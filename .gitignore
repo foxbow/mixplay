@@ -1,3 +1,7 @@
+# Eclipse stuff
+.cproject
+.project
+
 # Object files
 *.o
 *.ko
@@ -15,6 +19,7 @@
 *.lo
 
 # Shared objects (inc. Windows DLLs)
+bin/mixplay
 *.dll
 *.so
 *.so.*
