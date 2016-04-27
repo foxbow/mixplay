@@ -249,27 +249,29 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if (0 == strlen( blname) ) {
-		strcpy( blname, basedir );
-		strcat( blname, "/blacklist.txt" );
-	}
+	if(!stream) {
+		if (0 == strlen( blname) ) {
+			strcpy( blname, basedir );
+			strcat( blname, "/blacklist.txt" );
+		}
 
-	if (0 == strlen( wlname) ) {
-		strcpy( wlname, basedir );
-		strcat( wlname, "/whitelist.txt" );
+		if (0 == strlen( wlname) ) {
+			strcpy( wlname, basedir );
+			strcat( wlname, "/whitelist.txt" );
+		}
+		if( NULL == root ) root = recurse(basedir, root);
 	}
-
-	if( NULL == root ) root = recurse(basedir, root);
 
 	if (NULL != root) {
-		if (mix)
-			root = shuffleTitles(root );
-		else
-			root = rewindTitles(root );
+		if(!stream){
+			if (mix)
+				root = shuffleTitles(root );
+			else
+				root = rewindTitles(root );
 
-		loadWhitelist(wlname);
-		checkWhitelist(root);
-
+			loadWhitelist(wlname);
+			checkWhitelist(root);
+		}
 		// create communication pipes
 		pipe(p_status);
 		pipe(p_command);

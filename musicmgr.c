@@ -536,7 +536,7 @@ struct entry_t *recurse( char *curdir, struct entry_t *files ) {
 	// get all music files according to the blacklist
 	num = getMusic( curdir, &entry );
 	if( num < 0 ) {
-		fail( "getMusic", curdir, errno );
+		fail( "getMusic failed", curdir, errno );
 	}
 	for( i=0; i<num; i++ ) {
 		activity("Scanning");

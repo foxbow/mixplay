@@ -77,9 +77,9 @@ char *strip( char *buff, const char *text, const size_t maxlen ) {
 void fail( const char* msg, const char* info, int error ){
 	endwin();
 	if(error == 0 )
-		fprintf(stderr, "\n%s%s\n", msg, info );
+		fprintf(stderr, "\n%s %s\n", msg, info );
 	else
-		fprintf(stderr, "\n%s%s\nERROR: %i - %s\n", msg, info, abs(error), strerror( abs(error) ) );
+		fprintf(stderr, "\n%s %s\nERROR: %i - %s\n", msg, info, abs(error), strerror( abs(error) ) );
 	fprintf(stderr, "Press [ENTER]\n" );
 	fflush( stdout );
 	fflush( stderr );
@@ -153,11 +153,12 @@ int startsWith( const char *text, const char *prefix ){
 	if( tlen < plen ) {
 		return 0;
 	}
-	for( i=0; i<plen; i-- ) {
+	for( i=0; i<plen; i++ ) {
 		if( tolower(text[i]) != tolower(prefix[i]) ) {
 			return 0;
 		}
 	}
+
 	return -1;
 }
 
@@ -177,9 +178,7 @@ int isMusic( const char *name ){
  * We just allow http/s
  */
 int isURL( const char *uri ){
-	char line[MAXPATHLEN];
-
-	if( startsWith( line, "http://" ) || startsWith( line, "https://" ) ) {
+	if( startsWith( uri, "http://" ) || startsWith( uri, "https://" ) ) {
 		return -1;
 	}
 	return 0;
