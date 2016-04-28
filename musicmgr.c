@@ -171,7 +171,8 @@ static int loadBWlist( const char *path, int isbl ){
 	if( !buff ) fail( "Out of memory", "", errno );
 
 	file=fopen( path, "r" );
-	if( !file ) fail("Couldn't open list ", path,  errno);
+	if( !file ) return 0;
+		// fail("Couldn't open list ", path,  errno);
 
 	while( !feof( file ) ){
 		buff=fgets( buff, MAXPATHLEN, file );
@@ -205,7 +206,7 @@ static int loadBWlist( const char *path, int isbl ){
 		whitelist=bwlist;
 	}
 
-	return 0;
+	return cnt;
 }
 
 /**
@@ -405,7 +406,7 @@ struct entry_t *rewindTitles( struct entry_t *base ) {
 			}
 		}
 
-		if( artguard && lastname ) {
+		if( strlen(runner->artist) && artguard && lastname ) {
 			guard=runner;
 			while( 75 < fncmp( runner->artist, lastname ) ) {
 				runner=runner->next;

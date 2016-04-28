@@ -13,6 +13,7 @@
 
 /**
  * print out CLI usage
+ * mb:w:rvs
  */
 static void usage( char *progname ){
 	printf( "%s - console frontend to mpg123\n", progname );
@@ -21,6 +22,8 @@ static void usage( char *progname ){
 	printf( "-w <file>  : Whitelist of names to include [unset]\n" );
 	printf( "-m         : Mix, enable shuffle mode on playlist\n" );
 	printf( "-r         : Repeat\n");
+	printf( "-v         : increase Verbosity (just for debugging)\n" );
+	printf( "-s <key>   : Search names like <key>\n" );
 	printf( "[path]     : path to the music files [.]\n" );
 	exit(0);
 }
@@ -178,9 +181,6 @@ int main(int argc, char **argv) {
 	// mpg123 is up and running
 	int running;
 
-	// disable all output from utils
-	// muteVerbosity();
-
 	if (NULL == getcwd(basedir, MAXPATHLEN))
 		fail("Could not get current dir!", "", errno);
 
@@ -229,6 +229,7 @@ int main(int argc, char **argv) {
 			if( endsWith( argv[optind], "m3u" ) ) {
 				strcpy( line, "@" );
 			}
+
 			strncat( line, argv[optind], MAXPATHLEN );
 			root=insertTitle( root, line );
 			root->display[0]=0; // hide URL from display
@@ -239,28 +240,32 @@ int main(int argc, char **argv) {
 		}
 		else if ( endsWith( argv[optind], "m3u" ) ) {
 			root=loadPlaylist( argv[optind] );
+			if( NULL != strrchr( argv[optind], '/' ) ) {
+				strcpy(basedir, argv[optind]);
+				i=strlen(basedir);
+				while( basedir[i] != '/' ) i--;
+				basedir[i]=0;
+				chdir(basedir);
+			}
 		}
 		else {
 			strcpy(basedir, argv[optind]);
-			if ((strlen(basedir) == 2) && (basedir[1] == ':'))
-				sprintf(basedir, "%s/", basedir);
-			else if (basedir[strlen(basedir) - 1] == '/')
+			if (basedir[strlen(basedir) - 1] == '/')
 				basedir[strlen(basedir) - 1] = 0;
 		}
 	}
 
-	if(!stream) {
-		if (0 == strlen( blname) ) {
-			strcpy( blname, basedir );
-			strcat( blname, "/blacklist.txt" );
-		}
-
-		if (0 == strlen( wlname) ) {
-			strcpy( wlname, basedir );
-			strcat( wlname, "/whitelist.txt" );
-		}
-		if( NULL == root ) root = recurse(basedir, root);
+	if (0 == strlen( blname) ) {
+		strcpy( blname, basedir );
+		strcat( blname, "/blacklist.txt" );
 	}
+
+	if (0 == strlen( wlname) ) {
+		strcpy( wlname, basedir );
+		strcat( wlname, "/whitelist.txt" );
+	}
+
+	if( NULL == root ) root = recurse(basedir, root);
 
 	if (NULL != root) {
 		if(!stream){
@@ -269,8 +274,9 @@ int main(int argc, char **argv) {
 			else
 				root = rewindTitles(root );
 
-			loadWhitelist(wlname);
-			checkWhitelist(root);
+			if( 0 != loadWhitelist(wlname) ){
+				checkWhitelist(root);
+			}
 		}
 		// create communication pipes
 		pipe(p_status);
@@ -534,14 +540,11 @@ int main(int argc, char **argv) {
 						sprintf( status, "ERROR: %s", line);
 						drawframe( station, current, status, stream );
 						sleep(1);
-						// These are rarely deadly
-						// running=0;
 						break;
 					default:
 						sprintf( status, "MPG123 : %s", line);
 						drawframe( station, current, status, stream );
 						sleep(1);
-						//running=0;
 						break;
 					} // case()
 				} // fgets() > 0
@@ -553,7 +556,7 @@ int main(int argc, char **argv) {
 	}
 	// root==NULL
 	else {
-		fail("No music found at ", basedir, 0 );
+		fail("No music found at", basedir, 0 );
 	}
 	return 0;
 }
