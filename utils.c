@@ -52,13 +52,12 @@ char *strip( char *buff, const char *text, const size_t maxlen ) {
 
 	// Cut off leading spaces and special chars
 	while( ( pos < len ) && ( isspace( text[pos] ) ) ) pos++;
+
+	// Copy the remains into buff
 	strncpy( buff, text+pos, maxlen );
+	buff[maxlen]=0;
 
-	len=(len<maxlen)?len:maxlen;
-
-	// Truncate the string to maximum length
-	pos = strlen(buff)-1;
-	while( pos >= len ) buff[pos--]='\0';
+	pos = strlen(buff);
 
 	// Cut off trailing spaces and special chars - for some reason
 	// isspace() does not think that \r is a space?!
