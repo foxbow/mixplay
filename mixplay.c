@@ -17,14 +17,15 @@
  */
 static void usage( char *progname ){
 	printf( "%s - console frontend to mpg123\n", progname );
-	printf( "Usage: %s [-b <file>] [-w <file>] [-m] [path|URL]\n", progname );
-	printf( "-b <file>  : Blacklist of names to exclude [unset]\n" );
-	printf( "-w <file>  : Whitelist of names to include [unset]\n" );
+	printf( "Usage: %s [-b <file>] [-w <file>] [-m] [-s <key>] -S -v  [path|URL]\n", progname );
+	printf( "-b <file>  : Blacklist of names to exclude\n" );
+	printf( "-w <file>  : Whitelist of names to include\n" );
 	printf( "-m         : Mix, enable shuffle mode on playlist\n" );
-	printf( "-r         : Repeat\n");
+	printf( "-r         : Repeat playlist\n");
 	printf( "-v         : increase Verbosity (just for debugging)\n" );
-	printf( "-s <key>   : Search names like <key>\n" );
-	printf( "[path]     : path to the music files [.]\n" );
+	printf( "-s <key>   : Search names like <key> (can be used multiple times)\n" );
+	printf( "-S         : interactive search\n" );
+	printf( "[path|URL] : path to the music files [.]\n" );
 	exit(0);
 }
 
@@ -181,10 +182,58 @@ int main(int argc, char **argv) {
 	// mpg123 is up and running
 	int running;
 
-	if (NULL == getcwd(basedir, MAXPATHLEN))
-		fail("Could not get current dir!", "", errno);
+	FILE *fp=NULL;
 
-	while ((c = getopt(argc, argv, "mb:w:rvs")) != -1) {
+	// load config
+	b=getenv("HOME");
+	sprintf( dirbuf, "%s/.mixplay", b );
+	fp=fopen(dirbuf, "r");
+	if( NULL != fp ) {
+		do {
+			i=0;
+			fgets( line, LINE_BUFLEN, fp );
+			if( strlen(line) > 2 ) {
+				line[strlen(line)-1]=0;
+				switch( line[0] ) {
+				case 's':
+					strncpy( basedir, line+1, MAXPATHLEN );
+					break;
+				case '+':
+					i=1;
+					break;
+				case '-':
+					i=-1;
+					break;
+				case '#':
+					break;
+				case 'b':
+					strncpy( blname, line+1, MAXPATHLEN );
+					break;
+				case 'w':
+					strncpy( wlname, line+1, MAXPATHLEN );
+					break;
+				default:
+					fail( "Config error:", line, -1 );
+					break;
+				}
+				if( 0 != i ){
+					if( startsWith( &line[1], "mix" ) ) mix=(i==-1?0:1);
+					else if( startsWith( &line[1], "repeat" ) ) repeat=(i==-1?0:1);
+					else fail( "Unknown keyword:", line, -1 );
+				}
+			}
+		} while( !feof(fp) );
+	}
+	else {
+		printf( "%s dies not exist.\n", dirbuf );
+	}
+
+	if( 0 == strlen(basedir) ) {
+		if (NULL == getcwd(basedir, MAXPATHLEN))
+			fail("Could not get current dir!", "", errno);
+	}
+
+	while ((c = getopt(argc, argv, "mb:w:rvs:S")) != -1) {
 		switch (c) {
 		case 'v': // not documented and pretty useless in normal use
 			incVerbosity();
@@ -194,21 +243,29 @@ int main(int argc, char **argv) {
 			break;
 		case 'b':
 			strcpy(blname, optarg);
-			loadBlacklist(optarg);
 			break;
 		case 'w':
 			strcpy(wlname, optarg);
-			loadWhitelist(optarg);
 			break;
 		case 'r':
 			repeat = 1;
 			break;
-		case 's':
+		case 'S':
 			printf("Search: ");
 			fflush(stdout);
 			readline( line, MAXPATHLEN, fileno(stdin) );
 			if( strlen(line) > 2 ) {
 				addToWhitelist( line );
+			}
+			else {
+				puts("Ignoring less than three characters!");
+				sleep(3);
+				return -1;
+			}
+			break;
+		case 's':
+			if( strlen(optarg) > 2 ) {
+				addToWhitelist( optarg );
 			}
 			else {
 				puts("Ignoring less than three characters!");
@@ -259,10 +316,28 @@ int main(int argc, char **argv) {
 		strcpy( blname, basedir );
 		strcat( blname, "/blacklist.txt" );
 	}
+	else {
+		if( blname[0] != '/' ) {
+			strcpy( line, basedir );
+			strcat( line, "/" );
+			strcat( line, blname );
+			strcpy( blname, line );
+		}
+		loadBlacklist( blname );
+	}
 
 	if (0 == strlen( wlname) ) {
 		strcpy( wlname, basedir );
-		strcat( wlname, "/whitelist.txt" );
+		strcat( wlname, "/favourites.txt" );
+	}
+	else {
+		if( wlname[0] != '/' ) {
+			strcpy( line, basedir );
+			strcat( line, "/" );
+			strcat( line, wlname );
+			strcpy( wlname, line );
+		}
+		loadBlacklist( wlname );
 	}
 
 	if( NULL == root ) root = recurse(basedir, root);
@@ -326,9 +401,9 @@ int main(int argc, char **argv) {
 				FD_SET( fileno(stdin), &fds );
 				FD_SET( p_status[0], &fds );
 				to.tv_sec=1;
-				to.tv_usec=0; // 1/4 sec
+				to.tv_usec=0; // 1 sec
 				i=select( FD_SETSIZE, &fds, NULL, NULL, &to );
-				redraw=0;
+				redraw=i?1:0;
 				// Interpret keypresses
 				if( FD_ISSET( fileno(stdin), &fds ) ) {
 					key=getch();

@@ -406,7 +406,7 @@ struct entry_t *rewindTitles( struct entry_t *base ) {
 			}
 		}
 
-		if( strlen(runner->artist) && artguard && lastname ) {
+		if( artguard && lastname ) {
 			guard=runner;
 			while( 75 < fncmp( runner->artist, lastname ) ) {
 				runner=runner->next;

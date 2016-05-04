@@ -75,7 +75,7 @@ char *strip( char *buff, const char *text, const size_t maxlen ) {
  */
 void fail( const char* msg, const char* info, int error ){
 	endwin();
-	if(error == 0 )
+	if(error <= 0 )
 		fprintf(stderr, "\n%s %s\n", msg, info );
 	else
 		fprintf(stderr, "\n%s %s\nERROR: %i - %s\n", msg, info, abs(error), strerror( abs(error) ) );
@@ -83,7 +83,7 @@ void fail( const char* msg, const char* info, int error ){
 	fflush( stdout );
 	fflush( stderr );
 	while(getc(stdin)!=10);
-	if (error > 0 ) exit(error);
+	if (error != 0 ) exit(error);
 	return;
 }
 
@@ -250,6 +250,8 @@ static int getMax( strval_t val ){
 static int computestrval( const char* str, strval_t strval ){
 	char c1, c2;
 	int cnt;
+
+	if( 3 > strlen( str) ) return 0;
 
 	for( cnt=0; cnt < strlen( str )-1; cnt++ ){
 		c1=str[cnt];
