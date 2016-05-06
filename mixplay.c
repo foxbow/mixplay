@@ -304,6 +304,8 @@ int main(int argc, char **argv) {
 				basedir[i]=0;
 				chdir(basedir);
 			}
+			// usually playlist should NOT be shuffled
+			mix=0;
 		}
 		else {
 			strcpy(basedir, argv[optind]);

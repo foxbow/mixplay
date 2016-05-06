@@ -61,7 +61,10 @@ char *strip( char *buff, const char *text, const size_t maxlen ) {
 
 	// Cut off trailing spaces and special chars - for some reason
 	// isspace() does not think that \r is a space?!
-	while( ( pos > 0 ) && ( isspace( buff[pos] ) || buff[pos]==10 ) ) buff[pos--]='\0';
+	while( ( pos > 0 ) && ( iscntrl(buff[pos]) || isspace(buff[pos] )) ) {
+		buff[pos]=0;
+		pos --;
+	}
 
 	return buff;
 }
@@ -229,6 +232,11 @@ void addToList( const char *path, const char *line ) {
 static void setBit( int pos, strval_t val ){
 	int bytepos;
 	unsigned char set=0;
+
+	// avoid under/overflow
+	if( pos < 0 ) pos=0;
+	if( pos > CMP_ARRAYLEN ) pos=CMP_ARRAYLEN;
+
 	bytepos=pos/8;
 	set = 1<<(pos%8);
 	val[bytepos]|=set;
