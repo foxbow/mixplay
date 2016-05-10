@@ -41,7 +41,7 @@ struct bwlist_t {
  * Music helper functions
  */
 // unused?!
-// void wipeTitles( struct entry_t *files );
+void wipeTitles( struct entry_t *files );
 struct entry_t *recurse( char *curdir, struct entry_t *files );
 struct entry_t *shuffleTitles( struct entry_t *base );
 struct entry_t *rewindTitles( struct entry_t *base );
@@ -56,7 +56,7 @@ int genPathName( char *name, const char *cd, const size_t len );
 int isMusic( const char *name );
 int addToWhitelist( const char *line );
 int checkWhitelist( struct entry_t *root );
-
+int mp3Exists( const struct entry_t *title );
 int getFiles( const char *cd, struct dirent ***filelist );
 int getDirs( const char *cd, struct dirent ***dirlist );
 

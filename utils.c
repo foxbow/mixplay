@@ -5,7 +5,7 @@
 // Represents a string as a bit array
 typedef unsigned char* strval_t;
 
-static int rpos=0;
+static int _ftrpos=0;
 
 static int _ftverbosity=1;
 
@@ -26,6 +26,7 @@ int incVerbosity() {
 void muteVerbosity() {
 	_ftverbosity=0;
 }
+
 /**
  * Some ANSI code magic to set the terminal title
  **/
@@ -59,8 +60,7 @@ char *strip( char *buff, const char *text, const size_t maxlen ) {
 
 	pos = strlen(buff);
 
-	// Cut off trailing spaces and special chars - for some reason
-	// isspace() does not think that \r is a space?!
+	// Cut off trailing spaces and special chars
 	while( ( pos > 0 ) && ( iscntrl(buff[pos]) || isspace(buff[pos] )) ) {
 		buff[pos]=0;
 		pos --;
@@ -74,7 +74,9 @@ char *strip( char *buff, const char *text, const size_t maxlen ) {
  * Print errormessage, errno and quit
  * msg - Message to print
  * info - second part of the massage, for instance a variable
- * error - errno that was set.
+ * error - errno that was set
+ *          0 = print message w/o error and return
+ *         -1 = print message w/o error and exit
  */
 void fail( const char* msg, const char* info, int error ){
 	endwin();
@@ -194,11 +196,11 @@ int isURL( const char *uri ){
 void activity( const char *msg ){
 	char roller[5]="|/-\\";
 	int pos;
-	if( _ftverbosity && ( rpos%100 == 0 )) {
-		pos=(rpos/100)%4;
+	if( _ftverbosity && ( _ftrpos%100 == 0 )) {
+		pos=(_ftrpos/100)%4;
 		printf( "%s %c\r", msg, roller[pos] ); fflush( stdout );
 	}
-	rpos=(rpos+1)%400;
+	_ftrpos=(_ftrpos+1)%400;
 }	
 
 /*
@@ -242,22 +244,9 @@ static void setBit( int pos, strval_t val ){
 	val[bytepos]|=set;
 }
 
-static int getMax( strval_t val ){
-	int pos, retval=0;
-	unsigned char c;
-	for(pos=0; pos<CMP_ARRAYLEN;pos++){
-		c=val[pos];
-		while( c != 0 ){
-			if( c &  1 ) retval++;
-			c=c>>1;
-		}
-	}
-	return retval;
-}
-
 static int computestrval( const char* str, strval_t strval ){
 	char c1, c2;
-	int cnt;
+	int cnt, max=0;
 
 	if( 3 > strlen( str) ) return 0;
 
@@ -270,9 +259,10 @@ static int computestrval( const char* str, strval_t strval ){
 			c1=c1-'a';
 			c2=c2-'a';
 			setBit( c1*26+c2, strval );
+			max++;
 		}
 	}
-	return getMax( strval );
+	return max;
 }
 
 static int vecmult( strval_t val1, strval_t val2 ){

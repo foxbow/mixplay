@@ -164,7 +164,8 @@ static int loadBWlist( const char *path, int isbl ){
 	}
 	else {
 		if( NULL != whitelist )
-			fail("Whitelist already loaded! ", path, ENOTRECOVERABLE );
+			// fail("Whitelist already loaded! ", path, ENOTRECOVERABLE );
+			return 0;
 	}
 
 	buff=calloc( MAXPATHLEN, sizeof(char) );
@@ -271,7 +272,9 @@ struct entry_t *loadPlaylist( const char *path ) {
  * clean up a list of entries
  */
 void wipeTitles( struct entry_t *files ){
-	struct entry_t *buff=files;
+	struct entry_t *buff;
+	buff=rewindTitles(files);
+
 	while( buff != NULL ){
 		files=buff;
 		buff=files->next;
@@ -516,6 +519,13 @@ int checkWhitelist( struct entry_t *root ) {
 	return 0;
 }
 
+int mp3Exists( const struct entry_t *title ) {
+	char path[MAXPATHLEN];
+	strncpy( path, title->path, MAXPATHLEN );
+	strncat( path, "/", MAXPATHLEN );
+	strncat( path, title->name, MAXPATHLEN );
+	return( access( path, F_OK ) );
+}
 
 /*
  * Steps recursively through a directory and collects all music files in a list

@@ -162,6 +162,7 @@ int main(int argc, char **argv) {
 	char station[LINE_BUFLEN] = "mixplay "VERSION;
 	char basedir[MAXPATHLEN];
 	char dirbuf[MAXPATHLEN];
+	char dbname[MAXPATHLEN] = "";
 	char blname[MAXPATHLEN] = "";
 	char wlname[MAXPATHLEN] = "";
 	int key;
@@ -195,6 +196,9 @@ int main(int argc, char **argv) {
 			if( strlen(line) > 2 ) {
 				line[strlen(line)-1]=0;
 				switch( line[0] ) {
+				case 'd':
+					strncpy( dbname, line+1, MAXPATHLEN );
+					break;
 				case 's':
 					strncpy( basedir, line+1, MAXPATHLEN );
 					break;
@@ -307,8 +311,11 @@ int main(int argc, char **argv) {
 			// usually playlist should NOT be shuffled
 			mix=0;
 		}
+		else if ( endsWith( argv[optind], ".sq3" ) ) {
+			strncpy( dbname, argv[optind], MAXPATHLEN );
+		}
 		else {
-			strcpy(basedir, argv[optind]);
+			strncpy( basedir, argv[optind], MAXPATHLEN );
 			if (basedir[strlen(basedir) - 1] == '/')
 				basedir[strlen(basedir) - 1] = 0;
 		}
@@ -339,7 +346,7 @@ int main(int argc, char **argv) {
 			strcat( line, wlname );
 			strcpy( wlname, line );
 		}
-		loadBlacklist( wlname );
+		// loadWhitelist( wlname );
 	}
 
 	if( NULL == root ) root = recurse(basedir, root);
@@ -351,7 +358,7 @@ int main(int argc, char **argv) {
 			else
 				root = rewindTitles(root );
 
-			if( 0 != loadWhitelist(wlname) ){
+			if(0 != loadWhitelist(wlname)) {
 				checkWhitelist(root);
 			}
 		}
