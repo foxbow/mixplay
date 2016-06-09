@@ -24,6 +24,7 @@ static void usage( char *progname ){
 	printf( "-r         : Repeat playlist\n");
 	printf( "-v         : increase Verbosity (just for debugging)\n" );
 	printf( "-s <key>   : Search names like <key> (can be used multiple times)\n" );
+	printf( "             Disables -m by default.\n");
 	printf( "-S         : interactive search\n" );
 	printf( "[path|URL] : path to the music files [.]\n" );
 	exit(0);
@@ -182,6 +183,7 @@ int main(int argc, char **argv) {
 	int order=1;
 	// mpg123 is up and running
 	int running;
+	int usedb=0; // DB support is not yet done!
 
 	FILE *fp=NULL;
 
@@ -255,6 +257,7 @@ int main(int argc, char **argv) {
 			repeat = 1;
 			break;
 		case 'S':
+			mix=0;
 			printf("Search: ");
 			fflush(stdout);
 			readline( line, MAXPATHLEN, fileno(stdin) );
@@ -268,6 +271,7 @@ int main(int argc, char **argv) {
 			}
 			break;
 		case 's':
+			mix=0;
 			if( strlen(optarg) > 2 ) {
 				addToWhitelist( optarg );
 			}
@@ -284,6 +288,7 @@ int main(int argc, char **argv) {
 	}
 
 	if (optind < argc) {
+		usedb=0;
 		if( isURL( argv[optind] ) ) {
 			stream=1;
 			line[0]=0;
@@ -312,6 +317,7 @@ int main(int argc, char **argv) {
 			mix=0;
 		}
 		else if ( endsWith( argv[optind], ".sq3" ) ) {
+			usedb=1;
 			strncpy( dbname, argv[optind], MAXPATHLEN );
 		}
 		else {
@@ -349,7 +355,16 @@ int main(int argc, char **argv) {
 		// loadWhitelist( wlname );
 	}
 
-	if( NULL == root ) root = recurse(basedir, root);
+	if( NULL == root ) {
+		if( usedb ) {
+//			dbGetAllMusic( &root );
+			root=useBlacklist( root );
+		} else {
+			root = recurse(basedir, NULL);
+		}
+	}
+
+	// No else as the above calls may return NULL!
 
 	if (NULL != root) {
 		if(!stream){
@@ -362,6 +377,7 @@ int main(int argc, char **argv) {
 				checkWhitelist(root);
 			}
 		}
+
 		// create communication pipes
 		pipe(p_status);
 		pipe(p_command);

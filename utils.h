@@ -9,8 +9,12 @@
 
 /* Default values */
 
-#define CMP_ARRAYLEN 85
-#define CMP_BITS 680
+#define CMP_CHARS 127
+#define CMP_BITS (CMP_CHARS*CMP_CHARS)
+#define CMP_ARRAYLEN ((CMP_BITS%8==0)?CMP_BITS/8:(CMP_BITS/8)+1)
+
+// Represents a string as a bit array
+typedef unsigned char* strval_t;
 
 /*
  * Verbosity handling of the utils functions

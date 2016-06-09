@@ -49,6 +49,7 @@ struct entry_t *removeTitle( struct entry_t *entry );
 struct entry_t *loadPlaylist( const char *path );
 struct entry_t *insertTitle( struct entry_t *base, const char *path );
 struct entry_t *skipTitles( struct entry_t *current, int num, int repeat, int mix );
+struct entry_t *useBlacklist( struct entry_t *base );
 int countTitles( struct entry_t *base );
 int loadBlacklist( const char *path );
 int loadWhitelist( const char *path );
@@ -60,4 +61,6 @@ int mp3Exists( const struct entry_t *title );
 int getFiles( const char *cd, struct dirent ***filelist );
 int getDirs( const char *cd, struct dirent ***dirlist );
 
+// DEBUG only!
+// void dumpTitles( struct entry_t *root, char *msg );
 #endif /* MUSICMGR_H_ */

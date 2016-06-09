@@ -108,8 +108,16 @@ static int msel( const struct dirent *entry ){
 			isMusic( entry->d_name ) );
 }
 
+static int tsort( const struct dirent **d1, const struct dirent **d2 ) {
+	int v1, v2;
+	v1= atoi( d1[0]->d_name );
+	v2= atoi( d2[0]->d_name );
+	if( ( v1 > 0 ) && ( v2 > 0 ) ) return( v1-v2 );
+	return strcasecmp( d1[0]->d_name, d2[0]->d_name );
+}
+
 static int getMusic( const char *cd, struct dirent ***musiclist ){
-	return scandir( cd, musiclist, msel, alphasort);
+	return scandir( cd, musiclist, msel, tsort);
 }
 
 int getFiles( const char *cd, struct dirent ***filelist ){
@@ -118,6 +126,44 @@ int getFiles( const char *cd, struct dirent ***filelist ){
 
 int getDirs( const char *cd, struct dirent ***dirlist ){
 	return scandir( cd, dirlist, dsel, alphasort);
+}
+
+struct entry_t *useBlacklist( struct entry_t *base ) {
+	struct entry_t *pos;
+	struct bwlist_t *ptr = NULL;
+	struct entry_t *buf = NULL;
+	char loname[MAXPATHLEN];
+
+	base=rewindTitles(base);
+	pos=base;
+	if( NULL == blacklist ) {
+		return pos;
+	}
+
+	while( pos != NULL ) {
+		// strncpy( loname, pos->display, MAXPATHLEN );
+		strncpy( loname, pos->path, MAXPATHLEN );
+		strncpy( loname, pos->name, MAXPATHLEN );
+		toLower( loname );
+
+		ptr=blacklist;
+		while( ptr ){
+			if( strstr( loname, ptr->dir ) ) {
+				buf=pos->next;
+				if( NULL == pos->prev ) {
+					base=pos->next;
+				}
+				pos=removeTitle(pos);
+				break;
+			}
+			ptr=ptr->next;
+		}
+		if( NULL != pos ) {
+			pos=pos->next;
+		}
+	}
+
+	return base;
 }
 
 /**
@@ -160,11 +206,11 @@ static int loadBWlist( const char *path, int isbl ){
 
 	if( isbl ) {
 		if( NULL != blacklist )
-			fail("Blacklist already loaded! ", path, ENOTRECOVERABLE );
+			fail("Blacklist already loaded! ", path, -1 );
 	}
 	else {
 		if( NULL != whitelist )
-			// fail("Whitelist already loaded! ", path, ENOTRECOVERABLE );
+			// fail("Whitelist already loaded! ", path, -1 );
 			return 0;
 	}
 
@@ -400,18 +446,22 @@ struct entry_t *rewindTitles( struct entry_t *base ) {
 	// Stepping through every item
 	while( base != NULL ) {
 		int j, pos;
+
 		runner=base;
+
+		// select a title at random
 		pos=RANDOM(num--);
-		for(j=1; j<=pos; j++){
+		for( j=1; j<=pos; j++ ){
 			runner=runner->next;
 			if( runner == NULL ) {
 				runner=base;
 			}
 		}
 
+		// check for duplicates
 		if( artguard && lastname ) {
 			guard=runner;
-			while( 75 < fncmp( runner->artist, lastname ) ) {
+			while( 80 < fncmp( runner->artist, lastname ) ) {
 				runner=runner->next;
 				if( runner == NULL ) {
 					runner=base;
@@ -435,7 +485,7 @@ struct entry_t *rewindTitles( struct entry_t *base ) {
 			runner->next->prev=runner->prev;
 		}
 
-		// add entry to list
+		// append entry to list
 		runner->next=NULL;
 		runner->prev=end;
 		if( NULL != end ) {
@@ -445,6 +495,7 @@ struct entry_t *rewindTitles( struct entry_t *base ) {
 
 		activity("Shuffling ");
 	}
+
 	return rewindTitles( end );
 }
 
@@ -565,7 +616,6 @@ struct entry_t *recurse( char *curdir, struct entry_t *files ) {
 
 			buff=(struct entry_t *)calloc(1, sizeof(struct entry_t));
 			if(buff == NULL) fail("Out of memory!", "", errno);
-
 			strncpy( buff->name, entry[i]->d_name, MAXPATHLEN );
 			alen=genPathName( buff->display, dirbuff, MAXPATHLEN );
 	//		strncpy( buff->title, entry[i]->d_name, MAXPATHLEN );
@@ -596,4 +646,18 @@ struct entry_t *recurse( char *curdir, struct entry_t *files ) {
 	free(entry);
 
 	return files;
+}
+
+/**
+ * just for debugging purposes!
+ */
+void dumpTitles( struct entry_t *root, char *msg ) {
+	struct entry_t *ptr=root;
+	if( NULL==root ) return;
+	while( ptr->prev != NULL ) ptr=ptr->prev;
+	while( ptr != NULL ) {
+		puts( ptr->name );
+		ptr=ptr->next;
+	}
+	fail("END DUMP",msg,0);
 }

@@ -2,6 +2,10 @@
 .cproject
 .project
 
+# Binaries
+bin/mixplay
+bin/scanformusic
+
 # Object files
 *.o
 *.ko
@@ -19,7 +23,6 @@
 *.lo
 
 # Shared objects (inc. Windows DLLs)
-bin/mixplay
 *.dll
 *.so
 *.so.*

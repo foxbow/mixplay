@@ -1,12 +1,6 @@
 #include "utils.h"
-#include "musicmgr.h"
-#include "ncutils.h"
-
-// Represents a string as a bit array
-typedef unsigned char* strval_t;
 
 static int _ftrpos=0;
-
 static int _ftverbosity=1;
 
 int getVerbosity() {
@@ -39,36 +33,48 @@ void setTitle(const char* title) {
 	fflush(stdout);
 }
 
+
 /**
  * Strip spaces and special chars from the beginning and the end
  * of 'text', truncate it to 'maxlen' and store the result in
  * 'buff'.
+ *
+ * @todo: take proper care of wide characters! Right now control (and
+ *        extended) characters are simply filtered out. But different
+ *        encodings WILL cause problems in any case.
 **/
 char *strip( char *buff, const char *text, const size_t maxlen ) {
 	int len=strlen( text );
-	int pos=0;
+	int bpos=0, tpos=0;
 
 	// clear target buffer
 	memset( buff, 0, maxlen );
 
 	// Cut off leading spaces and special chars
-	while( ( pos < len ) && ( isspace( text[pos] ) ) ) pos++;
+	while( ( tpos < len ) && ( isspace( text[tpos] ) ) ) tpos++;
 
-	// Copy the remains into buff
-	strncpy( buff, text+pos, maxlen );
-	buff[maxlen]=0;
+	// Filter out all extended characters
+	while( ( tpos < len )  && ( bpos < ( maxlen-1) ) ) {
+		if( isascii( text[tpos]) ) {
+			buff[bpos]=text[tpos];
+			bpos++;
+		}
+		tpos++;
+	}
 
-	pos = strlen(buff);
+	// Make sure string ends with a 0
+	buff[bpos]=0;
+	bpos--;
 
 	// Cut off trailing spaces and special chars
-	while( ( pos > 0 ) && ( iscntrl(buff[pos]) || isspace(buff[pos] )) ) {
-		buff[pos]=0;
-		pos --;
+	while( ( bpos > 0 ) && ( iscntrl(buff[bpos]) || isspace(buff[bpos] )) ) {
+		buff[bpos]=0;
+		bpos --;
 	}
 
 	return buff;
-}
 
+}
 
 /*
  * Print errormessage, errno and quit
@@ -231,36 +237,35 @@ void addToList( const char *path, const char *line ) {
 /*
  * sets a bit in a long bitlist
  */
-static void setBit( int pos, strval_t val ){
+static int setBit( long pos, strval_t val ){
 	int bytepos;
 	unsigned char set=0;
 
 	// avoid under/overflow
 	if( pos < 0 ) pos=0;
-	if( pos > CMP_ARRAYLEN ) pos=CMP_ARRAYLEN;
+	if( pos > CMP_BITS ) pos=CMP_BITS;
 
 	bytepos=pos/8;
 	set = 1<<(pos%8);
-	val[bytepos]|=set;
+	if( 0 == ( val[bytepos] & set ) ) { 
+		val[bytepos]|=set;
+		return 1;
+	}
+
+	return 0;
 }
 
 static int computestrval( const char* str, strval_t strval ){
 	char c1, c2;
 	int cnt, max=0;
 
-	if( 3 > strlen( str) ) return 0;
+	// needs at least two characters!
+	if( 2 > strlen( str) ) return 0;
 
 	for( cnt=0; cnt < strlen( str )-1; cnt++ ){
-		c1=str[cnt];
-		c2=str[cnt+1];
-		if( isalpha( c1 )  && isalpha( c2 ) ){
-			c1=tolower( c1 );
-			c2=tolower( c2 );
-			c1=c1-'a';
-			c2=c2-'a';
-			setBit( c1*26+c2, strval );
-			max++;
-		}
+		c1=tolower(str[cnt])%CMP_CHARS;
+		c2=tolower(str[cnt+1]%CMP_CHARS;
+		max=max+setBit( c1*CMP_CHARS+c2, strval );
 	}
 	return max;
 }
@@ -300,7 +305,6 @@ int fncmp( const char* str1, const char* str2 ){
 	// the max possible matches are defined by the min number of bits set!
 	maxval=(max1 < max2) ? max1 : max2;
 
-	if( maxval < 4 ) return -1;
 	step=100.0/maxval;
 
 	result=vecmult(  str1val, str2val );
