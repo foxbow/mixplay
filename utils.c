@@ -264,7 +264,7 @@ static int computestrval( const char* str, strval_t strval ){
 
 	for( cnt=0; cnt < strlen( str )-1; cnt++ ){
 		c1=tolower(str[cnt])%CMP_CHARS;
-		c2=tolower(str[cnt+1]%CMP_CHARS;
+		c2=tolower(str[cnt+1])%CMP_CHARS;
 		max=max+setBit( c1*CMP_CHARS+c2, strval );
 	}
 	return max;
