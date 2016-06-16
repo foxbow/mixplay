@@ -17,15 +17,17 @@
  */
 static void usage( char *progname ){
 	printf( "%s - console frontend to mpg123\n", progname );
-	printf( "Usage: %s [-b <file>] [-w <file>] [-m] [-s <key>] -S -v  [path|URL]\n", progname );
+	printf( "Usage: %s [-b <file>] [-w <file>] [-s <key>|-S] [-m] [-r] [-v] [path|URL]\n", progname );
 	printf( "-b <file>  : Blacklist of names to exclude\n" );
-	printf( "-w <file>  : Whitelist of names to include\n" );
-	printf( "-m         : Mix, enable shuffle mode on playlist\n" );
-	printf( "-r         : Repeat playlist\n");
-	printf( "-v         : increase Verbosity (just for debugging)\n" );
+	printf( "-w <file>  : List of favourites\n" );
+	printf( "-W         : Apply favourites as whitelist\n" );
 	printf( "-s <key>   : Search names like <key> (can be used multiple times)\n" );
 	printf( "             Disables -m by default.\n");
 	printf( "-S         : interactive search\n" );
+	printf( "             Disables -m by default.\n");
+	printf( "-m         : Mix, enable shuffle mode on playlist\n" );
+	printf( "-r         : Repeat playlist\n");
+	printf( "-v         : increase Verbosity (just for debugging)\n" );
 	printf( "[path|URL] : path to the music files [.]\n" );
 	exit(0);
 }
@@ -62,7 +64,7 @@ static void drawframe(char *station, struct entry_t *current, const char *status
 
 		// title
 		dhline( middle-1, 1, col-3 );
-		strncpy(buff, station, maxlen);
+		strip( buff, station, maxlen );
 		pos = (col - (strlen(buff) + 2)) / 2;
 		mvprintw(middle-1, pos, " %s ", buff);
 
@@ -87,7 +89,7 @@ static void drawframe(char *station, struct entry_t *current, const char *status
 		dhline( middle+1, 1, col-3 );
 
 		// print the status
-		strncpy(buff, status, maxlen);
+		strip(buff, status, maxlen);
 		pos = (col - (strlen(buff) + 2)) / 2;
 		mvprintw( row - 2, pos, " %s ", buff);
 
@@ -132,6 +134,9 @@ static void drawframe(char *station, struct entry_t *current, const char *status
 	refresh();
 }
 
+/**
+ * make mpeg123 play the given title
+ */
 static void sendplay( int fd, struct entry_t *song ) {
 	char line[LINE_BUFLEN];
 
@@ -187,7 +192,7 @@ int main(int argc, char **argv) {
 
 	FILE *fp=NULL;
 
-	// load config
+	// load default config
 	b=getenv("HOME");
 	sprintf( dirbuf, "%s/.mixplay", b );
 	fp=fopen(dirbuf, "r");
@@ -234,12 +239,14 @@ int main(int argc, char **argv) {
 		printf( "%s dies not exist.\n", dirbuf );
 	}
 
+	// if no basedir has been set, use the current dir as default
 	if( 0 == strlen(basedir) ) {
 		if (NULL == getcwd(basedir, MAXPATHLEN))
 			fail("Could not get current dir!", "", errno);
 	}
 
-	while ((c = getopt(argc, argv, "mb:w:rvs:S")) != -1) {
+	// parse command line options
+	while ((c = getopt(argc, argv, "mb:w:Wrvs:S")) != -1) {
 		switch (c) {
 		case 'v': // not documented and pretty useless in normal use
 			incVerbosity();
@@ -253,6 +260,9 @@ int main(int argc, char **argv) {
 		case 'w':
 			strcpy(wlname, optarg);
 			break;
+		case 'W':
+			loadWhitelist(wlname);
+			break;
 		case 'r':
 			repeat = 1;
 			break;
@@ -261,7 +271,7 @@ int main(int argc, char **argv) {
 			printf("Search: ");
 			fflush(stdout);
 			readline( line, MAXPATHLEN, fileno(stdin) );
-			if( strlen(line) > 2 ) {
+			if( strlen(line) > 1 ) {
 				addToWhitelist( line );
 			}
 			else {
@@ -287,6 +297,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
+	// parse additional argument
 	if (optind < argc) {
 		usedb=0;
 		if( isURL( argv[optind] ) ) {
@@ -327,10 +338,12 @@ int main(int argc, char **argv) {
 		}
 	}
 
+	// set default blacklist name
 	if (0 == strlen( blname) ) {
 		strcpy( blname, basedir );
 		strcat( blname, "/blacklist.txt" );
 	}
+	// load given blacklist
 	else {
 		if( blname[0] != '/' ) {
 			strcpy( line, basedir );
@@ -341,10 +354,12 @@ int main(int argc, char **argv) {
 		loadBlacklist( blname );
 	}
 
+	// set default whitelist name
 	if (0 == strlen( wlname) ) {
 		strcpy( wlname, basedir );
 		strcat( wlname, "/favourites.txt" );
 	}
+	// set given whitelist name
 	else {
 		if( wlname[0] != '/' ) {
 			strcpy( line, basedir );
@@ -355,6 +370,7 @@ int main(int argc, char **argv) {
 		// loadWhitelist( wlname );
 	}
 
+	// load titles
 	if( NULL == root ) {
 		if( usedb ) {
 //			dbGetAllMusic( &root );
@@ -365,7 +381,7 @@ int main(int argc, char **argv) {
 	}
 
 	// No else as the above calls may return NULL!
-
+	// prepare playing the titles
 	if (NULL != root) {
 		if(!stream){
 			if (mix)
@@ -432,7 +448,6 @@ int main(int argc, char **argv) {
 				// Interpret keypresses
 				if( FD_ISSET( fileno(stdin), &fds ) ) {
 					key=getch();
-
 					switch( key ){
 						case ' ':
 							write( p_command[1], "PAUSE\n", 7 );

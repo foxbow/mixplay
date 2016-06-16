@@ -13,6 +13,15 @@
 #define CMP_BITS (CMP_CHARS*CMP_CHARS)
 #define CMP_ARRAYLEN ((CMP_BITS%8==0)?CMP_BITS/8:(CMP_BITS/8)+1)
 
+#define F_WARN 0
+#define F_FAIL -1
+
+#ifndef MAX
+#define MAX(x,y) (x>y?x:y)
+#endif
+#ifndef MIN
+#define MIN(x,y) (x<y?x:y)
+#endif
 // Represents a string as a bit array
 typedef unsigned char* strval_t;
 

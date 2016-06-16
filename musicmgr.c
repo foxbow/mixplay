@@ -172,9 +172,20 @@ struct entry_t *useBlacklist( struct entry_t *base ) {
 static int isValid( char *entry ){
 	char loname[MAXPATHLEN];
 	struct bwlist_t *ptr = NULL;
+	int len=0, pos=0;
+	int trigger=0;
 
 	strncpy( loname, entry, MAXPATHLEN );
 	toLower( loname );
+
+	for( len=strlen(entry); len>0; len-- ) {
+		if(entry[len]=='/') pos++;
+		if( pos == 3 ){
+			strcpy( loname, &entry[len] );
+			break;
+		}
+	}
+	if( len == 0 ) strcpy( loname, entry );
 
 	// Blacklist has priority
 	ptr=blacklist;
@@ -186,7 +197,17 @@ static int isValid( char *entry ){
 	if( whitelist ) {
 		ptr=whitelist;
 		while( ptr ){
-			if( strstr( loname, ptr->dir ) ) return -1;
+			len=MIN(strlen(entry), strlen(ptr->dir) );
+			trigger=70;
+			if( len <= 20 ) trigger=80;
+			if( len <= 10 ) trigger=88;
+			if( len <= 5 ) trigger=100;
+//			if( strstr( loname, ptr->dir ) ) return -1;
+			strcpy( loname, entry );
+			if( trigger <= fncmp( toLower(loname), ptr->dir ) ){
+//				printf("%s - %s = %i/%i\n", loname, ptr->dir, fncmp( loname, ptr->dir ), trigger );
+				return -1;
+			}
 			ptr=ptr->next;
 		}
 		return 0;
@@ -271,6 +292,7 @@ int addToWhitelist( const char *line ) {
 	struct bwlist_t *entry;
 	entry=calloc( 1, sizeof( struct bwlist_t ) );
 	strncpy( entry->dir, line, MAXPATHLEN );
+	toLower( entry->dir );
 	if( !whitelist ) {
 		whitelist=entry;
 		entry->next=NULL;
@@ -558,7 +580,7 @@ int checkWhitelist( struct entry_t *root ) {
 		runner->rating=0;
 		ptr=whitelist;
 		while( ptr ){
-			if( strstr( loname, ptr->dir ) ){
+			if( strstr( loname, ptr->dir ) ){ // @todo fncmp?
 				runner->rating=1;
 				break;
 			}

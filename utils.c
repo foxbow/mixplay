@@ -54,7 +54,7 @@ char *strip( char *buff, const char *text, const size_t maxlen ) {
 	while( ( tpos < len ) && ( isspace( text[tpos] ) ) ) tpos++;
 
 	// Filter out all extended characters
-	while( ( tpos < len )  && ( bpos < ( maxlen-1) ) ) {
+	while( ( 0 != text[tpos] )  && ( bpos < ( maxlen-1) ) ) {
 		if( isascii( text[tpos]) ) {
 			buff[bpos]=text[tpos];
 			bpos++;
@@ -73,16 +73,15 @@ char *strip( char *buff, const char *text, const size_t maxlen ) {
 	}
 
 	return buff;
-
 }
 
 /*
- * Print errormessage, errno and quit
+ * Print errormessage, errno and wait for [enter]
  * msg - Message to print
  * info - second part of the massage, for instance a variable
  * error - errno that was set
- *          0 = print message w/o error and return
- *         -1 = print message w/o error and exit
+ *         F_WARN = print message w/o errno and return
+ *         F_FAIL = print message w/o errno and exit
  */
 void fail( const char* msg, const char* info, int error ){
 	endwin();
@@ -97,7 +96,6 @@ void fail( const char* msg, const char* info, int error ){
 	if (error != 0 ) exit(error);
 	return;
 }
-
 
 /**
  * reads from the fd into the line buffer until either a CR
@@ -220,7 +218,7 @@ char *toLower( char *text ){
 
 
 /**
- * add a line to a playlist/blacklist
+ * add a line to a file
  */
 void addToList( const char *path, const char *line ) {
 	FILE *fp;
@@ -235,9 +233,9 @@ void addToList( const char *path, const char *line ) {
 
 
 /*
- * sets a bit in a long bitlist
+ * internally used to set a bit in a long bitlist
  */
-static int setBit( long pos, strval_t val ){
+static int setBit( unsigned long pos, strval_t val ){
 	int bytepos;
 	unsigned char set=0;
 
@@ -255,23 +253,35 @@ static int setBit( long pos, strval_t val ){
 	return 0;
 }
 
+/**
+ * this creates the raw strval of a string
+ * depending on the needed result it may help to turn the strings
+ * into lowercase first. For other cases this may be bad so this function
+ * acts on the strings as given.
+ * If CMP_CHARS is 255 even unicode sequences will be taken into account.
+ * This will NOT work across encodings (of course)
+ */
 static int computestrval( const char* str, strval_t strval ){
-	char c1, c2;
+	unsigned char c1, c2;
 	int cnt, max=0;
 
 	// needs at least two characters!
 	if( 2 > strlen( str) ) return 0;
 
 	for( cnt=0; cnt < strlen( str )-1; cnt++ ){
-		c1=tolower(str[cnt])%CMP_CHARS;
-		c2=tolower(str[cnt+1])%CMP_CHARS;
+		c1=str[cnt]%CMP_CHARS;
+		c2=str[cnt+1]%CMP_CHARS;
 		max=max+setBit( c1*CMP_CHARS+c2, strval );
 	}
 	return max;
 }
 
-static int vecmult( strval_t val1, strval_t val2 ){
-	int result=0;
+/**
+ * internally used to multiplicate two vectors. This is the actual
+ * comparison.
+ */
+static unsigned int vecmult( strval_t val1, strval_t val2 ){
+	unsigned int result=0;
 	int cnt;
 	unsigned char c;
 
@@ -292,7 +302,7 @@ static int vecmult( strval_t val1, strval_t val2 ){
  **/
 int fncmp( const char* str1, const char* str2 ){
 	strval_t str1val, str2val;
-	int maxval, max1, max2;
+	unsigned int maxval, max1, max2;
 	long result;
 	float step;
 
@@ -304,6 +314,7 @@ int fncmp( const char* str1, const char* str2 ){
 
 	// the max possible matches are defined by the min number of bits set!
 	maxval=(max1 < max2) ? max1 : max2;
+	if( 0 == maxval ) return -1;
 
 	step=100.0/maxval;
 
