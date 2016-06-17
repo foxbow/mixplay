@@ -10,6 +10,7 @@
 #include <ctype.h>
 #include <strings.h>
 #include <sys/statvfs.h>
+#include <sys/time.h>
 
 #define RANDOM(x) (rand()%x)
 #ifndef MAXPATHLEN
