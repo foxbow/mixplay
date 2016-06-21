@@ -10,6 +10,7 @@
 #include <ctype.h>
 #include <strings.h>
 #include <sys/statvfs.h>
+#include <sys/time.h>
 
 #define RANDOM(x) (rand()%x)
 #ifndef MAXPATHLEN
@@ -61,6 +62,7 @@ int mp3Exists( const struct entry_t *title );
 int getFiles( const char *cd, struct dirent ***filelist );
 int getDirs( const char *cd, struct dirent ***dirlist );
 
-// DEBUG only!
-// void dumpTitles( struct entry_t *root, char *msg );
+#ifdef DEBUG
+void dumpTitles( struct entry_t *root, char *msg );
+#endif
 #endif /* MUSICMGR_H_ */

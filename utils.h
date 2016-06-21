@@ -6,6 +6,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <ctype.h>
+#include <ncurses.h>
+#include <unistd.h>
 
 /* Default values */
 
@@ -17,10 +20,10 @@
 #define F_FAIL -1
 
 #ifndef MAX
-#define MAX(x,y) (x>y?x:y)
+#define MAX(x,y) ((x)>(y)?(x):(y))
 #endif
 #ifndef MIN
-#define MIN(x,y) (x<y?x:y)
+#define MIN(x,y) ((x)<(y)?(x):(y))
 #endif
 // Represents a string as a bit array
 typedef unsigned char* strval_t;

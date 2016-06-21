@@ -108,6 +108,10 @@ static int msel( const struct dirent *entry ){
 			isMusic( entry->d_name ) );
 }
 
+/**
+ * helperfunction for scandir() sorts entries numerically first then
+ * alphabetical
+ */
 static int tsort( const struct dirent **d1, const struct dirent **d2 ) {
 	int v1, v2;
 	v1= atoi( d1[0]->d_name );
@@ -116,22 +120,35 @@ static int tsort( const struct dirent **d1, const struct dirent **d2 ) {
 	return strcasecmp( d1[0]->d_name, d2[0]->d_name );
 }
 
+/**
+ * loads all music files in cd into musiclist
+ */
 static int getMusic( const char *cd, struct dirent ***musiclist ){
 	return scandir( cd, musiclist, msel, tsort);
 }
 
+/**
+ * loads all unhidden files in cd into musiclist
+ */
 int getFiles( const char *cd, struct dirent ***filelist ){
 	return scandir( cd, filelist, fsel, alphasort);
 }
 
+/**
+ * loads all directories in cd into musiclist
+ */
 int getDirs( const char *cd, struct dirent ***dirlist ){
 	return scandir( cd, dirlist, dsel, alphasort);
 }
 
+
+/**
+ * applies the blacklist on a list of titles and removes matching titles
+ * from the list
+ */
 struct entry_t *useBlacklist( struct entry_t *base ) {
 	struct entry_t *pos;
 	struct bwlist_t *ptr = NULL;
-	struct entry_t *buf = NULL;
 	char loname[MAXPATHLEN];
 
 	base=rewindTitles(base);
@@ -149,7 +166,6 @@ struct entry_t *useBlacklist( struct entry_t *base ) {
 		ptr=blacklist;
 		while( ptr ){
 			if( strstr( loname, ptr->dir ) ) {
-				buf=pos->next;
 				if( NULL == pos->prev ) {
 					base=pos->next;
 				}
@@ -168,6 +184,7 @@ struct entry_t *useBlacklist( struct entry_t *base ) {
 
 /**
  * filters pathnames according to black and whitelist
+ * this does a fuzzy matching against the whitelist
  */
 static int isValid( char *entry ){
 	char loname[MAXPATHLEN];
@@ -202,10 +219,8 @@ static int isValid( char *entry ){
 			if( len <= 20 ) trigger=80;
 			if( len <= 10 ) trigger=88;
 			if( len <= 5 ) trigger=100;
-//			if( strstr( loname, ptr->dir ) ) return -1;
 			strcpy( loname, entry );
 			if( trigger <= fncmp( toLower(loname), ptr->dir ) ){
-//				printf("%s - %s = %i/%i\n", loname, ptr->dir, fncmp( loname, ptr->dir ), trigger );
 				return -1;
 			}
 			ptr=ptr->next;
@@ -217,6 +232,9 @@ static int isValid( char *entry ){
 	}
 }
 
+/**
+ * does the actual loading of a blacklist or favourites list
+ */
 static int loadBWlist( const char *path, int isbl ){
 	FILE *file = NULL;
 	struct bwlist_t *ptr = NULL;
@@ -284,10 +302,16 @@ int loadBlacklist( const char *path ){
 	return loadBWlist( path, 1 );
 }
 
+/**
+ * load a favourites file into the whitelist structure
+ */
 int loadWhitelist( const char *path ){
 	return loadBWlist( path, 0 );
 }
 
+/**
+ * add an entry to the whitelist
+ */
 int addToWhitelist( const char *line ) {
 	struct bwlist_t *entry;
 	entry=calloc( 1, sizeof( struct bwlist_t ) );
@@ -309,7 +333,7 @@ int addToWhitelist( const char *line ) {
  */
 struct entry_t *loadPlaylist( const char *path ) {
 	FILE *fp;
-	int cnt;
+	int cnt=0;
 	struct entry_t *current=NULL;
 	char *buff;
 
@@ -416,6 +440,9 @@ struct entry_t *insertTitle( struct entry_t *base, const char *path ){
 	return root;
 }
 
+/**
+ * return the number of titles in the list
+ */
 int countTitles( struct entry_t *base ) {
 	int cnt=0;
 	if( NULL == base ){
@@ -446,16 +473,15 @@ struct entry_t *rewindTitles( struct entry_t *base ) {
 }
 
 /**
- * mix a list of titles into a new order
+ * mix a list of titles into a random order
  */
  struct entry_t *shuffleTitles( struct entry_t *base ) {
-	struct entry_t *list=NULL;
 	struct entry_t *end=NULL;
 	struct entry_t *runner=NULL;
 	struct entry_t *guard=NULL;
 	char *lastname=NULL;
 
-	int i, num=0, artguard=-1;
+	int num=0, artguard=-1;
 	struct timeval tv;
 
 	// improve 'randomization'
@@ -467,18 +493,11 @@ struct entry_t *rewindTitles( struct entry_t *base ) {
 
 	// Stepping through every item
 	while( base != NULL ) {
-		int j, pos;
-
-		runner=base;
+		int pos;
 
 		// select a title at random
 		pos=RANDOM(num--);
-		for( j=1; j<=pos; j++ ){
-			runner=runner->next;
-			if( runner == NULL ) {
-				runner=base;
-			}
-		}
+		runner=skipTitles( base, pos, 1, 0 );
 
 		// check for duplicates
 		if( artguard && lastname ) {
@@ -498,6 +517,7 @@ struct entry_t *rewindTitles( struct entry_t *base ) {
 		lastname=runner->artist;
 
 		// Remove entry from base
+		// do not replace with removeTitle() we still need runner!
 		if(runner==base) base=runner->next;
 
 		if(runner->prev != NULL){
@@ -521,6 +541,11 @@ struct entry_t *rewindTitles( struct entry_t *base ) {
 	return rewindTitles( end );
 }
 
+/**
+ * skips the given number of titles
+ * this also takes 'repeat' and 'mix' into account.
+ * Caveat: you cannot skip before the first title
+ */
 struct entry_t *skipTitles( struct entry_t *current, int num, int repeat, int mix ) {
 	int dir=num;
 	num=abs(num);
@@ -559,7 +584,6 @@ struct entry_t *skipTitles( struct entry_t *current, int num, int repeat, int mi
 					num=1;
 				}
 			}
-
 		}
 		num--;
 	}
@@ -567,6 +591,11 @@ struct entry_t *skipTitles( struct entry_t *current, int num, int repeat, int mi
 	return current;
 }
 
+/**
+ * applies the loaded whitelist against the list of entries
+ * This function uses a literal comparison to identify true
+ * favourites and is not supposed to use a fuzzy search.
+ */
 int checkWhitelist( struct entry_t *root ) {
 	char loname[MAXPATHLEN];
 	struct bwlist_t *ptr = NULL;
@@ -580,7 +609,7 @@ int checkWhitelist( struct entry_t *root ) {
 		runner->rating=0;
 		ptr=whitelist;
 		while( ptr ){
-			if( strstr( loname, ptr->dir ) ){ // @todo fncmp?
+			if( strstr( loname, ptr->dir ) ){
 				runner->rating=1;
 				break;
 			}
@@ -608,11 +637,9 @@ int mp3Exists( const struct entry_t *title ) {
 struct entry_t *recurse( char *curdir, struct entry_t *files ) {
 	struct entry_t *buff=NULL;
 	char dirbuff[MAXPATHLEN];
-	DIR *directory;
 	FILE *file;
 	struct dirent **entry;
 	int num, i;
-	char *pos;
 
 	if( getVerbosity() > 2 ) {
 		printf("Checking %s\n", curdir );
@@ -660,7 +687,6 @@ struct entry_t *recurse( char *curdir, struct entry_t *files ) {
 		fail( "getDirs", curdir, errno );
 	}
 	for( i=0; i<num; i++ ) {
-//		activity("Scanning");
 		sprintf( dirbuff, "%s/%s", curdir, entry[i]->d_name );
 		files=recurse( dirbuff, files );
 		free(entry[i]);
@@ -670,6 +696,7 @@ struct entry_t *recurse( char *curdir, struct entry_t *files ) {
 	return files;
 }
 
+#ifdef DEBUG
 /**
  * just for debugging purposes!
  */
@@ -683,3 +710,4 @@ void dumpTitles( struct entry_t *root, char *msg ) {
 	}
 	fail("END DUMP",msg,0);
 }
+#endif

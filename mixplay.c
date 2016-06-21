@@ -36,7 +36,7 @@ static void usage( char *progname ){
  * Draw the application frame
  */
 static void drawframe(char *station, struct entry_t *current, const char *status, int stream ) {
-	int i, maxlen, pos, rows;
+	int i, maxlen, pos;
 	int row, col;
 	int middle;
 	char buff[LINE_BUFLEN];
@@ -175,7 +175,7 @@ int main(int argc, char **argv) {
 	char c;
 	char *b;
 	int mix = 0;
-	int i, cnt = 1;
+	int i;
 	fd_set fds;
 	struct timeval to;
 	pid_t pid;
