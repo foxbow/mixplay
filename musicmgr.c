@@ -490,6 +490,18 @@ int countTitles( struct entry_t *base ) {
 	return cnt;
 }
 
+static unsigned long getLowestPlaycount( struct entry_t *base ) {
+	struct entry_t *runner=base;
+	unsigned long min=-1;
+
+	do {
+		if( runner->played < min ) min=base->played;
+		runner=runner->next;
+	} while( runner != base );
+
+	return min;
+}
+
 /**
  * mix a list of titles into a random order
  * @todo: this sometimes ends up with a messed up list
@@ -499,24 +511,24 @@ int countTitles( struct entry_t *base ) {
 	struct entry_t *runner=NULL;
 	struct entry_t *guard=NULL;
 	char *lastname=NULL;
-
 	int num=0, artguard=-1;
 	struct timeval tv;
+	unsigned long count=0;
 
 	// improve 'randomization'
 	gettimeofday(&tv,NULL);
 	srand(getpid()*tv.tv_sec);
 
+	count=getLowestPlaycount( base );
 	num = countTitles(base);
 
 	// Stepping through every item
-	while( base != NULL ) {
+	while( base->next != base ) {
 		int pos;
 		activity("Shuffling ");
 
 		// select a title at random
 		pos=RANDOM(num);
-
 		runner=skipTitles( base, pos );
 
 		// check for duplicates
@@ -531,19 +543,29 @@ int countTitles( struct entry_t *base ) {
 			}
 		}
 
+		// check for playcount
+		guard=runner;
+		do {
+			if( runner->played < count ) break;
+			runner=runner->next;
+		} while( runner != guard );
+
+		if( runner == guard ) {
+			count=runner->played;
+		}
+
 		lastname=runner->artist;
 
 		// Make sure we stay in the right list
-		if(runner==base) {
+		if(runner == base) {
 			base=runner->next;
-			// Is this the last entry?
-			if( base->next == base ) {
-				base=NULL;
-			}
 		}
 
 		end = moveTitle( runner, &end );
 	}
+
+	// add the last title
+	end=moveTitle( base, &end );
 
 	return end->next;
 }

@@ -35,7 +35,7 @@ static struct entry_t *findTitle( struct entry_t *base, const char *path ) {
 int main( int argc, char **argv ){
 	struct entry_t *fsroot=NULL;
 	struct entry_t *dbroot=NULL;
-//	struct entry_t *fsrunner;
+	struct entry_t *guard;
 	struct entry_t *dbrunner;
 
 	char dirbuf[MAXPATHLEN];
@@ -161,22 +161,36 @@ int main( int argc, char **argv ){
 	// check for titles in the database which are no
 	// longer on the filesystem
 	if( rem ) {
-		fail("Not supported yet", __func__, F_FAIL );
-		num=0;
-		dbroot = dbGetMusic( db );
-		dbrunner=dbroot;
+		guard=dbroot;
 
-		while( NULL != dbrunner ) {
+		do {
 			activity( "Cleaning" );
 			if( !mp3Exists(dbrunner) ) {
-//				dbRemoveTitle( db, runner );
+				if(guard == dbrunner) guard=dbrunner->prev;
+				dbrunner=removeTitle( dbrunner );
 				num++;
 			}
 			dbrunner=dbrunner->next;
+		} while( guard != dbrunner );
+
+		if( num > 0 ) {
+			dbClose(&db);
+			if( 0 != remove(dbname) ) {
+				fail("Cannot delete", dbname, errno );
+			}
+			dbOpen(&db,dbname);
+			while( NULL != dbrunner ) {
+				dbAddTitle( db, dbrunner );
+				dbrunner=removeTitle(dbrunner);
+			}
+			printf("Removed %i titles\n", num );
 		}
-		wipeTitles(dbroot);
-		printf("Removed %i titles\n", num );
+		else {
+			wipeTitles(dbroot);
+			printf("No titles to remove\n" );
+		}
 	}
 
+	dbClose(&db);
 	return 0;
 }

@@ -496,7 +496,7 @@ int main(int argc, char **argv) {
 									strcpy( blname, basedir );
 									strcat( blname, "/blacklist.txt" );
 								}
-								addToList( blname, strrchr( current->path, '/')+1 ); // @todo - what to add, name, path or filename?
+								addToList( blname, strrchr( current->path, '/')+1 );
 								current=removeTitle( current );
 								if( NULL != current->prev ) {
 									current=current->prev;
@@ -511,7 +511,7 @@ int main(int argc, char **argv) {
 								}
 								else {
 									if( !(current->flags & MP_FAV) ) {
-										addToList( wlname, strrchr( current->path, '/')+1 ); // @todo - what to add, name, path or filename?
+										addToList( wlname, strrchr( current->path, '/')+1 );
 										current->flags|=MP_FAV;
 									}
 								}
@@ -641,9 +641,9 @@ int main(int argc, char **argv) {
 								strcpy( status, "STOP" );
 							}
 							else {
-								current->played = current->played+1;
-//								if( ( 1 == usedb ) && ( 1 == current->played ) ) {
-								if( 1 == usedb ) {
+								if( ( 1 == usedb ) &&
+										( ( 0 == current->played ) || ( q >= 10 ) ) ) {
+									current->played = current->played+1;
 									dbSetTitle( dbname, current );
 								}
 								current=next;
