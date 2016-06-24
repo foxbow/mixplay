@@ -1,6 +1,7 @@
 #include "utils.h"
 #include "ncutils.h"
 #include "musicmgr.h"
+#include "dbutils.h"
 
 #include <getopt.h>
 #include <signal.h>
@@ -26,7 +27,6 @@ static void usage( char *progname ){
 	printf( "-S         : interactive search\n" );
 	printf( "             Disables -m by default.\n");
 	printf( "-m         : Mix, enable shuffle mode on playlist\n" );
-	printf( "-r         : Repeat playlist\n");
 	printf( "-v         : increase Verbosity (just for debugging)\n" );
 	printf( "[path|URL] : path to the music files [.]\n" );
 	exit(0);
@@ -71,7 +71,7 @@ static void drawframe(char *station, struct entry_t *current, const char *status
 		// Set the current playing title
 		if( NULL != current ) {
 			strip(buff, current->display, maxlen);
-			if(current->rating) {
+			if(current->flags & MP_FAV) {
 				attron(A_BOLD);
 			}
 
@@ -100,7 +100,7 @@ static void drawframe(char *station, struct entry_t *current, const char *status
 			for( i=middle-2; i>1; i-- ){
 				if( NULL != runner ) {
 					strip( buff, runner->display, maxlen );
-					if(runner->rating) {
+					if(runner->flags & MP_FAV) {
 						attron(A_BOLD);
 					}
 					runner=runner->prev;
@@ -117,7 +117,7 @@ static void drawframe(char *station, struct entry_t *current, const char *status
 			for( i=middle+2; i<row-2; i++ ){
 				if( NULL != runner ) {
 					strip( buff, runner->display, maxlen );
-					if(runner->rating) {
+					if(runner->flags & MP_FAV ) {
 						attron(A_BOLD);
 					}
 					runner=runner->next;
@@ -139,13 +139,8 @@ static void drawframe(char *station, struct entry_t *current, const char *status
  */
 static void sendplay( int fd, struct entry_t *song ) {
 	char line[LINE_BUFLEN];
-
 	strncpy( line, "load ", LINE_BUFLEN );
-	if( strlen(song->path) != 0 ){
-		strncat( line, song->path, LINE_BUFLEN );
-		strncat( line, "/", LINE_BUFLEN );
-	}
-	strncat( line, song->name, LINE_BUFLEN );
+	strncat( line, song->path, LINE_BUFLEN );
 	strncat( line, "\n", LINE_BUFLEN );
 	write( fd, line, LINE_BUFLEN );
 }
@@ -182,13 +177,13 @@ int main(int argc, char **argv) {
 	int redraw;
 	// set when a stream is played
 	int stream=0;
-	// no repeat
-	int repeat = 0;
 	// normal playing order
 	int order=1;
 	// mpg123 is up and running
 	int running;
-	int usedb=0; // DB support is not yet done!
+	int usedb=1;
+	int search=0;
+	int db=0;
 
 	FILE *fp=NULL;
 
@@ -229,7 +224,6 @@ int main(int argc, char **argv) {
 				}
 				if( 0 != i ){
 					if( startsWith( &line[1], "mix" ) ) mix=(i==-1?0:1);
-					else if( startsWith( &line[1], "repeat" ) ) repeat=(i==-1?0:1);
 					else fail( "Unknown keyword:", line, -1 );
 				}
 			}
@@ -263,15 +257,13 @@ int main(int argc, char **argv) {
 		case 'W':
 			loadWhitelist(wlname);
 			break;
-		case 'r':
-			repeat = 1;
-			break;
 		case 'S':
 			mix=0;
 			printf("Search: ");
 			fflush(stdout);
 			readline( line, MAXPATHLEN, fileno(stdin) );
 			if( strlen(line) > 1 ) {
+				search=1;
 				addToWhitelist( line );
 			}
 			else {
@@ -283,6 +275,7 @@ int main(int argc, char **argv) {
 		case 's':
 			mix=0;
 			if( strlen(optarg) > 2 ) {
+				search=1;
 				addToWhitelist( optarg );
 			}
 			else {
@@ -299,8 +292,8 @@ int main(int argc, char **argv) {
 
 	// parse additional argument
 	if (optind < argc) {
-		usedb=0;
 		if( isURL( argv[optind] ) ) {
+			usedb=0;
 			stream=1;
 			line[0]=0;
 			if( endsWith( argv[optind], "m3u" ) ) {
@@ -313,9 +306,11 @@ int main(int argc, char **argv) {
 		}
 		else if( endsWith( argv[optind], ".mp3" ) ) {
 			// play single song...
+			usedb=0;
 			root=insertTitle( root, argv[optind] );
 		}
 		else if ( endsWith( argv[optind], "m3u" ) ) {
+			usedb=0;
 			root=loadPlaylist( argv[optind] );
 			if( NULL != strrchr( argv[optind], '/' ) ) {
 				strcpy(basedir, argv[optind]);
@@ -327,11 +322,12 @@ int main(int argc, char **argv) {
 			// usually playlist should NOT be shuffled
 			mix=0;
 		}
-		else if ( endsWith( argv[optind], ".sq3" ) ) {
+		else if ( endsWith( argv[optind], ".db" ) ) {
 			usedb=1;
 			strncpy( dbname, argv[optind], MAXPATHLEN );
 		}
 		else {
+			usedb=0;
 			strncpy( basedir, argv[optind], MAXPATHLEN );
 			if (basedir[strlen(basedir) - 1] == '/')
 				basedir[strlen(basedir) - 1] = 0;
@@ -373,10 +369,16 @@ int main(int argc, char **argv) {
 	// load titles
 	if( NULL == root ) {
 		if( usedb ) {
-//			dbGetAllMusic( &root );
+			dbOpen( &db, dbname );
+			root=dbGetMusic( db );
+			dbClose(&db);
 			root=useBlacklist( root );
+			if(search){
+				root=useWhitelist(root);
+			}
 		} else {
-			root = recurse(basedir, NULL);
+			root = recurse(basedir, NULL, basedir);
+			root=root->next;
 		}
 	}
 
@@ -384,10 +386,9 @@ int main(int argc, char **argv) {
 	// prepare playing the titles
 	if (NULL != root) {
 		if(!stream){
-			if (mix)
+			if (mix) {
 				root = shuffleTitles(root );
-			else
-				root = rewindTitles(root );
+			}
 
 			if(0 != loadWhitelist(wlname)) {
 				checkWhitelist(root);
@@ -495,7 +496,7 @@ int main(int argc, char **argv) {
 									strcpy( blname, basedir );
 									strcat( blname, "/blacklist.txt" );
 								}
-								addToList( blname, current->name );
+								addToList( blname, strrchr( current->path, '/')+1 ); // @todo - what to add, name, path or filename?
 								current=removeTitle( current );
 								if( NULL != current->prev ) {
 									current=current->prev;
@@ -503,11 +504,16 @@ int main(int argc, char **argv) {
 								order=1;
 								write( p_command[1], "STOP\n", 6 );
 							break;
-							case 'f':
-								// sprintf( tbuf, "%s/%s", current->path, current->name );
-								if(0 == current->rating) {
-									addToList( wlname, current->name );
-									current->rating=1;
+							case 'f': // toggles the favourite flag on a title
+								if( usedb ){
+									current->flags ^= MP_FAV;
+									dbSetTitle( dbname, current );
+								}
+								else {
+									if( !(current->flags & MP_FAV) ) {
+										addToList( wlname, strrchr( current->path, '/')+1 ); // @todo - what to add, name, path or filename?
+										current->flags|=MP_FAV;
+									}
 								}
 							break;
 						}
@@ -543,25 +549,26 @@ int main(int argc, char **argv) {
 								if( strlen(current->display) != 0 ) {
 									insertTitle( current, current->display );
 								}
-								strip(current->display, b, LINE_BUFLEN );
+								strip(current->display, b, MAXPATHLEN );
 							}
 						}
 						// standard mpg123 info
 						else {
 							if (NULL != (b = strstr(line, "title:"))) {
-								strip(tbuf, b + 6, LINE_BUFLEN);
-								// do not redraw yet, wait for the artist
+								strip(current->title, b + 6, NAMELEN );
+								snprintf( current->display, MAXPATHLEN, "%s - %s",
+										current->artist, current->title );
 							}
 							// line starts with 'Artist:' this means we had a 'Title:' line before
 							else if (NULL != (b = strstr(line, "artist:"))) {
-								strip(current->display, b + 7, LINE_BUFLEN);
-								strcat(current->display, " - ");
-								strip(current->display + strlen(current->display), tbuf,
-										LINE_BUFLEN - strlen(current->display));
+								strip(current->artist, b + 7, NAMELEN );
+								snprintf( current->display, MAXPATHLEN, "%s - %s",
+										current->artist, current->title );
 							}
 							// Album
 							else if (NULL != (b = strstr(line, "album:"))) {
 								strip(station, b + 6, LINE_BUFLEN);
+								strip( current->album, station, NAMELEN );
 							}
 						}
 						redraw=1;
@@ -628,12 +635,17 @@ int main(int argc, char **argv) {
 						cmd = atoi(&line[3]);
 						switch (cmd) {
 						case 0:
-							next = skipTitles( current, order, repeat, mix );
+							next = skipTitles( current, order );
 							order=1;
 							if ( next == current ) {
 								strcpy( status, "STOP" );
 							}
 							else {
+								current->played = current->played+1;
+//								if( ( 1 == usedb ) && ( 1 == current->played ) ) {
+								if( 1 == usedb ) {
+									dbSetTitle( dbname, current );
+								}
 								current=next;
 								sendplay(p_command[1], current);
 							}
