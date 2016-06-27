@@ -1,8 +1,5 @@
 #include "musicmgr.h"
 
-static struct bwlist_t *blacklist=NULL;
-static struct bwlist_t *whitelist=NULL;
-
 /**
  * moves *title from the original list and inserts it after *target
  */
@@ -138,38 +135,44 @@ int getDirs( const char *cd, struct dirent ***dirlist ){
 	return scandir( cd, dirlist, dsel, alphasort);
 }
 
-struct entry_t *useWhitelist( struct entry_t *base ) {
+static int checkMatch( const char* name, const char* pat ) {
+	int len;
+	char loname[NAMELEN];
+	int trigger;
+
+	len=MIN(strlen(name), strlen(pat) );
+	trigger=70;
+	if( len <= 20 ) trigger=80;
+	if( len <= 10 ) trigger=88;
+	if( len <= 5 ) trigger=100;
+	strcpy( loname, name );
+	if( trigger <= fncmp( toLower(loname), pat ) ){
+		return -1;
+	}
+	return 0;
+}
+
+struct entry_t *useWhitelist( struct entry_t *base, struct bwlist_t *term ) {
 	struct entry_t  *runner=base;
 	struct entry_t  *next=NULL;
 	struct entry_t  *result=NULL;
-	struct bwlist_t *term=NULL;
-	char   loname[MAXPATHLEN];
-	int len;
-	int trigger;
+	int cnt=0;
 
 	if( NULL == base ) {
 		fail("No music loaded!", "Nothing to search in", F_FAIL );
 	}
 
-	term=whitelist;
-
 	while( term != NULL ) {
 		toLower(term->dir);
 		do{
-			strcpy( loname, runner->path );
-			len=MIN(strlen(loname), strlen(term->dir) );
-			trigger=70;
-			if( len <= 20 ) trigger=80;
-			if( len <= 10 ) trigger=88;
-			if( len <= 5 ) trigger=100;
-			if( trigger <= fncmp( loname, term->dir ) ){
+			if( checkMatch( runner->path, term->dir ) ) {
 				next=runner->next;
 				if( runner==base ) {
-					base=next;
-					next=next->next; // @todo this may skip a title..
+					base=next;       // make sure base stays valid after removal
 				}
 
 				result=moveTitle( runner, &result );
+				cnt++;
 				runner=next;
 			}
 			else {
@@ -181,6 +184,8 @@ struct entry_t *useWhitelist( struct entry_t *base ) {
 
 	wipeTitles( base );
 
+	if( getVerbosity() ) printf("Added %i titles\n", cnt );
+
 	return result?result->next:NULL;
 }
 
@@ -188,16 +193,17 @@ struct entry_t *useWhitelist( struct entry_t *base ) {
  * applies the blacklist on a list of titles and removes matching titles
  * from the list
  */
-struct entry_t *useBlacklist( struct entry_t *base ) {
+struct entry_t *useBlacklist( struct entry_t *base, struct bwlist_t *list ) {
 	struct entry_t *pos=base;
 	struct bwlist_t *ptr = NULL;
 	char loname[512];
+	int cnt=0;
 
 	if( NULL == base ) {
 		fail("No music loaded!", "No blacklist used", F_FAIL );
 	}
 
-	if( NULL == blacklist ) {
+	if( NULL == list ) {
 		return base;
 	}
 
@@ -206,11 +212,12 @@ struct entry_t *useBlacklist( struct entry_t *base ) {
 		strncat( loname, pos->path, 512-strlen(loname) );
 		toLower( loname );
 
-		ptr=blacklist;
+		ptr=list;
 		while( ptr ){
 			if( strstr( ptr->dir, loname ) ) {
 				if( pos == base ) base=base->next;
 				pos=removeTitle(pos);
+				cnt++;
 				break;
 			}
 			ptr=ptr->next;
@@ -223,63 +230,15 @@ struct entry_t *useBlacklist( struct entry_t *base ) {
 		pos=pos->next;
 	} while( pos != base );
 
+	if( getVerbosity() ) printf("Removed %i titles\n", cnt );
+
 	return base;
-}
-
-/**
- * filters pathnames according to black and whitelist
- * this does a fuzzy matching against the whitelist
- */
-static int isValid( char *entry ){
-	char loname[MAXPATHLEN];
-	struct bwlist_t *ptr = NULL;
-	int len=0, pos=0;
-	int trigger=0;
-
-	strncpy( loname, entry, MAXPATHLEN );
-	toLower( loname );
-
-	for( len=strlen(entry); len>0; len-- ) {
-		if(entry[len]=='/') pos++;
-		if( pos == 3 ){
-			strcpy( loname, &entry[len] );
-			break;
-		}
-	}
-	if( len == 0 ) strcpy( loname, entry );
-
-	// Blacklist has priority
-	ptr=blacklist;
-	while( ptr ){
-		if( strstr( loname, ptr->dir ) ) return 0;
-		ptr=ptr->next;
-	}
-
-	if( whitelist ) {
-		ptr=whitelist;
-		while( ptr ){
-			len=MIN(strlen(entry), strlen(ptr->dir) );
-			trigger=70;
-			if( len <= 20 ) trigger=80;
-			if( len <= 10 ) trigger=88;
-			if( len <= 5 ) trigger=100;
-			strcpy( loname, entry );
-			if( trigger <= fncmp( toLower(loname), ptr->dir ) ){
-				return -1;
-			}
-			ptr=ptr->next;
-		}
-		return 0;
-	}
-	else {
-		return -1;
-	}
 }
 
 /**
  * does the actual loading of a blacklist or favourites list
  */
-static int loadBWlist( const char *path, int isbl ){
+struct bwlist_t *loadList( const char *path ){
 	FILE *file = NULL;
 	struct bwlist_t *ptr = NULL;
 	struct bwlist_t *bwlist = NULL;
@@ -287,21 +246,11 @@ static int loadBWlist( const char *path, int isbl ){
 	char *buff;
 	int cnt=0;
 
-	if( isbl ) {
-		if( NULL != blacklist )
-			fail("Blacklist already loaded! ", path, -1 );
-	}
-	else {
-		if( NULL != whitelist )
-			// fail("Whitelist already loaded! ", path, -1 );
-			return 0;
-	}
-
 	buff=calloc( MAXPATHLEN, sizeof(char) );
 	if( !buff ) fail( "Out of memory", "", errno );
 
 	file=fopen( path, "r" );
-	if( !file ) return 0;
+	if( !file ) return NULL;
 		// fail("Couldn't open list ", path,  errno);
 
 	while( !feof( file ) ){
@@ -329,47 +278,26 @@ static int loadBWlist( const char *path, int isbl ){
 	free( buff );
 	fclose( file );
 
-	if( isbl ) {
-		blacklist=bwlist;
-	}
-	else {
-		whitelist=bwlist;
-	}
-
-	return cnt;
-}
-
-/**
- * load a blacklist file into the blacklist structure
- */
-int loadBlacklist( const char *path ){
-	return loadBWlist( path, 1 );
-}
-
-/**
- * load a favourites file into the whitelist structure
- */
-int loadWhitelist( const char *path ){
-	return loadBWlist( path, 0 );
+	return bwlist;
 }
 
 /**
  * add an entry to the whitelist
  */
-int addToWhitelist( const char *line ) {
+struct bwlist_t *addToList( const char *line, struct bwlist_t *list ) {
 	struct bwlist_t *entry;
 	entry=calloc( 1, sizeof( struct bwlist_t ) );
 	strncpy( entry->dir, line, MAXPATHLEN );
 	toLower( entry->dir );
-	if( !whitelist ) {
-		whitelist=entry;
-		entry->next=NULL;
+	entry->next = NULL;
+	if( NULL == list ) {
+		list=entry;
 	}
 	else {
-		entry->next=whitelist->next;
-		whitelist=entry;
+		list->next=entry;
 	}
-	return 0;
+
+	return list;
 }
 
 /**
@@ -504,7 +432,6 @@ static unsigned long getLowestPlaycount( struct entry_t *base ) {
 
 /**
  * mix a list of titles into a random order
- * @todo: this sometimes ends up with a messed up list
  */
  struct entry_t *shuffleTitles( struct entry_t *base ) {
 	struct entry_t *end=NULL;
@@ -605,12 +532,10 @@ struct entry_t *skipTitles( struct entry_t *current, int num ) {
  * This function uses a literal comparison to identify true
  * favourites and is not supposed to use a fuzzy search.
  */
-int checkWhitelist( struct entry_t *root ) {
+int checkWhitelist( struct entry_t *root, struct bwlist_t *whitelist ) {
 	char loname[MAXPATHLEN];
 	struct bwlist_t *ptr = NULL;
 	struct entry_t *runner=root;
-
-	if(!whitelist) return -1;
 
 	do {
 		activity("Favourites ");
@@ -669,7 +594,7 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 		}
 		strncat( dirbuff, entry[i]->d_name, MAXPATHLEN );
 
-		if( isValid(dirbuff) ) {
+//		if( isValid(dirbuff) ) { // we're adding everything now!
 			file=fopen( dirbuff, "r");
 			if( NULL == file ) fail("Couldn't open file ", dirbuff,  errno);
 			if( -1 == fseek( file, 0L, SEEK_END ) ) fail( "fseek() failed on ", dirbuff, errno );
@@ -694,7 +619,7 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 			buff->size=ftell( file )/1024;
 			files=buff;
 			fclose(file);
-		}
+//		}
 		free(entry[i]);
 	}
 	free(entry);

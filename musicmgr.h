@@ -19,12 +19,13 @@
   #define MAXPATHLEN 256
 #endif
 
-#define MP_FAV 1
+#define MP_FAV 1	// Favourite
+#define MP_BL  2    // Blacklisted
 
 struct entry_t {
 	char path[MAXPATHLEN];		// path on the filesystem to the file
 	unsigned long size;			// size in kb
-	char artist[NAMELEN];	// Artist info
+	char artist[NAMELEN];		// Artist info
 	char title[NAMELEN];		// Title info (from mp3)
 	char album[NAMELEN];		// Album info (from mp3)
 //	int  length;				// length in seconds (from mp3)
@@ -53,15 +54,14 @@ struct entry_t *removeTitle( struct entry_t *entry );
 struct entry_t *loadPlaylist( const char *path );
 struct entry_t *insertTitle( struct entry_t *base, const char *path );
 struct entry_t *skipTitles( struct entry_t *current, int num );
-struct entry_t *useBlacklist( struct entry_t *base );
-struct entry_t *useWhitelist( struct entry_t *base );
+struct entry_t *useBlacklist( struct entry_t *base, struct bwlist_t *list );
+struct entry_t *useWhitelist( struct entry_t *base, struct bwlist_t *list );
 int countTitles( struct entry_t *base );
-int loadBlacklist( const char *path );
-int loadWhitelist( const char *path );
+struct bwlist_t *loadList( const char *path );
 int genPathName( const char *basedir, struct entry_t *entry  );
 int isMusic( const char *name );
-int addToWhitelist( const char *line );
-int checkWhitelist( struct entry_t *root );
+struct bwlist_t *addToList( const char *line, struct bwlist_t *list );
+int checkWhitelist( struct entry_t *root, struct bwlist_t *list );
 int mp3Exists( const struct entry_t *title );
 int getFiles( const char *cd, struct dirent ***filelist );
 int getDirs( const char *cd, struct dirent ***dirlist );

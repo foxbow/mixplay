@@ -39,7 +39,7 @@ void muteVerbosity();
 /**
  * General utility functions
  */
-void addToList( const char *path, const char *line );
+void addToFile( const char *path, const char *line );
 void setTitle(const char* title);
 void fail( const char* msg, const char* info, int error );
 int fncmp( const char* str1, const char* str2 );

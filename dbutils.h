@@ -14,7 +14,7 @@
 struct dbentry_t {
 	char path[MAXPATHLEN];		// path on the filesystem to the file
 	unsigned long size;			// size in kb
-	char artist[NAMELEN];	// Artist info
+	char artist[NAMELEN];		// Artist info
 	char title[NAMELEN];		// Title info (from mp3)
 	char album[NAMELEN];		// Album info (from mp3)
 //	int  length;				// length in seconds (from mp3)

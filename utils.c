@@ -220,7 +220,7 @@ char *toLower( char *text ){
 /**
  * add a line to a file
  */
-void addToList( const char *path, const char *line ) {
+void addToFile( const char *path, const char *line ) {
 	FILE *fp;
 	fp=fopen( path, "a" );
 	if( NULL == fp ) {

@@ -153,6 +153,9 @@ int main(int argc, char **argv) {
 	struct entry_t *current = NULL;
 	struct entry_t *next = NULL;
 
+	struct bwlist_t *blacklist=NULL;
+	struct bwlist_t *whitelist=NULL;
+
 	// pipes to communicate with mpg123
 	int p_status[2];
 	int p_command[2];
@@ -255,7 +258,7 @@ int main(int argc, char **argv) {
 			strcpy(wlname, optarg);
 			break;
 		case 'W':
-			loadWhitelist(wlname);
+			whitelist=loadList( wlname );
 			break;
 		case 'S':
 			mix=0;
@@ -264,7 +267,7 @@ int main(int argc, char **argv) {
 			readline( line, MAXPATHLEN, fileno(stdin) );
 			if( strlen(line) > 1 ) {
 				search=1;
-				addToWhitelist( line );
+				whitelist=addToList( line, whitelist );
 			}
 			else {
 				puts("Ignoring less than three characters!");
@@ -276,7 +279,7 @@ int main(int argc, char **argv) {
 			mix=0;
 			if( strlen(optarg) > 2 ) {
 				search=1;
-				addToWhitelist( optarg );
+				whitelist=addToList( optarg, whitelist );
 			}
 			else {
 				puts("Ignoring less than three characters!");
@@ -347,7 +350,7 @@ int main(int argc, char **argv) {
 			strcat( line, blname );
 			strcpy( blname, line );
 		}
-		loadBlacklist( blname );
+		blacklist=loadList( blname );
 	}
 
 	// set default whitelist name
@@ -372,9 +375,9 @@ int main(int argc, char **argv) {
 			dbOpen( &db, dbname );
 			root=dbGetMusic( db );
 			dbClose(&db);
-			root=useBlacklist( root );
+			root=useBlacklist( root, blacklist );
 			if(search){
-				root=useWhitelist(root);
+				root=useWhitelist(root, whitelist);
 			}
 		} else {
 			root = recurse(basedir, NULL, basedir);
@@ -389,10 +392,8 @@ int main(int argc, char **argv) {
 			if (mix) {
 				root = shuffleTitles(root );
 			}
-
-			if(0 != loadWhitelist(wlname)) {
-				checkWhitelist(root);
-			}
+			whitelist=loadList( wlname );
+			checkWhitelist(root, whitelist );
 		}
 
 		// create communication pipes
@@ -496,7 +497,7 @@ int main(int argc, char **argv) {
 									strcpy( blname, basedir );
 									strcat( blname, "/blacklist.txt" );
 								}
-								addToList( blname, strrchr( current->path, '/')+1 );
+								addToFile( blname, strrchr( current->path, '/')+1 );
 								current=removeTitle( current );
 								if( NULL != current->prev ) {
 									current=current->prev;
@@ -505,15 +506,9 @@ int main(int argc, char **argv) {
 								write( p_command[1], "STOP\n", 6 );
 							break;
 							case 'f': // toggles the favourite flag on a title
-								if( usedb ){
-									current->flags ^= MP_FAV;
-									dbSetTitle( dbname, current );
-								}
-								else {
-									if( !(current->flags & MP_FAV) ) {
-										addToList( wlname, strrchr( current->path, '/')+1 );
-										current->flags|=MP_FAV;
-									}
+								if( !(current->flags & MP_FAV) ) {
+									addToFile( wlname, strrchr( current->path, '/')+1 );
+									current->flags|=MP_FAV;
 								}
 							break;
 						}
