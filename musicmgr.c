@@ -10,12 +10,12 @@ static struct entry_t *moveTitle( struct entry_t *title, struct entry_t **target
 
 	if( NULL == target[0] ) {
 		target[0]=title;
-		title->next=title;
-		title->prev=title;
+		target[0]->next=target[0];
+		target[0]->prev=target[0];
 	}
 	else {
 		title->next=target[0]->next;
-		title->next->prev=title;
+		target[0]->next->prev=title;
 		title->prev=target[0];
 		target[0]->next=title;
 	}
@@ -137,7 +137,7 @@ int getDirs( const char *cd, struct dirent ***dirlist ){
 
 static int checkMatch( const char* name, const char* pat ) {
 	int len;
-	char loname[NAMELEN];
+	char loname[MAXPATHLEN];
 	int trigger;
 
 	len=MIN(strlen(name), strlen(pat) );
@@ -145,14 +145,14 @@ static int checkMatch( const char* name, const char* pat ) {
 	if( len <= 20 ) trigger=80;
 	if( len <= 10 ) trigger=88;
 	if( len <= 5 ) trigger=100;
-	strcpy( loname, name );
+	strncpy( loname, name, MAXPATHLEN );
 	if( trigger <= fncmp( toLower(loname), pat ) ){
 		return -1;
 	}
 	return 0;
 }
 
-struct entry_t *useWhitelist( struct entry_t *base, struct bwlist_t *term ) {
+struct entry_t *searchList( struct entry_t *base, struct bwlist_t *term ) {
 	struct entry_t  *runner=base;
 	struct entry_t  *next=NULL;
 	struct entry_t  *result=NULL;
@@ -163,12 +163,11 @@ struct entry_t *useWhitelist( struct entry_t *base, struct bwlist_t *term ) {
 	}
 
 	while( term != NULL ) {
-		toLower(term->dir);
-		do{
+		while( runner->next != base ){
 			if( checkMatch( runner->path, term->dir ) ) {
 				next=runner->next;
 				if( runner==base ) {
-					base=next;       // make sure base stays valid after removal
+					base=base->next;       // make sure base stays valid after removal
 				}
 
 				result=moveTitle( runner, &result );
@@ -178,7 +177,7 @@ struct entry_t *useWhitelist( struct entry_t *base, struct bwlist_t *term ) {
 			else {
 				runner=runner->next;
 			}
-		} while( runner != base );
+		} //  while( runner != base );
 		term=term->next;
 	}
 
@@ -194,9 +193,9 @@ struct entry_t *useWhitelist( struct entry_t *base, struct bwlist_t *term ) {
  * from the list
  */
 struct entry_t *useBlacklist( struct entry_t *base, struct bwlist_t *list ) {
-	struct entry_t *pos=base;
-	struct bwlist_t *ptr = NULL;
-	char loname[512];
+	struct entry_t  *pos = base;
+	struct bwlist_t *ptr = list;
+	char loname[NAMELEN+MAXPATHLEN];
 	int cnt=0;
 
 	if( NULL == base ) {
@@ -208,15 +207,16 @@ struct entry_t *useBlacklist( struct entry_t *base, struct bwlist_t *list ) {
 	}
 
 	do{
-		strncpy( loname, pos->display, 512 );
-		strncat( loname, pos->path, 512-strlen(loname) );
+		strncpy( loname, pos->path, NAMELEN+MAXPATHLEN );
+		strncat( loname, pos->display, NAMELEN+MAXPATHLEN-strlen(loname) );
 		toLower( loname );
 
 		ptr=list;
 		while( ptr ){
-			if( strstr( ptr->dir, loname ) ) {
+			if( strstr( loname, ptr->dir ) ) {
 				if( pos == base ) base=base->next;
 				pos=removeTitle(pos);
+				pos=pos->prev;
 				cnt++;
 				break;
 			}
@@ -264,7 +264,7 @@ struct bwlist_t *loadList( const char *path ){
 				ptr=ptr->next;
 			}
 			if( !ptr ) fail( "Out of memory!", "", errno );
-			strncpy( ptr->dir, toLower(buff), strlen( buff ) );
+			strncpy( ptr->dir, toLower(buff), MAXPATHLEN );
 			ptr->dir[ strlen(buff)-1 ]=0;
 			ptr->next=NULL;
 			cnt++;
@@ -408,10 +408,9 @@ int countTitles( struct entry_t *base ) {
 		return 0;
 	}
 
-//	base=rewindTitles( base );
 	do {
 		cnt++;
-		runner=runner->next;
+		runner=runner->prev;
 	} while( runner != base );
 	if (getVerbosity() > 0 ) printf("Found %i titles\n", cnt );
 
@@ -447,7 +446,7 @@ static unsigned long getLowestPlaycount( struct entry_t *base ) {
 	srand(getpid()*tv.tv_sec);
 
 	count=getLowestPlaycount( base );
-	num = countTitles(base);
+	num = countTitles(base)+1;
 
 	// Stepping through every item
 	while( base->next != base ) {
@@ -489,6 +488,7 @@ static unsigned long getLowestPlaycount( struct entry_t *base ) {
 		}
 
 		end = moveTitle( runner, &end );
+		num--;
 	}
 
 	// add the last title
@@ -532,26 +532,29 @@ struct entry_t *skipTitles( struct entry_t *current, int num ) {
  * This function uses a literal comparison to identify true
  * favourites and is not supposed to use a fuzzy search.
  */
-int checkWhitelist( struct entry_t *root, struct bwlist_t *whitelist ) {
+int applyFavourites( struct entry_t *root, struct bwlist_t *whitelist ) {
 	char loname[MAXPATHLEN];
 	struct bwlist_t *ptr = NULL;
 	struct entry_t *runner=root;
+	int cnt=0;
 
 	do {
 		activity("Favourites ");
 		strcpy( loname, runner->path );
 		toLower( loname );
-//		runner->flags|=MP_FAV;
 		ptr=whitelist;
 		while( ptr ){
 			if( strstr( loname, ptr->dir ) ){
 				runner->flags|=MP_FAV;
+				cnt++;
 				break;
 			}
 			ptr=ptr->next;
 		}
 		runner=runner->next;
 	} while ( runner != root );
+
+	if( getVerbosity() ) printf("Marked %i favourites\n", cnt );
 
 	return 0;
 }
@@ -638,17 +641,15 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 	return files;
 }
 
-#ifdef DEBUG
 /**
  * just for debugging purposes!
  */
-void dumpTitles( struct entry_t *root, char *msg ) {
+void dumpTitles( struct entry_t *root ) {
 	struct entry_t *ptr=root;
-	if( NULL==root ) fail("NO LIST", msg, F_FAIL );
+	if( NULL==root ) fail("NO LIST", "", F_FAIL );
 	do {
-		puts( ptr->path );
+		printf("[%04li] %s: %s - %s (%s)\n", ptr->key, ptr->path, ptr->artist, ptr->title, ptr->album );
 		ptr=ptr->next;
 	} while( ptr != root );
-	fail("END DUMP",msg,F_FAIL );
+	fail("END DUMP","",F_FAIL );
 }
-#endif

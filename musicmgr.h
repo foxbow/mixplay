@@ -55,18 +55,16 @@ struct entry_t *loadPlaylist( const char *path );
 struct entry_t *insertTitle( struct entry_t *base, const char *path );
 struct entry_t *skipTitles( struct entry_t *current, int num );
 struct entry_t *useBlacklist( struct entry_t *base, struct bwlist_t *list );
-struct entry_t *useWhitelist( struct entry_t *base, struct bwlist_t *list );
+struct entry_t *searchList( struct entry_t *base, struct bwlist_t *list );
 int countTitles( struct entry_t *base );
 struct bwlist_t *loadList( const char *path );
 int genPathName( const char *basedir, struct entry_t *entry  );
 int isMusic( const char *name );
 struct bwlist_t *addToList( const char *line, struct bwlist_t *list );
-int checkWhitelist( struct entry_t *root, struct bwlist_t *list );
+int applyFavourites( struct entry_t *root, struct bwlist_t *list );
 int mp3Exists( const struct entry_t *title );
 int getFiles( const char *cd, struct dirent ***filelist );
 int getDirs( const char *cd, struct dirent ***dirlist );
 
-#ifdef DEBUG
-void dumpTitles( struct entry_t *root, char *msg );
-#endif
+void dumpTitles( struct entry_t *root );
 #endif /* MUSICMGR_H_ */

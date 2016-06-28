@@ -18,15 +18,15 @@
  */
 static void usage( char *progname ){
 	printf( "%s - console frontend to mpg123\n", progname );
-	printf( "Usage: %s [-b <file>] [-w <file>] [-s <key>|-S] [-m] [-r] [-v] [path|URL]\n", progname );
+	printf( "Usage: %s [-b <file>] [-f <file>] [-s <key>|-S] [-p <file>] [-m] [-v] [path|URL]\n", progname );
 	printf( "-b <file>  : Blacklist of names to exclude\n" );
-	printf( "-w <file>  : List of favourites\n" );
-	printf( "-W         : Apply favourites as whitelist\n" );
+	printf( "-f <file>  : List of favourites\n" );
 	printf( "-s <key>   : Search names like <key> (can be used multiple times)\n" );
 	printf( "             Disables -m by default.\n");
 	printf( "-S         : interactive search\n" );
 	printf( "             Disables -m by default.\n");
 	printf( "-m         : Mix, enable shuffle mode on playlist\n" );
+	printf( "-p <file>  : use file as fuzzy playlist (party mode)\n" );
 	printf( "-v         : increase Verbosity (just for debugging)\n" );
 	printf( "[path|URL] : path to the music files [.]\n" );
 	exit(0);
@@ -35,7 +35,7 @@ static void usage( char *progname ){
 /**
  * Draw the application frame
  */
-static void drawframe(char *station, struct entry_t *current, const char *status, int stream ) {
+static void drawframe( struct entry_t *current, const char *status, int stream ) {
 	int i, maxlen, pos;
 	int row, col;
 	int middle;
@@ -64,7 +64,11 @@ static void drawframe(char *station, struct entry_t *current, const char *status
 
 		// title
 		dhline( middle-1, 1, col-3 );
-		strip( buff, station, maxlen );
+		if( NULL != current ) {
+			strip( buff, current->album, maxlen );
+		} else {
+			strip( buff, "mixplay "VERSION, maxlen );
+		}
 		pos = (col - (strlen(buff) + 2)) / 2;
 		mvprintw(middle-1, pos, " %s ", buff);
 
@@ -154,7 +158,8 @@ int main(int argc, char **argv) {
 	struct entry_t *next = NULL;
 
 	struct bwlist_t *blacklist=NULL;
-	struct bwlist_t *whitelist=NULL;
+	struct bwlist_t *favourites=NULL;
+	struct bwlist_t *searchlist=NULL;
 
 	// pipes to communicate with mpg123
 	int p_status[2];
@@ -163,7 +168,6 @@ int main(int argc, char **argv) {
 	char line[LINE_BUFLEN];
 	char status[LINE_BUFLEN] = "INIT";
 	char tbuf[LINE_BUFLEN];
-	char station[LINE_BUFLEN] = "mixplay "VERSION;
 	char basedir[MAXPATHLEN];
 	char dirbuf[MAXPATHLEN];
 	char dbname[MAXPATHLEN] = "";
@@ -172,7 +176,7 @@ int main(int argc, char **argv) {
 	int key;
 	char c;
 	char *b;
-	int mix = 0;
+	int mix = 1;
 	int i;
 	fd_set fds;
 	struct timeval to;
@@ -243,31 +247,27 @@ int main(int argc, char **argv) {
 	}
 
 	// parse command line options
-	while ((c = getopt(argc, argv, "mb:w:Wrvs:S")) != -1) {
+	while ((c = getopt(argc, argv, "mb:f:rvs:Sp:")) != -1) {
 		switch (c) {
 		case 'v': // not documented and pretty useless in normal use
 			incVerbosity();
 		break;
 		case 'm':
-			mix = 1;
+			mix = 0;
 			break;
 		case 'b':
 			strcpy(blname, optarg);
 			break;
-		case 'w':
+		case 'f':
 			strcpy(wlname, optarg);
 			break;
-		case 'W':
-			whitelist=loadList( wlname );
-			break;
 		case 'S':
-			mix=0;
 			printf("Search: ");
 			fflush(stdout);
 			readline( line, MAXPATHLEN, fileno(stdin) );
 			if( strlen(line) > 1 ) {
 				search=1;
-				whitelist=addToList( line, whitelist );
+				searchlist=addToList( line, searchlist );
 			}
 			else {
 				puts("Ignoring less than three characters!");
@@ -276,16 +276,19 @@ int main(int argc, char **argv) {
 			}
 			break;
 		case 's':
-			mix=0;
 			if( strlen(optarg) > 2 ) {
 				search=1;
-				whitelist=addToList( optarg, whitelist );
+				searchlist=addToList( optarg, searchlist );
 			}
 			else {
 				puts("Ignoring less than three characters!");
 				sleep(3);
 				return -1;
 			}
+			break;
+		case 'p':
+			search=1;
+			searchlist=loadList( optarg );
 			break;
 		default:
 			usage(argv[0]);
@@ -296,6 +299,7 @@ int main(int argc, char **argv) {
 	// parse additional argument
 	if (optind < argc) {
 		if( isURL( argv[optind] ) ) {
+			mix=0;
 			usedb=0;
 			stream=1;
 			line[0]=0;
@@ -310,10 +314,12 @@ int main(int argc, char **argv) {
 		else if( endsWith( argv[optind], ".mp3" ) ) {
 			// play single song...
 			usedb=0;
+			mix=0;
 			root=insertTitle( root, argv[optind] );
 		}
 		else if ( endsWith( argv[optind], "m3u" ) ) {
 			usedb=0;
+			mix=0;
 			root=loadPlaylist( argv[optind] );
 			if( NULL != strrchr( argv[optind], '/' ) ) {
 				strcpy(basedir, argv[optind]);
@@ -340,7 +346,7 @@ int main(int argc, char **argv) {
 	// set default blacklist name
 	if (0 == strlen( blname) ) {
 		strcpy( blname, basedir );
-		strcat( blname, "/blacklist.txt" );
+		strcat( blname, "/blacklist.dnp" );
 	}
 	// load given blacklist
 	else {
@@ -350,8 +356,8 @@ int main(int argc, char **argv) {
 			strcat( line, blname );
 			strcpy( blname, line );
 		}
-		blacklist=loadList( blname );
 	}
+	blacklist=loadList( blname );
 
 	// set default whitelist name
 	if (0 == strlen( wlname) ) {
@@ -366,35 +372,34 @@ int main(int argc, char **argv) {
 			strcat( line, wlname );
 			strcpy( wlname, line );
 		}
-		// loadWhitelist( wlname );
 	}
+	favourites=loadList( wlname );
 
-	// load titles
+	// load and prepare titles
 	if( NULL == root ) {
 		if( usedb ) {
 			dbOpen( &db, dbname );
 			root=dbGetMusic( db );
 			dbClose(&db);
-			root=useBlacklist( root, blacklist );
-			if(search){
-				root=useWhitelist(root, whitelist);
-			}
 		} else {
-			root = recurse(basedir, NULL, basedir);
+			root=recurse(basedir, NULL, basedir);
 			root=root->next;
+		}
+
+		root=useBlacklist( root, blacklist );
+		applyFavourites( root, favourites );
+
+		if(search){
+			root=searchList(root, searchlist);
+		}
+		if (mix) {
+			root=shuffleTitles(root);
 		}
 	}
 
 	// No else as the above calls may return NULL!
 	// prepare playing the titles
 	if (NULL != root) {
-		if(!stream){
-			if (mix) {
-				root = shuffleTitles(root );
-			}
-			whitelist=loadList( wlname );
-			checkWhitelist(root, whitelist );
-		}
 
 		// create communication pipes
 		pipe(p_status);
@@ -412,7 +417,6 @@ int main(int argc, char **argv) {
 			if (dup2(p_status[1], STDOUT_FILENO) != STDOUT_FILENO) {
 				fail("Could not dup stdout for player", "", errno);
 			}
-			// dup2( STDERR_FILENO, p_status[0] );
 
 			close(p_command[1]);
 			close(p_status[0]);
@@ -437,7 +441,7 @@ int main(int argc, char **argv) {
 			cbreak();
 			keypad(stdscr, TRUE);
 			noecho();
-			drawframe(station, NULL, status, stream );
+			drawframe( NULL, status, stream );
 
 			while (running) {
 				FD_ZERO( &fds );
@@ -493,14 +497,13 @@ int main(int argc, char **argv) {
 								write( p_command[1], "JUMP 0\n", 8 );
 							break;
 							case 'b':
-								if( 0 == strlen(blname) ) {
-									strcpy( blname, basedir );
-									strcat( blname, "/blacklist.txt" );
-								}
 								addToFile( blname, strrchr( current->path, '/')+1 );
 								current=removeTitle( current );
 								if( NULL != current->prev ) {
 									current=current->prev;
+								}
+								else {
+									fail("Broken link", current->path, F_FAIL);
 								}
 								order=1;
 								write( p_command[1], "STOP\n", 6 );
@@ -536,7 +539,7 @@ int main(int argc, char **argv) {
 						// ICY stream info
 						if( NULL != strstr( line, "ICY-" ) ) {
 							if( NULL != strstr( line, "ICY-NAME: " ) ) {
-								strip( station, line+13, LINE_BUFLEN );
+								strip( current->album, line+13, NAMELEN );
 							}
 							if( NULL != ( b = strstr( line, "StreamTitle") ) ) {
 								b = b + 13;
@@ -562,8 +565,7 @@ int main(int argc, char **argv) {
 							}
 							// Album
 							else if (NULL != (b = strstr(line, "album:"))) {
-								strip(station, b + 6, LINE_BUFLEN);
-								strip( current->album, station, NAMELEN );
+								strip( current->album, b + 6, NAMELEN );
 							}
 						}
 						redraw=1;
@@ -653,24 +655,24 @@ int main(int argc, char **argv) {
 							break;
 						default:
 							sprintf( status, "Unknown status %i!", cmd);
-							drawframe( station, current, status, stream );
+							drawframe( current, status, stream );
 							sleep(1);
 						}
 						redraw=1;
 						break;
 					case 'E':
 						sprintf( status, "ERROR: %s", line);
-						drawframe( station, current, status, stream );
+						drawframe( current, status, stream );
 						sleep(1);
 						break;
 					default:
 						sprintf( status, "MPG123 : %s", line);
-						drawframe( station, current, status, stream );
+						drawframe( current, status, stream );
 						sleep(1);
 						break;
 					} // case()
 				} // fgets() > 0
-				if( redraw ) drawframe(station, current, status, stream );
+				if( redraw ) drawframe( current, status, stream );
 			} // while(running)
 			kill(pid, SIGTERM);
 			endwin();
