@@ -43,7 +43,7 @@ int genPathName( const char *basedir, struct entry_t *entry  ){
 		curdir[strlen( curdir ) - 4]=0;
 	}
 
-	strcpy( entry->artist, "Various" );
+	strcpy( entry->artist, "Sampler" );
 	strcpy( entry->album, "None" );
 
 	p=strrchr( curdir, '/' );
@@ -189,17 +189,17 @@ struct entry_t *searchList( struct entry_t *base, struct bwlist_t *term ) {
 }
 
 /**
- * applies the blacklist on a list of titles and removes matching titles
+ * applies the dnplist on a list of titles and removes matching titles
  * from the list
  */
-struct entry_t *useBlacklist( struct entry_t *base, struct bwlist_t *list ) {
+struct entry_t *useDNPlist( struct entry_t *base, struct bwlist_t *list ) {
 	struct entry_t  *pos = base;
 	struct bwlist_t *ptr = list;
 	char loname[NAMELEN+MAXPATHLEN];
 	int cnt=0;
 
 	if( NULL == base ) {
-		fail("No music loaded!", "No blacklist used", F_FAIL );
+		fail("No music loaded!", "No list used", F_FAIL );
 	}
 
 	if( NULL == list ) {
@@ -236,7 +236,7 @@ struct entry_t *useBlacklist( struct entry_t *base, struct bwlist_t *list ) {
 }
 
 /**
- * does the actual loading of a blacklist or favourites list
+ * does the actual loading of a list
  */
 struct bwlist_t *loadList( const char *path ){
 	FILE *file = NULL;
@@ -282,7 +282,7 @@ struct bwlist_t *loadList( const char *path ){
 }
 
 /**
- * add an entry to the whitelist
+ * add an entry to a list
  */
 struct bwlist_t *addToList( const char *line, struct bwlist_t *list ) {
 	struct bwlist_t *entry;
@@ -412,7 +412,7 @@ int countTitles( struct entry_t *base ) {
 		cnt++;
 		runner=runner->prev;
 	} while( runner != base );
-	if (getVerbosity() > 0 ) printf("Found %i titles\n", cnt );
+	if (getVerbosity() > 1 ) printf("Found %i titles\n", cnt );
 
 	return cnt;
 }
@@ -450,12 +450,10 @@ static unsigned long getLowestPlaycount( struct entry_t *base ) {
 
 	// Stepping through every item
 	while( base->next != base ) {
-		int pos;
 		activity("Shuffling ");
 
 		// select a title at random
-		pos=RANDOM(num);
-		runner=skipTitles( base, pos );
+		runner=skipTitles( base, RANDOM(num) );
 
 		// check for duplicates
 		if( artguard && lastname ) {
@@ -499,8 +497,6 @@ static unsigned long getLowestPlaycount( struct entry_t *base ) {
 
 /**
  * skips the given number of titles
- * this also takes 'repeat' and 'mix' into account.
- * Caveat: you cannot skip before the first title
  */
 struct entry_t *skipTitles( struct entry_t *current, int num ) {
 	int dir=num;
@@ -528,11 +524,10 @@ struct entry_t *skipTitles( struct entry_t *current, int num ) {
 }
 
 /**
- * applies the loaded whitelist against the list of entries
- * This function uses a literal comparison to identify true
- * favourites and is not supposed to use a fuzzy search.
+ * This function sets the favourite bit on titles found in the given list
+ * a literal comparison is used to identify true favourites
  */
-int applyFavourites( struct entry_t *root, struct bwlist_t *whitelist ) {
+int applyFavourites( struct entry_t *root, struct bwlist_t *favourites ) {
 	char loname[MAXPATHLEN];
 	struct bwlist_t *ptr = NULL;
 	struct entry_t *runner=root;
@@ -542,7 +537,7 @@ int applyFavourites( struct entry_t *root, struct bwlist_t *whitelist ) {
 		activity("Favourites ");
 		strcpy( loname, runner->path );
 		toLower( loname );
-		ptr=whitelist;
+		ptr=favourites;
 		while( ptr ){
 			if( strstr( loname, ptr->dir ) ){
 				runner->flags|=MP_FAV;
@@ -584,7 +579,7 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 	if( getVerbosity() > 2 ) {
 		printf("Checking %s\n", curdir );
 	}
-	// get all music files according to the blacklist
+	// get all music files according to the dnplist
 	num = getMusic( curdir, &entry );
 	if( num < 0 ) {
 		fail( "getMusic failed", curdir, errno );
@@ -597,32 +592,31 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 		}
 		strncat( dirbuff, entry[i]->d_name, MAXPATHLEN );
 
-//		if( isValid(dirbuff) ) { // we're adding everything now!
-			file=fopen( dirbuff, "r");
-			if( NULL == file ) fail("Couldn't open file ", dirbuff,  errno);
-			if( -1 == fseek( file, 0L, SEEK_END ) ) fail( "fseek() failed on ", dirbuff, errno );
+		file=fopen( dirbuff, "r");
+		if( NULL == file ) fail("Couldn't open file ", dirbuff,  errno);
+		if( -1 == fseek( file, 0L, SEEK_END ) ) fail( "fseek() failed on ", dirbuff, errno );
 
-			buff=(struct entry_t *)calloc(1, sizeof(struct entry_t));
-			if(buff == NULL) fail("Out of memory!", "", errno);
+		buff=(struct entry_t *)calloc(1, sizeof(struct entry_t));
+		if(buff == NULL) fail("Out of memory!", "", errno);
 
-			strncpy( buff->path, dirbuff, MAXPATHLEN );
-			genPathName( basedir, buff );
-			if( NULL == files ){
-				files=buff;
-				buff->prev=files;
-				buff->next=files;
-			}
-			else {
-				buff->prev=files;
-				buff->next=files->next;
-				files->next->prev=buff;
-				files->next=buff;
-			}
-
-			buff->size=ftell( file )/1024;
+		strncpy( buff->path, dirbuff, MAXPATHLEN );
+		genPathName( basedir, buff );
+		if( NULL == files ){
 			files=buff;
-			fclose(file);
-//		}
+			buff->prev=files;
+			buff->next=files;
+		}
+		else {
+			buff->prev=files;
+			buff->next=files->next;
+			files->next->prev=buff;
+			files->next=buff;
+		}
+
+		buff->size=ftell( file )/1024;
+		files=buff;
+		fclose(file);
+
 		free(entry[i]);
 	}
 	free(entry);

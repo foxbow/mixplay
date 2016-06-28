@@ -19,7 +19,7 @@
 static void usage( char *progname ){
 	printf( "%s - console frontend to mpg123\n", progname );
 	printf( "Usage: %s [-b <file>] [-f <file>] [-s <key>|-S] [-p <file>] [-m] [-v] [path|URL]\n", progname );
-	printf( "-b <file>  : Blacklist of names to exclude\n" );
+	printf( "-b <file>  : List of names to exclude\n" );
 	printf( "-f <file>  : List of favourites\n" );
 	printf( "-s <key>   : Search names like <key> (can be used multiple times)\n" );
 	printf( "             Disables -m by default.\n");
@@ -157,7 +157,7 @@ int main(int argc, char **argv) {
 	struct entry_t *current = NULL;
 	struct entry_t *next = NULL;
 
-	struct bwlist_t *blacklist=NULL;
+	struct bwlist_t *dnplist=NULL;
 	struct bwlist_t *favourites=NULL;
 	struct bwlist_t *searchlist=NULL;
 
@@ -171,7 +171,7 @@ int main(int argc, char **argv) {
 	char basedir[MAXPATHLEN];
 	char dirbuf[MAXPATHLEN];
 	char dbname[MAXPATHLEN] = "";
-	char blname[MAXPATHLEN] = "";
+	char dnpname[MAXPATHLEN] = "";
 	char wlname[MAXPATHLEN] = "";
 	int key;
 	char c;
@@ -211,33 +211,17 @@ int main(int argc, char **argv) {
 				case 's':
 					strncpy( basedir, line+1, MAXPATHLEN );
 					break;
-				case '+':
-					i=1;
-					break;
-				case '-':
-					i=-1;
-					break;
 				case '#':
-					break;
-				case 'b':
-					strncpy( blname, line+1, MAXPATHLEN );
-					break;
-				case 'w':
-					strncpy( wlname, line+1, MAXPATHLEN );
 					break;
 				default:
 					fail( "Config error:", line, -1 );
 					break;
 				}
-				if( 0 != i ){
-					if( startsWith( &line[1], "mix" ) ) mix=(i==-1?0:1);
-					else fail( "Unknown keyword:", line, -1 );
-				}
 			}
 		} while( !feof(fp) );
 	}
 	else {
-		printf( "%s dies not exist.\n", dirbuf );
+		printf( "%s does not exist.\n", dirbuf );
 	}
 
 	// if no basedir has been set, use the current dir as default
@@ -256,7 +240,7 @@ int main(int argc, char **argv) {
 			mix = 0;
 			break;
 		case 'b':
-			strcpy(blname, optarg);
+			strcpy(dnpname, optarg);
 			break;
 		case 'f':
 			strcpy(wlname, optarg);
@@ -343,21 +327,21 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	// set default blacklist name
-	if (0 == strlen( blname) ) {
-		strcpy( blname, basedir );
-		strcat( blname, "/blacklist.dnp" );
+	// set default dnplist name
+	if (0 == strlen( dnpname) ) {
+		strcpy( dnpname, basedir );
+		strcat( dnpname, "/default.dnp" );
 	}
-	// load given blacklist
+	// load given dnplist
 	else {
-		if( blname[0] != '/' ) {
+		if( dnpname[0] != '/' ) {
 			strcpy( line, basedir );
 			strcat( line, "/" );
-			strcat( line, blname );
-			strcpy( blname, line );
+			strcat( line, dnpname );
+			strcpy( dnpname, line );
 		}
 	}
-	blacklist=loadList( blname );
+	dnplist=loadList( dnpname );
 
 	// set default whitelist name
 	if (0 == strlen( wlname) ) {
@@ -386,20 +370,20 @@ int main(int argc, char **argv) {
 			root=root->next;
 		}
 
-		root=useBlacklist( root, blacklist );
+		root=useDNPlist( root, dnplist );
 		applyFavourites( root, favourites );
 
 		if(search){
 			root=searchList(root, searchlist);
-		}
-		if (mix) {
-			root=shuffleTitles(root);
 		}
 	}
 
 	// No else as the above calls may return NULL!
 	// prepare playing the titles
 	if (NULL != root) {
+		if (mix) {
+			root=shuffleTitles(root);
+		}
 
 		// create communication pipes
 		pipe(p_status);
@@ -497,7 +481,7 @@ int main(int argc, char **argv) {
 								write( p_command[1], "JUMP 0\n", 8 );
 							break;
 							case 'b':
-								addToFile( blname, strrchr( current->path, '/')+1 );
+								addToFile( dnpname, strrchr( current->path, '/')+1 );
 								current=removeTitle( current );
 								if( NULL != current->prev ) {
 									current=current->prev;

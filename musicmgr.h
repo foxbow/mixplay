@@ -20,7 +20,7 @@
 #endif
 
 #define MP_FAV 1	// Favourite
-#define MP_BL  2    // Blacklisted
+#define MP_DNP 2    // do not play
 
 struct entry_t {
 	char path[MAXPATHLEN];		// path on the filesystem to the file
@@ -54,7 +54,7 @@ struct entry_t *removeTitle( struct entry_t *entry );
 struct entry_t *loadPlaylist( const char *path );
 struct entry_t *insertTitle( struct entry_t *base, const char *path );
 struct entry_t *skipTitles( struct entry_t *current, int num );
-struct entry_t *useBlacklist( struct entry_t *base, struct bwlist_t *list );
+struct entry_t *useDNPlist( struct entry_t *base, struct bwlist_t *list );
 struct entry_t *searchList( struct entry_t *base, struct bwlist_t *list );
 int countTitles( struct entry_t *base );
 struct bwlist_t *loadList( const char *path );
