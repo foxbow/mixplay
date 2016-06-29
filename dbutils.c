@@ -62,26 +62,15 @@ int dbAddTitle( int db, struct entry_t *title ){
 	return 0;
 }
 
-/**
- * updates a title in the database
- */
-int dbSetTitle( const char *path, struct entry_t *title ){
-	int db=0;
+int dbSetTitle( int db, struct entry_t *title ) {
 	struct dbentry_t dbentry;
-
-	dbOpen( &db, path );
-
 	if( -1 == lseek( db, DBESIZE*title->key, SEEK_SET ) ) {
 		fail( "Could not skip to title!", title->path, errno );
 	}
-
 	entry2db( title, &dbentry );
 	if( write( db, &dbentry, DBESIZE ) != DBESIZE ) {
 		fail( "Could not overwrite entry!", title->path, errno );
 	}
-
-	dbClose( &db );
-
 	return 0;
 }
 

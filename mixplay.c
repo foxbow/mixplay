@@ -18,16 +18,16 @@
  */
 static void usage( char *progname ){
 	printf( "%s - console frontend to mpg123\n", progname );
-	printf( "Usage: %s [-b <file>] [-f <file>] [-s <key>|-S] [-p <file>] [-m] [-v] [path|URL]\n", progname );
+	printf( "Usage: %s [-b <file>] [-f <file>] [-s <key>|-S] [-p <file>] [-m] [-r] [-v] [-T] [path|URL]\n", progname );
 	printf( "-b <file>  : List of names to exclude\n" );
 	printf( "-f <file>  : List of favourites\n" );
 	printf( "-s <key>   : Search names like <key> (can be used multiple times)\n" );
-	printf( "             Disables -m by default.\n");
 	printf( "-S         : interactive search\n" );
-	printf( "             Disables -m by default.\n");
-	printf( "-m         : Mix, enable shuffle mode on playlist\n" );
+	printf( "-m         : disable shuffle mode on playlist\n" );
+	printf( "-r         : disable reapeat mode on playlist\n");
 	printf( "-p <file>  : use file as fuzzy playlist (party mode)\n" );
 	printf( "-v         : increase Verbosity (just for debugging)\n" );
+	printf( "-T         : Tagrun, set MP3tags on all titles in the db\n" );
 	printf( "[path|URL] : path to the music files [.]\n" );
 	exit(0);
 }
@@ -191,6 +191,9 @@ int main(int argc, char **argv) {
 	int usedb=1;
 	int search=0;
 	int db=0;
+	int tagrun=0;
+	int repeat=1;
+	int tagsync=0;
 
 	FILE *fp=NULL;
 
@@ -231,9 +234,9 @@ int main(int argc, char **argv) {
 	}
 
 	// parse command line options
-	while ((c = getopt(argc, argv, "mb:f:rvs:Sp:")) != -1) {
+	while ((c = getopt(argc, argv, "mb:f:rvs:Sp:T")) != -1) {
 		switch (c) {
-		case 'v': // not documented and pretty useless in normal use
+		case 'v': // pretty useless in normal use
 			incVerbosity();
 		break;
 		case 'm':
@@ -274,10 +277,19 @@ int main(int argc, char **argv) {
 			search=1;
 			searchlist=loadList( optarg );
 			break;
+		case 'T':
+			tagrun=1;
+			break;
 		default:
 			usage(argv[0]);
 			break;
 		}
+	}
+
+	if( tagrun ) {
+		usedb=1;
+		mix=0;
+		repeat=0;
 	}
 
 	// parse additional argument
@@ -327,6 +339,10 @@ int main(int argc, char **argv) {
 		}
 	}
 
+	if( tagrun && !usedb ) {
+		fail( "Tagrun needs a database!", "", F_FAIL );
+	}
+
 	// set default dnplist name
 	if (0 == strlen( dnpname) ) {
 		strcpy( dnpname, basedir );
@@ -364,14 +380,15 @@ int main(int argc, char **argv) {
 		if( usedb ) {
 			dbOpen( &db, dbname );
 			root=dbGetMusic( db );
-			dbClose(&db);
+			dbClose( &db );
 		} else {
 			root=recurse(basedir, NULL, basedir);
 			root=root->next;
 		}
-
-		root=useDNPlist( root, dnplist );
-		applyFavourites( root, favourites );
+		if( ! tagrun ) {
+			root=useDNPlist( root, dnplist );
+			applyFavourites( root, favourites );
+		}
 
 		if(search){
 			root=searchList(root, searchlist);
@@ -381,7 +398,7 @@ int main(int argc, char **argv) {
 	// No else as the above calls may return NULL!
 	// prepare playing the titles
 	if (NULL != root) {
-		if (mix) {
+		if (mix && !tagrun) {
 			root=shuffleTitles(root);
 		}
 
@@ -427,6 +444,7 @@ int main(int argc, char **argv) {
 			noecho();
 			drawframe( NULL, status, stream );
 
+			if( usedb ) dbOpen( &db, dbname );
 			while (running) {
 				FD_ZERO( &fds );
 				FD_SET( fileno(stdin), &fds );
@@ -585,29 +603,41 @@ int main(int argc, char **argv) {
 						 * c = seconds (float)
 						 * d = seconds left (float)
 						 */
-						b=strrchr( line, ' ' );
-						rem=atoi(b);
-						*b=0;
-						b=strrchr( line, ' ' );
-						in=atoi(b);
-						// file play
-						if( 0 != rem ) {
-							q=(30*in)/(rem+in);
-							memset( tbuf, 0, LINE_BUFLEN );
-							for( i=0; i<30; i++ ) {
-								if( i < q ) tbuf[i]='=';
-								else if( i == q ) tbuf[i]='>';
-								else tbuf[i]=' ';
+						if( tagrun ) {
+							if( tagsync == 0 ){
+								tagsync=1;
+								if( current->played == 0 ) {
+									dbSetTitle( db, current );
+								}
+								strcpy(status, "TAGGING");
+								write( p_command[1], "STOP\n", 6 );
 							}
-							sprintf(status, "%i:%02i [%s] %i:%02i", in/60, in%60, tbuf, rem/60, rem%60 );
 						}
-						// stream play
 						else {
-							if( in/60 < 60 ) {
-								sprintf(status, "%i:%02i PLAYING", in/60, in%60 );
+							b=strrchr( line, ' ' );
+							rem=atoi(b);
+							*b=0;
+							b=strrchr( line, ' ' );
+							in=atoi(b);
+							// file play
+							if( 0 != rem ) {
+								q=(30*in)/(rem+in);
+								memset( tbuf, 0, LINE_BUFLEN );
+								for( i=0; i<30; i++ ) {
+									if( i < q ) tbuf[i]='=';
+									else if( i == q ) tbuf[i]='>';
+									else tbuf[i]=' ';
+								}
+								sprintf(status, "%i:%02i [%s] %i:%02i", in/60, in%60, tbuf, rem/60, rem%60 );
 							}
+							// stream play
 							else {
-								sprintf(status, "%i:%02i:%02i PLAYING", in/3600, (in%3600)/60, in%60 );
+								if( in/60 < 60 ) {
+									sprintf(status, "%i:%02i PLAYING", in/60, in%60 );
+								}
+								else {
+									sprintf(status, "%i:%02i:%02i PLAYING", in/3600, (in%3600)/60, in%60 );
+								}
 							}
 						}
 						redraw=1;
@@ -616,19 +646,38 @@ int main(int argc, char **argv) {
 						cmd = atoi(&line[3]);
 						switch (cmd) {
 						case 0:
-							next = skipTitles( current, order );
-							order=1;
-							if ( next == current ) {
-								strcpy( status, "STOP" );
+							if( tagrun ) {
+								if( current->played == 0 ) {
+									current->played=1;
+									dbSetTitle( db, current );
+								}
+								current=current->next;
+								while( ( current->played > 0 ) && ( current != root ) ) {
+									current=current->next;
+								}
+								if( current == root ) {
+									strcpy( status, "STOP" );
+								}
+								else {
+									tagsync=0;
+									sendplay( p_command[1], current );
+								}
 							}
 							else {
-								if( ( 1 == usedb ) &&
-										( ( 0 == current->played ) || ( q >= 10 ) ) ) {
-									current->played = current->played+1;
-									dbSetTitle( dbname, current );
+								next = skipTitles( current, order );
+								order=1;
+								if ( ( !repeat && ( next == root ) ) || ( next == current ) ) {
+									strcpy( status, "STOP" );
 								}
-								current=next;
-								sendplay(p_command[1], current);
+								else {
+									if( ( 1 == usedb ) &&
+											( ( 0 == current->played ) || ( q >= 10 ) ) ) {
+										current->played = current->played+1;
+										dbSetTitle( db, current );
+									}
+									current=next;
+									sendplay(p_command[1], current);
+								}
 							}
 							break;
 						case 1:
@@ -658,6 +707,7 @@ int main(int argc, char **argv) {
 				} // fgets() > 0
 				if( redraw ) drawframe( current, status, stream );
 			} // while(running)
+			if( usedb ) dbClose( &db );
 			kill(pid, SIGTERM);
 			endwin();
 		} // fork() parent

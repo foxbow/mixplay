@@ -25,7 +25,7 @@ struct dbentry_t {
 
 int dbOpen( int *db, const char *path );
 int dbAddTitle( int db, struct entry_t *title );
-int dbSetTitle( const char *path, struct entry_t *title );
+int dbSetTitle( int db, struct entry_t *title );
 struct entry_t *dbGetMusic( int db );
 int dbRemTitle( int db, struct entry_t *title );
 void dbClose( int *db );
