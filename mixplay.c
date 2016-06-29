@@ -202,6 +202,8 @@ int main(int argc, char **argv) {
 
 	FILE *fp=NULL;
 
+	muteVerbosity();
+
 	// load default config
 	b=getenv("HOME");
 	sprintf( dirbuf, "%s/.mixplay", b );
@@ -703,8 +705,10 @@ int main(int argc, char **argv) {
 									strcpy( status, "STOP" );
 								}
 								else {
-									if( ( 1 == usedb ) &&
-											( ( 0 == current->played ) || ( q >= 10 ) ) ) {
+									// note: no check for how long the title has played
+									// because when a title is skipped it should move to
+									// the end of the queue
+									if ( 1 == usedb ) {
 										current->played = current->played+1;
 										dbSetTitle( db, current );
 									}

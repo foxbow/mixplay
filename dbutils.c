@@ -120,8 +120,11 @@ struct entry_t *dbGetMusic( int db ) {
 		index++;
 	}
 
+	if( getVerbosity() ) printf("Loaded %li titles from the database\n", index );
+
 	return (dbroot?dbroot->next:NULL);
 }
+
 int dbCheckExist( char *dbname ) {
 	struct entry_t *root;
 	struct entry_t *runner;
@@ -154,7 +157,7 @@ int dbCheckExist( char *dbname ) {
 			dbAddTitle( db, runner );
 			runner=removeTitle( runner );
 		}
-		if( getVerbosity() ) printf("Removed %i titles\n", num );
+		printf("Removed %i titles\n", num );
 	}
 	else {
 		wipeTitles( root );
@@ -188,7 +191,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 		fsroot=removeTitle( fsroot );
 	}
 
-	if( getVerbosity() ) printf("Added %i titles to %s\n", num, dbname );
+	printf("Added %i titles to %s\n", num, dbname );
 	dbClose( &db );
 	return num;
 }

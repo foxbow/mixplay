@@ -438,6 +438,8 @@ static unsigned long getLowestPlaycount( struct entry_t *base ) {
 	struct entry_t *guard=NULL;
 	char *lastname=NULL;
 	int num=0, artguard=-1;
+	int nameskip=0;
+	int playskip=0;
 	struct timeval tv;
 	unsigned long count=0;
 
@@ -465,14 +467,17 @@ static unsigned long getLowestPlaycount( struct entry_t *base ) {
 					break;
 				}
 			}
+			if( guard != runner ) nameskip++;
 		}
 
 		// check for playcount
 		guard=runner;
 		do {
-			if( runner->played < count ) break;
+			if( runner->played <= count ) break;
 			runner=runner->next;
 		} while( runner != guard );
+
+		if( runner != guard ) playskip++;
 
 		if( runner == guard ) {
 			count=runner->played;
@@ -491,6 +496,11 @@ static unsigned long getLowestPlaycount( struct entry_t *base ) {
 
 	// add the last title
 	end=moveTitle( base, &end );
+
+	if( getVerbosity() > 1 ) {
+		printf("Skipped %i titles to avoid artist repeats\n", nameskip );
+		printf("Skipped %i titles to keep playrate even (max=%li)\n", playskip, count );
+	}
 
 	return end->next;
 }
