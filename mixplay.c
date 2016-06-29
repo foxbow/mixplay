@@ -18,8 +18,8 @@
  */
 static void usage( char *progname ){
 	printf( "%s - console frontend to mpg123\n", progname );
-	printf( "Usage: %s [-b <file>] [-f <file>] [-s <key>|-S] [-p <file>] [-m] [-r] [-v] [-T] [path|URL]\n", progname );
-	printf( "-b <file>  : List of names to exclude\n" );
+	printf( "Usage: %s [-d <file>] [-f <file>] [-s <key>|-S] [-p <file>] [-m] [-r] [-v] [-T] [path|URL]\n", progname );
+	printf( "-d <file>  : List of names to exclude\n" );
 	printf( "-f <file>  : List of favourites\n" );
 	printf( "-s <key>   : Search names like <key> (can be used multiple times)\n" );
 	printf( "-S         : interactive search\n" );
@@ -27,8 +27,12 @@ static void usage( char *progname ){
 	printf( "-r         : disable reapeat mode on playlist\n");
 	printf( "-p <file>  : use file as fuzzy playlist (party mode)\n" );
 	printf( "-v         : increase Verbosity (just for debugging)\n" );
-	printf( "-T         : Tagrun, set MP3tags on all titles in the db\n" );
+	printf( "-C         : clear database and add titles anew *\n" );
+	printf( "-A         : add new titles to the database *\n" );
+	printf( "-D         : delete removed titles from the database *\n" );
+	printf( "-T         : Tagrun, set MP3tags on all titles in the db *\n" );
 	printf( "[path|URL] : path to the music files [.]\n" );
+	printf( " * these functions will not start the player\n");
 	exit(0);
 }
 
@@ -172,7 +176,7 @@ int main(int argc, char **argv) {
 	char dirbuf[MAXPATHLEN];
 	char dbname[MAXPATHLEN] = "";
 	char dnpname[MAXPATHLEN] = "";
-	char wlname[MAXPATHLEN] = "";
+	char favname[MAXPATHLEN] = "";
 	int key;
 	char c;
 	char *b;
@@ -194,6 +198,7 @@ int main(int argc, char **argv) {
 	int tagrun=0;
 	int repeat=1;
 	int tagsync=0;
+	int scan=0;
 
 	FILE *fp=NULL;
 
@@ -228,13 +233,12 @@ int main(int argc, char **argv) {
 	}
 
 	// if no basedir has been set, use the current dir as default
-	if( 0 == strlen(basedir) ) {
-		if (NULL == getcwd(basedir, MAXPATHLEN))
-			fail("Could not get current dir!", "", errno);
+	if( 0 == strlen(basedir) && ( NULL == getcwd( basedir, MAXPATHLEN ) ) ) {
+		fail("Could not get current dir!", "", errno);
 	}
 
 	// parse command line options
-	while ((c = getopt(argc, argv, "mb:f:rvs:Sp:T")) != -1) {
+	while ((c = getopt(argc, argv, "md:f:rvs:Sp:CADT")) != -1) {
 		switch (c) {
 		case 'v': // pretty useless in normal use
 			incVerbosity();
@@ -242,11 +246,11 @@ int main(int argc, char **argv) {
 		case 'm':
 			mix = 0;
 			break;
-		case 'b':
+		case 'd':
 			strcpy(dnpname, optarg);
 			break;
 		case 'f':
-			strcpy(wlname, optarg);
+			strcpy(favname, optarg);
 			break;
 		case 'S':
 			printf("Search: ");
@@ -280,6 +284,15 @@ int main(int argc, char **argv) {
 		case 'T':
 			tagrun=1;
 			break;
+		case 'C':
+			scan|=3;
+			break;
+		case 'A':
+			scan|=2;
+			break;
+		case 'D':
+			scan|=4;
+			break;
 		default:
 			usage(argv[0]);
 			break;
@@ -297,6 +310,7 @@ int main(int argc, char **argv) {
 		if( isURL( argv[optind] ) ) {
 			mix=0;
 			usedb=0;
+			repeat=0;
 			stream=1;
 			line[0]=0;
 			if( endsWith( argv[optind], "m3u" ) ) {
@@ -311,6 +325,7 @@ int main(int argc, char **argv) {
 			// play single song...
 			usedb=0;
 			mix=0;
+			repeat=0;
 			root=insertTitle( root, argv[optind] );
 		}
 		else if ( endsWith( argv[optind], "m3u" ) ) {
@@ -324,8 +339,6 @@ int main(int argc, char **argv) {
 				basedir[i]=0;
 				chdir(basedir);
 			}
-			// usually playlist should NOT be shuffled
-			mix=0;
 		}
 		else if ( endsWith( argv[optind], ".db" ) ) {
 			usedb=1;
@@ -339,6 +352,26 @@ int main(int argc, char **argv) {
 		}
 	}
 
+	if( strchr( dbname, '/' ) == NULL ) {
+		strncpy( dirbuf, dbname, MAXPATHLEN );
+		snprintf( dbname, MAXPATHLEN, "%s/%s", basedir, dbname );
+	}
+
+	// scanformusic functionality
+	if( scan ) {
+		if ( ( scan & 1 ) && ( 0 != remove(dbname) ) ) {
+			fail("Cannot delete", dbname, errno );
+		}
+		if( scan & 2 ) {
+			dbAddTitles( dbname, basedir );
+		}
+		if( scan & 4 ) {
+			dbCheckExist( dbname );
+		}
+
+		if( !tagrun ) return 0;
+	}
+
 	if( tagrun && !usedb ) {
 		fail( "Tagrun needs a database!", "", F_FAIL );
 	}
@@ -350,7 +383,7 @@ int main(int argc, char **argv) {
 	}
 	// load given dnplist
 	else {
-		if( dnpname[0] != '/' ) {
+		if( strchr( dnpname, '/' ) == NULL ) {
 			strcpy( line, basedir );
 			strcat( line, "/" );
 			strcat( line, dnpname );
@@ -359,21 +392,21 @@ int main(int argc, char **argv) {
 	}
 	dnplist=loadList( dnpname );
 
-	// set default whitelist name
-	if (0 == strlen( wlname) ) {
-		strcpy( wlname, basedir );
-		strcat( wlname, "/favourites.txt" );
+	// set default favourites name
+	if (0 == strlen( favname) ) {
+		strcpy( favname, basedir );
+		strcat( favname, "/favourites.txt" );
 	}
-	// set given whitelist name
+	// set given favourites name
 	else {
-		if( wlname[0] != '/' ) {
+		if( strchr( favname, '/' ) == NULL  ) {
 			strcpy( line, basedir );
 			strcat( line, "/" );
-			strcat( line, wlname );
-			strcpy( wlname, line );
+			strcat( line, favname );
+			strcpy( favname, line );
 		}
 	}
-	favourites=loadList( wlname );
+	favourites=loadList( favname );
 
 	// load and prepare titles
 	if( NULL == root ) {
@@ -512,7 +545,7 @@ int main(int argc, char **argv) {
 							break;
 							case 'f': // toggles the favourite flag on a title
 								if( !(current->flags & MP_FAV) ) {
-									addToFile( wlname, strrchr( current->path, '/')+1 );
+									addToFile( favname, strrchr( current->path, '/')+1 );
 									current->flags|=MP_FAV;
 								}
 							break;

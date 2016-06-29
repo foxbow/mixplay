@@ -636,6 +636,22 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 }
 
 /**
+ * 	searches for a given path in the mixplay entry list
+ */
+struct entry_t *findTitle( struct entry_t *base, const char *path ) {
+	struct entry_t *runner;
+	if( NULL == base ) return NULL;
+
+	runner=base;
+	do {
+		if( strstr( runner->path, path ) ) return runner;
+		runner=runner->next;
+	} while ( runner != base );
+
+	return NULL;
+}
+
+/**
  * just for debugging purposes!
  */
 void dumpTitles( struct entry_t *root ) {

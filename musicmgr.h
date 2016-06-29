@@ -65,6 +65,7 @@ int applyFavourites( struct entry_t *root, struct bwlist_t *list );
 int mp3Exists( const struct entry_t *title );
 int getFiles( const char *cd, struct dirent ***filelist );
 int getDirs( const char *cd, struct dirent ***dirlist );
+struct entry_t *findTitle( struct entry_t *base, const char *path );
 
 void dumpTitles( struct entry_t *root );
 #endif /* MUSICMGR_H_ */

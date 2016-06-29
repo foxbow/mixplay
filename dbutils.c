@@ -122,6 +122,76 @@ struct entry_t *dbGetMusic( int db ) {
 
 	return (dbroot?dbroot->next:NULL);
 }
+int dbCheckExist( char *dbname ) {
+	struct entry_t *root;
+	struct entry_t *runner;
+	struct entry_t *guard;
+	int db, num;
+
+	dbOpen( &db, dbname );
+	root=dbGetMusic( db );
+	guard=root;
+
+	do {
+		activity( "Cleaning" );
+		if( !mp3Exists(runner) ) {
+			if(guard == runner) guard=runner->prev;
+			runner=removeTitle( runner );
+			num++;
+		}
+		else {
+			runner=runner->next;
+		}
+	} while( guard != runner );
+
+	if( num > 0 ) {
+		dbClose(&db);
+		if( 0 != remove(dbname) ) {
+			fail("Cannot delete", dbname, errno );
+		}
+		dbOpen(&db,dbname);
+		while( NULL != runner ) {
+			dbAddTitle( db, runner );
+			runner=removeTitle( runner );
+		}
+		if( getVerbosity() ) printf("Removed %i titles\n", num );
+	}
+	else {
+		wipeTitles( root );
+		printf("No titles to remove\n" );
+	}
+	dbClose( &db );
+
+	return num;
+}
+
+int dbAddTitles( const char *dbname, char *basedir ) {
+	struct entry_t *fsroot;
+	struct entry_t *dbroot;
+	struct entry_t *dbrunner;
+	int num, db;
+
+	dbOpen( &db, dbname );
+	dbroot=dbGetMusic(db);
+
+	// scan directory
+	fsroot=recurse(basedir, NULL, basedir);
+	fsroot=fsroot->next;
+
+	while( NULL != fsroot ) {
+		activity("Adding");
+		dbrunner = findTitle( dbroot, fsroot->path );
+		if( NULL == dbrunner ) {
+			dbAddTitle(db,fsroot);
+			num++;
+		}
+		fsroot=removeTitle( fsroot );
+	}
+
+	if( getVerbosity() ) printf("Added %i titles to %s\n", num, dbname );
+	dbClose( &db );
+	return num;
+}
 
 /**
  * closes the database file

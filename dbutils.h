@@ -28,6 +28,8 @@ int dbAddTitle( int db, struct entry_t *title );
 int dbSetTitle( int db, struct entry_t *title );
 struct entry_t *dbGetMusic( int db );
 int dbRemTitle( int db, struct entry_t *title );
+int dbCheckExist( char *dbname );
+int dbAddTitles( const char *dbname, char *basedir );
 void dbClose( int *db );
 
 #endif /* DBUTILS_H_ */
