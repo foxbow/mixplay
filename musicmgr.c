@@ -472,10 +472,12 @@ static unsigned long getLowestPlaycount( struct entry_t *base ) {
 
 		// check for playcount
 		guard=runner;
-		do {
-			if( runner->played <= count ) break;
-			runner=runner->next;
-		} while( runner != guard );
+		if( !(runner->flags & MP_FAV) ) { // favourites override playcount
+			do {
+				if( runner->played <= count ) break;
+				runner=runner->next;
+			} while( runner != guard );
+		}
 
 		if( runner != guard ) playskip++;
 

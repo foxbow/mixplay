@@ -5,6 +5,7 @@
 
 #include <getopt.h>
 #include <signal.h>
+#include <sys/stat.h>
 
 #ifndef VERSION
 #define VERSION "dev"
@@ -202,8 +203,10 @@ int main(int argc, char **argv) {
 	int scan=0;
 	int fade=0;
 	int fdset=0;
+	int hascfg=0;
 
 	FILE *fp=NULL;
+	struct stat st;
 
 	muteVerbosity();
 
@@ -232,9 +235,7 @@ int main(int argc, char **argv) {
 				}
 			}
 		} while( !feof(fp) );
-	}
-	else {
-		printf( "%s does not exist.\n", dirbuf );
+		hascfg=1;
 	}
 
 	// if no basedir has been set, use the current dir as default
@@ -364,6 +365,40 @@ int main(int argc, char **argv) {
 	if( strchr( dbname, '/' ) == NULL ) {
 		strncpy( dirbuf, dbname, MAXPATHLEN );
 		snprintf( dbname, MAXPATHLEN, "%s/%s", basedir, dbname );
+	}
+
+	if( usedb && !hascfg ) {
+		printf("No default configuration found!\n");
+		printf("It will be set up now\n");
+		while(1){
+			printf("Default music directory:"); fflush(stdout);
+			memset( basedir, 0, MAXPATHLEN );
+			fgets( basedir, MAXPATHLEN, stdin );
+			if( basedir[0] != '/' ) { // we want absolute paths
+				snprintf( line, LINE_BUFLEN, "%s/%s", b, basedir );
+				strncpy( basedir, line, MAXPATHLEN );
+			}
+			if( stat( basedir, &st ) ) {
+				printf("Cannot access %s!\n", basedir );
+			}
+			else if( S_ISDIR( st.st_mode ) ){
+				break;
+			}
+			else {
+				printf("%s is not a directory!\n", basedir );
+			}
+		}
+		fp=fopen(dirbuf, "w");
+		if( NULL != fp ) {
+			fputs( "# mixplay configuration", fp );
+			fputc( 's', fp );
+			fputs( basedir, fp );
+			fclose(fp);
+			fail("Done.", "", F_FAIL );
+		}
+		else {
+			fail("Could not open", dirbuf, errno );
+		}
 	}
 
 	// scanformusic functionality

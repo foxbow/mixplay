@@ -9,8 +9,8 @@ a full featured management software.
 ### Features
 * Skipping titles forward/backward
 * Jumping forward backward during play
-* add favourites
-* blacklisting
+* favourites
+* do-not-play lists
 * shuffle play that avoids the same artist twice in a row
 * shuffle will play each file before shuffling again
 * keyword play
@@ -18,8 +18,9 @@ a full featured management software.
 * playlist support
 * Name/Artist guessing by path (shall be replaced by MP3 tag reading)
 
+### Room for improvement
+* MP3 Tag reading - now done by startign each song and setting the tag data
+
 ### Planned
-* Database support to avoid rescan on each and every start
-* MP3 Tag reading
 * native MP3 streaming (lose mpg123 - low priority)
 * interface revamp (dependant on actual hardware)
