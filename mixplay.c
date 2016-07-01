@@ -155,6 +155,9 @@ static void sendplay( int fd, struct entry_t *song ) {
 	write( fd, line, LINE_BUFLEN );
 }
 
+/*
+ * @TODO: use 'tag' command for tagrun instead of play.
+ */
 int main(int argc, char **argv) {
 	/**
 	 * CLI interface
@@ -204,6 +207,7 @@ int main(int argc, char **argv) {
 	int fade=0;
 	int fdset=0;
 	int hascfg=0;
+	int vol=100;
 
 	FILE *fp=NULL;
 	struct stat st;
@@ -505,7 +509,8 @@ int main(int argc, char **argv) {
 				close(p_status[i][1]);
 
 				// Start mpg123 in Remote mode
-				execlp("mpg123", "mpg123", "-R", "2>/dev/null", NULL);
+				//				execlp("mpg123", "mpg123", "-R", "2>/dev/null", NULL);
+				execlp("mpg123", "mpg123", "-R", "--remote-err", NULL);
 				fail("Could not exec", "mpg123", errno);
 			}
 			close(p_command[i][0]);
@@ -710,8 +715,16 @@ int main(int argc, char **argv) {
 									// swap player
 									fdset=fdset?0:1;
 									sendplay(p_command[fdset][1], current);
+									vol=0;
+									write( p_command[fdset][1], "volume 0\n", 10 );
 								}
 							}
+							if( vol < 100 ) {
+								vol++;
+								snprintf( line, LINE_BUFLEN, "volume %i\n", vol );
+								write( p_command[fdset][1], line, strlen(line) );
+							}
+
 						}
 						// stream play
 						else {
@@ -777,6 +790,9 @@ int main(int argc, char **argv) {
 						sleep(1);
 					}
 					redraw=1;
+					break;
+				case 'V':
+					redraw=0;
 					break;
 				case 'E':
 					sprintf( status, "ERROR: %s", line);
