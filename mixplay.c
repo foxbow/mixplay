@@ -18,8 +18,8 @@
  * mb:w:rvs
  */
 static void usage( char *progname ){
-	printf( "%s - console frontend to mpg123\n", progname );
-	printf( "Usage: %s [-d <file>] [-f <file>] [-s <key>|-S] [-p <file>] [-m] [-r] [-v] [-T] [path|URL]\n", progname );
+	printf( "%s-%s - console frontend to mpg123\n", progname, VERSION );
+	printf( "Usage: %s [-d <file>] [-f <file>] [-s <key>|-S] [-p <file>] [-m] [-r] [-v] [-T] [-V] [-h] [path|URL]\n", progname );
 	printf( "-d <file>  : List of names to exclude\n" );
 	printf( "-f <file>  : List of favourites\n" );
 	printf( "-s <key>   : Search names like <key> (can be used multiple times)\n" );
@@ -28,6 +28,8 @@ static void usage( char *progname ){
 	printf( "-r         : disable reapeat mode on playlist\n");
 	printf( "-p <file>  : use file as fuzzy playlist (party mode)\n" );
 	printf( "-v         : increase Verbosity (just for debugging)\n" );
+	printf( "-h         : print this help*\n");
+	printf( "-V         : print version*\n");
 	printf( "-C         : clear database and add titles anew *\n" );
 	printf( "-A         : add new titles to the database *\n" );
 	printf( "-D         : delete removed titles from the database *\n" );
@@ -179,9 +181,10 @@ int main(int argc, char **argv) {
 	char tbuf[LINE_BUFLEN];
 	char basedir[MAXPATHLEN];
 	char dirbuf[MAXPATHLEN];
-	char dbname[MAXPATHLEN] = "";
-	char dnpname[MAXPATHLEN] = "";
-	char favname[MAXPATHLEN] = "";
+	char dbname[MAXPATHLEN] = "mixplay.db";
+	char dnpname[MAXPATHLEN] = "mixplay.dnp";
+	char favname[MAXPATHLEN] = "mixplay.fav";
+	char config[MAXPATHLEN]="";
 	int key;
 	char c;
 	char *b;
@@ -206,18 +209,18 @@ int main(int argc, char **argv) {
 	int scan=0;
 	int fade=0;
 	int fdset=0;
-	int hascfg=0;
+// 	int hascfg=0;
 	int vol=100;
 
 	FILE *fp=NULL;
-	struct stat st;
+//	struct stat st;
 
 	muteVerbosity();
 
 	// load default config
 	b=getenv("HOME");
-	sprintf( dirbuf, "%s/.mixplay", b );
-	fp=fopen(dirbuf, "r");
+	sprintf( config, "%s/.mixplay", b );
+	fp=fopen(config, "r");
 	if( NULL != fp ) {
 		do {
 			i=0;
@@ -239,7 +242,7 @@ int main(int argc, char **argv) {
 				}
 			}
 		} while( !feof(fp) );
-		hascfg=1;
+//		hascfg=1;
 	}
 
 	// if no basedir has been set, use the current dir as default
@@ -248,7 +251,7 @@ int main(int argc, char **argv) {
 	}
 
 	// parse command line options
-	while ((c = getopt(argc, argv, "md:f:rvs:Sp:CADTF:")) != -1) {
+	while ((c = getopt(argc, argv, "md:f:rvs:Sp:CADTF:Vh")) != -1) {
 		switch (c) {
 		case 'v': // pretty useless in normal use
 			incVerbosity();
@@ -306,7 +309,15 @@ int main(int argc, char **argv) {
 		case 'F':
 			fade=atoi(optarg);
 			break;
+		case 'V':
+			printf("mixplay-%s\n", VERSION );
+			return 0;
+			break;
+		case 'h':
+			usage(argv[0]);
+			break;
 		default:
+			printf("Unknown option -%c!\n\n", c );
 			usage(argv[0]);
 			break;
 		}
@@ -359,8 +370,14 @@ int main(int argc, char **argv) {
 			strncpy( dbname, argv[optind], MAXPATHLEN );
 		}
 		else {
-			usedb=0;
-			strncpy( basedir, argv[optind], MAXPATHLEN );
+			if( !scan ) usedb=0;
+			if( argv[optind][0] != '/' ) {
+				snprintf( dirbuf, MAXPATHLEN, "%s/%s", basedir, argv[optind] );
+				strncpy( basedir, dirbuf, MAXPATHLEN );
+			}
+			else {
+				strncpy( basedir, argv[optind], MAXPATHLEN );
+			}
 			if (basedir[strlen(basedir) - 1] == '/')
 				basedir[strlen(basedir) - 1] = 0;
 		}
@@ -368,16 +385,24 @@ int main(int argc, char **argv) {
 
 	if( strchr( dbname, '/' ) == NULL ) {
 		strncpy( dirbuf, dbname, MAXPATHLEN );
-		snprintf( dbname, MAXPATHLEN, "%s/%s", basedir, dbname );
+		snprintf( dbname, MAXPATHLEN, "%s/%s", basedir, dirbuf );
 	}
 
+/*
 	if( usedb && !hascfg ) {
 		printf("No default configuration found!\n");
 		printf("It will be set up now\n");
+		if( basedir[0] != '/' ) { // we want absolute paths
+			snprintf( line, LINE_BUFLEN, "%s/%s", b, basedir );
+			strncpy( basedir, line, MAXPATHLEN );
+		}
 		while(1){
-			printf("Default music directory:"); fflush(stdout);
-			memset( basedir, 0, MAXPATHLEN );
-			fgets( basedir, MAXPATHLEN, stdin );
+			printf("Default music directory [%s]\n> ", basedir); 
+			fflush(stdout);
+			memset( line, 0, MAXPATHLEN );
+			fgets( line, MAXPATHLEN, stdin );
+			line[strlen(line)-1]=0; // cut off LF
+			if( line[0] != 0 ) strncpy( basedir, line, MAXPATHLEN );
 			if( basedir[0] != '/' ) { // we want absolute paths
 				snprintf( line, LINE_BUFLEN, "%s/%s", b, basedir );
 				strncpy( basedir, line, MAXPATHLEN );
@@ -392,19 +417,20 @@ int main(int argc, char **argv) {
 				printf("%s is not a directory!\n", basedir );
 			}
 		}
-		fp=fopen(dirbuf, "w");
+		fp=fopen(config, "w");
 		if( NULL != fp ) {
-			fputs( "# mixplay configuration", fp );
+			fputs( "# mixplay configuration\n", fp );
 			fputc( 's', fp );
 			fputs( basedir, fp );
+			fputc( '\n', fp );
 			fclose(fp);
 			fail("Done.", "", F_FAIL );
 		}
 		else {
-			fail("Could not open", dirbuf, errno );
+			fail("Could not open", config, errno );
 		}
 	}
-
+*/
 	// scanformusic functionality
 	if( scan ) {
 		if ( ( scan & 1 ) && ( 0 != remove(dbname) ) ) {
@@ -424,35 +450,20 @@ int main(int argc, char **argv) {
 		fail( "Tagrun needs a database!", "", F_FAIL );
 	}
 
-	// set default dnplist name
-	if (0 == strlen( dnpname) ) {
-		strcpy( dnpname, basedir );
-		strcat( dnpname, "/default.dnp" );
-	}
-	// load given dnplist
-	else {
-		if( strchr( dnpname, '/' ) == NULL ) {
-			strcpy( line, basedir );
-			strcat( line, "/" );
-			strcat( line, dnpname );
-			strcpy( dnpname, line );
-		}
+	if( strchr( dnpname, '/' ) == NULL ) {
+		strcpy( line, basedir );
+		strcat( line, "/" );
+		strcat( line, dnpname );
+		strcpy( dnpname, line );
 	}
 	dnplist=loadList( dnpname );
 
 	// set default favourites name
-	if (0 == strlen( favname) ) {
-		strcpy( favname, basedir );
-		strcat( favname, "/favourites.txt" );
-	}
-	// set given favourites name
-	else {
-		if( strchr( favname, '/' ) == NULL  ) {
-			strcpy( line, basedir );
-			strcat( line, "/" );
-			strcat( line, favname );
-			strcpy( favname, line );
-		}
+	if( strchr( favname, '/' ) == NULL  ) {
+		strcpy( line, basedir );
+		strcat( line, "/" );
+		strcat( line, favname );
+		strcpy( favname, line );
 	}
 	favourites=loadList( favname );
 
@@ -509,8 +520,8 @@ int main(int argc, char **argv) {
 				close(p_status[i][1]);
 
 				// Start mpg123 in Remote mode
-				//				execlp("mpg123", "mpg123", "-R", "2>/dev/null", NULL);
-				execlp("mpg123", "mpg123", "-R", "--remote-err", NULL);
+				execlp("mpg123", "mpg123", "-R", "2>/dev/null", NULL);
+				// execlp("mpg123", "mpg123", "-R", "--remote-err", NULL);
 				fail("Could not exec", "mpg123", errno);
 			}
 			close(p_command[i][0]);
@@ -604,7 +615,7 @@ int main(int argc, char **argv) {
 				}
 			}
 			// drain inactive player
-			if( FD_ISSET( p_status[fdset?0:1][0], &fds ) ) {
+			if( fade && FD_ISSET( p_status[fdset?0:1][0], &fds ) ) {
 				readline(line, 512, p_status[fdset?0:1][0]);
 			}
 
@@ -788,6 +799,7 @@ int main(int argc, char **argv) {
 						sprintf( status, "Unknown status %i!", cmd);
 						drawframe( current, status, stream );
 						sleep(1);
+						break;
 					}
 					redraw=1;
 					break;
