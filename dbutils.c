@@ -129,7 +129,8 @@ int dbCheckExist( char *dbname ) {
 	struct entry_t *root;
 	struct entry_t *runner;
 	struct entry_t *guard;
-	int db, num;
+	int db=0;
+	int num=0;
 
 	dbOpen( &db, dbname );
 	root=dbGetMusic( db );
@@ -172,7 +173,8 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 	struct entry_t *fsroot;
 	struct entry_t *dbroot;
 	struct entry_t *dbrunner;
-	int num, db;
+	int num=0;
+	int db=0;
 
 	dbOpen( &db, dbname );
 	dbroot=dbGetMusic(db);

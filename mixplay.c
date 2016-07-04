@@ -157,8 +157,16 @@ static void sendplay( int fd, struct entry_t *song ) {
 	write( fd, line, LINE_BUFLEN );
 }
 
+static void sendtag( int fd, struct entry_t *song ) {
+	char line[LINE_BUFLEN];
+	strncpy( line, "loadpaused ", LINE_BUFLEN );
+	strncat( line, song->path, LINE_BUFLEN );
+	strncat( line, "\n", LINE_BUFLEN );
+	write( fd, line, strlen(line) );
+}
+
 /*
- * @TODO: use 'tag' command for tagrun instead of play.
+ *
  */
 int main(int argc, char **argv) {
 	/**
@@ -205,12 +213,12 @@ int main(int argc, char **argv) {
 	int db=0;
 	int tagrun=0;
 	int repeat=1;
-	int tagsync=0;
 	int scan=0;
 	int fade=0;
 	int fdset=0;
 // 	int hascfg=0;
 	int vol=100;
+	int intime=0;
 
 	FILE *fp=NULL;
 //	struct stat st;
@@ -378,59 +386,17 @@ int main(int argc, char **argv) {
 			else {
 				strncpy( basedir, argv[optind], MAXPATHLEN );
 			}
-			if (basedir[strlen(basedir) - 1] == '/')
-				basedir[strlen(basedir) - 1] = 0;
 		}
 	}
+
+	if (basedir[strlen(basedir) - 1] == '/')
+		basedir[strlen(basedir) - 1] = 0;
 
 	if( strchr( dbname, '/' ) == NULL ) {
 		strncpy( dirbuf, dbname, MAXPATHLEN );
 		snprintf( dbname, MAXPATHLEN, "%s/%s", basedir, dirbuf );
 	}
 
-/*
-	if( usedb && !hascfg ) {
-		printf("No default configuration found!\n");
-		printf("It will be set up now\n");
-		if( basedir[0] != '/' ) { // we want absolute paths
-			snprintf( line, LINE_BUFLEN, "%s/%s", b, basedir );
-			strncpy( basedir, line, MAXPATHLEN );
-		}
-		while(1){
-			printf("Default music directory [%s]\n> ", basedir); 
-			fflush(stdout);
-			memset( line, 0, MAXPATHLEN );
-			fgets( line, MAXPATHLEN, stdin );
-			line[strlen(line)-1]=0; // cut off LF
-			if( line[0] != 0 ) strncpy( basedir, line, MAXPATHLEN );
-			if( basedir[0] != '/' ) { // we want absolute paths
-				snprintf( line, LINE_BUFLEN, "%s/%s", b, basedir );
-				strncpy( basedir, line, MAXPATHLEN );
-			}
-			if( stat( basedir, &st ) ) {
-				printf("Cannot access %s!\n", basedir );
-			}
-			else if( S_ISDIR( st.st_mode ) ){
-				break;
-			}
-			else {
-				printf("%s is not a directory!\n", basedir );
-			}
-		}
-		fp=fopen(config, "w");
-		if( NULL != fp ) {
-			fputs( "# mixplay configuration\n", fp );
-			fputc( 's', fp );
-			fputs( basedir, fp );
-			fputc( '\n', fp );
-			fclose(fp);
-			fail("Done.", "", F_FAIL );
-		}
-		else {
-			fail("Could not open", config, errno );
-		}
-	}
-*/
 	// scanformusic functionality
 	if( scan ) {
 		if ( ( scan & 1 ) && ( 0 != remove(dbname) ) ) {
@@ -520,8 +486,8 @@ int main(int argc, char **argv) {
 				close(p_status[i][1]);
 
 				// Start mpg123 in Remote mode
-				execlp("mpg123", "mpg123", "-R", "2>/dev/null", NULL);
-				// execlp("mpg123", "mpg123", "-R", "--remote-err", NULL);
+				// execlp("mpg123", "mpg123", "-R", "2>/dev/null", NULL);
+				execlp("mpg123", "mpg123", "-R", "--remote-err", NULL);
 				fail("Could not exec", "mpg123", errno);
 			}
 			close(p_command[i][0]);
@@ -623,10 +589,16 @@ int main(int argc, char **argv) {
 			if( FD_ISSET( p_status[fdset][0], &fds ) &&
 					( 3 < readline(line, 512, p_status[fdset][0]) ) ) {
 				switch (line[1]) {
-				int cmd, in, rem, q;
+				int cmd=0, rem=0, q=0;
 				case 'R': // startup
 					current = root;
-					sendplay(p_command[fdset][1], current);
+					if( tagrun ) {
+						strcpy( status, "TAGGING" );
+						sendtag(p_command[fdset][1], current);
+					}
+					else {
+						sendplay(p_command[fdset][1], current);
+					}
 					break;
 				case 'I': // ID3 info
 					/* @I ID3.2.year:2016
@@ -671,6 +643,35 @@ int main(int argc, char **argv) {
 					}
 					redraw=1;
 					break;
+				case 'T': // TAG reply
+					redraw=0;
+					if (NULL != (b = strstr(line, "title:"))) {
+						strip(current->title, b + 6, NAMELEN );
+						snprintf( current->display, MAXPATHLEN, "%s - %s",
+								current->artist, current->title );
+					}
+					// line starts with 'Artist:' this means we had a 'Title:' line before
+					else if (NULL != (b = strstr(line, "artist:"))) {
+						strip(current->artist, b + 7, NAMELEN );
+						snprintf( current->display, MAXPATHLEN, "%s - %s",
+								current->artist, current->title );
+					}
+					// Album
+					else if (NULL != (b = strstr(line, "album:"))) {
+						strip( current->album, b + 6, NAMELEN );
+					}
+					else if ( '}' == line[3] ) {
+						dbSetTitle( db, current );
+						current=current->next;
+						if( current == root ) {
+							strcpy( status, "DONE" );
+							redraw=1;
+						}
+						else {
+							sendtag(p_command[fdset][1], current);
+						}
+					}
+					break;
 				case 'J': // JUMP reply
 					redraw=0;
 				break;
@@ -683,68 +684,49 @@ int main(int argc, char **argv) {
 					 * in  = seconds (float)
 					 * rem = seconds left (float)
 					 */
-					if( tagrun ) {
-						if( tagsync == 0 ){
-							tagsync=1;
-							if( current->played == 0 ) {
-								dbSetTitle( db, current );
-							}
-							strcpy(status, "TAGGING");
-							write( p_command[fdset][1], "STOP\n", 6 );
+					b=strrchr( line, ' ' );
+					rem=atoi(b);
+					*b=0;
+					b=strrchr( line, ' ' );
+					intime=atoi(b);
+					// file play
+					if( 0 != rem ) {
+						q=(30*intime)/(rem+intime);
+						memset( tbuf, 0, LINE_BUFLEN );
+						for( i=0; i<30; i++ ) {
+							if( i < q ) tbuf[i]='=';
+							else if( i == q ) tbuf[i]='>';
+							else tbuf[i]=' ';
 						}
-					}
-					else {
-						b=strrchr( line, ' ' );
-						rem=atoi(b);
-						*b=0;
-						b=strrchr( line, ' ' );
-						in=atoi(b);
-						// file play
-						if( 0 != rem ) {
-							q=(30*in)/(rem+in);
-							memset( tbuf, 0, LINE_BUFLEN );
-							for( i=0; i<30; i++ ) {
-								if( i < q ) tbuf[i]='=';
-								else if( i == q ) tbuf[i]='>';
-								else tbuf[i]=' ';
-							}
-							sprintf(status, "%i:%02i [%s] %i:%02i", in/60, in%60, tbuf, rem/60, rem%60 );
-							if( ( fade != 0 ) && ( rem <= fade ) ) {
-								next = skipTitles( current, order );
-								if ( ( !repeat && ( next == root ) ) || ( next == current ) ) {
-									strcpy( status, "STOP" );
-								}
-								else {
-									// note: no check for how long the title has played
-									// because when a title is skipped it should move to
-									// the end of the queue
-									if ( 1 == usedb ) {
-										current->played = current->played+1;
-										dbSetTitle( db, current );
-									}
-									current=next;
-									// swap player
-									fdset=fdset?0:1;
-									sendplay(p_command[fdset][1], current);
-									vol=0;
-									write( p_command[fdset][1], "volume 0\n", 10 );
-								}
-							}
-							if( vol < 100 ) {
-								vol++;
-								snprintf( line, LINE_BUFLEN, "volume %i\n", vol );
-								write( p_command[fdset][1], line, strlen(line) );
-							}
-
-						}
-						// stream play
-						else {
-							if( in/60 < 60 ) {
-								sprintf(status, "%i:%02i PLAYING", in/60, in%60 );
+						sprintf(status, "%i:%02i [%s] %i:%02i", intime/60, intime%60, tbuf, rem/60, rem%60 );
+						if( ( fade != 0 ) && ( rem <= fade ) ) {
+							next = skipTitles( current, order );
+							if ( ( !repeat && ( next == root ) ) || ( next == current ) ) {
+								strcpy( status, "STOP" );
 							}
 							else {
-								sprintf(status, "%i:%02i:%02i PLAYING", in/3600, (in%3600)/60, in%60 );
+								current=next;
+								// swap player
+								fdset=fdset?0:1;
+								vol=0;
+								write( p_command[fdset][1], "volume 0\n", 10 );
+								sendplay(p_command[fdset][1], current);
 							}
+						}
+						if( vol < 100 ) {
+							vol++;
+							snprintf( line, LINE_BUFLEN, "volume %i\n", vol );
+							write( p_command[fdset][1], line, strlen(line) );
+						}
+
+					}
+					// stream play
+					else {
+						if( intime/60 < 60 ) {
+							sprintf(status, "%i:%02i PLAYING", intime/60, intime%60 );
+						}
+						else {
+							sprintf(status, "%i:%02i:%02i PLAYING", intime/3600, (intime%3600)/60, intime%60 );
 						}
 					}
 					redraw=1;
@@ -753,44 +735,29 @@ int main(int argc, char **argv) {
 					cmd = atoi(&line[3]);
 					switch (cmd) {
 					case 0:
-						if( tagrun ) {
-							if( current->played == 0 ) {
-								current->played=1;
-								dbSetTitle( db, current );
-							}
-							current=current->next;
-							while( ( current->played > 0 ) && ( current != root ) ) {
-								current=current->next;
-							}
-							if( current == root ) {
-								strcpy( status, "STOP" );
-							}
-							else {
-								tagsync=0;
-								sendplay( p_command[fdset][1], current );
-							}
+						// update playcount after 15s
+						if ( (intime > 15 ) && ( 1 == usedb ) ) {
+							current->played = current->played+1;
+							dbSetTitle( db, current );
+						}
+						next = skipTitles( current, order );
+						order=1;
+						if ( ( !repeat && ( next == root ) ) || ( next == current ) ) {
+							strcpy( status, "STOP" );
 						}
 						else {
-							next = skipTitles( current, order );
-							order=1;
-							if ( ( !repeat && ( next == root ) ) || ( next == current ) ) {
-								strcpy( status, "STOP" );
-							}
-							else {
-								// note: no check for how long the title has played
-								// because when a title is skipped it should move to
-								// the end of the queue
-								if ( 1 == usedb ) {
-									current->played = current->played+1;
-									dbSetTitle( db, current );
-								}
-								current=next;
-								sendplay(p_command[fdset][1], current);
-							}
+							current=next;
+							sendplay(p_command[fdset][1], current);
 						}
 						break;
 					case 1:
-						strcpy( status, "PAUSE" );
+						if( tagrun ) {
+							redraw=1;
+							write( p_command[fdset][1], "tag\n", 4 );
+						}
+						else {
+							strcpy( status, "PAUSE" );
+						}
 						break;
 					case 2:
 						strcpy( status, "PLAYING" );
@@ -812,9 +779,11 @@ int main(int argc, char **argv) {
 					sleep(1);
 					break;
 				default:
-					sprintf( status, "MPG123 : %s", line);
-					drawframe( current, status, stream );
-					sleep(1);
+					if( !tagrun ) {
+						sprintf( status, "MPG123 : %s", line);
+						drawframe( current, status, stream );
+						sleep(1);
+					}
 					break;
 				} // case()
 			} // fgets() > 0
