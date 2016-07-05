@@ -40,6 +40,7 @@ int dbOpen( int *db, const char *path ){
 	if( -1 == db[0] ) {
 		fail( "Could not open database!", path, errno );
 	}
+	if( getVerbosity() > 1 ) printf("Opened database %s\n", path);
 	return db[0];
 }
 

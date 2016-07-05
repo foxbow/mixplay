@@ -738,7 +738,7 @@ int main(int argc, char **argv) {
 								// swap player
 								fdset=fdset?0:1;
 								vol=0;
-								write( p_command[fdset][1], "volume 0\n", 10 );
+								write( p_command[fdset][1], "volume 0\n", 9 );
 								sendplay(p_command[fdset][1], current);
 							}
 						}
