@@ -15,7 +15,6 @@
 
 /**
  * print out CLI usage
- * mb:w:rvs
  */
 static void usage( char *progname ){
 	printf( "%s-%s - console frontend to mpg123\n", progname, VERSION );
@@ -219,6 +218,7 @@ int main(int argc, char **argv) {
 // 	int hascfg=0;
 	int vol=100;
 	int intime=0;
+	int dump=0;
 
 	FILE *fp=NULL;
 //	struct stat st;
@@ -259,7 +259,7 @@ int main(int argc, char **argv) {
 	}
 
 	// parse command line options
-	while ((c = getopt(argc, argv, "md:f:rvs:Sp:CADTF:Vh")) != -1) {
+	while ((c = getopt(argc, argv, "md:f:rvs:Sp:CADTF:VhX")) != -1) {
 		switch (c) {
 		case 'v': // pretty useless in normal use
 			incVerbosity();
@@ -323,6 +323,11 @@ int main(int argc, char **argv) {
 			break;
 		case 'h':
 			usage(argv[0]);
+			break;
+		case 'X':
+			dump=1;
+			puts("-- Dumping Database statistics --");
+			setVerbosity(2);
 			break;
 		default:
 			printf("Unknown option -%c!\n\n", c );
@@ -453,6 +458,30 @@ int main(int argc, char **argv) {
 		}
 	}
 
+	if( dump ) {
+		unsigned long maxplayed=0;
+		unsigned long minplayed=-1;
+		unsigned long pl=0;
+
+		current=root;
+		do {
+			if( current->played < minplayed ) minplayed=current->played;
+			if( current->played > maxplayed ) maxplayed=current->played;
+			current=current->next;
+		} while( current != root );
+
+		for( pl=minplayed; pl <= maxplayed; pl++ ) {
+			unsigned long pcount=0;
+			do {
+				if( current->played == pl ) pcount++;
+				current=current->next;
+			} while( current != root );
+			printf("%5li times played: %5li titles\n", pl, pcount );
+		}
+		puts("");
+		return 0;
+	}
+
 	// No else as the above calls may return NULL!
 	// prepare playing the titles
 	if (NULL != root) {
@@ -486,8 +515,8 @@ int main(int argc, char **argv) {
 				close(p_status[i][1]);
 
 				// Start mpg123 in Remote mode
-				// execlp("mpg123", "mpg123", "-R", "2>/dev/null", NULL);
-				execlp("mpg123", "mpg123", "-R", "--remote-err", NULL);
+				execlp("mpg123", "mpg123", "-R", "2>/dev/null", NULL);
+				// execlp("mpg123", "mpg123", "-R", "--remote-err", NULL); // breaks the reply parsing!
 				fail("Could not exec", "mpg123", errno);
 			}
 			close(p_command[i][0]);
