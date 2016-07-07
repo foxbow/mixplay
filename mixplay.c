@@ -306,12 +306,15 @@ int main(int argc, char **argv) {
 			tagrun=1;
 			break;
 		case 'C':
+			incVerbosity();
 			scan|=3;
 			break;
 		case 'A':
+			incVerbosity();
 			scan|=2;
 			break;
 		case 'D':
+			incVerbosity();
 			scan|=4;
 			break;
 		case 'F':
@@ -628,7 +631,7 @@ int main(int argc, char **argv) {
 					else {
 						sendplay(p_command[fdset][1], current);
 					}
-					break;
+				break;
 				case 'I': // ID3 info
 					/* @I ID3.2.year:2016
 					 * @I ID3.2.comment:http://www.faderhead.com
@@ -669,9 +672,12 @@ int main(int argc, char **argv) {
 						else if (NULL != (b = strstr(line, "album:"))) {
 							strip( current->album, b + 6, NAMELEN );
 						}
+						else if( NULL != (b = strstr( line, "genre:" ) ) ) {
+							strip( current->tags, b+6, NAMELEN );
+						}
 					}
 					redraw=1;
-					break;
+				break;
 				case 'T': // TAG reply
 					redraw=0;
 					if (NULL != (b = strstr(line, "title:"))) {
@@ -689,6 +695,9 @@ int main(int argc, char **argv) {
 					else if (NULL != (b = strstr(line, "album:"))) {
 						strip( current->album, b + 6, NAMELEN );
 					}
+					else if( NULL != (b = strstr( line, "genre:" ) ) ) {
+						strip( current->tags, b+6, NAMELEN );
+					}
 					else if ( '}' == line[3] ) {
 						dbSetTitle( db, current );
 						current=current->next;
@@ -700,13 +709,13 @@ int main(int argc, char **argv) {
 							sendtag(p_command[fdset][1], current);
 						}
 					}
-					break;
+				break;
 				case 'J': // JUMP reply
 					redraw=0;
 				break;
 				case 'S': // Status message after loading a song (stream info)
 					redraw=0;
-					break;
+				break;
 				case 'F': // Status message during playing (frame info)
 					/* $1   = framecount (int)
 					 * $2   = frames left this song (int)
@@ -759,7 +768,7 @@ int main(int argc, char **argv) {
 						}
 					}
 					redraw=1;
-					break;
+				break;
 				case 'P': // Player status
 					cmd = atoi(&line[3]);
 					switch (cmd) {
@@ -799,21 +808,21 @@ int main(int argc, char **argv) {
 					}
 					redraw=1;
 					break;
-				case 'V':
+				case 'V': // volume reply
 					redraw=0;
-					break;
+				break;
 				case 'E':
 					sprintf( status, "ERROR: %s", line);
 					drawframe( current, status, stream );
 					sleep(1);
-					break;
+				break;
 				default:
 					if( !tagrun ) {
 						sprintf( status, "MPG123 : %s", line);
 						drawframe( current, status, stream );
 						sleep(1);
 					}
-					break;
+				break;
 				} // case()
 			} // fgets() > 0
 			if( redraw ) drawframe( current, status, stream );

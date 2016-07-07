@@ -17,6 +17,7 @@ struct dbentry_t {
 	char artist[NAMELEN];		// Artist info
 	char title[NAMELEN];		// Title info (from mp3)
 	char album[NAMELEN];		// Album info (from mp3)
+	char tags[NAMELEN];		// Album info (from mp3)
 //	int  length;				// length in seconds (from mp3)
 	unsigned long played;		// play counter
 };

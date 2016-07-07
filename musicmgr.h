@@ -30,6 +30,7 @@ struct entry_t {
 	char album[NAMELEN];		// Album info (from mp3)
 //	int  length;				// length in seconds (from mp3)
 	unsigned long played;		// play counter
+	char tags[NAMELEN];
 	struct entry_t *prev;		//
 	unsigned long key;			// DB key/index  - internal
 	char display[MAXPATHLEN];	// Title display - internal

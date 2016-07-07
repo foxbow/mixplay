@@ -460,7 +460,7 @@ static unsigned long getLowestPlaycount( struct entry_t *base ) {
 		// check for duplicates
 		if( artguard && lastname ) {
 			guard=runner;
-			while( 80 < fncmp( runner->artist, lastname ) ) {
+			while( 75 < fncmp( runner->artist, lastname ) ) {
 				runner=runner->next;
 				if( guard == runner ) {
 					artguard=0;
@@ -479,9 +479,10 @@ static unsigned long getLowestPlaycount( struct entry_t *base ) {
 			} while( runner != guard );
 		}
 
-		if( runner != guard ) playskip++;
-
-		if( runner == guard ) {
+		if( runner != guard ) {
+			playskip++;
+		}
+		else {
 			count=runner->played;
 		}
 
