@@ -9,7 +9,7 @@ static int db2entry( struct dbentry_t *dbentry, struct entry_t *entry ) {
 	strcpy( entry->artist, dbentry->artist );
 	strcpy( entry->title, dbentry->title );
 	strcpy( entry->album, dbentry->album );
-	strcpy( entry->tags, dbentry->tags );
+	strcpy( entry->genre, dbentry->genre );
 	snprintf( entry->display, MAXPATHLEN, "%s - %s", entry->artist, entry->title );
 	entry->played=dbentry->played;
 	entry->size=dbentry->size;
@@ -25,7 +25,7 @@ static int entry2db( struct entry_t *entry, struct dbentry_t *dbentry ) {
 	strcpy( dbentry->artist, entry->artist );
 	strcpy( dbentry->title, entry->title );
 	strcpy( dbentry->album, entry->album );
-	strcpy( dbentry->tags, entry->tags );
+	strcpy( dbentry->genre, entry->genre );
 	dbentry->played=entry->played;
 	dbentry->size=entry->size;
 	return 0;

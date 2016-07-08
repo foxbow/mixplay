@@ -673,7 +673,7 @@ int main(int argc, char **argv) {
 							strip( current->album, b + 6, NAMELEN );
 						}
 						else if( NULL != (b = strstr( line, "genre:" ) ) ) {
-							strip( current->tags, b+6, NAMELEN );
+							strip( current->genre, b+6, NAMELEN );
 						}
 					}
 					redraw=1;
@@ -696,7 +696,7 @@ int main(int argc, char **argv) {
 						strip( current->album, b + 6, NAMELEN );
 					}
 					else if( NULL != (b = strstr( line, "genre:" ) ) ) {
-						strip( current->tags, b+6, NAMELEN );
+						strip( current->genre, b+6, NAMELEN );
 					}
 					else if ( '}' == line[3] ) {
 						dbSetTitle( db, current );
@@ -738,6 +738,8 @@ int main(int argc, char **argv) {
 						}
 						sprintf(status, "%i:%02i [%s] %i:%02i", intime/60, intime%60, tbuf, rem/60, rem%60 );
 						if( ( fade != 0 ) && ( rem <= fade ) ) {
+							current->played++;
+							dbSetTitle( db, current );
 							next = skipTitles( current, order );
 							if ( ( !repeat && ( next == root ) ) || ( next == current ) ) {
 								strcpy( status, "STOP" );
@@ -774,6 +776,7 @@ int main(int argc, char **argv) {
 					switch (cmd) {
 					case 0:
 						// update playcount after 15s
+						// only happens on non fading title change
 						if ( (intime > 15 ) && ( 1 == usedb ) ) {
 							current->played = current->played+1;
 							dbSetTitle( db, current );

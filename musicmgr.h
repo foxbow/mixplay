@@ -30,7 +30,7 @@ struct entry_t {
 	char album[NAMELEN];		// Album info (from mp3)
 //	int  length;				// length in seconds (from mp3)
 	unsigned long played;		// play counter
-	char tags[NAMELEN];
+	char genre[NAMELEN];
 	struct entry_t *prev;		//
 	unsigned long key;			// DB key/index  - internal
 	char display[MAXPATHLEN];	// Title display - internal
@@ -67,6 +67,6 @@ int mp3Exists( const struct entry_t *title );
 int getFiles( const char *cd, struct dirent ***filelist );
 int getDirs( const char *cd, struct dirent ***dirlist );
 struct entry_t *findTitle( struct entry_t *base, const char *path );
-
+char *getGenre( struct entry_t *title );
 void dumpTitles( struct entry_t *root );
 #endif /* MUSICMGR_H_ */
