@@ -399,6 +399,53 @@ struct entry_t *searchList( struct entry_t *base, struct bwlist_t *term ) {
 }
 
 /**
+ * @todo join with searchlist
+ * add parameter to define search scope:
+ *  Title
+ *  Album
+ *  Artist
+ *  Genre
+ *  Path (default)
+ *
+ *  to be combined too.
+ */
+struct entry_t *gsearchList( struct entry_t *base, struct bwlist_t *term ) {
+	struct entry_t  *runner=base;
+	struct entry_t  *next=NULL;
+	struct entry_t  *result=NULL;
+	int cnt=0;
+
+	if( NULL == base ) {
+		fail("No music loaded!", "Nothing to search in", F_FAIL );
+	}
+
+	while( term != NULL ) {
+		while( runner->next != base ){
+			if( checkMatch( getGenre(runner), term->dir ) ) {
+				next=runner->next;
+				if( runner==base ) {
+					base=base->next;       // make sure base stays valid after removal
+				}
+
+				result=moveTitle( runner, &result );
+				cnt++;
+				runner=next;
+			}
+			else {
+				runner=runner->next;
+			}
+		} //  while( runner != base );
+		term=term->next;
+	}
+
+	wipeTitles( base );
+
+	if( getVerbosity() ) printf("Added %i titles by genre\n", cnt );
+
+	return result?result->next:NULL;
+}
+
+/**
  * applies the dnplist on a list of titles and removes matching titles
  * from the list
  */

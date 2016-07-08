@@ -57,6 +57,7 @@ struct entry_t *insertTitle( struct entry_t *base, const char *path );
 struct entry_t *skipTitles( struct entry_t *current, int num );
 struct entry_t *useDNPlist( struct entry_t *base, struct bwlist_t *list );
 struct entry_t *searchList( struct entry_t *base, struct bwlist_t *list );
+struct entry_t *gsearchList( struct entry_t *base, struct bwlist_t *list );
 int countTitles( struct entry_t *base );
 struct bwlist_t *loadList( const char *path );
 int genPathName( const char *basedir, struct entry_t *entry  );

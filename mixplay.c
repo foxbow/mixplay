@@ -23,6 +23,8 @@ static void usage( char *progname ){
 	printf( "-f <file>  : List of favourites\n" );
 	printf( "-s <key>   : Search names like <key> (can be used multiple times)\n" );
 	printf( "-S         : interactive search\n" );
+	printf( "-g <genre> : Search for titles in the given genre (multiple)\n");
+	printf( "-G         : interactive genre search");
 	printf( "-m         : disable shuffle mode on playlist\n" );
 	printf( "-r         : disable reapeat mode on playlist\n");
 	printf( "-p <file>  : use file as fuzzy playlist (party mode)\n" );
@@ -171,13 +173,14 @@ int main(int argc, char **argv) {
 	/**
 	 * CLI interface
 	 */
-	struct entry_t *root = NULL;
+	struct entry_t *root = NULL; // @ todo: have two lists, the database list and the playlist
 	struct entry_t *current = NULL;
 	struct entry_t *next = NULL;
 
 	struct bwlist_t *dnplist=NULL;
 	struct bwlist_t *favourites=NULL;
 	struct bwlist_t *searchlist=NULL;
+	struct bwlist_t *gsearchlist=NULL;
 
 	// pipes to communicate with mpg123
 	int p_status[2][2];
@@ -209,6 +212,7 @@ int main(int argc, char **argv) {
 	int running;
 	int usedb=1;
 	int search=0;
+	int gsearch=0;
 	int db=0;
 	int tagrun=0;
 	int repeat=1;
@@ -259,7 +263,7 @@ int main(int argc, char **argv) {
 	}
 
 	// parse command line options
-	while ((c = getopt(argc, argv, "md:f:rvs:Sp:CADTF:VhX")) != -1) {
+	while ((c = getopt(argc, argv, "md:f:rvs:Sp:CADTF:VhXg:G")) != -1) {
 		switch (c) {
 		case 'v': // pretty useless in normal use
 			incVerbosity();
@@ -282,7 +286,7 @@ int main(int argc, char **argv) {
 				searchlist=addToList( line, searchlist );
 			}
 			else {
-				puts("Ignoring less than three characters!");
+				printf("-S: Ignoring less than three characters! (%s)", optarg);
 				sleep(3);
 				return -1;
 			}
@@ -293,7 +297,32 @@ int main(int argc, char **argv) {
 				searchlist=addToList( optarg, searchlist );
 			}
 			else {
-				puts("Ignoring less than three characters!");
+				printf("-s: Ignoring less than three characters! (%s)", optarg);
+				sleep(3);
+				return -1;
+			}
+			break;
+		case 'G':
+			printf("Genre: ");
+			fflush(stdout);
+			readline( line, MAXPATHLEN, fileno(stdin) );
+			if( strlen(line) > 1 ) {
+				gsearch=1;
+				gsearchlist=addToList( line, gsearchlist );
+			}
+			else {
+				printf("-G: Ignoring less than three characters! (%s)", optarg);
+				sleep(3);
+				return -1;
+			}
+			break;
+		case 'g':
+			if( strlen(optarg) > 2 ) {
+				gsearch=1;
+				gsearchlist=addToList( optarg, gsearchlist );
+			}
+			else {
+				printf("-g: Ignoring less than three characters! (%s)", optarg);
 				sleep(3);
 				return -1;
 			}
@@ -458,6 +487,10 @@ int main(int argc, char **argv) {
 
 		if(search){
 			root=searchList(root, searchlist);
+		}
+
+		if(gsearch) {
+			root=gsearchList( root, gsearchlist );
 		}
 	}
 
