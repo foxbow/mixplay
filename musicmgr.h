@@ -22,6 +22,12 @@
 #define MP_FAV 1	// Favourite
 #define MP_DNP 2    // do not play
 
+#define SL_TITLE 1
+#define SL_ALBUM 2
+#define SL_ARTIST 4
+#define SL_GENRE 8
+#define SL_PATH 16
+
 struct entry_t {
 	char path[MAXPATHLEN];		// path on the filesystem to the file
 	unsigned long size;			// size in kb
@@ -56,8 +62,7 @@ struct entry_t *loadPlaylist( const char *path );
 struct entry_t *insertTitle( struct entry_t *base, const char *path );
 struct entry_t *skipTitles( struct entry_t *current, int num );
 struct entry_t *useDNPlist( struct entry_t *base, struct bwlist_t *list );
-struct entry_t *searchList( struct entry_t *base, struct bwlist_t *list );
-struct entry_t *gsearchList( struct entry_t *base, struct bwlist_t *list );
+struct entry_t *searchList( struct entry_t *base, struct bwlist_t *term, int range );
 int countTitles( struct entry_t *base );
 struct bwlist_t *loadList( const char *path );
 int genPathName( const char *basedir, struct entry_t *entry  );

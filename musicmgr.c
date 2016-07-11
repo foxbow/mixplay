@@ -362,11 +362,20 @@ static int checkMatch( const char* name, const char* pat ) {
 	return 0;
 }
 
-struct entry_t *searchList( struct entry_t *base, struct bwlist_t *term ) {
+
+int matchList( struct entry_t **result, struct entry_t *base, struct bwlist_t *term, int range ) {
 	struct entry_t  *runner=base;
 	struct entry_t  *next=NULL;
-	struct entry_t  *result=NULL;
-	int cnt=0;
+	int match=0;
+	int cnt;
+
+	char *mdesc[]={
+			"title"
+			,"album"
+			,"artist"
+			,"genre"
+			,"path"
+	};
 
 	if( NULL == base ) {
 		fail("No music loaded!", "Nothing to search in", F_FAIL );
@@ -374,13 +383,32 @@ struct entry_t *searchList( struct entry_t *base, struct bwlist_t *term ) {
 
 	while( term != NULL ) {
 		while( runner->next != base ){
-			if( checkMatch( runner->path, term->dir ) ) {
+			switch( range ) {
+				case SL_TITLE:
+					match=checkMatch( runner->title, term->dir );
+				break;
+				case SL_ALBUM:
+					match=checkMatch( runner->album, term->dir );
+				break;
+				case SL_ARTIST:
+					match=checkMatch( runner->artist, term->dir );
+				break;
+				case SL_GENRE:
+					match=checkMatch( getGenre(runner), term->dir );
+				break;
+				case SL_PATH:
+					match=checkMatch( runner->path, term->dir );
+				break;
+				default:
+					fail("invalid checkMatch call", "", range );
+			}
+			if( match ) {
 				next=runner->next;
 				if( runner==base ) {
 					base=base->next;       // make sure base stays valid after removal
 				}
 
-				result=moveTitle( runner, &result );
+				moveTitle( runner, result );
 				cnt++;
 				runner=next;
 			}
@@ -390,57 +418,31 @@ struct entry_t *searchList( struct entry_t *base, struct bwlist_t *term ) {
 		} //  while( runner != base );
 		term=term->next;
 	}
+
+//	wipeTitles( base );
+
+	if( getVerbosity() ) printf("Added %i titles by %s \n", cnt, mdesc[range] );
+
+	return cnt;
+}
+
+struct entry_t *searchList( struct entry_t *base, struct bwlist_t *term, int range ) {
+	struct entry_t  *result=NULL;
+	int cnt=0;
+
+	if( NULL == base ) {
+		fail("No music loaded!", "Nothing to search in", F_FAIL );
+	}
+
+	if( range & SL_ARTIST ) cnt += matchList( &result, base, term, SL_ARTIST );
+	if( range & SL_TITLE ) cnt += matchList( &result, base, term, SL_TITLE );
+	if( range & SL_ALBUM ) cnt += matchList( &result, base, term, SL_ALBUM );
+	if( range & SL_PATH ) cnt += matchList( &result, base, term, SL_PATH );
+	if( range & SL_GENRE ) cnt += matchList( &result, base, term, SL_GENRE );
 
 	wipeTitles( base );
 
 	if( getVerbosity() ) printf("Added %i titles\n", cnt );
-
-	return result?result->next:NULL;
-}
-
-/**
- * @todo join with searchlist
- * add parameter to define search scope:
- *  Title
- *  Album
- *  Artist
- *  Genre
- *  Path (default)
- *
- *  to be combined too.
- */
-struct entry_t *gsearchList( struct entry_t *base, struct bwlist_t *term ) {
-	struct entry_t  *runner=base;
-	struct entry_t  *next=NULL;
-	struct entry_t  *result=NULL;
-	int cnt=0;
-
-	if( NULL == base ) {
-		fail("No music loaded!", "Nothing to search in", F_FAIL );
-	}
-
-	while( term != NULL ) {
-		while( runner->next != base ){
-			if( checkMatch( getGenre(runner), term->dir ) ) {
-				next=runner->next;
-				if( runner==base ) {
-					base=base->next;       // make sure base stays valid after removal
-				}
-
-				result=moveTitle( runner, &result );
-				cnt++;
-				runner=next;
-			}
-			else {
-				runner=runner->next;
-			}
-		} //  while( runner != base );
-		term=term->next;
-	}
-
-	wipeTitles( base );
-
-	if( getVerbosity() ) printf("Added %i titles by genre\n", cnt );
 
 	return result?result->next:NULL;
 }

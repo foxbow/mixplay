@@ -173,7 +173,7 @@ int main(int argc, char **argv) {
 	/**
 	 * CLI interface
 	 */
-	struct entry_t *root = NULL; // @ todo: have two lists, the database list and the playlist
+	struct entry_t *root = NULL;
 	struct entry_t *current = NULL;
 	struct entry_t *next = NULL;
 
@@ -485,12 +485,13 @@ int main(int argc, char **argv) {
 			applyFavourites( root, favourites );
 		}
 
+		// @todo rework command line arguments
 		if(search){
-			root=searchList(root, searchlist);
+			root=searchList(root, searchlist, SL_PATH );
 		}
 
 		if(gsearch) {
-			root=gsearchList( root, gsearchlist );
+			root=searchList( root, gsearchlist, SL_GENRE );
 		}
 	}
 
@@ -848,15 +849,11 @@ int main(int argc, char **argv) {
 					redraw=0;
 				break;
 				case 'E':
-					sprintf( status, "ERROR: %s", line);
-					drawframe( current, status, stream );
-					sleep(1);
+					fail("ERROR:", line, F_FAIL );
 				break;
 				default:
 					if( !tagrun ) {
-						sprintf( status, "MPG123 : %s", line);
-						drawframe( current, status, stream );
-						sleep(1);
+						fail( "MPG123:", line, F_FAIL );
 					}
 				break;
 				} // case()
