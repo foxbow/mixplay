@@ -419,8 +419,6 @@ int matchList( struct entry_t **result, struct entry_t *base, struct bwlist_t *t
 		term=term->next;
 	}
 
-//	wipeTitles( base );
-
 	if( getVerbosity() ) printf("Added %i titles by %s \n", cnt, mdesc[range] );
 
 	return cnt;
@@ -731,12 +729,13 @@ static unsigned long getLowestPlaycount( struct entry_t *base ) {
 
 		// check for playcount
 		guard=runner;
-		if( !(runner->flags & MP_FAV) ) { // favourites override playcount
-			do {
-				if( runner->played <= count ) break;
-				runner=runner->next;
-			} while( runner != guard );
-		}
+
+		do {
+			if( !(runner->flags & MP_FAV) && ( runner->played <=   count ) ) break;
+			// favourites may be played twice as often
+			if(  (runner->flags & MP_FAV) && ( runner->played <= 2*count ) ) break;
+			runner=runner->next;
+		} while( runner != guard );
 
 		if( runner != guard ) {
 			playskip++;

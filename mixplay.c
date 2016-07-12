@@ -21,10 +21,9 @@ static void usage( char *progname ){
 	printf( "Usage: %s [-d <file>] [-f <file>] [-s <key>|-S] [-p <file>] [-m] [-r] [-v] [-T] [-V] [-h] [path|URL]\n", progname );
 	printf( "-d <file>  : List of names to exclude\n" );
 	printf( "-f <file>  : List of favourites\n" );
-	printf( "-s <key>   : Search names like <key> (can be used multiple times)\n" );
+	printf( "-s <term>  : add search term (can be used multiple times)\n" );
 	printf( "-S         : interactive search\n" );
-	printf( "-g <genre> : Search for titles in the given genre (multiple)\n");
-	printf( "-G         : interactive genre search");
+	printf( "-R <talgp> : Set rage (title, artist, album, genre, path) [p]\n");
 	printf( "-m         : disable shuffle mode on playlist\n" );
 	printf( "-r         : disable reapeat mode on playlist\n");
 	printf( "-p <file>  : use file as fuzzy playlist (party mode)\n" );
@@ -180,7 +179,6 @@ int main(int argc, char **argv) {
 	struct bwlist_t *dnplist=NULL;
 	struct bwlist_t *favourites=NULL;
 	struct bwlist_t *searchlist=NULL;
-	struct bwlist_t *gsearchlist=NULL;
 
 	// pipes to communicate with mpg123
 	int p_status[2][2];
@@ -212,7 +210,7 @@ int main(int argc, char **argv) {
 	int running;
 	int usedb=1;
 	int search=0;
-	int gsearch=0;
+	int range=0;
 	int db=0;
 	int tagrun=0;
 	int repeat=1;
@@ -263,7 +261,7 @@ int main(int argc, char **argv) {
 	}
 
 	// parse command line options
-	while ((c = getopt(argc, argv, "md:f:rvs:Sp:CADTF:VhXg:G")) != -1) {
+	while ((c = getopt(argc, argv, "md:f:rvs:Sp:CADTF:VhXR:")) != -1) {
 		switch (c) {
 		case 'v': // pretty useless in normal use
 			incVerbosity();
@@ -302,29 +300,28 @@ int main(int argc, char **argv) {
 				return -1;
 			}
 			break;
-		case 'G':
-			printf("Genre: ");
-			fflush(stdout);
-			readline( line, MAXPATHLEN, fileno(stdin) );
-			if( strlen(line) > 1 ) {
-				gsearch=1;
-				gsearchlist=addToList( line, gsearchlist );
-			}
-			else {
-				printf("-G: Ignoring less than three characters! (%s)", optarg);
-				sleep(3);
-				return -1;
-			}
-			break;
-		case 'g':
-			if( strlen(optarg) > 2 ) {
-				gsearch=1;
-				gsearchlist=addToList( optarg, gsearchlist );
-			}
-			else {
-				printf("-g: Ignoring less than three characters! (%s)", optarg);
-				sleep(3);
-				return -1;
+		case 'R':
+			for( i=0; i<strlen(optarg); i++ ) {
+				switch( optarg[i] ) {
+				case 'a':
+					range |= SL_ARTIST;
+				break;
+				case 'l':
+					range |= SL_ALBUM;
+				break;
+				case 't':
+					range |= SL_TITLE;
+				break;
+				case 'g':
+					range |= SL_GENRE;
+				break;
+				case 'p':
+					range |= SL_PATH;
+				break;
+				default:
+					fail( "Unknown range given in:", optarg, F_FAIL );
+				break;
+				}
 			}
 			break;
 		case 'p':
@@ -485,13 +482,9 @@ int main(int argc, char **argv) {
 			applyFavourites( root, favourites );
 		}
 
-		// @todo rework command line arguments
 		if(search){
-			root=searchList(root, searchlist, SL_PATH );
-		}
-
-		if(gsearch) {
-			root=searchList( root, gsearchlist, SL_GENRE );
+			if( 0 == range ) range=SL_PATH;
+			root=searchList(root, searchlist, range );
 		}
 	}
 
