@@ -15,26 +15,29 @@
 
 /**
  * print out CLI usage
+ * md:f:rvs:Sp:CADTF:VhXR:
  */
 static void usage( char *progname ){
 	printf( "%s-%s - console frontend to mpg123\n", progname, VERSION );
-	printf( "Usage: %s [-d <file>] [-f <file>] [-s <key>|-S] [-p <file>] [-m] [-r] [-v] [-T] [-V] [-h] [path|URL]\n", progname );
+	printf( "Usage: %s [-d <file>] [-f <file>] [-s <key>|-S] [-R <talgp>] [-p <file>] [-m] [-r] "
+			"[-v] [-V] [-h] [-C] [-A] [-D] [-T] [-F <sec>] [-X] [path|URL]\n", progname );
 	printf( "-d <file>  : List of names to exclude\n" );
 	printf( "-f <file>  : List of favourites\n" );
 	printf( "-s <term>  : add search term (can be used multiple times)\n" );
 	printf( "-S         : interactive search\n" );
-	printf( "-R <talgp> : Set rage (title, artist, album, genre, path) [p]\n");
+	printf( "-R <talgp> : Set range (Title, Artist, aLbum, Genre, Path) [p]\n");
+	printf( "-p <file>  : use file as fuzzy playlist (party mode)\n" );
 	printf( "-m         : disable shuffle mode on playlist\n" );
 	printf( "-r         : disable reapeat mode on playlist\n");
-	printf( "-p <file>  : use file as fuzzy playlist (party mode)\n" );
 	printf( "-v         : increase Verbosity (just for debugging)\n" );
-	printf( "-h         : print this help*\n");
 	printf( "-V         : print version*\n");
+	printf( "-h         : print this help*\n");
 	printf( "-C         : clear database and add titles anew *\n" );
 	printf( "-A         : add new titles to the database *\n" );
 	printf( "-D         : delete removed titles from the database *\n" );
 	printf( "-T         : Tagrun, set MP3tags on all titles in the db *\n" );
-	printf( "-F <time>  : start playing new song in the last <time> seconds of the current\n");
+	printf( "-F <sec>   : start playing new song in the last <sec> seconds of the current\n");
+	printf( "-X         : print some database statistics*\n");
 	printf( "[path|URL] : path to the music files [.]\n" );
 	printf( " * these functions will not start the player\n");
 	exit(0);
@@ -157,7 +160,7 @@ static void sendplay( int fd, struct entry_t *song ) {
 	write( fd, line, LINE_BUFLEN );
 }
 
-static void sendtag( int fd, struct entry_t *song ) {
+static void sendpause( int fd, struct entry_t *song ) {
 	char line[LINE_BUFLEN];
 	strncpy( line, "loadpaused ", LINE_BUFLEN );
 	strncat( line, song->path, LINE_BUFLEN );
@@ -217,13 +220,11 @@ int main(int argc, char **argv) {
 	int scan=0;
 	int fade=0;
 	int fdset=0;
-// 	int hascfg=0;
 	int vol=100;
 	int intime=0;
 	int dump=0;
-
+	int multiline=0;
 	FILE *fp=NULL;
-//	struct stat st;
 
 	muteVerbosity();
 
@@ -252,7 +253,6 @@ int main(int argc, char **argv) {
 				}
 			}
 		} while( !feof(fp) );
-//		hascfg=1;
 	}
 
 	// if no basedir has been set, use the current dir as default
@@ -332,15 +332,15 @@ int main(int argc, char **argv) {
 			tagrun=1;
 			break;
 		case 'C':
-			incVerbosity();
+			if( !getVerbosity() ) incVerbosity();
 			scan|=3;
 			break;
 		case 'A':
-			incVerbosity();
+			if( !getVerbosity() ) incVerbosity();
 			scan|=2;
 			break;
 		case 'D':
-			incVerbosity();
+			if( !getVerbosity() ) incVerbosity();
 			scan|=4;
 			break;
 		case 'F':
@@ -446,10 +446,6 @@ int main(int argc, char **argv) {
 		if( !tagrun ) return 0;
 	}
 
-	if( tagrun && !usedb ) {
-		fail( "Tagrun needs a database!", "", F_FAIL );
-	}
-
 	if( strchr( dnpname, '/' ) == NULL ) {
 		strcpy( line, basedir );
 		strcat( line, "/" );
@@ -488,7 +484,7 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if( dump ) {
+	if( dump ) { // database statistics
 		unsigned long maxplayed=0;
 		unsigned long minplayed=-1;
 		unsigned long pl=0;
@@ -512,7 +508,7 @@ int main(int argc, char **argv) {
 		return 0;
 	}
 
-	// No else as the above calls may return NULL!
+	// No else as the above calls may return with an empty playlist!
 	// prepare playing the titles
 	if (NULL != root) {
 		if (mix && !tagrun) {
@@ -647,43 +643,69 @@ int main(int argc, char **argv) {
 			// Interpret mpg123 output and ignore invalid lines
 			if( FD_ISSET( p_status[fdset][0], &fds ) &&
 					( 3 < readline(line, 512, p_status[fdset][0]) ) ) {
-				switch (line[1]) {
-				int cmd=0, rem=0, q=0;
-				case 'R': // startup
-					current = root;
-					if( tagrun ) {
-						strcpy( status, "TAGGING" );
-						sendtag(p_command[fdset][1], current);
-					}
-					else {
-						sendplay(p_command[fdset][1], current);
-					}
-				break;
-				case 'I': // ID3 info
-					/* @I ID3.2.year:2016
-					 * @I ID3.2.comment:http://www.faderhead.com
-					 * @I ID3.2.genre:EBM / Electronic / Electro
-					 *
-					 * @I <a>
-					 * Status message after loading a song (no ID3 song info)
-					 * a = filename without path and extension
-					 */
-					// ICY stream info
-					if( NULL != strstr( line, "ICY-" ) ) {
-						if( NULL != strstr( line, "ICY-NAME: " ) ) {
-							strip( current->album, line+13, NAMELEN );
+				if( '@' == line[0] ) {
+					multiline=0;
+					switch (line[1]) {
+					int cmd=0, rem=0, q=0;
+					case 'R': // startup
+						current = root;
+						if( tagrun ) {
+							strcpy( status, "TAGGING" );
+							sendpause(p_command[fdset][1], current);
 						}
-						if( NULL != ( b = strstr( line, "StreamTitle") ) ) {
-							b = b + 13;
-							*strchr(b, '\'') = '\0';
-							if( strlen(current->display) != 0 ) {
-								insertTitle( current, current->display );
+						else {
+							sendplay(p_command[fdset][1], current);
+						}
+					break;
+					case 'I': // ID3 info
+						/* @I ID3.2.year:2016
+						 * @I ID3.2.comment:http://www.faderhead.com
+						 * @I ID3.2.genre:EBM / Electronic / Electro
+						 *
+						 * @I <a>
+						 * Status message after loading a song (no ID3 song info)
+						 * a = filename without path and extension
+						 */
+						// ICY stream info
+						if( NULL != strstr( line, "ICY-" ) ) {
+							if( NULL != strstr( line, "ICY-NAME: " ) ) {
+								strip( current->album, line+13, NAMELEN );
 							}
-							strip(current->display, b, MAXPATHLEN );
+							if( NULL != ( b = strstr( line, "StreamTitle") ) ) {
+								b = b + 13;
+								*strchr(b, '\'') = '\0';
+								if( strlen(current->display) != 0 ) {
+									insertTitle( current, current->display );
+								}
+								strip(current->display, b, MAXPATHLEN );
+							}
 						}
-					}
-					// standard mpg123 info
-					else {
+						// standard mpg123 info
+						else {
+							if (NULL != (b = strstr(line, "title:"))) {
+								strip(current->title, b + 6, NAMELEN );
+								snprintf( current->display, MAXPATHLEN, "%s - %s",
+										current->artist, current->title );
+							}
+							// line starts with 'Artist:' this means we had a 'Title:' line before
+							else if (NULL != (b = strstr(line, "artist:"))) {
+								strip(current->artist, b + 7, NAMELEN );
+								snprintf( current->display, MAXPATHLEN, "%s - %s",
+										current->artist, current->title );
+							}
+							// Album
+							else if (NULL != (b = strstr(line, "album:"))) {
+								strip( current->album, b + 6, NAMELEN );
+							}
+							else if( NULL != (b = strstr( line, "genre:" ) ) ) {
+								multiline=-1;
+								strip( current->genre, b+6, NAMELEN );
+							}
+						}
+						redraw=1;
+					break;
+					case 'T': // TAG reply
+						redraw=0;
 						if (NULL != (b = strstr(line, "title:"))) {
 							strip(current->title, b + 6, NAMELEN );
 							snprintf( current->display, MAXPATHLEN, "%s - %s",
@@ -700,156 +722,148 @@ int main(int argc, char **argv) {
 							strip( current->album, b + 6, NAMELEN );
 						}
 						else if( NULL != (b = strstr( line, "genre:" ) ) ) {
+							multiline=-1;
 							strip( current->genre, b+6, NAMELEN );
 						}
-					}
-					redraw=1;
-				break;
-				case 'T': // TAG reply
-					redraw=0;
-					if (NULL != (b = strstr(line, "title:"))) {
-						strip(current->title, b + 6, NAMELEN );
-						snprintf( current->display, MAXPATHLEN, "%s - %s",
-								current->artist, current->title );
-					}
-					// line starts with 'Artist:' this means we had a 'Title:' line before
-					else if (NULL != (b = strstr(line, "artist:"))) {
-						strip(current->artist, b + 7, NAMELEN );
-						snprintf( current->display, MAXPATHLEN, "%s - %s",
-								current->artist, current->title );
-					}
-					// Album
-					else if (NULL != (b = strstr(line, "album:"))) {
-						strip( current->album, b + 6, NAMELEN );
-					}
-					else if( NULL != (b = strstr( line, "genre:" ) ) ) {
-						strip( current->genre, b+6, NAMELEN );
-					}
-					else if ( '}' == line[3] ) {
-						dbSetTitle( db, current );
-						current=current->next;
-						if( current == root ) {
-							strcpy( status, "DONE" );
-							redraw=1;
-						}
-						else {
-							sendtag(p_command[fdset][1], current);
-						}
-					}
-				break;
-				case 'J': // JUMP reply
-					redraw=0;
-				break;
-				case 'S': // Status message after loading a song (stream info)
-					redraw=0;
-				break;
-				case 'F': // Status message during playing (frame info)
-					/* $1   = framecount (int)
-					 * $2   = frames left this song (int)
-					 * in  = seconds (float)
-					 * rem = seconds left (float)
-					 */
-					b=strrchr( line, ' ' );
-					rem=atoi(b);
-					*b=0;
-					b=strrchr( line, ' ' );
-					intime=atoi(b);
-					// file play
-					if( 0 != rem ) {
-						q=(30*intime)/(rem+intime);
-						memset( tbuf, 0, LINE_BUFLEN );
-						for( i=0; i<30; i++ ) {
-							if( i < q ) tbuf[i]='=';
-							else if( i == q ) tbuf[i]='>';
-							else tbuf[i]=' ';
-						}
-						sprintf(status, "%i:%02i [%s] %i:%02i", intime/60, intime%60, tbuf, rem/60, rem%60 );
-						if( ( fade != 0 ) && ( rem <= fade ) ) {
-							current->played++;
+						else if ( '}' == line[3] ) {
+							multiline=0;
 							dbSetTitle( db, current );
+							current=current->next;
+							if( current == root ) {
+								strcpy( status, "DONE" );
+								redraw=1;
+							}
+							else {
+								sendpause(p_command[fdset][1], current);
+							}
+						}
+					break;
+					case 'J': // JUMP reply
+						redraw=0;
+					break;
+					case 'S': // Status message after loading a song (stream info)
+						redraw=0;
+					break;
+					case 'F': // Status message during playing (frame info)
+						/* $1   = framecount (int)
+						 * $2   = frames left this song (int)
+						 * in  = seconds (float)
+						 * rem = seconds left (float)
+						 */
+						b=strrchr( line, ' ' );
+						rem=atoi(b);
+						*b=0;
+						b=strrchr( line, ' ' );
+						intime=atoi(b);
+						// file play
+						if( 0 != rem ) {
+							q=(30*intime)/(rem+intime);
+							memset( tbuf, 0, LINE_BUFLEN );
+							for( i=0; i<30; i++ ) {
+								if( i < q ) tbuf[i]='=';
+								else if( i == q ) tbuf[i]='>';
+								else tbuf[i]=' ';
+							}
+							sprintf(status, "%i:%02i [%s] %i:%02i", intime/60, intime%60, tbuf, rem/60, rem%60 );
+							if( (!search) && ( fade != 0 ) && ( rem <= fade ) ) {
+								current->played++;
+								dbSetTitle( db, current );
+								next = skipTitles( current, order );
+								if ( ( !repeat && ( next == root ) ) || ( next == current ) ) {
+									strcpy( status, "STOP" );
+								}
+								else {
+									current=next;
+									// swap player
+									fdset=fdset?0:1;
+									vol=0;
+									write( p_command[fdset][1], "volume 0\n", 9 );
+									sendplay(p_command[fdset][1], current);
+								}
+							}
+							if( vol < 100 ) {
+								vol++;
+								snprintf( line, LINE_BUFLEN, "volume %i\n", vol );
+								write( p_command[fdset][1], line, strlen(line) );
+							}
+
+						}
+						// stream play
+						else {
+							if( intime/60 < 60 ) {
+								sprintf(status, "%i:%02i PLAYING", intime/60, intime%60 );
+							}
+							else {
+								sprintf(status, "%i:%02i:%02i PLAYING", intime/3600, (intime%3600)/60, intime%60 );
+							}
+						}
+						redraw=1;
+					break;
+					case 'P': // Player status
+						cmd = atoi(&line[3]);
+						switch (cmd) {
+						case 0:
+							// update playcount after 15s
+							// only happens on non fading title change
+							if ( (!search) && (intime > 15 ) && ( 1 == usedb ) ) {
+								current->played = current->played+1;
+								dbSetTitle( db, current );
+							}
 							next = skipTitles( current, order );
+							order=1;
 							if ( ( !repeat && ( next == root ) ) || ( next == current ) ) {
 								strcpy( status, "STOP" );
 							}
 							else {
 								current=next;
-								// swap player
-								fdset=fdset?0:1;
-								vol=0;
-								write( p_command[fdset][1], "volume 0\n", 9 );
 								sendplay(p_command[fdset][1], current);
 							}
+							break;
+						case 1:
+							if( tagrun ) {
+								redraw=1;
+								write( p_command[fdset][1], "tag\n", 4 );
+							}
+							else {
+								strcpy( status, "PAUSE" );
+							}
+							break;
+						case 2:
+							strcpy( status, "PLAYING" );
+							break;
+						default:
+							sprintf( status, "Unknown status %i!", cmd);
+							drawframe( current, status, stream );
+							sleep(1);
+							break;
 						}
-						if( vol < 100 ) {
-							vol++;
-							snprintf( line, LINE_BUFLEN, "volume %i\n", vol );
-							write( p_command[fdset][1], line, strlen(line) );
-						}
-
-					}
-					// stream play
-					else {
-						if( intime/60 < 60 ) {
-							sprintf(status, "%i:%02i PLAYING", intime/60, intime%60 );
-						}
-						else {
-							sprintf(status, "%i:%02i:%02i PLAYING", intime/3600, (intime%3600)/60, intime%60 );
-						}
-					}
-					redraw=1;
-				break;
-				case 'P': // Player status
-					cmd = atoi(&line[3]);
-					switch (cmd) {
-					case 0:
-						// update playcount after 15s
-						// only happens on non fading title change
-						if ( (intime > 15 ) && ( 1 == usedb ) ) {
-							current->played = current->played+1;
-							dbSetTitle( db, current );
-						}
-						next = skipTitles( current, order );
-						order=1;
-						if ( ( !repeat && ( next == root ) ) || ( next == current ) ) {
-							strcpy( status, "STOP" );
-						}
-						else {
-							current=next;
-							sendplay(p_command[fdset][1], current);
-						}
+						redraw=1;
 						break;
-					case 1:
-						if( tagrun ) {
-							redraw=1;
-							write( p_command[fdset][1], "tag\n", 4 );
-						}
-						else {
-							strcpy( status, "PAUSE" );
-						}
-						break;
-					case 2:
-						strcpy( status, "PLAYING" );
-						break;
-					default:
-						sprintf( status, "Unknown status %i!", cmd);
-						drawframe( current, status, stream );
-						sleep(1);
-						break;
-					}
-					redraw=1;
+					case 'V': // volume reply
+						redraw=0;
 					break;
-				case 'V': // volume reply
-					redraw=0;
-				break;
-				case 'E':
-					fail("ERROR:", line, F_FAIL );
-				break;
-				default:
-					if( !tagrun ) {
+					case 'E':
+						fail("ERROR:", line, F_FAIL );
+					break;
+					default:
+						if( !tagrun ) {
+							sprintf(status, "Warning: %s", line );
+							drawframe( current, status, stream );
+							sleep(2);
+						}
+					break;
+					} // case line[1]
+				} // if line starts with '@'
+				else {
+					if( multiline ) {
+						strncat( current->genre, " ", NAMELEN );
+						strncat( current->genre, line, NAMELEN );
+						strip( current->genre+strlen(current->genre)-1, line, NAMELEN-strlen(current->genre) ); // cut off linebreak
+					}
+					else {
 						fail( "MPG123:", line, F_FAIL );
 					}
-				break;
-				} // case()
+				} // if
 			} // fgets() > 0
 			if( redraw ) drawframe( current, status, stream );
 		} // while(running)

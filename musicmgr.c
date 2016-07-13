@@ -729,7 +729,6 @@ static unsigned long getLowestPlaycount( struct entry_t *base ) {
 
 		// check for playcount
 		guard=runner;
-
 		do {
 			if( !(runner->flags & MP_FAV) && ( runner->played <=   count ) ) break;
 			// favourites may be played twice as often
