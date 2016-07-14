@@ -238,13 +238,12 @@ int main(int argc, char **argv) {
 			i=0;
 			fgets( line, LINE_BUFLEN, fp );
 			if( strlen(line) > 2 ) {
-				line[strlen(line)-1]=0;
 				switch( line[0] ) {
 				case 'd':
-					strncpy( dbname, line+1, MAXPATHLEN );
+					strip( dbname, line+1, MAXPATHLEN );
 					break;
 				case 's':
-					strncpy( basedir, line+1, MAXPATHLEN );
+					strip( basedir, line+1, MAXPATHLEN );
 					break;
 				case '#':
 					break;
@@ -424,8 +423,8 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if (basedir[strlen(basedir) - 1] == '/')
-		basedir[strlen(basedir) - 1] = 0;
+	while (basedir[strlen(basedir)-1] == '/')
+		basedir[strlen(basedir)-1] = 0;
 
 	if( strchr( dbname, '/' ) == NULL ) {
 		strncpy( dirbuf, dbname, MAXPATHLEN );
@@ -863,12 +862,10 @@ int main(int argc, char **argv) {
 				} // if line starts with '@'
 				else {
 					if( multiline ) {
+						fail( "Multiline:", line, F_FAIL );
 						strncat( current->genre, " ", NAMELEN );
 						strncat( current->genre, line, NAMELEN );
 						strip( current->genre+strlen(current->genre)-1, line, NAMELEN-strlen(current->genre) ); // cut off linebreak
-					}
-					else {
-						fail( "MPG123:", line, F_FAIL );
 					}
 				} // if
 			} // fgets() > 0
