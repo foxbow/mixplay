@@ -36,7 +36,7 @@ static void usage( char *progname ){
 	printf( "-A         : add new titles to the database *\n" );
 	printf( "-D         : delete removed titles from the database *\n" );
 	printf( "-T         : Tagrun, set MP3tags on all titles in the db *\n" );
-	printf( "-F <sec>   : start playing new song in the last <sec> seconds of the current\n");
+	printf( "-F         : disable crossfading between songs\n");
 	printf( "-X         : print some database statistics*\n");
 	printf( "[path|URL] : path to the music files [.]\n" );
 	printf( " * these functions will not start the player\n");
@@ -218,9 +218,10 @@ int main(int argc, char **argv) {
 	int tagrun=0;
 	int repeat=1;
 	int scan=0;
-	int fade=0;
+	int fade=3;
 	int fdset=0;
-	int vol=100;
+	int invol=100;
+	int outvol=100;
 	int intime=0;
 	int dump=0;
 	int multiline=0;
@@ -261,7 +262,7 @@ int main(int argc, char **argv) {
 	}
 
 	// parse command line options
-	while ((c = getopt(argc, argv, "md:f:rvs:Sp:CADTF:VhXR:")) != -1) {
+	while ((c = getopt(argc, argv, "md:f:rvs:Sp:CADTFVhXR:")) != -1) {
 		switch (c) {
 		case 'v': // pretty useless in normal use
 			incVerbosity();
@@ -344,7 +345,7 @@ int main(int argc, char **argv) {
 			scan|=4;
 			break;
 		case 'F':
-			fade=atoi(optarg);
+			fade=0;// atoi(optarg);
 			break;
 		case 'V':
 			printf("mixplay-%s\n", VERSION );
@@ -638,6 +639,11 @@ int main(int argc, char **argv) {
 			// drain inactive player
 			if( fade && FD_ISSET( p_status[fdset?0:1][0], &fds ) ) {
 				readline(line, 512, p_status[fdset?0:1][0]);
+				if( ( outvol > 0 ) && ( line[1] == 'F' ) ){
+					outvol--;
+					snprintf( line, LINE_BUFLEN, "volume %i\n", outvol );
+					write( p_command[fdset?0:1][1], line, strlen(line) );
+				}
 			}
 
 			// Interpret mpg123 output and ignore invalid lines
@@ -776,14 +782,15 @@ int main(int argc, char **argv) {
 									current=next;
 									// swap player
 									fdset=fdset?0:1;
-									vol=0;
+									invol=0;
+									outvol=100;
 									write( p_command[fdset][1], "volume 0\n", 9 );
 									sendplay(p_command[fdset][1], current);
 								}
 							}
-							if( vol < 100 ) {
-								vol++;
-								snprintf( line, LINE_BUFLEN, "volume %i\n", vol );
+							if( invol < 100 ) {
+								invol++;
+								snprintf( line, LINE_BUFLEN, "volume %i\n", invol );
 								write( p_command[fdset][1], line, strlen(line) );
 							}
 

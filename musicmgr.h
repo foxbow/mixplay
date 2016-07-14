@@ -13,11 +13,10 @@
 #include <sys/time.h>
 
 #define NAMELEN 64
+#define MAXPATHLEN 256
 
 #define RANDOM(x) (rand()%x)
-#ifndef MAXPATHLEN
-  #define MAXPATHLEN 256
-#endif
+
 
 #define MP_FAV 1	// Favourite
 #define MP_DNP 2    // do not play
