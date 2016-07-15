@@ -680,7 +680,10 @@ int main(int argc, char **argv) {
 								b = b + 13;
 								*strchr(b, '\'') = '\0';
 								if( strlen(current->display) != 0 ) {
-									insertTitle( current, current->display );
+									strcpy(tbuf, current->display);
+									next=insertTitle( current, tbuf );
+									// fix genpathname() from insertTitle
+									strip(next->display, tbuf, MAXPATHLEN );
 								}
 								strip(current->display, b, MAXPATHLEN );
 							}
