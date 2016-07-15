@@ -28,8 +28,8 @@ static void usage( char *progname ){
 	printf( "-R <talgp> : Set range (Title, Artist, aLbum, Genre, Path) [p]\n");
 	printf( "-p <file>  : use file as fuzzy playlist (party mode)\n" );
 	printf( "-m         : disable shuffle mode on playlist\n" );
-	printf( "-r         : disable reapeat mode on playlist\n");
-	printf( "-v         : increase Verbosity (just for debugging)\n" );
+	printf( "-r         : disable repeat mode on playlist\n");
+	printf( "-v         : increase verbosity (just for debugging)\n" );
 	printf( "-V         : print version*\n");
 	printf( "-h         : print this help*\n");
 	printf( "-C         : clear database and add titles anew *\n" );
@@ -224,12 +224,11 @@ int main(int argc, char **argv) {
 	int outvol=100;
 	int intime=0;
 	int dump=0;
-	int multiline=0;
 	FILE *fp=NULL;
 
 	muteVerbosity();
 
-	// load default config
+	// load default configuration
 	b=getenv("HOME");
 	sprintf( config, "%s/.mixplay", b );
 	fp=fopen(config, "r");
@@ -255,9 +254,9 @@ int main(int argc, char **argv) {
 		} while( !feof(fp) );
 	}
 
-	// if no basedir has been set, use the current dir as default
+	// if no basedir has been set, use the current directory as default
 	if( 0 == strlen(basedir) && ( NULL == getcwd( basedir, MAXPATHLEN ) ) ) {
-		fail("Could not get current dir!", "", errno);
+		fail("Could not get current directory!", "", errno);
 	}
 
 	// parse command line options
@@ -566,10 +565,10 @@ int main(int argc, char **argv) {
 			FD_SET( p_status[0][0], &fds );
 			if( fade != 0 ) FD_SET( p_status[1][0], &fds );
 			to.tv_sec=1;
-			to.tv_usec=0; // 1 sec
+			to.tv_usec=0; // 1 second
 			i=select( FD_SETSIZE, &fds, NULL, NULL, &to );
 			if( i>0 ) redraw=1;
-			// Interpret keypresses
+			// Interpret key
 			if( FD_ISSET( fileno(stdin), &fds ) ) {
 				key=getch();
 				switch( key ){
@@ -649,7 +648,6 @@ int main(int argc, char **argv) {
 			if( FD_ISSET( p_status[fdset][0], &fds ) &&
 					( 3 < readline(line, 512, p_status[fdset][0]) ) ) {
 				if( '@' == line[0] ) {
-					multiline=0;
 					switch (line[1]) {
 					int cmd=0, rem=0, q=0;
 					case 'R': // startup
@@ -706,7 +704,6 @@ int main(int argc, char **argv) {
 								strip( current->album, b + 6, NAMELEN );
 							}
 							else if( NULL != (b = strstr( line, "genre:" ) ) ) {
-								multiline=-1;
 								strip( current->genre, b+6, NAMELEN );
 							}
 						}
@@ -735,11 +732,9 @@ int main(int argc, char **argv) {
 							strip( current->album, b + 6, NAMELEN );
 						}
 						else if( NULL != (b = strstr( line, "genre:" ) ) ) {
-							multiline=-1;
 							strip( current->genre, b+6, NAMELEN );
 						}
 						else if ( '}' == line[3] ) {
-							multiline=0;
 							dbSetTitle( db, current );
 							current=current->next;
 							if( current == root ) {
@@ -868,15 +863,7 @@ int main(int argc, char **argv) {
 					break;
 					} // case line[1]
 				} // if line starts with '@'
-				else {
-					if( multiline ) {
-						fail( "Multiline:", line, F_FAIL );
-						strncat( current->genre, " ", NAMELEN );
-						strncat( current->genre, line, NAMELEN );
-						strip( current->genre+strlen(current->genre)-1, line, NAMELEN-strlen(current->genre) ); // cut off linebreak
-					}
-					// Ignore other mpg123 output
-				} // if
+				// Ignore other mpg123 output
 			} // fgets() > 0
 			if( redraw ) drawframe( current, status, stream );
 		} // while(running)
