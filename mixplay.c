@@ -113,7 +113,7 @@ static void drawframe( struct entry_t *current, const char *status, int stream )
 			// previous songs
 			runner=current->prev;
 			for( i=middle-2; i>1; i-- ){
-				if( NULL != runner ) {
+				if( current != runner ) {
 					strip( buff, runner->display, maxlen );
 					if(runner->flags & MP_FAV) {
 						attron(A_BOLD);
@@ -130,7 +130,7 @@ static void drawframe( struct entry_t *current, const char *status, int stream )
 			// past songs
 			runner=current->next;
 			for( i=middle+2; i<row-2; i++ ){
-				if( NULL != runner ) {
+				if( current != runner ) {
 					strip( buff, runner->display, maxlen );
 					if(runner->flags & MP_FAV ) {
 						attron(A_BOLD);
@@ -687,7 +687,7 @@ int main(int argc, char **argv) {
 							}
 						}
 						// standard mpg123 info
-						else {
+						else if ( strstr(line, "ID3") != NULL ) {
 							if (NULL != (b = strstr(line, "title:"))) {
 								strip(current->title, b + 6, NAMELEN );
 								snprintf( current->display, MAXPATHLEN, "%s - %s",
@@ -707,6 +707,11 @@ int main(int argc, char **argv) {
 								multiline=-1;
 								strip( current->genre, b+6, NAMELEN );
 							}
+						}
+						else {
+							strip( status, &line[3], 10 );
+							drawframe( current, status, stream );
+							sleep(2);
 						}
 						redraw=1;
 					break;
@@ -863,13 +868,12 @@ int main(int argc, char **argv) {
 				} // if line starts with '@'
 				else {
 					if( multiline ) {
+						fail( "multiline:", line, F_FAIL ); // @todo does this really happen at all?
 						strncat( current->genre, " ", NAMELEN );
 						strncat( current->genre, line, NAMELEN );
 						strip( current->genre+strlen(current->genre)-1, line, NAMELEN-strlen(current->genre) ); // cut off linebreak
 					}
-					else {
-						fail( "MPG123:", line, F_FAIL );
-					}
+					// Ignore other mpg123 output
 				} // if
 			} // fgets() > 0
 			if( redraw ) drawframe( current, status, stream );

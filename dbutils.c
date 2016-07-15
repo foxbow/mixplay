@@ -131,25 +131,23 @@ struct entry_t *dbGetMusic( int db ) {
 int dbCheckExist( char *dbname ) {
 	struct entry_t *root;
 	struct entry_t *runner;
-	struct entry_t *guard;
 	int db=0;
 	int num=0;
 
 	dbOpen( &db, dbname );
 	root=dbGetMusic( db );
-	guard=root;
 
 	do {
 		activity( "Cleaning" );
 		if( !mp3Exists(runner) ) {
-			if(guard == runner) guard=runner->prev;
+			if(root == runner) root=runner->prev;
 			runner=removeTitle( runner );
 			num++;
 		}
 		else {
 			runner=runner->next;
 		}
-	} while( guard != runner );
+	} while( root != runner );
 
 	if( num > 0 ) {
 		dbClose(&db);
