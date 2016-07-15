@@ -370,12 +370,12 @@ int main(int argc, char **argv) {
 		repeat=0;
 	}
 
-	// parse additional argument
+	// parse additional argument and sanitize options
 	if (optind < argc) {
 		if( isURL( argv[optind] ) ) {
 			mix=0;		// mixing a stream is a bad idea
 			usedb=0;	// a stream needs no db
-			repeat=0;	// @todo: repeat may even be useful on stream disconnect
+			repeat=0;	// no repeat
 			fade=0;		// fading is really dumb
 			stream=1;
 			line[0]=0;
@@ -740,6 +740,7 @@ int main(int argc, char **argv) {
 							if( current == root ) {
 								strcpy( status, "DONE" );
 								redraw=1;
+								running=0;
 							}
 							else {
 								sendpause(p_command[fdset][1], current);
