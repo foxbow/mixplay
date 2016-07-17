@@ -774,7 +774,7 @@ int main(int argc, char **argv) {
 								else tbuf[i]=' ';
 							}
 							sprintf(status, "%i:%02i [%s] %i:%02i", intime/60, intime%60, tbuf, rem/60, rem%60 );
-							if( (!search) && ( fade != 0 ) && ( rem <= fade ) ) {
+							if( (mix) && ( fade != 0 ) && ( rem <= fade ) ) {
 								current->played++;
 								dbSetTitle( db, current );
 								next = skipTitles( current, order );
@@ -815,7 +815,7 @@ int main(int argc, char **argv) {
 						case 0:
 							// update playcount after 15s
 							// only happens on non fading title change
-							if ( (!search) && (intime > 15 ) && ( 1 == usedb ) ) {
+							if ( (mix) && (intime > 15 ) && ( 1 == usedb ) ) {
 								current->played = current->played+1;
 								dbSetTitle( db, current );
 							}
