@@ -260,7 +260,7 @@ int main(int argc, char **argv) {
 	}
 
 	// parse command line options
-	while ((c = getopt(argc, argv, "md:f:rvs:Sp:CADTFVhXR:")) != -1) {
+	while ((c = getopt(argc, argv, "md:f:rvs:Sp:CADTFVhXR:Q")) != -1) {
 		switch (c) {
 		case 'v': // pretty useless in normal use
 			incVerbosity();
@@ -355,6 +355,10 @@ int main(int argc, char **argv) {
 		case 'X':
 			dump=1;
 			puts("-- Dumping Database statistics --");
+			setVerbosity(2);
+			break;
+		case 'Q':
+			dump=-1;
 			setVerbosity(2);
 			break;
 		default:
@@ -478,38 +482,43 @@ int main(int argc, char **argv) {
 		}
 
 		if(search){
-			if( 0 == range ) range=SL_PATH;
+			if( 0 == range ) {
+				range=SL_PATH;
+			}
 			root=searchList(root, searchlist, range );
 		}
-	}
-
-	if( dump ) { // database statistics
-		unsigned long maxplayed=0;
-		unsigned long minplayed=-1;
-		unsigned long pl=0;
-
-		current=root;
-		do {
-			if( current->played < minplayed ) minplayed=current->played;
-			if( current->played > maxplayed ) maxplayed=current->played;
-			current=current->next;
-		} while( current != root );
-
-		for( pl=minplayed; pl <= maxplayed; pl++ ) {
-			unsigned long pcount=0;
-			do {
-				if( current->played == pl ) pcount++;
-				current=current->next;
-			} while( current != root );
-			printf("%5li times played: %5li titles\n", pl, pcount );
-		}
-		puts("");
-		return 0;
 	}
 
 	// No else as the above calls may return with an empty playlist!
 	// prepare playing the titles
 	if (NULL != root) {
+		if( dump ) { // database statistics
+			unsigned long maxplayed=0;
+			unsigned long minplayed=-1;
+			unsigned long pl=0;
+
+			current=root;
+			do {
+				if( current->played < minplayed ) minplayed=current->played;
+				if( current->played > maxplayed ) maxplayed=current->played;
+				current=current->next;
+			} while( current != root );
+
+			for( pl=minplayed; pl <= maxplayed; pl++ ) {
+				unsigned long pcount=0;
+				do {
+					if( current->played == pl ) pcount++;
+					current=current->next;
+				} while( current != root );
+				printf("%5li times played: %5li titles\n", pl, pcount );
+			}
+			puts("");
+
+			if( -1 == dump ) dumpTitles(root);
+
+			return 0;
+		}
+
 		if (mix && !tagrun) {
 			root=shuffleTitles(root);
 		}

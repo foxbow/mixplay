@@ -366,8 +366,8 @@ static int checkMatch( const char* name, const char* pat ) {
 int matchList( struct entry_t **result, struct entry_t *base, struct bwlist_t *term, int range ) {
 	struct entry_t  *runner=base;
 	struct entry_t  *next=NULL;
-	int match=0;
-	int cnt;
+	int match, ranged=0;
+	int cnt=0;
 
 	char *mdesc[]={
 			"title"
@@ -385,18 +385,23 @@ int matchList( struct entry_t **result, struct entry_t *base, struct bwlist_t *t
 		while( runner->next != base ){
 			switch( range ) {
 				case SL_TITLE:
+					ranged=0;
 					match=checkMatch( runner->title, term->dir );
 				break;
 				case SL_ALBUM:
+					ranged=1;
 					match=checkMatch( runner->album, term->dir );
 				break;
 				case SL_ARTIST:
+					ranged=2;
 					match=checkMatch( runner->artist, term->dir );
 				break;
 				case SL_GENRE:
+					ranged=3;
 					match=checkMatch( getGenre(runner), term->dir );
 				break;
 				case SL_PATH:
+					ranged=4;
 					match=checkMatch( runner->path, term->dir );
 				break;
 				default:
@@ -408,7 +413,7 @@ int matchList( struct entry_t **result, struct entry_t *base, struct bwlist_t *t
 					base=base->next;       // make sure base stays valid after removal
 				}
 
-				moveTitle( runner, result );
+				result[0]=moveTitle( runner, result );
 				cnt++;
 				runner=next;
 			}
@@ -419,7 +424,7 @@ int matchList( struct entry_t **result, struct entry_t *base, struct bwlist_t *t
 		term=term->next;
 	}
 
-	if( getVerbosity() ) printf("Added %i titles by %s \n", cnt, mdesc[range] );
+	if( getVerbosity() ) printf("Added %i titles by %s \n", cnt, mdesc[ranged] );
 
 	return cnt;
 }
@@ -679,7 +684,7 @@ static unsigned long getLowestPlaycount( struct entry_t *base ) {
 	unsigned long min=-1;
 
 	do {
-		if( runner->played < min ) min=base->played;
+		if( runner->played < min ) min=runner->played;
 		runner=runner->next;
 	} while( runner != base );
 

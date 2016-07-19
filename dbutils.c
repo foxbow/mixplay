@@ -147,7 +147,7 @@ int dbCheckExist( char *dbname ) {
 		else {
 			runner=runner->next;
 		}
-	} while( root != runner );
+	} while( ( runner != NULL ) && ( root != runner ) );
 
 	if( num > 0 ) {
 		dbClose(&db);
