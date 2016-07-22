@@ -32,7 +32,7 @@ static int entry2db( struct entry_t *entry, struct dbentry_t *dbentry ) {
 }
 
 /**
- * opens the database fiel and handles errors
+ * opens the database file and handles errors
  */
 int dbOpen( int *db, const char *path ){
 	if( 0 != db[0] ) {

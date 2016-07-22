@@ -376,9 +376,9 @@ int main(int argc, char **argv) {
 
 	// parse additional argument and sanitize options
 	if (optind < argc) {
+		usedb=0;
 		if( isURL( argv[optind] ) ) {
 			mix=0;		// mixing a stream is a bad idea
-			usedb=0;	// a stream needs no db
 			repeat=0;	// no repeat
 			fade=0;		// fading is really dumb
 			stream=1;
@@ -393,7 +393,6 @@ int main(int argc, char **argv) {
 		}
 		else if( endsWith( argv[optind], ".mp3" ) ) {
 			// play single song...
-			usedb=0;
 			mix=0;
 			repeat=0;
 			root=insertTitle( root, argv[optind] );
@@ -416,6 +415,7 @@ int main(int argc, char **argv) {
 		}
 		else {
 			if( !scan ) usedb=0;
+			getcwd( basedir, MAXPATHLEN );
 			if( argv[optind][0] != '/' ) {
 				snprintf( dirbuf, MAXPATHLEN, "%s/%s", basedir, argv[optind] );
 				strncpy( basedir, dirbuf, MAXPATHLEN );
@@ -824,7 +824,7 @@ int main(int argc, char **argv) {
 						case 0:
 							// update playcount after 15s
 							// only happens on non fading title change
-							if ( (mix) && (intime > 15 ) && ( 1 == usedb ) ) {
+							if ( mix && (intime > 15 ) && usedb ) {
 								current->played = current->played+1;
 								dbSetTitle( db, current );
 							}
