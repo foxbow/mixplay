@@ -268,6 +268,9 @@ int main(int argc, char **argv) {
 		case 'm':
 			mix = 0;
 			break;
+		case 'r':
+			repeat=0;
+			break;
 		case 'd':
 			strcpy(dnpname, optarg);
 			break;
@@ -277,8 +280,7 @@ int main(int argc, char **argv) {
 		case 'S':
 			printf("Search: ");
 			fflush(stdout);
-			readline( line, MAXPATHLEN, fileno(stdin) );
-			if( strlen(line) > 1 ) {
+			if( readline( line, MAXPATHLEN, fileno(stdin) ) > 1 ) {
 				search=1;
 				searchlist=addToList( line, searchlist );
 			}
@@ -568,6 +570,14 @@ int main(int argc, char **argv) {
 		drawframe( NULL, status, stream );
 
 		if( usedb ) dbOpen( &db, dbname );
+
+		key = fcntl( p_status[0][0], F_GETFL, 0);
+		fcntl(p_status[0][0], F_SETFL, key | O_NONBLOCK );
+		if( fade ) {
+			key = fcntl( p_status[1][0], F_GETFL, 0);
+			fcntl(p_status[1][0], F_SETFL, key | O_NONBLOCK );
+		}
+
 		while (running) {
 			FD_ZERO( &fds );
 			FD_SET( fileno(stdin), &fds );
@@ -645,8 +655,8 @@ int main(int argc, char **argv) {
 			}
 			// drain inactive player
 			if( fade && FD_ISSET( p_status[fdset?0:1][0], &fds ) ) {
-				readline(line, 512, p_status[fdset?0:1][0]);
-				if( ( outvol > 0 ) && ( line[1] == 'F' ) ){
+				key=readline(line, 512, p_status[fdset?0:1][0]);
+				if( ( key > 0 ) && ( outvol > 0 ) && ( line[1] == 'F' ) ){
 					outvol--;
 					snprintf( line, LINE_BUFLEN, "volume %i\n", outvol );
 					write( p_command[fdset?0:1][1], line, strlen(line) );
