@@ -663,7 +663,7 @@ int main(int argc, char **argv) {
 								current=current->prev;
 							}
 							else {
-								fail("Broken link", current->path, F_FAIL);
+								fail("Broken link in list", current->path, F_FAIL);
 							}
 							order=1;
 							write( p_command[fdset][1], "STOP\n", 6 );
