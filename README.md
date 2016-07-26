@@ -18,9 +18,44 @@ a full featured management software.
 * playlist support
 * Name/Artist guessing by path (shall be replaced by MP3 tag reading)
 
-### Room for improvement
-* MP3 Tag reading - now done by startign each song and setting the tag data
+### Parameters
+* -d <file>  : List of names to exclude [mixplay.dnp]
+* -f <file>  : List of favourites [mixplay.fav]
+* -s <term>  : add search term (can be used multiple times)
+* -S         : interactive search
+* -R <talgp> : Set range (Title, Artist, aLbum, Genre, Path) [p]
+* -p <file>  : use file as fuzzy playlist (party mode)
+* -m         : disable shuffle mode on playlist
+* -r         : disable repeat mode on playlist
+* -v         : increase verbosity (just for debugging)
+* -V         : print version*
+* -h         : print this help*
+* -C         : clear database and add titles anew *
+* -A         : add new titles to the database *
+* -D         : delete removed titles from the database *
+* -T         : Tagrun, set MP3tags on all titles in the db *
+* -F         : disable crossfading between songs
+* -X         : print some database statistics*
+* [path|URL] : path to the music files [.]
+*  * these functions will not start the player
+
+### Control Keys
+* [SPACE] - toggle pause
+* s - stop playing
+* q - quite player
+
+on playlists:
+* i - show path information
+* n/[DOWN] - next title
+* p/[UP] - previous title
+* N - skip 5 titles forward
+* P - skip 5 titles backward
+* [LEFT] - rewind 64 frames
+* [RIGHT] - skip 64 frames
+* r - replay
+* b - add to do-not-play list
+* f - add to favoutites
 
 ### Planned
-* native MP3 streaming (lose mpg123 - low priority)
+* native MP3 streaming and tagging (lose mpg123 - low priority)
 * interface revamp (dependant on actual hardware)

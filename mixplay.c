@@ -43,6 +43,26 @@ static void usage( char *progname ){
 	exit(0);
 }
 
+static void popUp( const char *text ) {
+	int row, col;
+	char buff[LINE_BUFLEN];
+
+	refresh();
+	getmaxyx(stdscr, row, col);
+	if ((row > 6) && (col > 19)) {
+		// drawbox( row-3, 2, row, col-2 );
+		mvhline( row-2, 2, ' ', col-4);
+		if( strlen( text ) > col-6 ) {
+			strcpy( buff, ( text )+(strlen(text)-(col-7)) );
+		}
+		else {
+			strip( buff, text, col-6 );
+		}
+		mvprintw( row-2, 3, " %s ", buff);
+	}
+	refresh();
+}
+
 /**
  * Draw the application frame
  */
@@ -491,35 +511,35 @@ int main(int argc, char **argv) {
 		}
 	}
 
+	if( dump ) { // database statistics
+		unsigned long maxplayed=0;
+		unsigned long minplayed=-1;
+		unsigned long pl=0;
+
+		current=root;
+		do {
+			if( current->played < minplayed ) minplayed=current->played;
+			if( current->played > maxplayed ) maxplayed=current->played;
+			current=current->next;
+		} while( current != root );
+
+		for( pl=minplayed; pl <= maxplayed; pl++ ) {
+			unsigned long pcount=0;
+			do {
+				if( current->played == pl ) pcount++;
+				current=current->next;
+			} while( current != root );
+			printf("%5li times played: %5li titles\n", pl, pcount );
+		}
+		puts("");
+
+		if( -1 == dump ) dumpTitles(root);
+
+		return 0;
+	}
 	// No else as the above calls may return with an empty playlist!
 	// prepare playing the titles
 	if (NULL != root) {
-		if( dump ) { // database statistics
-			unsigned long maxplayed=0;
-			unsigned long minplayed=-1;
-			unsigned long pl=0;
-
-			current=root;
-			do {
-				if( current->played < minplayed ) minplayed=current->played;
-				if( current->played > maxplayed ) maxplayed=current->played;
-				current=current->next;
-			} while( current != root );
-
-			for( pl=minplayed; pl <= maxplayed; pl++ ) {
-				unsigned long pcount=0;
-				do {
-					if( current->played == pl ) pcount++;
-					current=current->next;
-				} while( current != root );
-				printf("%5li times played: %5li titles\n", pl, pcount );
-			}
-			puts("");
-
-			if( -1 == dump ) dumpTitles(root);
-
-			return 0;
-		}
 
 		if (mix && !tagrun) {
 			root=shuffleTitles(root);
@@ -605,6 +625,10 @@ int main(int argc, char **argv) {
 				}
 				if( !stream ) {
 					switch( key ) {
+						case 'i':
+							popUp( current->path );
+							sleep(2);
+						break;
 						case KEY_DOWN:
 						case 'n':
 							order=1;
@@ -783,8 +807,17 @@ int main(int argc, char **argv) {
 						*b=0;
 						b=strrchr( line, ' ' );
 						intime=atoi(b);
+						// stream play
+						if( stream ){
+							if( intime/60 < 60 ) {
+								sprintf(status, "%i:%02i PLAYING", intime/60, intime%60 );
+							}
+							else {
+								sprintf(status, "%i:%02i:%02i PLAYING", intime/3600, (intime%3600)/60, intime%60 );
+							}
+						}
 						// file play
-						if( 0 != rem ) {
+						else {
 							q=(30*intime)/(rem+intime);
 							memset( tbuf, 0, LINE_BUFLEN );
 							for( i=0; i<30; i++ ) {
@@ -816,15 +849,6 @@ int main(int argc, char **argv) {
 								write( p_command[fdset][1], line, strlen(line) );
 							}
 
-						}
-						// stream play
-						else {
-							if( intime/60 < 60 ) {
-								sprintf(status, "%i:%02i PLAYING", intime/60, intime%60 );
-							}
-							else {
-								sprintf(status, "%i:%02i:%02i PLAYING", intime/3600, (intime%3600)/60, intime%60 );
-							}
 						}
 						redraw=1;
 					break;

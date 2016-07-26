@@ -2,7 +2,7 @@
 Version=1.0
 Name=Mixplay
 Comment=Play directories m3u playlists and single mp3 files
-Exec=gnome-terminal --disable-factory --class mixplay --command "mixplay -m %u"
+Exec=gnome-terminal --disable-factory --class mixplay --command "mixplay %u"
 Type=Application
 Icon=/usr/share/pixmaps/mixplay.svg
 Categories=Player;
