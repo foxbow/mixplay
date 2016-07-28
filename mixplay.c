@@ -63,9 +63,6 @@ static void popUp( const char *text ) {
 	refresh();
 }
 
-/**
- * Draw the application frame
- */
 static void drawframe( struct entry_t *current, const char *status, int stream ) {
 	int i, maxlen, pos;
 	int row, col;
@@ -79,10 +76,7 @@ static void drawframe( struct entry_t *current, const char *status, int stream )
 	// Keep a minimum size to make sure
 	if ((row > 6) && (col > 19)) {
 		// main frame
-		drawbox(1, 1, row - 2, col - 2);
-		// outer frame
-		mvhline(row - 1, 1, ' ', col);
-		mvvline(1, col - 1, ' ', row);
+		drawbox(0, 1, row - 2, col - 2);
 
 		maxlen = col - 6;
 
@@ -132,7 +126,7 @@ static void drawframe( struct entry_t *current, const char *status, int stream )
 		if( NULL != current ) {
 			// previous songs
 			runner=current->prev;
-			for( i=middle-2; i>1; i-- ){
+			for( i=middle-2; i>0; i-- ){
 				if( current != runner ) {
 					strip( buff, runner->display, maxlen );
 					if(runner->flags & MP_FAV) {
@@ -161,7 +155,7 @@ static void drawframe( struct entry_t *current, const char *status, int stream )
 					strcpy( buff, "---" );
 				}
 				mvhline( i, 2, ' ', maxlen + 2);
-				mvprintw( i, 3, "%s", buff);
+				mvprintw( i, 2, "%s", buff);
 				attroff(A_BOLD);
 			}
 		}
