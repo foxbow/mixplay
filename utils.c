@@ -183,6 +183,7 @@ int isMusic( const char *name ){
 
 
 /**
+ * Check if the given string is an URL
  * We just allow http/s
  */
 int isURL( const char *uri ){
@@ -210,12 +211,29 @@ void activity( const char *msg ){
 /*
  * Inplace conversion of a string to lowercase
  */
-char *toLower( char *text ){
+static char *toLower( char *text ){
 	int i;
 	for(i=0;i<strlen(text);i++) text[i]=tolower(text[i]);
 	return text;
 }
 
+/**
+ * works like strncpy but turns every character to lowercase
+ */
+int strlncpy( char *dest, const char *src, const size_t len ) {
+	strncpy( dest, src, len );
+	dest=toLower(dest);
+	return strlen(dest);
+}
+
+/**
+ * works like strncat but turns every character to lowercase
+ */
+int strlncat( char *dest, const char *src, const size_t len ) {
+	strncat( dest, src, len );
+	dest=toLower(dest);
+	return strlen(dest);
+}
 
 /**
  * add a line to a file

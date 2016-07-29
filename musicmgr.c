@@ -355,8 +355,8 @@ static int checkMatch( const char* name, const char* pat ) {
 	if( len <= 20 ) trigger=80;
 	if( len <= 10 ) trigger=88;
 	if( len <= 5 ) trigger=100;
-	strncpy( loname, name, MAXPATHLEN );
-	if( trigger <= fncmp( toLower(loname), pat ) ){
+	strlncpy( loname, name, MAXPATHLEN );
+	if( trigger <= fncmp( loname, pat ) ){
 		return -1;
 	}
 	return 0;
@@ -469,9 +469,8 @@ struct entry_t *useDNPlist( struct entry_t *base, struct bwlist_t *list ) {
 	}
 
 	do{
-		strncpy( loname, pos->path, NAMELEN+MAXPATHLEN );
-		strncat( loname, pos->display, NAMELEN+MAXPATHLEN-strlen(loname) );
-		toLower( loname );
+		strlncpy( loname, pos->path, NAMELEN+MAXPATHLEN );
+		strlncat( loname, pos->display, NAMELEN+MAXPATHLEN-strlen(loname) );
 
 		ptr=list;
 		while( ptr ){
@@ -526,7 +525,7 @@ struct bwlist_t *loadList( const char *path ){
 				ptr=ptr->next;
 			}
 			if( !ptr ) fail( "Out of memory!", "", errno );
-			strncpy( ptr->dir, toLower(buff), MAXPATHLEN );
+			strlncpy( ptr->dir, buff, MAXPATHLEN );
 			ptr->dir[ strlen(buff)-1 ]=0;
 			ptr->next=NULL;
 			cnt++;
@@ -549,8 +548,7 @@ struct bwlist_t *loadList( const char *path ){
 struct bwlist_t *addToList( const char *line, struct bwlist_t *list ) {
 	struct bwlist_t *entry;
 	entry=calloc( 1, sizeof( struct bwlist_t ) );
-	strncpy( entry->dir, line, MAXPATHLEN );
-	toLower( entry->dir );
+	strlncpy( entry->dir, line, MAXPATHLEN );
 	entry->next = NULL;
 	if( NULL == list ) {
 		list=entry;
@@ -698,12 +696,12 @@ static unsigned long getLowestPlaycount( struct entry_t *base ) {
 	struct entry_t *end=NULL;
 	struct entry_t *runner=NULL;
 	struct entry_t *guard=NULL;
-	char *lastname=NULL;
 	int num=0, artguard=-1;
 	int nameskip=0;
 	int playskip=0;
 	struct timeval tv;
 	unsigned long count=0;
+	char name[NAMELEN], lastname[NAMELEN]="";
 
 	// improve 'randomization'
 	gettimeofday(&tv,NULL);
@@ -720,10 +718,12 @@ static unsigned long getLowestPlaycount( struct entry_t *base ) {
 		runner=skipTitles( base, RANDOM(num) );
 
 		// check for duplicates
-		if( artguard && lastname ) {
+		if( artguard && strlen(lastname) ) {
 			guard=runner;
-			while( 75 < fncmp( runner->artist, lastname ) ) {
+			strlncpy( name, runner->artist, NAMELEN );
+			while( 75 < fncmp( name, lastname ) ) {
 				runner=runner->next;
+				strlncpy( name, runner->artist, NAMELEN );
 				if( guard == runner ) {
 					artguard=0;
 					break;
@@ -748,7 +748,7 @@ static unsigned long getLowestPlaycount( struct entry_t *base ) {
 			count=runner->played;
 		}
 
-		lastname=runner->artist;
+		strlncpy(lastname, runner->artist, NAMELEN );
 
 		// Make sure we stay in the right list
 		if(runner == base) {
@@ -810,8 +810,7 @@ int applyFavourites( struct entry_t *root, struct bwlist_t *favourites ) {
 
 	do {
 		activity("Favourites ");
-		strcpy( loname, runner->path );
-		toLower( loname );
+		strlncpy( loname, runner->path, MAXPATHLEN );
 		ptr=favourites;
 		while( ptr ){
 			if( strstr( loname, ptr->dir ) ){
