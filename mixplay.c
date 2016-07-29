@@ -823,8 +823,9 @@ int main(int argc, char **argv) {
 							if( (mix) && ( fade != 0 ) && ( rem <= fade ) ) {
 								current->played++;
 								dbSetTitle( db, current );
-								next = skipTitles( current, order );
-								if ( ( !repeat && ( next == root ) ) || ( next == current ) ) {
+								next=current->next;
+								if( ( next == current )
+										|| ( ( !repeat ) && ( next == root ) ) ) {
 									strcpy( status, "STOP" );
 								}
 								else {
@@ -857,14 +858,17 @@ int main(int argc, char **argv) {
 								dbSetTitle( db, current );
 							}
 							next = skipTitles( current, order );
-							order=1;
-							if ( ( !repeat && ( next == root ) ) || ( next == current ) ) {
+							if ( ( next == current ) ||
+									( !repeat &&
+											( ( ( order == 1 ) && ( next == root ) ) ||
+											( ( order == -1 ) && ( next == root->prev ) ) ) ) ) {
 								strcpy( status, "STOP" );
 							}
 							else {
 								current=next;
 								sendplay(p_command[fdset][1], current);
 							}
+							order=1;
 							break;
 						case 1:
 							if( tagrun ) {
