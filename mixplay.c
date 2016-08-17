@@ -205,6 +205,7 @@ int main(int argc, char **argv) {
 	char status[LINE_BUFLEN] = "INIT";
 	char tbuf[LINE_BUFLEN];
 	char basedir[MAXPATHLEN];
+	char confdir[MAXPATHLEN];
 	char dirbuf[MAXPATHLEN];
 	char dbname[MAXPATHLEN] = "mixplay.db";
 	char dnpname[MAXPATHLEN] = "mixplay.dnp";
@@ -238,13 +239,15 @@ int main(int argc, char **argv) {
 	int outvol=100;
 	int intime=0;
 	int dump=0;
+	int hascfg=0;
 	FILE *fp=NULL;
 
 	muteVerbosity();
 
 	// load default configuration
-	b=getenv("HOME");
-	sprintf( config, "%s/.mixplay", b );
+	sprintf( confdir, "%s/.mixplay", getenv("$HOME") );
+	strcpy( config, confdir );
+	strcat( config, "/mixplay.cnf" );
 	fp=fopen(config, "r");
 	if( NULL != fp ) {
 		do {
@@ -266,6 +269,7 @@ int main(int argc, char **argv) {
 				}
 			}
 		} while( !feof(fp) );
+		hascfg=1;
 	}
 
 	// if no basedir has been set, use the current directory as default
@@ -448,6 +452,46 @@ int main(int argc, char **argv) {
 	if( strchr( dbname, '/' ) == NULL ) {
 		strncpy( dirbuf, dbname, MAXPATHLEN );
 		snprintf( dbname, MAXPATHLEN, "%s/%s", basedir, dirbuf );
+	}
+	if( hascfg==0 && ( strcmp( basedir, getenv("$HOME") ) == 0 ) ) {
+		struct stat st;
+		printf("basedir is set to %s\n", getenv("$HOME") );
+		printf("This is usually a bad idea and a sign that the default\n");
+		printf("music directory needs to be set.\n");
+		printf("It will be set up now\n");
+		if( mkdir( confdir, 0700 ) == -1 ) {
+			fail( "Could not create config dir", dirbuf, errno );
+		}
+
+		while(1){
+			printf("Default music directory:"); fflush(stdout);
+			memset( basedir, 0, MAXPATHLEN );
+			fgets( basedir, MAXPATHLEN, stdin );
+			if( basedir[0] != '/' ) { // we want absolute paths
+				snprintf( line, LINE_BUFLEN, "%s/%s", getenv("$HOME"), basedir );
+				strncpy( basedir, line, MAXPATHLEN );
+			}
+			if( stat( basedir, &st ) ) {
+				printf("Cannot access %s!\n", basedir );
+			}
+			else if( S_ISDIR( st.st_mode ) ){
+				break;
+			}
+			else {
+				printf("%s is not a directory!\n", basedir );
+			}
+		}
+		fp=fopen(config, "w");
+		if( NULL != fp ) {
+			fputs( "# mixplay configuration", fp );
+			fputc( 's', fp );
+			fputs( basedir, fp );
+			fclose(fp);
+			fail("Done.", "", F_FAIL );
+		}
+		else {
+			fail("Could not open", dirbuf, errno );
+		}
 	}
 
 	// scanformusic functionality
