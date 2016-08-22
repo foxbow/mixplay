@@ -588,7 +588,7 @@ struct entry_t *loadPlaylist( const char *path ) {
 		printf("Loaded %s with %i entries.\n", path, cnt );
 	}
 
-	return current;
+	return current->next;
 }
 
 /**
@@ -831,7 +831,6 @@ int applyFavourites( struct entry_t *root, struct bwlist_t *favourites ) {
 int mp3Exists( const struct entry_t *title ) {
 	return( access( title->path, F_OK ) );
 }
-
 
 /*
  * Steps recursively through a directory and collects all music files in a list
