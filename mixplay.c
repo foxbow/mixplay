@@ -244,8 +244,10 @@ int main(int argc, char **argv) {
 
 	muteVerbosity();
 
+	memset( basedir, 0, MAXPATHLEN );
+
 	// load default configuration
-	sprintf( confdir, "%s/.mixplay", getenv("$HOME") );
+	sprintf( confdir, "%s/.mixplay", getenv("HOME") );
 	strcpy( config, confdir );
 	strcat( config, "/mixplay.cnf" );
 	fp=fopen(config, "r");
@@ -449,26 +451,33 @@ int main(int argc, char **argv) {
 	while (basedir[strlen(basedir)-1] == '/')
 		basedir[strlen(basedir)-1] = 0;
 
-	if( strchr( dbname, '/' ) == NULL ) {
+	if( dbname[0] != '/' ) {
 		strncpy( dirbuf, dbname, MAXPATHLEN );
 		snprintf( dbname, MAXPATHLEN, "%s/%s", basedir, dirbuf );
 	}
-	if( hascfg==0 && ( strcmp( basedir, getenv("$HOME") ) == 0 ) ) {
+
+/*	if( strchr( dbname, '/' ) == NULL ) {
+		strncpy( dirbuf, dbname, MAXPATHLEN );
+		snprintf( dbname, MAXPATHLEN, "%s/%s", basedir, dirbuf );
+	}
+*/
+	if( hascfg==0 && ( strcmp(  getenv("HOME"), basedir ) == 0 ) ) {
 		struct stat st;
-		printf("basedir is set to %s\n", getenv("$HOME") );
+		printf("basedir is set to %s\n", basedir );
 		printf("This is usually a bad idea and a sign that the default\n");
 		printf("music directory needs to be set.\n");
 		printf("It will be set up now\n");
 		if( mkdir( confdir, 0700 ) == -1 ) {
-			fail( "Could not create config dir", dirbuf, errno );
+			fail( "Could not create config dir", confdir, errno );
 		}
 
 		while(1){
 			printf("Default music directory:"); fflush(stdout);
 			memset( basedir, 0, MAXPATHLEN );
 			fgets( basedir, MAXPATHLEN, stdin );
+			basedir[strlen(basedir)-1]=0; // cut off CR
 			if( basedir[0] != '/' ) { // we want absolute paths
-				snprintf( line, LINE_BUFLEN, "%s/%s", getenv("$HOME"), basedir );
+				snprintf( line, LINE_BUFLEN, "%s/%s", getenv("HOME"), basedir );
 				strncpy( basedir, line, MAXPATHLEN );
 			}
 			if( stat( basedir, &st ) ) {
@@ -483,9 +492,10 @@ int main(int argc, char **argv) {
 		}
 		fp=fopen(config, "w");
 		if( NULL != fp ) {
-			fputs( "# mixplay configuration", fp );
+			fputs( "# mixplay configuration\n", fp );
 			fputc( 's', fp );
 			fputs( basedir, fp );
+			fputc( '\n', fp );
 			fclose(fp);
 			fail("Done.", "", F_FAIL );
 		}
