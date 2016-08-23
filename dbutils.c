@@ -170,6 +170,30 @@ int dbCheckExist( char *dbname ) {
 	return num;
 }
 
+/**
+ * make sure that the lowest playcount is 0
+ * this is to make sure that freshly added music does not need to get played
+ * too many times to fit into the mix
+ */
+static void smoothePlayCount( int db ) {
+	struct entry_t *root;
+	struct entry_t *runner;
+	unsigned long low;
+
+	root=dbGetMusic( db );
+	low=getLowestPlaycount( root );
+	if( 0 != low ) {
+		do {
+			activity("Smoothe playcount");
+			runner->played=runner->played-low;
+			dbSetTitle( db, runner );
+			runner=runner->next;
+		} while( runner != root );
+	}
+	wipeTitles( root );
+}
+
+
 int dbAddTitles( const char *dbname, char *basedir ) {
 	struct entry_t *fsroot;
 	struct entry_t *dbroot;
@@ -178,6 +202,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 	int db=0;
 
 	dbOpen( &db, dbname );
+	smoothePlayCount(db);
 	dbroot=dbGetMusic(db);
 
 	// scan directory

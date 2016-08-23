@@ -204,7 +204,7 @@ int main(int argc, char **argv) {
 	char line[LINE_BUFLEN];
 	char status[LINE_BUFLEN] = "INIT";
 	char tbuf[LINE_BUFLEN];
-	char basedir[MAXPATHLEN];
+	char basedir[MAXPATHLEN]; // @todo: would it make sense to differ between base and music directory?
 	char confdir[MAXPATHLEN];
 	char dirbuf[MAXPATHLEN];
 	char dbname[MAXPATHLEN] = "mixplay.db";
@@ -405,7 +405,8 @@ int main(int argc, char **argv) {
 			fade=0;		// fading is really dumb
 			stream=1;
 			line[0]=0;
-			if( endsWith( argv[optind], "m3u" ) ) {
+			if( endsWith( argv[optind], ".m3u" ) ||
+					endsWith( argv[optind], ".pls" ) ) {
 				strcpy( line, "@" );
 			}
 
@@ -419,7 +420,8 @@ int main(int argc, char **argv) {
 			repeat=0;
 			root=insertTitle( root, argv[optind] );
 		}
-		else if ( endsWith( argv[optind], "m3u" ) ) {
+		else if ( endsWith( argv[optind], ".m3u" ) ||
+				endsWith( argv[optind], ".pls" ) ) {
 			usedb=0;
 			mix=0;
 			root=loadPlaylist( argv[optind] );
@@ -451,16 +453,8 @@ int main(int argc, char **argv) {
 	while (basedir[strlen(basedir)-1] == '/')
 		basedir[strlen(basedir)-1] = 0;
 
-	if( dbname[0] != '/' ) {
-		strncpy( dirbuf, dbname, MAXPATHLEN );
-		snprintf( dbname, MAXPATHLEN, "%s/%s", basedir, dirbuf );
-	}
+	abspath( dbname, confdir, MAXPATHLEN );
 
-/*	if( strchr( dbname, '/' ) == NULL ) {
-		strncpy( dirbuf, dbname, MAXPATHLEN );
-		snprintf( dbname, MAXPATHLEN, "%s/%s", basedir, dirbuf );
-	}
-*/
 	if( hascfg==0 && ( strcmp(  getenv("HOME"), basedir ) == 0 ) ) {
 		struct stat st;
 		printf("basedir is set to %s\n", basedir );
@@ -476,10 +470,7 @@ int main(int argc, char **argv) {
 			memset( basedir, 0, MAXPATHLEN );
 			fgets( basedir, MAXPATHLEN, stdin );
 			basedir[strlen(basedir)-1]=0; // cut off CR
-			if( basedir[0] != '/' ) { // we want absolute paths
-				snprintf( line, LINE_BUFLEN, "%s/%s", getenv("HOME"), basedir );
-				strncpy( basedir, line, MAXPATHLEN );
-			}
+			abspath( basedir, getenv("HOME"), MAXPATHLEN );
 			if( stat( basedir, &st ) ) {
 				printf("Cannot access %s!\n", basedir );
 			}
@@ -519,21 +510,11 @@ int main(int argc, char **argv) {
 		if( !tagrun ) return 0;
 	}
 
-	if( strchr( dnpname, '/' ) == NULL ) {
-		strcpy( line, basedir );
-		strcat( line, "/" );
-		strcat( line, dnpname );
-		strcpy( dnpname, line );
-	}
+	abspath( dnpname, confdir, MAXPATHLEN );
 	dnplist=loadList( dnpname );
 
 	// set default favourites name
-	if( strchr( favname, '/' ) == NULL  ) {
-		strcpy( line, basedir );
-		strcat( line, "/" );
-		strcat( line, favname );
-		strcpy( favname, line );
-	}
+	abspath( favname, confdir, MAXPATHLEN );
 	favourites=loadList( favname );
 
 	// load and prepare titles

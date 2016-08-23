@@ -63,6 +63,7 @@ struct entry_t *skipTitles( struct entry_t *current, int num );
 struct entry_t *useDNPlist( struct entry_t *base, struct bwlist_t *list );
 struct entry_t *searchList( struct entry_t *base, struct bwlist_t *term, int range );
 int countTitles( struct entry_t *base );
+unsigned long getLowestPlaycount( struct entry_t *base );
 struct bwlist_t *loadList( const char *path );
 int genPathName( const char *basedir, struct entry_t *entry  );
 int isMusic( const char *name );

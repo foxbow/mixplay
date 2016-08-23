@@ -22,6 +22,28 @@ void muteVerbosity() {
 }
 
 /**
+ * turn a relative path into an absolute path
+ * basedir is the current directory, which does not necessarily need to
+ * be the real current directory and may be used to maintain config and data
+ * directory structures
+ */
+char *abspath( char *path, char *basedir, int len ){
+	char *buff;
+
+	if( path[0] != '/' ) {
+		buff=calloc(sizeof(char),len);
+		if( NULL == buff ) {
+			fail("Can't fix path", "", errno );
+		}
+
+		snprintf( buff, len, "%s/%s", basedir, path );
+		strncpy( path, buff, len );
+		free(buff);
+	}
+	return path;
+}
+
+/**
  * Some ANSI code magic to set the terminal title
  **/
 void setTitle(const char* title) {

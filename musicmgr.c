@@ -677,7 +677,7 @@ int countTitles( struct entry_t *base ) {
 	return cnt;
 }
 
-static unsigned long getLowestPlaycount( struct entry_t *base ) {
+unsigned long getLowestPlaycount( struct entry_t *base ) {
 	struct entry_t *runner=base;
 	unsigned long min=-1;
 

@@ -52,5 +52,6 @@ int startsWith( const char *text, const char *prefix );
 int isURL( const char *uri );
 int readline( char *line, size_t len, int fd );
 void activity( const char *msg );
+char *abspath( char *path, char *basedir, int len );
 
 #endif
