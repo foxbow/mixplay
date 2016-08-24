@@ -25,8 +25,7 @@ struct dbentry_t {
 #define DBESIZE sizeof(struct dbentry_t)
 
 int dbOpen( int *db, const char *path );
-int dbAddTitle( int db, struct entry_t *title );
-int dbSetTitle( int db, struct entry_t *title );
+int dbPutTitle( int db, struct entry_t *title );
 struct entry_t *dbGetMusic( int db );
 int dbRemTitle( int db, struct entry_t *title );
 int dbCheckExist( char *dbname );

@@ -47,33 +47,28 @@ int dbOpen( int *db, const char *path ){
 }
 
 /**
- * adds a title to the database
+ * adds/overwrites a title to/in the database
  */
-int dbAddTitle( int db, struct entry_t *title ){
+int dbPutTitle( int db, struct entry_t *title ){
 	struct dbentry_t dbentry;
 
 	if( 0 == db ){
 		fail("Database not open!", __func__, F_FAIL );
 	}
 
-	lseek( db, 0, SEEK_END );
-	entry2db( title, &dbentry );
-	if( write( db, &dbentry, DBESIZE ) != DBESIZE ) {
-		fail( "Could not add entry!", title->path, errno );
+	if( 0 == title->key ) {
+		lseek( db, 0, SEEK_END );
 	}
-
-	return 0;
-}
-
-int dbSetTitle( int db, struct entry_t *title ) {
-	struct dbentry_t dbentry;
-	if( -1 == lseek( db, DBESIZE*title->key, SEEK_SET ) ) {
-		fail( "Could not skip to title!", title->path, errno );
+	else {
+		if( -1 == lseek( db, DBESIZE*(title->key-1), SEEK_SET ) ) {
+			fail( "Could not skip to title!", title->path, errno );
+		}
 	}
 	entry2db( title, &dbentry );
 	if( write( db, &dbentry, DBESIZE ) != DBESIZE ) {
-		fail( "Could not overwrite entry!", title->path, errno );
+		fail( "Could not write entry!", title->path, errno );
 	}
+
 	return 0;
 }
 
@@ -111,7 +106,7 @@ static struct entry_t *addDBTitle( struct dbentry_t dbentry, struct entry_t *roo
  */
 struct entry_t *dbGetMusic( int db ) {
 	struct dbentry_t dbentry;
-	unsigned long index = 0;
+	unsigned long index = 1;
 	struct entry_t *dbroot=NULL;
 
 	if( 0 == db ){
@@ -128,6 +123,10 @@ struct entry_t *dbGetMusic( int db ) {
 	return (dbroot?dbroot->next:NULL);
 }
 
+/**
+ * checks for removed entries in the database
+ * i.e. titles that are in the database but no longer on the medium
+ */
 int dbCheckExist( char *dbname ) {
 	struct entry_t *root;
 	struct entry_t *runner;
@@ -156,7 +155,7 @@ int dbCheckExist( char *dbname ) {
 		}
 		dbOpen(&db,dbname);
 		while( NULL != runner ) {
-			dbAddTitle( db, runner );
+			dbPutTitle( db, runner );
 			runner=removeTitle( runner );
 		}
 		printf("Removed %i titles\n", num );
@@ -171,39 +170,32 @@ int dbCheckExist( char *dbname ) {
 }
 
 /**
- * make sure that the lowest playcount is 0
- * this is to make sure that freshly added music does not need to get played
- * too many times to fit into the mix
+ * adds new titles to the database
+ * before adding, the playcount is minimized, so that the new titles will mingle with
+ * the least played titles.
  */
-static void smoothePlayCount( int db ) {
-	struct entry_t *root;
-	struct entry_t *runner;
-	unsigned long low;
-
-	root=dbGetMusic( db );
-	low=getLowestPlaycount( root );
-	if( 0 != low ) {
-		do {
-			activity("Smoothe playcount");
-			runner->played=runner->played-low;
-			dbSetTitle( db, runner );
-			runner=runner->next;
-		} while( runner != root );
-	}
-	wipeTitles( root );
-}
-
-
 int dbAddTitles( const char *dbname, char *basedir ) {
 	struct entry_t *fsroot;
 	struct entry_t *dbroot;
 	struct entry_t *dbrunner;
+	unsigned long low;
 	int num=0;
 	int db=0;
 
 	dbOpen( &db, dbname );
-	smoothePlayCount(db);
 	dbroot=dbGetMusic(db);
+
+	if( NULL != dbroot ) {
+		low=getLowestPlaycount( dbroot );
+		if( 0 != low ) {
+			do {
+				activity("Smoothe playcount");
+				dbrunner->played=dbrunner->played-low;
+				dbPutTitle( db, dbrunner );
+				dbrunner=dbrunner->next;
+			} while( dbrunner != dbroot );
+		}
+	}
 
 	// scan directory
 	fsroot=recurse(basedir, NULL, basedir);
@@ -213,7 +205,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 		activity("Adding");
 		dbrunner = findTitle( dbroot, fsroot->path );
 		if( NULL == dbrunner ) {
-			dbAddTitle(db,fsroot);
+			dbPutTitle(db,fsroot);
 			num++;
 		}
 		fsroot=removeTitle( fsroot );

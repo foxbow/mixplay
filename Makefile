@@ -3,7 +3,7 @@ CCFLAGS=-DVERSION=\"${VERSION}\"
 HDRS=utils.h ncutils.h musicmgr.h dbutils.h
 OBJS=utils.o ncutils.o musicmgr.o dbutils.c
 EXES=bin/mixplay
-CCFLAGS+=-Wall # -g
+CCFLAGS+=-Wall -g
 
 # Keep object files
 .PRECIOUS: %.o

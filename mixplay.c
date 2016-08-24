@@ -206,11 +206,10 @@ int main(int argc, char **argv) {
 	char tbuf[LINE_BUFLEN];
 	char basedir[MAXPATHLEN]; // @todo: would it make sense to differ between base and music directory?
 	char confdir[MAXPATHLEN];
-	char dirbuf[MAXPATHLEN];
-	char dbname[MAXPATHLEN] = "mixplay.db";
+	char dbname[MAXPATHLEN]  = "mixplay.db";
 	char dnpname[MAXPATHLEN] = "mixplay.dnp";
 	char favname[MAXPATHLEN] = "mixplay.fav";
-	char config[MAXPATHLEN]="";
+	char config[MAXPATHLEN]  = "mixplay.cnf";
 	int key;
 	char c;
 	char *b;
@@ -248,8 +247,7 @@ int main(int argc, char **argv) {
 
 	// load default configuration
 	sprintf( confdir, "%s/.mixplay", getenv("HOME") );
-	strcpy( config, confdir );
-	strcat( config, "/mixplay.cnf" );
+	abspath( config, confdir, MAXPATHLEN );
 	fp=fopen(config, "r");
 	if( NULL != fp ) {
 		do {
@@ -441,8 +439,8 @@ int main(int argc, char **argv) {
 			if( !scan ) usedb=0;
 			getcwd( basedir, MAXPATHLEN );
 			if( argv[optind][0] != '/' ) {
-				snprintf( dirbuf, MAXPATHLEN, "%s/%s", basedir, argv[optind] );
-				strncpy( basedir, dirbuf, MAXPATHLEN );
+				snprintf( line, MAXPATHLEN, "%s/%s", basedir, argv[optind] );
+				strncpy( basedir, line, MAXPATHLEN );
 			}
 			else {
 				strncpy( basedir, argv[optind], MAXPATHLEN );
@@ -491,7 +489,7 @@ int main(int argc, char **argv) {
 			fail("Done.", "", F_FAIL );
 		}
 		else {
-			fail("Could not open", dirbuf, errno );
+			fail("Could not open", line, errno );
 		}
 	}
 
@@ -807,7 +805,7 @@ int main(int argc, char **argv) {
 							strip( current->genre, b+6, NAMELEN );
 						}
 						else if ( '}' == line[3] ) {
-							dbSetTitle( db, current );
+							dbPutTitle( db, current );
 							current=current->next;
 							if( current == root ) {
 								strcpy( status, "DONE" );
@@ -857,7 +855,7 @@ int main(int argc, char **argv) {
 							sprintf(status, "%i:%02i [%s] %i:%02i", intime/60, intime%60, tbuf, rem/60, rem%60 );
 							if( (mix) && ( fade != 0 ) && ( rem <= fade ) ) {
 								current->played++;
-								dbSetTitle( db, current );
+								dbPutTitle( db, current );
 								next=current->next;
 								if( ( next == current )
 										|| ( ( !repeat ) && ( next == root ) ) ) {
@@ -890,7 +888,7 @@ int main(int argc, char **argv) {
 							// only happens on non fading title change
 							if ( mix && (intime > 15 ) && usedb ) {
 								current->played = current->played+1;
-								dbSetTitle( db, current );
+								dbPutTitle( db, current );
 							}
 							next = skipTitles( current, order );
 							if ( ( next == current ) ||
