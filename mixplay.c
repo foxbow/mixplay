@@ -15,7 +15,7 @@
 
 /**
  * print out CLI usage
- * md:f:rvs:Sp:CADTF:VhXR:
+ * ACd:Df:hmp:PQrR:s:SvTFVX
  */
 static void usage( char *progname ){
 	printf( "%s-%s - console frontend to mpg123\n", progname, VERSION );
@@ -26,7 +26,8 @@ static void usage( char *progname ){
 	printf( "-s <term>  : add search term (can be used multiple times)\n" );
 	printf( "-S         : interactive search\n" );
 	printf( "-R <talgp> : Set range (Title, Artist, aLbum, Genre, Path) [p]\n");
-	printf( "-p <file>  : use file as fuzzy playlist (party mode)\n" );
+	printf( "-p <file>  : use file as fuzzy playlist (party mode - resets range to Path!)\n" );
+	printf( "-P         : Like -p but uses the default favourites\n" );
 	printf( "-m         : disable shuffle mode on playlist\n" );
 	printf( "-r         : disable repeat mode on playlist\n");
 	printf( "-v         : increase verbosity (just for debugging)\n" );
@@ -278,7 +279,8 @@ int main(int argc, char **argv) {
 	}
 
 	// parse command line options
-	while ((c = getopt(argc, argv, "md:f:rvs:Sp:CADTFVhXR:Q")) != -1) {
+	while ((c = getopt(argc, argv, "ACd:Df:hmp:PQrR:s:SvTFVX")) != -1) {
+
 		switch (c) {
 		case 'v': // pretty useless in normal use
 			incVerbosity();
@@ -290,17 +292,17 @@ int main(int argc, char **argv) {
 			repeat=0;
 			break;
 		case 'd':
-			strcpy(dnpname, optarg);
+			strncpy(dnpname, optarg, MAXPATHLEN);
 			break;
 		case 'f':
-			strcpy(favname, optarg);
+			strncpy(favname, optarg, MAXPATHLEN);
 			break;
 		case 'S':
 			printf("Search: ");
 			fflush(stdout);
 			if( readline( line, MAXPATHLEN, fileno(stdin) ) > 1 ) {
 				search=1;
-				searchlist=addToList( line, searchlist );
+				searchlist=addToList( line, &searchlist );
 			}
 			else {
 				printf("-S: Ignoring less than three characters! (%s)", optarg);
@@ -311,7 +313,7 @@ int main(int argc, char **argv) {
 		case 's':
 			if( strlen(optarg) > 2 ) {
 				search=1;
-				searchlist=addToList( optarg, searchlist );
+				searchlist=addToList( optarg, &searchlist );
 			}
 			else {
 				printf("-s: Ignoring less than three characters! (%s)", optarg);
@@ -345,7 +347,14 @@ int main(int argc, char **argv) {
 			break;
 		case 'p':
 			search=1;
+			range=SL_PATH;
 			searchlist=loadList( optarg );
+			break;
+		case 'P':
+			search=1;
+			range=SL_PATH;
+			abspath( favname, confdir, MAXPATHLEN );
+			searchlist=loadList( favname );
 			break;
 		case 'T':
 			tagrun=1;
@@ -539,6 +548,8 @@ int main(int argc, char **argv) {
 	}
 
 	if( dump ) { // database statistics
+		if( -1 == dump ) dumpTitles(root);
+
 		unsigned long maxplayed=0;
 		unsigned long minplayed=-1;
 		unsigned long pl=0;
@@ -559,8 +570,6 @@ int main(int argc, char **argv) {
 			printf("%5li times played: %5li titles\n", pl, pcount );
 		}
 		puts("");
-
-		if( -1 == dump ) dumpTitles(root);
 
 		return 0;
 	}

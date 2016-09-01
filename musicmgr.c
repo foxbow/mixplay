@@ -218,16 +218,16 @@ static struct entry_t *moveTitle( struct entry_t *title, struct entry_t **target
 	title->prev->next=title->next;
 	title->next->prev=title->prev;
 
-	if( NULL == target[0] ) {
-		target[0]=title;
-		target[0]->next=target[0];
-		target[0]->prev=target[0];
+	if( NULL == *target ) {
+		*target=title;
+		(*target)->next=*target;
+		(*target)->prev=*target;
 	}
 	else {
-		title->next=target[0]->next;
-		target[0]->next->prev=title;
-		title->prev=target[0];
-		target[0]->next=title;
+		title->next=(*target)->next;
+		(*target)->next->prev=title;
+		title->prev=*target;
+		(*target)->next=title;
 	}
 
 	return title;
@@ -318,10 +318,10 @@ static int msel( const struct dirent *entry ){
  */
 static int tsort( const struct dirent **d1, const struct dirent **d2 ) {
 	int v1, v2;
-	v1= atoi( d1[0]->d_name );
-	v2= atoi( d2[0]->d_name );
+	v1= atoi( (*d1)->d_name );
+	v2= atoi( (*d2)->d_name );
 	if( ( v1 > 0 ) && ( v2 > 0 ) ) return( v1-v2 );
-	return strcasecmp( d1[0]->d_name, d2[0]->d_name );
+	return strcasecmp( (*d1)->d_name, (*d2)->d_name );
 }
 
 /**
@@ -363,8 +363,8 @@ static int checkMatch( const char* name, const char* pat ) {
 }
 
 
-int matchList( struct entry_t **result, struct entry_t *base, struct bwlist_t *term, int range ) {
-	struct entry_t  *runner=base;
+int matchList( struct entry_t **result, struct entry_t **base, struct bwlist_t *term, int range ) {
+	struct entry_t  *runner=*base;
 	struct entry_t  *next=NULL;
 	int match, ranged=0;
 	int cnt=0;
@@ -377,12 +377,13 @@ int matchList( struct entry_t **result, struct entry_t *base, struct bwlist_t *t
 			,"path"
 	};
 
-	if( NULL == base ) {
+	if( NULL == *base ) {
 		fail("No music loaded!", "Nothing to search in", F_FAIL );
 	}
 
 	while( term != NULL ) {
-		while( runner->next != base ){
+		while( runner->next != *base ){
+			activity("Matching");
 			switch( range ) {
 				case SL_TITLE:
 					ranged=0;
@@ -407,20 +408,22 @@ int matchList( struct entry_t **result, struct entry_t *base, struct bwlist_t *t
 				default:
 					fail("invalid checkMatch call", "", range );
 			}
+
 			if( match ) {
 				next=runner->next;
-				if( runner==base ) {
-					base=base->next;       // make sure base stays valid after removal
+				if( runner==*base ) {
+					*base=(*base)->next;       // make sure base stays valid after removal
 				}
 
-				result[0]=moveTitle( runner, result );
+				*result=moveTitle( runner, result );
 				cnt++;
 				runner=next;
 			}
 			else {
 				runner=runner->next;
 			}
-		} //  while( runner != base );
+		} //  while( runner->next != base );
+		runner=runner->next; // start from the beginning
 		term=term->next;
 	}
 
@@ -437,11 +440,11 @@ struct entry_t *searchList( struct entry_t *base, struct bwlist_t *term, int ran
 		fail("No music loaded!", "Nothing to search in", F_FAIL );
 	}
 
-	if( range & SL_ARTIST ) cnt += matchList( &result, base, term, SL_ARTIST );
-	if( range & SL_TITLE ) cnt += matchList( &result, base, term, SL_TITLE );
-	if( range & SL_ALBUM ) cnt += matchList( &result, base, term, SL_ALBUM );
-	if( range & SL_PATH ) cnt += matchList( &result, base, term, SL_PATH );
-	if( range & SL_GENRE ) cnt += matchList( &result, base, term, SL_GENRE );
+	if( range & SL_ARTIST ) cnt += matchList( &result, &base, term, SL_ARTIST );
+	if( range & SL_TITLE ) cnt += matchList( &result, &base, term, SL_TITLE );
+	if( range & SL_ALBUM ) cnt += matchList( &result, &base, term, SL_ALBUM );
+	if( range & SL_PATH ) cnt += matchList( &result, &base, term, SL_PATH );
+	if( range & SL_GENRE ) cnt += matchList( &result, &base, term, SL_GENRE );
 
 	wipeTitles( base );
 
@@ -545,19 +548,25 @@ struct bwlist_t *loadList( const char *path ){
 /**
  * add an entry to a list
  */
-struct bwlist_t *addToList( const char *line, struct bwlist_t *list ) {
-	struct bwlist_t *entry;
+struct bwlist_t *addToList( const char *line, struct bwlist_t **list ) {
+	struct bwlist_t *entry, *runner;
 	entry=calloc( 1, sizeof( struct bwlist_t ) );
+	if( NULL == entry ) {
+		fail("Could not add searchterm", line, errno );
+	}
 	strlncpy( entry->dir, line, MAXPATHLEN );
 	entry->next = NULL;
-	if( NULL == list ) {
-		list=entry;
+
+	if( NULL == *list ) {
+		*list=entry;
 	}
 	else {
-		list->next=entry;
+		runner=*list;
+		while( runner->next != NULL ) runner=runner->next;
+		runner->next=entry;
 	}
 
-	return list;
+	return *list;
 }
 
 /**
@@ -602,7 +611,7 @@ void wipeTitles( struct entry_t *files ){
 
 	while( buff != NULL ){
 		files=buff;
-		buff=files->next;
+		buff=buff->next;
 		free(files);
 	}
 }

@@ -67,7 +67,7 @@ unsigned long getLowestPlaycount( struct entry_t *base );
 struct bwlist_t *loadList( const char *path );
 int genPathName( const char *basedir, struct entry_t *entry  );
 int isMusic( const char *name );
-struct bwlist_t *addToList( const char *line, struct bwlist_t *list );
+struct bwlist_t *addToList( const char *line, struct bwlist_t **list );
 int applyFavourites( struct entry_t *root, struct bwlist_t *list );
 int mp3Exists( const struct entry_t *title );
 int getFiles( const char *cd, struct dirent ***filelist );

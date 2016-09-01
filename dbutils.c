@@ -35,15 +35,15 @@ static int entry2db( struct entry_t *entry, struct dbentry_t *dbentry ) {
  * opens the database file and handles errors
  */
 int dbOpen( int *db, const char *path ){
-	if( 0 != db[0] ) {
+	if( 0 != *db ) {
 		fail( "Database already open!", path, F_FAIL );
 	}
-	db[0] = open( path, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR );
-	if( -1 == db[0] ) {
+	*db = open( path, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR );
+	if( -1 == *db ) {
 		fail( "Could not open database!", path, errno );
 	}
 	if( getVerbosity() > 1 ) printf("Opened database %s\n", path);
-	return db[0];
+	return *db;
 }
 
 /**
@@ -220,11 +220,11 @@ int dbAddTitles( const char *dbname, char *basedir ) {
  * closes the database file
  */
 void dbClose( int *db ) {
-	if( 0 == db ){
+	if( 0 == *db ){
 		fail("Database not open!", __func__, F_FAIL );
 	}
-	close(db[0]);
-	db[0]=0;
+	close(*db);
+	*db=0;
 
 	return;
 }
