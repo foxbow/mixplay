@@ -20,7 +20,7 @@
 static void usage( char *progname ){
 	printf( "%s-%s - console frontend to mpg123\n", progname, VERSION );
 	printf( "Usage: %s [-d <file>] [-f <file>] [-s <key>|-S] [-R <talgp>] [-p <file>] [-m] [-r] "
-			"[-v] [-V] [-h] [-C] [-A] [-D] [-T] [-F <sec>] [-X] [path|URL]\n", progname );
+			"[-v] [-V] [-h] [-C] [-A] [-D] [-T] [-F] [-X] [path|URL]\n", progname );
 	printf( "-d <file>  : List of names to exclude\n" );
 	printf( "-f <file>  : List of favourites\n" );
 	printf( "-s <term>  : add search term (can be used multiple times)\n" );
@@ -205,7 +205,7 @@ int main(int argc, char **argv) {
 	char line[LINE_BUFLEN];
 	char status[LINE_BUFLEN] = "INIT";
 	char tbuf[LINE_BUFLEN];
-	char basedir[MAXPATHLEN]; // @todo: would it make sense to differ between base and music directory?
+	char basedir[MAXPATHLEN];
 	char confdir[MAXPATHLEN];
 	char dbname[MAXPATHLEN]  = "mixplay.db";
 	char dnpname[MAXPATHLEN] = "mixplay.dnp";
@@ -567,7 +567,19 @@ int main(int argc, char **argv) {
 				if( current->played == pl ) pcount++;
 				current=current->next;
 			} while( current != root );
-			printf("%5li times played: %5li titles\n", pl, pcount );
+			switch( pl ) {
+			case 0:
+				printf(" Never  played:\t%5li titles\n", pcount );
+				break;
+			case 1:
+				printf(" Once   played:\t%5li titles\n", pcount );
+				break;
+			case 2:
+				printf(" Twice  played:\t%5li titles\n", pcount );
+				break;
+			default:
+				printf("%li times played:\t%5li titles\n", pl, pcount );
+			}
 		}
 		puts("");
 
