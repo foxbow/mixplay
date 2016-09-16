@@ -44,6 +44,9 @@ static void usage( char *progname ){
 	exit(0);
 }
 
+/**
+ * @todo multiline pop-up?
+ */
 static void popUp( const char *text ) {
 	int row, col;
 	char buff[LINE_BUFLEN];
@@ -674,7 +677,8 @@ int main(int argc, char **argv) {
 				if( !stream ) {
 					switch( key ) {
 						case 'i':
-							popUp( current->path );
+							sprintf( line, "%s[%04li]", current->path, current->key );
+							popUp( line );
 							sleep(2);
 						break;
 						case KEY_DOWN:

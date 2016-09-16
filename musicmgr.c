@@ -700,8 +700,10 @@ unsigned long getLowestPlaycount( struct entry_t *base ) {
 
 /**
  * mix a list of titles into a random order
+ *
+ * @todo: get rid on the goto!
  */
- struct entry_t *shuffleTitles( struct entry_t *base ) {
+struct entry_t *shuffleTitles( struct entry_t *base ) {
 	struct entry_t *end=NULL;
 	struct entry_t *runner=NULL;
 	struct entry_t *guard=NULL;
@@ -711,6 +713,8 @@ unsigned long getLowestPlaycount( struct entry_t *base ) {
 	struct timeval tv;
 	unsigned long count=0;
 	char name[NAMELEN], lastname[NAMELEN]="";
+
+	int valid=0;
 
 	// improve 'randomization'
 	gettimeofday(&tv,NULL);
@@ -726,35 +730,40 @@ unsigned long getLowestPlaycount( struct entry_t *base ) {
 		// select a title at random
 		runner=skipTitles( base, RANDOM(num) );
 
-		// check for duplicates
-		if( artguard && strlen(lastname) ) {
-			guard=runner;
-			strlncpy( name, runner->artist, NAMELEN );
-			while( 75 < fncmp( name, lastname ) ) {
-				runner=runner->next;
+		valid=0;
+		while(!valid) {
+			// check for duplicates
+			if( artguard && strlen(lastname) ) {
+				guard=runner;
 				strlncpy( name, runner->artist, NAMELEN );
-				if( guard == runner ) {
-					artguard=0;
-					break;
+				while( 75 < fncmp( name, lastname ) ) {
+					runner=runner->next;
+					strlncpy( name, runner->artist, NAMELEN );
+					if( guard == runner ) {
+						artguard=0;
+						break;
+					}
 				}
+				if( guard != runner ) nameskip++;
 			}
-			if( guard != runner ) nameskip++;
-		}
 
-		// check for playcount
-		guard=runner;
-		do {
-			if( !(runner->flags & MP_FAV) && ( runner->played <=   count ) ) break;
-			// favourites may be played twice as often
-			if(  (runner->flags & MP_FAV) && ( runner->played <= 2*count ) ) break;
-			runner=runner->next;
-		} while( runner != guard );
+			// check for playcount
+			guard=runner;
+			do {
+				if( !(runner->flags & MP_FAV) && ( runner->played <=   count ) ) break;
+				// favourites may be played twice as often
+				if(  (runner->flags & MP_FAV) && ( runner->played <= 2*count ) ) break;
+				runner=runner->next;
+			} while( runner != guard );
 
-		if( runner != guard ) {
-			playskip++;
-		}
-		else {
-			count=runner->played;
+			if( runner != guard ) {
+				playskip++;
+				valid=0;
+			}
+			else {
+				count=runner->played;
+				valid=1;
+			}
 		}
 
 		strlncpy(lastname, runner->artist, NAMELEN );
