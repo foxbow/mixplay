@@ -190,7 +190,12 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 		if( 0 != low ) {
 			do {
 				activity("Smoothe playcount");
-				dbrunner->played=dbrunner->played-low;
+				if( ( dbrunner->flags & MP_FAV ) && ( dbrunner->played >= 2*low ) ) {
+					dbrunner->played=dbrunner->played-(2*low);
+				}
+				else {
+					dbrunner->played=dbrunner->played-low;
+				}
 				dbPutTitle( db, dbrunner );
 				dbrunner=dbrunner->next;
 			} while( dbrunner != dbroot );
