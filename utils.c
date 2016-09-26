@@ -33,7 +33,7 @@ char *abspath( char *path, char *basedir, int len ){
 	if( path[0] != '/' ) {
 		buff=calloc(sizeof(char),len);
 		if( NULL == buff ) {
-			fail("Can't fix path", "", errno );
+			fail( errno, "Can't fix path %s to %s", path, basedir );
 		}
 
 		snprintf( buff, len, "%s/%s", basedir, path );
@@ -105,15 +105,24 @@ char *strip( char *buff, const char *text, const size_t maxlen ) {
  *         F_WARN = print message w/o errno and return
  *         F_FAIL = print message w/o errno and exit
  */
-void fail( const char* msg, const char* info, int error ){
+void fail( int error, const char* msg, ... ){
+	va_list args;
+	va_start( args, msg );
 	endwin();
-	if(error <= 0 )
-		fprintf(stderr, "\n%s %s\n", msg, info );
-	else
-		fprintf(stderr, "\n%s %s\nERROR: %i - %s\n", msg, info, abs(error), strerror( abs(error) ) );
+	if(error <= 0 ) {
+		fprintf(stderr, "\n");
+		vfprintf(stderr, msg, args );
+		fprintf( stderr, "\n" );
+	}
+	else {
+		fprintf(stderr, "\n");
+		vfprintf(stderr, msg, args );
+		fprintf( stderr, "\n ERROR: %i - %s\n", abs(error), strerror( abs(error) ) );
+	}
 	fprintf(stderr, "Press [ENTER]\n" );
 	fflush( stdout );
 	fflush( stderr );
+	va_end(args);
 	while(getc(stdin)!=10);
 	if (error != 0 ) exit(error);
 	return;
@@ -264,7 +273,7 @@ void addToFile( const char *path, const char *line ) {
 	FILE *fp;
 	fp=fopen( path, "a" );
 	if( NULL == fp ) {
-		fail( "Could not open list for writing ", path, errno );
+		fail( errno, "Could not open %s for writing ", path );
 	}
 	fputs( line, fp );
 	fputc( '\n', fp );

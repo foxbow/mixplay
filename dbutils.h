@@ -31,5 +31,6 @@ int dbRemTitle( int db, struct entry_t *title );
 int dbCheckExist( char *dbname );
 int dbAddTitles( const char *dbname, char *basedir );
 void dbClose( int *db );
+void dbBackup( char *dbname );
 
 #endif /* DBUTILS_H_ */

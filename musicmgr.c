@@ -378,7 +378,7 @@ int matchList( struct entry_t **result, struct entry_t **base, struct bwlist_t *
 	};
 
 	if( NULL == *base ) {
-		fail("No music loaded!", "Nothing to search in", F_FAIL );
+		fail( F_FAIL, "No music in list!" );
 	}
 
 	while( term != NULL ) {
@@ -406,7 +406,7 @@ int matchList( struct entry_t **result, struct entry_t **base, struct bwlist_t *
 					match=checkMatch( runner->path, term->dir );
 				break;
 				default:
-					fail("invalid checkMatch call", "", range );
+					fail( F_FAIL, "invalid checkMatch call %i", range );
 			}
 
 			if( match ) {
@@ -437,7 +437,7 @@ struct entry_t *searchList( struct entry_t *base, struct bwlist_t *term, int ran
 	int cnt=0;
 
 	if( NULL == base ) {
-		fail("No music loaded!", "Nothing to search in", F_FAIL );
+		fail( F_FAIL, "%s: No music loaded", __func__ );
 	}
 
 	if( range & SL_ARTIST ) cnt += matchList( &result, &base, term, SL_ARTIST );
@@ -464,7 +464,7 @@ struct entry_t *useDNPlist( struct entry_t *base, struct bwlist_t *list ) {
 	int cnt=0;
 
 	if( NULL == base ) {
-		fail("No music loaded!", "No list used", F_FAIL );
+		fail( F_FAIL, "%s: No music loaded", __func__ );
 	}
 
 	if( NULL == list ) {
@@ -488,7 +488,7 @@ struct entry_t *useDNPlist( struct entry_t *base, struct bwlist_t *list ) {
 		}
 
 		if( pos == NULL ) {
-			fail("List emptied!", "No more titles..", F_FAIL );
+			fail( F_FAIL, "%s: List emptied, No more titles..", __func__ );
 		}
 
 		pos=pos->next;
@@ -511,7 +511,7 @@ struct bwlist_t *loadList( const char *path ){
 	int cnt=0;
 
 	buff=calloc( MAXPATHLEN, sizeof(char) );
-	if( !buff ) fail( "Out of memory", "", errno );
+	if( !buff ) fail( errno, "%s: can't alloc buffer", __func__ );
 
 	file=fopen( path, "r" );
 	if( !file ) return NULL;
@@ -527,7 +527,7 @@ struct bwlist_t *loadList( const char *path ){
 				ptr->next=calloc( 1, sizeof( struct bwlist_t ) );
 				ptr=ptr->next;
 			}
-			if( !ptr ) fail( "Out of memory!", "", errno );
+			if( !ptr ) fail( errno, "Could not add %s", buff );
 			strlncpy( ptr->dir, buff, MAXPATHLEN );
 			ptr->dir[ strlen(buff)-1 ]=0;
 			ptr->next=NULL;
@@ -552,7 +552,7 @@ struct bwlist_t *addToList( const char *line, struct bwlist_t **list ) {
 	struct bwlist_t *entry, *runner;
 	entry=calloc( 1, sizeof( struct bwlist_t ) );
 	if( NULL == entry ) {
-		fail("Could not add searchterm", line, errno );
+		fail( errno, "Could not add searchterm %s", line );
 	}
 	strlncpy( entry->dir, line, MAXPATHLEN );
 	entry->next = NULL;
@@ -579,10 +579,10 @@ struct entry_t *loadPlaylist( const char *path ) {
 	char *buff;
 
 	buff=calloc( MAXPATHLEN, sizeof(char) );
-	if( !buff ) fail( "Out of memory", "", errno );
+	if( !buff ) fail( errno, "%s: can't alloc buffer", __func__ );
 
 	fp=fopen( path, "r" );
-	if( !fp ) fail("Couldn't open playlist ", path,  errno);
+	if( !fp ) fail( errno, "Couldn't open playlist %s", path );
 
 	while( !feof( fp ) ){
 		activity("Loading");
@@ -646,7 +646,7 @@ struct entry_t *insertTitle( struct entry_t *base, const char *path ){
 
 	root = (struct entry_t*) calloc(1, sizeof(struct entry_t));
 	if (NULL == root) {
-		fail("Malloc failed", "", errno);
+		fail( errno, "%s: Could not alloc root", __func__);
 	}
 
 	if( NULL == base ) {
@@ -730,19 +730,19 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 		// select a title at random
 		runner=skipTitles( base, RANDOM(num) );
 
-		valid=0;
-		while(!valid) {
+		do {
+			valid=0;
 			// check for duplicates
 			if( artguard && strlen(lastname) ) {
 				guard=runner;
 				strlncpy( name, runner->artist, NAMELEN );
 				while( 75 < fncmp( name, lastname ) ) {
 					runner=runner->next;
-					strlncpy( name, runner->artist, NAMELEN );
 					if( guard == runner ) {
 						artguard=0;
 						break;
 					}
+					strlncpy( name, runner->artist, NAMELEN );
 				}
 				if( guard != runner ) nameskip++;
 			}
@@ -750,22 +750,29 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 			// check for playcount
 			guard=runner;
 			do {
-				if( !(runner->flags & MP_FAV) && ( runner->played <=   count ) ) break;
-				// favourites may be played twice as often
-				if(  (runner->flags & MP_FAV) && ( runner->played <= 2*count ) ) break;
-				runner=runner->next;
-			} while( runner != guard );
+				if( runner->flags & MP_FAV) {
+					if ( runner-> played <= 2*count ) {
+						valid=-1;
+					}
+				}
+				else {
+				    if ( runner->played <= count ) {
+				    	valid=-1;
+				    }
+				}
+				if( !valid ) runner=runner->next;
+			} while( (!valid) && (runner != guard) );
 
 			if( runner != guard ) {
-				playskip++;
-				valid=0;
+				playskip++;    // we needed to skip
+				valid=0;       // check for double artist
 			}
-			else {
-				count=runner->played;
-				valid=1;
+			else{
+				if( !valid ) { // we went once through without finding a title
+					count++;   // allow replays
+				}
 			}
-		}
-
+		} while( !valid );
 		strlncpy(lastname, runner->artist, NAMELEN );
 
 		// Make sure we stay in the right list
@@ -873,7 +880,7 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 	// get all music files according to the dnplist
 	num = getMusic( curdir, &entry );
 	if( num < 0 ) {
-		fail( "getMusic failed", curdir, errno );
+		fail( errno, "getMusic failed in %s", curdir );
 	}
 	for( i=0; i<num; i++ ) {
 		activity("Scanning");
@@ -884,11 +891,11 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 		strncat( dirbuff, entry[i]->d_name, MAXPATHLEN );
 
 		file=fopen( dirbuff, "r");
-		if( NULL == file ) fail("Couldn't open file ", dirbuff,  errno);
-		if( -1 == fseek( file, 0L, SEEK_END ) ) fail( "fseek() failed on ", dirbuff, errno );
+		if( NULL == file ) fail( errno, "Couldn't open file %s", dirbuff );
+		if( -1 == fseek( file, 0L, SEEK_END ) ) fail( errno, "fseek() failed on ", dirbuff );
 
 		buff=(struct entry_t *)calloc(1, sizeof(struct entry_t));
-		if(buff == NULL) fail("Out of memory!", "", errno);
+		if(buff == NULL) fail( errno, "%s: Could not alloc buffer", __func__ );
 
 		strncpy( buff->path, dirbuff, MAXPATHLEN );
 		genPathName( basedir, buff );
@@ -914,7 +921,7 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 
 	num=getDirs( curdir, &entry );
 	if( num < 0 ) {
-		fail( "getDirs", curdir, errno );
+		fail( errno, "getDirs failed on %s", curdir );
 	}
 	for( i=0; i<num; i++ ) {
 		sprintf( dirbuff, "%s/%s", curdir, entry[i]->d_name );
@@ -947,10 +954,10 @@ struct entry_t *findTitle( struct entry_t *base, const char *path ) {
  */
 void dumpTitles( struct entry_t *root ) {
 	struct entry_t *ptr=root;
-	if( NULL==root ) fail("NO LIST", "", F_FAIL );
+	if( NULL==root ) fail( F_FAIL, "NO LIST" );
 	do {
 		printf("[%04li] %s: %s - %s (%s)\n", ptr->key, ptr->path, ptr->artist, ptr->title, ptr->album );
 		ptr=ptr->next;
 	} while( ptr != root );
-	fail("END DUMP","",F_FAIL );
+	fail( F_FAIL, "END DUMP" );
 }

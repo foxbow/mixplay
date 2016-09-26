@@ -268,7 +268,7 @@ int main(int argc, char **argv) {
 				case '#':
 					break;
 				default:
-					fail( "Config error:", line, -1 );
+					fail( F_FAIL, "Config error: %s", line );
 					break;
 				}
 			}
@@ -278,7 +278,7 @@ int main(int argc, char **argv) {
 
 	// if no basedir has been set, use the current directory as default
 	if( 0 == strlen(basedir) && ( NULL == getcwd( basedir, MAXPATHLEN ) ) ) {
-		fail("Could not get current directory!", "", errno);
+		fail( errno, "Could not get current directory!" );
 	}
 
 	// parse command line options
@@ -343,7 +343,7 @@ int main(int argc, char **argv) {
 					range |= SL_PATH;
 				break;
 				default:
-					fail( "Unknown range given in:", optarg, F_FAIL );
+					fail( F_FAIL, "Unknown range given in: %s", optarg );
 				break;
 				}
 			}
@@ -472,7 +472,7 @@ int main(int argc, char **argv) {
 		printf("music directory needs to be set.\n");
 		printf("It will be set up now\n");
 		if( mkdir( confdir, 0700 ) == -1 ) {
-			fail( "Could not create config dir", confdir, errno );
+			fail( errno, "Could not create config dir %s", confdir );
 		}
 
 		while(1){
@@ -498,17 +498,17 @@ int main(int argc, char **argv) {
 			fputs( basedir, fp );
 			fputc( '\n', fp );
 			fclose(fp);
-			fail("Done.", "", F_FAIL );
+			fail( F_FAIL, "Done." );
 		}
 		else {
-			fail("Could not open", line, errno );
+			fail( errno, "Could not open %s", line );
 		}
 	}
 
 	// scanformusic functionality
 	if( scan ) {
-		if ( ( scan & 1 ) && ( 0 != remove(dbname) ) ) {
-			fail("Cannot delete", dbname, errno );
+		if ( scan & 1 ) {
+			dbBackup( dbname );
 		}
 		if( scan & 2 ) {
 			dbAddTitles( dbname, basedir );
@@ -604,15 +604,15 @@ int main(int argc, char **argv) {
 
 			pid[i] = fork();
 			if (0 > pid[i]) {
-				fail("could not fork", "", errno);
+				fail( errno, "could not fork" );
 			}
 			// child process
 			if (0 == pid[i]) {
 				if (dup2(p_command[i][0], STDIN_FILENO) != STDIN_FILENO) {
-					fail("Could not dup stdin for player", "", errno);
+					fail( errno, "Could not dup stdin for player %i", i+1 );
 				}
 				if (dup2(p_status[i][1], STDOUT_FILENO) != STDOUT_FILENO) {
-					fail("Could not dup stdout for player", "", errno);
+					fail( errno, "Could not dup stdout for player %i", i+1 );
 				}
 
 				// this process needs no pipes
@@ -624,7 +624,7 @@ int main(int argc, char **argv) {
 				// Start mpg123 in Remote mode
 				execlp("mpg123", "mpg123", "-R", "2>/dev/null", NULL);
 				// execlp("mpg123", "mpg123", "-R", "--remote-err", NULL); // breaks the reply parsing!
-				fail("Could not exec", "mpg123", errno);
+				fail( errno, "Could not exec mpg123" );
 			}
 			close(p_command[i][0]);
 			close(p_status[i][1]);
@@ -715,7 +715,7 @@ int main(int argc, char **argv) {
 								current=current->prev;
 							}
 							else {
-								fail("Broken link in list", current->path, F_FAIL);
+								fail( F_FAIL, "Broken link in list at %s", current->path );
 							}
 							order=1;
 							write( p_command[fdset][1], "STOP\n", 6 );
@@ -952,7 +952,7 @@ int main(int argc, char **argv) {
 						redraw=0;
 					break;
 					case 'E':
-						fail("ERROR:", line, F_FAIL );
+						fail( F_FAIL, "ERROR: %s", line );
 					break;
 					default:
 						if( !tagrun ) {
@@ -973,7 +973,7 @@ int main(int argc, char **argv) {
 		endwin();
 	} // root==NULL
 	else {
-		fail("No music found at", basedir, 0 );
+		fail( F_WARN, "No music found at %s", basedir );
 	}
 	return 0;
 }

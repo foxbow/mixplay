@@ -36,11 +36,11 @@ static int entry2db( struct entry_t *entry, struct dbentry_t *dbentry ) {
  */
 int dbOpen( int *db, const char *path ){
 	if( 0 != *db ) {
-		fail( "Database already open!", path, F_FAIL );
+		fail( F_FAIL, "Database %s already open", path );
 	}
 	*db = open( path, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR );
 	if( -1 == *db ) {
-		fail( "Could not open database!", path, errno );
+		fail( errno, "Could not open database %s", path );
 	}
 	if( getVerbosity() > 1 ) printf("Opened database %s\n", path);
 	return *db;
@@ -53,7 +53,7 @@ int dbPutTitle( int db, struct entry_t *title ){
 	struct dbentry_t dbentry;
 
 	if( 0 == db ){
-		fail("Database not open!", __func__, F_FAIL );
+		fail( F_FAIL, "%s - Database not open", __func__ );
 	}
 
 	if( 0 == title->key ) {
@@ -61,12 +61,12 @@ int dbPutTitle( int db, struct entry_t *title ){
 	}
 	else {
 		if( -1 == lseek( db, DBESIZE*(title->key-1), SEEK_SET ) ) {
-			fail( "Could not skip to title!", title->path, errno );
+			fail( errno, "Could not skip to title %s", title->path );
 		}
 	}
 	entry2db( title, &dbentry );
 	if( write( db, &dbentry, DBESIZE ) != DBESIZE ) {
-		fail( "Could not write entry!", title->path, errno );
+		fail( errno, "Could not write entry %s!", title->path );
 	}
 
 	return 0;
@@ -80,7 +80,7 @@ static struct entry_t *addDBTitle( struct dbentry_t dbentry, struct entry_t *roo
 	struct entry_t *entry;
 	entry=malloc( sizeof( struct entry_t ) );
 	if( NULL == entry ) {
-		fail("Could not create new entry", __func__, errno );
+		fail( errno, " %s - Could not create new entry", __func__ );
 	}
 
 	db2entry( &dbentry, entry );
@@ -102,6 +102,21 @@ static struct entry_t *addDBTitle( struct dbentry_t dbentry, struct entry_t *roo
 }
 
 /**
+ * move the current database file into a backup
+ * tries to delete the backup first
+ */
+void dbBackup( char *dbname ) {
+	char backupname[MAXPATHLEN]="";
+
+	strncpy( backupname, dbname, MAXPATHLEN );
+	strncat( backupname, ".bak", MAXPATHLEN );
+	remove(backupname);
+	if( !rename(dbname, backupname) ) {
+		fail( errno, "Could not rename %s", dbname );
+	}
+}
+
+/**
  * gets all titles from the database and returns them as a mixplay entry list
  */
 struct entry_t *dbGetMusic( int db ) {
@@ -110,7 +125,7 @@ struct entry_t *dbGetMusic( int db ) {
 	struct entry_t *dbroot=NULL;
 
 	if( 0 == db ){
-		fail("Database not open!", __func__, F_FAIL );
+		fail( F_FAIL, "%s - Database not open!", __func__ );
 	}
 
 	while( read( db, &dbentry, DBESIZE ) == DBESIZE ) {
@@ -150,9 +165,7 @@ int dbCheckExist( char *dbname ) {
 
 	if( num > 0 ) {
 		dbClose(&db);
-		if( 0 != remove(dbname) ) {
-			fail("Cannot delete", dbname, errno );
-		}
+		dbBackup( dbname );
 		dbOpen(&db,dbname);
 		while( NULL != runner ) {
 			dbPutTitle( db, runner );
@@ -226,10 +239,9 @@ int dbAddTitles( const char *dbname, char *basedir ) {
  */
 void dbClose( int *db ) {
 	if( 0 == *db ){
-		fail("Database not open!", __func__, F_FAIL );
+		fail( F_FAIL, "Database not open!" );
 	}
 	close(*db);
 	*db=0;
-
 	return;
 }

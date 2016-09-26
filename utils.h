@@ -9,6 +9,7 @@
 #include <ctype.h>
 #include <ncurses.h>
 #include <unistd.h>
+#include <stdarg.h>
 
 /* Default values */
 
@@ -41,7 +42,7 @@ void muteVerbosity();
  */
 void addToFile( const char *path, const char *line );
 void setTitle(const char* title);
-void fail( const char* msg, const char* info, int error );
+void fail( int error, const char* msg, ... );
 int fncmp( const char* str1, const char* str2 );
 // char *toLower( char *text );
 int strlncpy( char *dest, const char *src, const size_t len );
