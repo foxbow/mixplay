@@ -700,14 +700,12 @@ unsigned long getLowestPlaycount( struct entry_t *base ) {
 
 /**
  * mix a list of titles into a random order
- *
- * @todo: get rid on the goto!
  */
 struct entry_t *shuffleTitles( struct entry_t *base ) {
 	struct entry_t *end=NULL;
 	struct entry_t *runner=NULL;
 	struct entry_t *guard=NULL;
-	int num=0, artguard=-1;
+	int num=0, skipguard=-1;
 	int nameskip=0;
 	int playskip=0;
 	struct timeval tv;
@@ -726,54 +724,68 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 	// Stepping through every item
 	while( base->next != base ) {
 		activity("Shuffling ");
-
 		// select a title at random
 		runner=skipTitles( base, RANDOM(num) );
+		valid=0; // title has not passed any tests
 
-		do {
-			valid=0;
-			// check for duplicates
-			if( artguard && strlen(lastname) ) {
-				guard=runner;
-				strlncpy( name, runner->artist, NAMELEN );
-				while( 75 < fncmp( name, lastname ) ) {
-					runner=runner->next;
-					if( guard == runner ) {
-						artguard=0;
-						break;
-					}
-					strlncpy( name, runner->artist, NAMELEN );
-				}
-				if( guard != runner ) nameskip++;
-			}
-
-			// check for playcount
-			guard=runner;
+		if( skipguard ) {
 			do {
-				if( runner->flags & MP_FAV) {
-					if ( runner-> played <= 2*count ) {
-						valid=-1;
+				// check for duplicates
+				if( !(valid&1) && strlen(lastname) ) {
+					guard=runner;
+					strlncpy( name, runner->artist, NAMELEN );
+					while( 75 < fncmp( name, lastname ) ) {
+						activity("Nameskipping ");
+						runner=runner->next;
+						if( guard == runner ) {
+							skipguard=0; // No more alternatives
+							break;
+						}
+						strlncpy( name, runner->artist, NAMELEN );
+					}
+					if( guard != runner ){
+						nameskip++;
+						valid=1; // we skipped and need to check playcount
+					}
+					else {
+						valid |= 1; // we did not skip, so if playcount was fine it's still fine
 					}
 				}
-				else {
-				    if ( runner->played <= count ) {
-				    	valid=-1;
-				    }
-				}
-				if( !valid ) runner=runner->next;
-			} while( (!valid) && (runner != guard) );
 
-			if( runner != guard ) {
-				playskip++;    // we needed to skip
-				valid=0;       // check for double artist
-			}
-			else{
-				if( !valid ) { // we went once through without finding a title
-					count++;   // allow replays
+				// check for playcount
+				guard=runner;
+
+				if( !(valid & 2) ) {
+					do {
+						if( runner->flags & MP_FAV) {
+							if ( runner-> played <= 2*count ) {
+								valid=3;
+							}
+						}
+						else {
+							if ( runner->played <= count ) {
+								valid=3;
+							}
+						}
+						if( !(valid & 2) ){
+							activity("Playcountskipping ");
+							runner=runner->next;
+						}
+					} while( (valid != 3) && (runner != guard) );
+
+					if( runner != guard ) {
+						playskip++;    // we needed to skip
+						valid=2;       // check for double artist
+					}
+					else{
+						if( valid == 1 ) { // we went once through without finding a title
+							count++;   // allow replays
+						}
+					}
 				}
-			}
-		} while( !valid );
-		strlncpy(lastname, runner->artist, NAMELEN );
+			} while( !skipguard && ( valid != 3 ) );
+			strlncpy(lastname, runner->artist, NAMELEN );
+		}
 
 		// Make sure we stay in the right list
 		if(runner == base) {

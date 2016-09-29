@@ -631,6 +631,7 @@ int main(int argc, char **argv) {
 		}
 
 		running=1;
+		if( usedb ) dbOpen( &db, dbname );
 
 		// Start curses mode
 		initscr();
@@ -639,8 +640,6 @@ int main(int argc, char **argv) {
 		keypad(stdscr, TRUE);
 		noecho();
 		drawframe( NULL, status, stream );
-
-		if( usedb ) dbOpen( &db, dbname );
 
 		key = fcntl( p_status[0][0], F_GETFL, 0);
 		fcntl(p_status[0][0], F_SETFL, key | O_NONBLOCK );
