@@ -1,8 +1,6 @@
 #ifndef MUSICMGR_H_
 #define MUSICMGR_H_
 
-#include "utils.h"
-
 /* Directory access */
 #include <unistd.h>
 #include <sys/types.h>
@@ -29,11 +27,9 @@
 
 struct entry_t {
 	char path[MAXPATHLEN];		// path on the filesystem to the file
-	unsigned long size;			// size in kb
 	char artist[NAMELEN];		// Artist info
 	char title[NAMELEN];		// Title info (from mp3)
 	char album[NAMELEN];		// Album info (from mp3)
-//	int  length;				// length in seconds (from mp3)
 	unsigned long played;		// play counter
 	char genre[NAMELEN];
 	struct entry_t *prev;		//
@@ -65,7 +61,6 @@ struct entry_t *searchList( struct entry_t *base, struct bwlist_t *term, int ran
 int countTitles( struct entry_t *base );
 unsigned long getLowestPlaycount( struct entry_t *base );
 struct bwlist_t *loadList( const char *path );
-int genPathName( const char *basedir, struct entry_t *entry  );
 int isMusic( const char *name );
 struct bwlist_t *addToList( const char *line, struct bwlist_t **list );
 int applyFavourites( struct entry_t *root, struct bwlist_t *list );

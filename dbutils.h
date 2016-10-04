@@ -13,12 +13,10 @@
 
 struct dbentry_t {
 	char path[MAXPATHLEN];		// path on the filesystem to the file
-	unsigned long size;			// size in kb
 	char artist[NAMELEN];		// Artist info
 	char title[NAMELEN];		// Title info (from mp3)
 	char album[NAMELEN];		// Album info (from mp3)
 	char genre[NAMELEN];		// Album info (from mp3)
-//	int  length;				// length in seconds (from mp3)
 	unsigned long played;		// play counter
 };
 
@@ -32,5 +30,6 @@ int dbCheckExist( char *dbname );
 int dbAddTitles( const char *dbname, char *basedir );
 void dbClose( int *db );
 void dbBackup( char *dbname );
+void dbDump( char *dbname, struct entry_t *root );
 
 #endif /* DBUTILS_H_ */

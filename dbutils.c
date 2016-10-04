@@ -1,4 +1,5 @@
 #include "dbutils.h"
+#include "utils.h"
 
 /**
  * turn a database entry into a mixplay structure
@@ -12,7 +13,6 @@ static int db2entry( struct dbentry_t *dbentry, struct entry_t *entry ) {
 	strcpy( entry->genre, dbentry->genre );
 	snprintf( entry->display, MAXPATHLEN, "%s - %s", entry->artist, entry->title );
 	entry->played=dbentry->played;
-	entry->size=dbentry->size;
 	return 0;
 }
 
@@ -27,7 +27,6 @@ static int entry2db( struct entry_t *entry, struct dbentry_t *dbentry ) {
 	strcpy( dbentry->album, entry->album );
 	strcpy( dbentry->genre, entry->genre );
 	dbentry->played=entry->played;
-	dbentry->size=entry->size;
 	return 0;
 }
 
@@ -110,8 +109,7 @@ void dbBackup( char *dbname ) {
 
 	strncpy( backupname, dbname, MAXPATHLEN );
 	strncat( backupname, ".bak", MAXPATHLEN );
-	remove(backupname);
-	if( !rename(dbname, backupname) ) {
+	if( rename(dbname, backupname) ) {
 		fail( errno, "Could not rename %s", dbname );
 	}
 }
@@ -133,7 +131,7 @@ struct entry_t *dbGetMusic( int db ) {
 		index++;
 	}
 
-	if( getVerbosity() ) printf("Loaded %li titles from the database\n", index );
+	if( getVerbosity() ) printf("Loaded %li titles from the database\n", index-1 );
 
 	return (dbroot?dbroot->next:NULL);
 }
@@ -232,6 +230,21 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 	printf("Added %i titles to %s\n", num, dbname );
 	dbClose( &db );
 	return num;
+}
+
+void dbDump( char *dbname, struct entry_t *root ) {
+	int db;
+	struct entry_t *runner=root;
+	if( NULL == root ) {
+		fail( F_FAIL, "Not dumping an empty database!");
+	}
+	dbBackup( dbname );
+	dbOpen( &db, dbname );
+	do {
+		dbPutTitle( db, runner );
+		runner=runner->next;
+	} while( runner != root );
+	dbClose( &db );
 }
 
 /**

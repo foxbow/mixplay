@@ -2,6 +2,7 @@
 #include "ncutils.h"
 #include "musicmgr.h"
 #include "dbutils.h"
+#include "mpgutils.h"
 
 #include <getopt.h>
 #include <signal.h>
@@ -178,14 +179,6 @@ static void sendplay( int fd, struct entry_t *song ) {
 	write( fd, line, LINE_BUFLEN );
 }
 
-static void sendpause( int fd, struct entry_t *song ) {
-	char line[LINE_BUFLEN];
-	strncpy( line, "loadpaused ", LINE_BUFLEN );
-	strncat( line, song->path, LINE_BUFLEN );
-	strncat( line, "\n", LINE_BUFLEN );
-	write( fd, line, strlen(line) );
-}
-
 /*
  *
  */
@@ -360,6 +353,7 @@ int main(int argc, char **argv) {
 			searchlist=loadList( favname );
 			break;
 		case 'T':
+			if( !getVerbosity() ) incVerbosity();
 			tagrun=1;
 			break;
 		case 'C':
@@ -398,12 +392,6 @@ int main(int argc, char **argv) {
 			usage(argv[0]);
 			break;
 		}
-	}
-
-	if( tagrun ) {
-		usedb=1;
-		mix=0;
-		repeat=0;
 	}
 
 	// parse additional argument and sanitize options
@@ -516,8 +504,17 @@ int main(int argc, char **argv) {
 		if( scan & 4 ) {
 			dbCheckExist( dbname );
 		}
+		return 0;
+	}
 
-		if( !tagrun ) return 0;
+	if( tagrun ) {
+		dbOpen( &db, dbname );
+		root=dbGetMusic( db );
+		dbClose( &db );
+		if( tagRun( basedir, root ) ) {
+			dbDump( dbname, root );
+		}
+		return 0;
 	}
 
 	abspath( dnpname, confdir, MAXPATHLEN );
@@ -537,10 +534,8 @@ int main(int argc, char **argv) {
 			root=recurse(basedir, NULL, basedir);
 			root=root->next;
 		}
-		if( ! tagrun ) {
-			root=useDNPlist( root, dnplist );
-			applyFavourites( root, favourites );
-		}
+		root=useDNPlist( root, dnplist );
+		applyFavourites( root, favourites );
 
 		if(search){
 			if( 0 == range ) {
@@ -592,7 +587,7 @@ int main(int argc, char **argv) {
 	// prepare playing the titles
 	if (NULL != root) {
 
-		if (mix && !tagrun) {
+		if (mix) {
 			root=shuffleTitles(root);
 		}
 
@@ -746,13 +741,7 @@ int main(int argc, char **argv) {
 					int cmd=0, rem=0, q=0;
 					case 'R': // startup
 						current = root;
-						if( tagrun ) {
-							strcpy( status, "TAGGING" );
-							sendpause(p_command[fdset][1], current);
-						}
-						else {
-							sendplay(p_command[fdset][1], current);
-						}
+						sendplay(p_command[fdset][1], current);
 					break;
 					case 'I': // ID3 info
 						/* @I ID3.2.year:2016
@@ -809,37 +798,8 @@ int main(int argc, char **argv) {
 						redraw=1;
 					break;
 					case 'T': // TAG reply
-						redraw=0;
-						if (NULL != (b = strstr(line, "title:"))) {
-							strip(current->title, b + 6, NAMELEN );
-							snprintf( current->display, MAXPATHLEN, "%s - %s",
-									current->artist, current->title );
-						}
-						// line starts with 'Artist:' this means we had a 'Title:' line before
-						else if (NULL != (b = strstr(line, "artist:"))) {
-							strip(current->artist, b + 7, NAMELEN );
-							snprintf( current->display, MAXPATHLEN, "%s - %s",
-									current->artist, current->title );
-						}
-						// Album
-						else if (NULL != (b = strstr(line, "album:"))) {
-							strip( current->album, b + 6, NAMELEN );
-						}
-						else if( NULL != (b = strstr( line, "genre:" ) ) ) {
-							strip( current->genre, b+6, NAMELEN );
-						}
-						else if ( '}' == line[3] ) {
-							dbPutTitle( db, current );
-							current=current->next;
-							if( current == root ) {
-								strcpy( status, "DONE" );
-								redraw=1;
-								running=0;
-							}
-							else {
-								sendpause(p_command[fdset][1], current);
-							}
-						}
+						fail( F_FAIL, "Got TAG reply!" );
+						break;
 					break;
 					case 'J': // JUMP reply
 						redraw=0;
@@ -928,13 +888,7 @@ int main(int argc, char **argv) {
 							order=1;
 							break;
 						case 1:
-							if( tagrun ) {
-								redraw=1;
-								write( p_command[fdset][1], "tag\n", 4 );
-							}
-							else {
-								strcpy( status, "PAUSE" );
-							}
+							strcpy( status, "PAUSE" );
 							break;
 						case 2:
 							strcpy( status, "PLAYING" );
@@ -954,11 +908,9 @@ int main(int argc, char **argv) {
 						fail( F_FAIL, "ERROR: %s", line );
 					break;
 					default:
-						if( !tagrun ) {
-							sprintf(status, "Warning: %s", line );
-							drawframe( current, status, stream );
-							sleep(2);
-						}
+						sprintf(status, "Warning: %s", line );
+						drawframe( current, status, stream );
+						sleep(2);
 					break;
 					} // case line[1]
 				} // if line starts with '@'

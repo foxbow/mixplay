@@ -68,7 +68,6 @@ void setTitle(const char* title) {
 char *strip( char *buff, const char *text, const size_t maxlen ) {
 	int len=strlen( text );
 	int bpos=0, tpos=0;
-
 	// clear target buffer
 	memset( buff, 0, maxlen );
 
@@ -77,7 +76,8 @@ char *strip( char *buff, const char *text, const size_t maxlen ) {
 
 	// Filter out all extended characters
 	while( ( 0 != text[tpos] )  && ( bpos < ( maxlen-1) ) ) {
-		if( isascii( text[tpos]) ) {
+//		if( isascii( text[tpos]) ) {
+		if( isprint( text[tpos]) ) {
 			buff[bpos]=text[tpos];
 			bpos++;
 		}

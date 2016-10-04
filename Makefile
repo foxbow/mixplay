@@ -1,7 +1,7 @@
 VERSION:=$(shell git describe --tags --long --dirty --always)
 CCFLAGS=-DVERSION=\"${VERSION}\"
-HDRS=utils.h ncutils.h musicmgr.h dbutils.h
-OBJS=utils.o ncutils.o musicmgr.o dbutils.c
+HDRS=utils.h ncutils.h musicmgr.h dbutils.h mpgutils.h
+OBJS=utils.o ncutils.o musicmgr.o dbutils.c mpgutils.c
 EXES=bin/mixplay
 CCFLAGS+=-Wall -g
 
@@ -15,7 +15,7 @@ clean:
 	rm -f $(EXES)
 
 bin/%: $(OBJS) %.o
-	gcc $(CCFLAGS) $^ -o $@ -lncurses
+	gcc $(CCFLAGS) $^ -o $@ -lncurses -lmpg123
 
 %.o: %.c $(HDRS)
 	gcc $(CCFLAGS) -c $<

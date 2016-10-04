@@ -1,0 +1,163 @@
+/*
+ * mpgutils.c
+ *
+ *  Created on: 04.10.2016
+ *      Author: bweber
+ */
+#include <mpg123.h>
+#include "mpgutils.h"
+#include <stdlib.h>
+
+static void tagCopy( char *target, char *tag, size_t len ) {
+	if( len > NAMELEN ) len=NAMELEN;
+	strip( target, tag, len );
+}
+
+/**
+ * takes a directory and tries to guess info from the structure
+ * Either it's Artist/Album for directories or just the Artist from an mp3
+ */
+static void genPathName( const char *basedir, struct entry_t *entry  ){
+	char *p;
+	char curdir[MAXPATHLEN];
+	int blen=0;
+
+	blen=strlen(basedir);
+	if( basedir[blen] != '/' )  blen=blen+1;
+
+	// Create working copy of the path and cut off trailing /
+	strip( curdir, (entry->path)+blen, MAXPATHLEN );
+
+	// cut off .mp3
+	if( endsWith( curdir, ".mp3" ) ) {
+		curdir[strlen( curdir ) - 4]=0;
+	}
+
+	strcpy( entry->artist, "Sampler" );
+	strcpy( entry->album, "None" );
+
+	p=strrchr( curdir, '/' );
+	if( NULL == p ) {
+		strncpy( entry->title, curdir, NAMELEN );
+	}
+	else {
+		p[0]=0;
+		strncpy( entry->title, p+1, NAMELEN );
+
+		if( strlen( curdir ) > 1 ) {
+			p=strrchr( curdir, '/' );
+			if( NULL == p ) {
+				strncpy( entry->artist, curdir, NAMELEN );
+			}
+			else {
+				p[0]=0;
+				strncpy( entry->album, p+1, NAMELEN );
+
+				p=strrchr( curdir, '/' );
+				if( NULL == p ) {
+					strncpy( entry->artist, curdir, NAMELEN );
+				}
+				else {
+					strncpy( entry->artist, p+1, NAMELEN );
+				}
+			}
+		}
+	}
+
+//	snprintf( entry->display, MAXPATHLEN, "%s - %s", entry->artist, entry->title );
+//	return strlen( entry->display );
+}
+
+static void fillInfo( mpg123_handle *mh, const char *basedir, struct entry_t *title ) {
+	mpg123_id3v1 *v1;
+	mpg123_id3v2 *v2;
+	int meta;
+
+	genPathName( basedir, title ); // Set some default values as tag info may be incomplete
+	if(mpg123_open(mh, title->path ) != MPG123_OK) {
+		fail( F_FAIL, "Cannot open %s: %s\n", title->path, mpg123_strerror(mh) );
+	}
+
+	while( mpg123_framebyframe_next( mh ) == MPG123_OK ) {
+		meta = mpg123_meta_check(mh);
+		if(meta & MPG123_ID3 ) break;
+	}
+
+	if( mpg123_id3(mh, &v1, &v2) == MPG123_OK) {
+		if( v2 != NULL ) {
+			if( NULL != v2->title ) {
+				tagCopy( title->title, v2->title->p, v2->title->fill );
+			}
+			if( NULL != v2->artist ) {
+				tagCopy( title->artist, v2->artist->p, v2->artist->fill );
+			}
+			if( NULL != v2->album ) {
+				tagCopy( title->album, v2->album->p, v2->album->fill );
+			}
+			if( NULL != v2->genre) {
+				tagCopy( title->genre, v2->genre->p, v2->genre->fill );
+			}
+		}
+		else if( v1 != NULL ) {
+			tagCopy( title->title, v1->title, sizeof(v1->title) );
+			tagCopy( title->artist, v1->artist, sizeof(v1->artist) );
+			tagCopy( title->album, v1->album, sizeof(v1->album) );
+			snprintf( title->genre, NAMELEN, "%i", v1->genre );
+		}
+		else {
+			printf("\nID3 OK but no tags in %s\n", title->path );
+		}
+	}
+	else {
+		printf("\nTag parse error in %s\n", title->path );
+	}
+	snprintf( title->display, MAXPATHLEN, "%s - %s", title->artist, title->title );
+	mpg123_close(mh);
+}
+
+/**
+ * do a full tagrun
+ */
+int tagRun( const char *basedir, struct entry_t *base ) {
+	struct entry_t *runner=base;
+	mpg123_handle* mh;
+	unsigned long cnt=0;
+
+	mpg123_init();
+	mh = mpg123_new(NULL, NULL);
+	mpg123_param( mh, MPG123_ADD_FLAGS, MPG123_QUIET, 0.0 );
+
+	do {
+		activity("Tagging");
+		if( 0 == strlen( runner->artist ) ) { // only tag titles without artist
+			fillInfo( mh, basedir, runner );
+			cnt++;
+		}
+		runner=runner->next;
+	} while( runner != base );
+
+	if( cnt > 0 ) {
+		if( getVerbosity() > 1 ) {
+			printf("Tagged %li titles\n", cnt );
+		}
+	}
+
+	mpg123_delete(mh);
+	mpg123_exit();
+	return cnt>0?-1:0;
+}
+
+int fillTagInfo( const char *basedir, struct entry_t *title ) {
+	mpg123_handle* mh;
+
+	if( 0 == strlen(title->artist) ) return 0;
+
+	mpg123_init();
+	mh = mpg123_new(NULL, NULL);
+//	mpg123_param( mh, MPG123_VERBOSE, 0, 0.0 );
+	mpg123_param( mh, MPG123_ADD_FLAGS, MPG123_QUIET, 0.0 );
+	fillInfo( mh, basedir, title );
+	mpg123_delete(mh);
+	mpg123_exit();
+	return 0;
+}

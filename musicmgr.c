@@ -1,4 +1,6 @@
 #include "musicmgr.h"
+#include "mpgutils.h"
+#include "utils.h"
 
 // default genres by number
 char *genres[192] = {
@@ -231,61 +233,6 @@ static struct entry_t *moveTitle( struct entry_t *title, struct entry_t **target
 	}
 
 	return title;
-}
-
-/**
- * takes a directory and tries to guess info from the structure
- * Either it's Artist/Album for directories or just the Artist from an mp3
- */
-int genPathName( const char *basedir, struct entry_t *entry  ){
-	char *p;
-	char curdir[MAXPATHLEN];
-	int blen=0;
-
-	blen=strlen(basedir);
-	if( basedir[blen] != '/' )  blen=blen+1;
-
-	// Create working copy of the path and cut off trailing /
-	strip( curdir, (entry->path)+blen, MAXPATHLEN );
-
-	// cut off .mp3
-	if( endsWith( curdir, ".mp3" ) ) {
-		curdir[strlen( curdir ) - 4]=0;
-	}
-
-	strcpy( entry->artist, "Sampler" );
-	strcpy( entry->album, "None" );
-
-	p=strrchr( curdir, '/' );
-	if( NULL == p ) {
-		strncpy( entry->title, curdir, NAMELEN );
-	}
-	else {
-		p[0]=0;
-		strncpy( entry->title, p+1, NAMELEN );
-
-		if( strlen( curdir ) > 1 ) {
-			p=strrchr( curdir, '/' );
-			if( NULL == p ) {
-				strncpy( entry->artist, curdir, NAMELEN );
-			}
-			else {
-				p[0]=0;
-				strncpy( entry->album, p+1, NAMELEN );
-
-				p=strrchr( curdir, '/' );
-				if( NULL == p ) {
-					strncpy( entry->artist, curdir, NAMELEN );
-				}
-				else {
-					strncpy( entry->artist, p+1, NAMELEN );
-				}
-			}
-		}
-	}
-
-	snprintf( entry->display, MAXPATHLEN, "%s - %s", entry->artist, entry->title );
-	return strlen( entry->display );
 }
 
 /**
@@ -662,7 +609,8 @@ struct entry_t *insertTitle( struct entry_t *base, const char *path ){
 	}
 
 	strncpy( root->path, path, MAXPATHLEN );
-	genPathName( "", root );
+
+	fillTagInfo( "", root );
 
 	return root;
 }
@@ -878,7 +826,6 @@ int mp3Exists( const struct entry_t *title ) {
 struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedir ) {
 	struct entry_t *buff=NULL;
 	char dirbuff[MAXPATHLEN];
-	FILE *file;
 	struct dirent **entry;
 	int num, i;
 
@@ -902,15 +849,11 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 		}
 		strncat( dirbuff, entry[i]->d_name, MAXPATHLEN );
 
-		file=fopen( dirbuff, "r");
-		if( NULL == file ) fail( errno, "Couldn't open file %s", dirbuff );
-		if( -1 == fseek( file, 0L, SEEK_END ) ) fail( errno, "fseek() failed on ", dirbuff );
-
 		buff=(struct entry_t *)calloc(1, sizeof(struct entry_t));
 		if(buff == NULL) fail( errno, "%s: Could not alloc buffer", __func__ );
 
 		strncpy( buff->path, dirbuff, MAXPATHLEN );
-		genPathName( basedir, buff );
+		fillTagInfo( basedir, buff );
 		if( NULL == files ){
 			files=buff;
 			buff->prev=files;
@@ -923,10 +866,7 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 			files->next=buff;
 		}
 
-		buff->size=ftell( file )/1024;
 		files=buff;
-		fclose(file);
-
 		free(entry[i]);
 	}
 	free(entry);
