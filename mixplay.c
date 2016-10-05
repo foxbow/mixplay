@@ -508,9 +508,7 @@ int main(int argc, char **argv) {
 	}
 
 	if( tagrun ) {
-		dbOpen( &db, dbname );
-		root=dbGetMusic( db );
-		dbClose( &db );
+		root=dbGetMusic( dbname );
 		if( tagRun( basedir, root ) ) {
 			dbDump( dbname, root );
 		}
@@ -527,9 +525,7 @@ int main(int argc, char **argv) {
 	// load and prepare titles
 	if( NULL == root ) {
 		if( usedb ) {
-			dbOpen( &db, dbname );
-			root=dbGetMusic( db );
-			dbClose( &db );
+			root=dbGetMusic( dbname );
 		} else {
 			root=recurse(basedir, NULL, basedir);
 			root=root->next;
@@ -626,7 +622,7 @@ int main(int argc, char **argv) {
 		}
 
 		running=1;
-		if( usedb ) dbOpen( &db, dbname );
+		if( usedb ) db=dbOpen( dbname );
 
 		// Start curses mode
 		initscr();
@@ -918,7 +914,7 @@ int main(int argc, char **argv) {
 			} // fgets() > 0
 			if( redraw ) drawframe( current, status, stream );
 		} // while(running)
-		if( usedb ) dbClose( &db );
+		if( usedb ) dbClose( db );
 		kill(pid[0], SIGTERM);
 		if( fade ) kill( pid[1], SIGTERM );
 		endwin();

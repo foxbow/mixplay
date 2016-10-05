@@ -33,16 +33,14 @@ static int entry2db( struct entry_t *entry, struct dbentry_t *dbentry ) {
 /**
  * opens the database file and handles errors
  */
-int dbOpen( int *db, const char *path ){
-	if( 0 != *db ) {
-		fail( F_FAIL, "Database %s already open", path );
-	}
-	*db = open( path, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR );
-	if( -1 == *db ) {
+int dbOpen( const char *path ){
+	int db=-1;
+	db = open( path, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR );
+	if( -1 == db ) {
 		fail( errno, "Could not open database %s", path );
 	}
 	if( getVerbosity() > 1 ) printf("Opened database %s\n", path);
-	return *db;
+	return db;
 }
 
 /**
@@ -104,7 +102,7 @@ static struct entry_t *addDBTitle( struct dbentry_t dbentry, struct entry_t *roo
  * move the current database file into a backup
  * tries to delete the backup first
  */
-void dbBackup( char *dbname ) {
+void dbBackup( const char *dbname ) {
 	char backupname[MAXPATHLEN]="";
 
 	strncpy( backupname, dbname, MAXPATHLEN );
@@ -117,20 +115,19 @@ void dbBackup( char *dbname ) {
 /**
  * gets all titles from the database and returns them as a mixplay entry list
  */
-struct entry_t *dbGetMusic( int db ) {
+struct entry_t *dbGetMusic( const char *dbname ) {
 	struct dbentry_t dbentry;
-	unsigned long index = 1;
+	unsigned long index = 1; // index 0 is reserved for titles not in the db!
 	struct entry_t *dbroot=NULL;
-
-	if( 0 == db ){
-		fail( F_FAIL, "%s - Database not open!", __func__ );
-	}
+	int db;
+	db=dbOpen( dbname );
 
 	while( read( db, &dbentry, DBESIZE ) == DBESIZE ) {
 		dbroot = addDBTitle( dbentry, dbroot, index );
 		index++;
 	}
 
+	dbClose( db );
 	if( getVerbosity() ) printf("Loaded %li titles from the database\n", index-1 );
 
 	return (dbroot?dbroot->next:NULL);
@@ -140,14 +137,12 @@ struct entry_t *dbGetMusic( int db ) {
  * checks for removed entries in the database
  * i.e. titles that are in the database but no longer on the medium
  */
-int dbCheckExist( char *dbname ) {
+int dbCheckExist( const char *dbname ) {
 	struct entry_t *root;
 	struct entry_t *runner;
-	int db=0;
 	int num=0;
 
-	dbOpen( &db, dbname );
-	root=dbGetMusic( db );
+	root=dbGetMusic( dbname );
 
 	do {
 		activity( "Cleaning" );
@@ -162,20 +157,13 @@ int dbCheckExist( char *dbname ) {
 	} while( ( runner != NULL ) && ( root != runner ) );
 
 	if( num > 0 ) {
-		dbClose(&db);
-		dbBackup( dbname );
-		dbOpen(&db,dbname);
-		while( NULL != runner ) {
-			dbPutTitle( db, runner );
-			runner=removeTitle( runner );
-		}
+		dbDump( dbname, root );
 		printf("Removed %i titles\n", num );
 	}
 	else {
-		wipeTitles( root );
 		printf("No titles to remove\n" );
 	}
-	dbClose( &db );
+	wipeTitles( root );
 
 	return num;
 }
@@ -193,9 +181,9 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 	int num=0;
 	int db=0;
 
-	dbOpen( &db, dbname );
-	dbroot=dbGetMusic(db);
+	dbroot=dbGetMusic( dbname );
 
+	db=dbOpen( dbname );
 	if( NULL != dbroot ) {
 		low=getLowestPlaycount( dbroot );
 		if( 0 != low ) {
@@ -228,33 +216,29 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 	}
 
 	printf("Added %i titles to %s\n", num, dbname );
-	dbClose( &db );
+	dbClose( db );
 	return num;
 }
 
-void dbDump( char *dbname, struct entry_t *root ) {
+void dbDump( const char *dbname, struct entry_t *root ) {
 	int db;
 	struct entry_t *runner=root;
 	if( NULL == root ) {
 		fail( F_FAIL, "Not dumping an empty database!");
 	}
 	dbBackup( dbname );
-	dbOpen( &db, dbname );
+	db=dbOpen( dbname );
 	do {
 		dbPutTitle( db, runner );
 		runner=runner->next;
 	} while( runner != root );
-	dbClose( &db );
+	dbClose( db );
 }
 
 /**
  * closes the database file
  */
-void dbClose( int *db ) {
-	if( 0 == *db ){
-		fail( F_FAIL, "Database not open!" );
-	}
-	close(*db);
-	*db=0;
+void dbClose( int db ) {
+	close(db);
 	return;
 }
