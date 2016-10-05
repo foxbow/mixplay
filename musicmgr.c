@@ -1,6 +1,17 @@
+/**
+ * collection of functions to manage a list of titles
+ */
+
 #include "musicmgr.h"
 #include "mpgutils.h"
 #include "utils.h"
+
+#include <unistd.h>
+#include <sys/types.h>
+#include <ctype.h>
+#include <strings.h>
+#include <sys/statvfs.h>
+#include <sys/time.h>
 
 // default genres by number
 char *genres[192] = {

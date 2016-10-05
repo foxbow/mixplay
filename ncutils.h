@@ -1,8 +1,6 @@
 #ifndef NCUTILS_H_
 #define NCUTILS_H_
 
-#include <ncurses.h>
-
 #define HOR '-'
 #define VER '|'
 #define EDG "+"

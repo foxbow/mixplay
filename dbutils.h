@@ -8,8 +8,6 @@
 #ifndef DBUTILS_H_
 #define DBUTILS_H_
 #include "musicmgr.h"
-#include <stdio.h>
-#include <fcntl.h>
 
 struct dbentry_t {
 	char path[MAXPATHLEN];		// path on the filesystem to the file

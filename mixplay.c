@@ -1,3 +1,15 @@
+/**
+ * all purpose music player with database support and ncurses interface
+ * also able to handle ICY streams and playlists
+ *
+ * supports per session favourites that may be played twice as often as normal songs
+ * supports per session DoNotPlay lists to filter out undesired titles
+ *
+ * main use is to replace the squeezebox(tm) set up and still offer
+ * dynamic mix of titles without the overhead of other players like Banshee
+ * or even iTunes
+ */
+
 #include "utils.h"
 #include "ncutils.h"
 #include "musicmgr.h"
@@ -7,6 +19,7 @@
 #include <getopt.h>
 #include <signal.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 
 #ifndef VERSION
 #define VERSION "dev"

@@ -1,5 +1,11 @@
+/**
+ * interface between titles and the database
+ */
+
 #include "dbutils.h"
 #include "utils.h"
+#include <stdio.h>
+#include <fcntl.h>
 
 /**
  * turn a database entry into a mixplay structure

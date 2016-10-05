@@ -1,4 +1,9 @@
+/**
+ * collection of ncurses helper functions
+ */
+
 #include "ncutils.h"
+#include <ncurses.h>
 
 /**
  * Draw a horizontal line

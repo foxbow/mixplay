@@ -1,14 +1,9 @@
 #ifndef MUSICMGR_H_
 #define MUSICMGR_H_
 
-/* Directory access */
-#include <unistd.h>
-#include <sys/types.h>
 #include <dirent.h>
-#include <ctype.h>
-#include <strings.h>
-#include <sys/statvfs.h>
-#include <sys/time.h>
+
+/* Directory access */
 
 #define NAMELEN 64
 #define MAXPATHLEN 256
@@ -47,7 +42,6 @@ struct bwlist_t {
 /**
  * Music helper functions
  */
-// unused?!
 void wipeTitles( struct entry_t *files );
 struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedir );
 struct entry_t *shuffleTitles( struct entry_t *base );
@@ -70,4 +64,5 @@ int getDirs( const char *cd, struct dirent ***dirlist );
 struct entry_t *findTitle( struct entry_t *base, const char *path );
 char *getGenre( struct entry_t *title );
 void dumpTitles( struct entry_t *root );
+
 #endif /* MUSICMGR_H_ */

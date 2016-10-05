@@ -1,13 +1,19 @@
 /*
  * mpgutils.c
  *
+ * interface to libmpg123
+ *
  *  Created on: 04.10.2016
  *      Author: bweber
  */
-#include <mpg123.h>
 #include "mpgutils.h"
+#include "utils.h"
 #include <stdlib.h>
+#include <mpg123.h>
 
+/**
+ * helperfunction to copy tag data
+ */
 static void tagCopy( char *target, char *tag, size_t len ) {
 	if( len > NAMELEN ) len=NAMELEN;
 	strip( target, tag, len );
@@ -16,6 +22,7 @@ static void tagCopy( char *target, char *tag, size_t len ) {
 /**
  * takes a directory and tries to guess info from the structure
  * Either it's Artist/Album for directories or just the Artist from an mp3
+ * Used as base settings in case no mp3 tag info is available
  */
 static void genPathName( const char *basedir, struct entry_t *entry  ){
 	char *p;
@@ -63,11 +70,11 @@ static void genPathName( const char *basedir, struct entry_t *entry  ){
 			}
 		}
 	}
-
-//	snprintf( entry->display, MAXPATHLEN, "%s - %s", entry->artist, entry->title );
-//	return strlen( entry->display );
 }
 
+/**
+ * read tag data from the file
+ */
 static void fillInfo( mpg123_handle *mh, const char *basedir, struct entry_t *title ) {
 	mpg123_id3v1 *v1;
 	mpg123_id3v2 *v2;
@@ -116,7 +123,7 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, struct entry_t *ti
 }
 
 /**
- * do a full tagrun
+ * tag all titles in the list
  */
 int tagRun( const char *basedir, struct entry_t *base ) {
 	struct entry_t *runner=base;
@@ -147,10 +154,11 @@ int tagRun( const char *basedir, struct entry_t *base ) {
 	return cnt>0?-1:0;
 }
 
+/**
+ * read tags for a single title
+ */
 int fillTagInfo( const char *basedir, struct entry_t *title ) {
 	mpg123_handle* mh;
-
-	if( 0 == strlen(title->artist) ) return 0;
 
 	mpg123_init();
 	mh = mpg123_new(NULL, NULL);

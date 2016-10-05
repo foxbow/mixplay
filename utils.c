@@ -1,3 +1,7 @@
+/**
+ * collection of all-purpose utility functions
+ */
+
 #include "utils.h"
 
 static int _ftrpos=0;

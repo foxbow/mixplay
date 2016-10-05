@@ -9,7 +9,6 @@
 #define MPGUTILS_H_
 
 #include "musicmgr.h"
-#include "utils.h"
 
 int fillTagInfo( const char *basedir, struct entry_t *title );
 int tagRun( const char *basedir, struct entry_t *base );
