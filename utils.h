@@ -1,17 +1,8 @@
 #ifndef FBFS_UTILS_H
 #define FBFS_UTILS_H
 
-#include <errno.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <ctype.h>
-#include <ncurses.h>
-#include <unistd.h>
-#include <stdarg.h>
-
 /* Default values */
+#include <stdlib.h>
 
 #define CMP_CHARS 127
 #define CMP_BITS (CMP_CHARS*CMP_CHARS)

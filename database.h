@@ -5,8 +5,8 @@
  *      Author: bweber
  */
 
-#ifndef DBUTILS_H_
-#define DBUTILS_H_
+#ifndef DATABASE_H_
+#define DATABASE_H_
 #include "musicmgr.h"
 
 struct dbentry_t {
@@ -30,4 +30,4 @@ void dbClose( int db );
 void dbBackup( const char *dbname );
 void dbDump( const char *dbname, struct entry_t *root );
 
-#endif /* DBUTILS_H_ */
+#endif /* DATABASE_H_ */

@@ -12,6 +12,9 @@
 #include <strings.h>
 #include <sys/statvfs.h>
 #include <sys/time.h>
+#include <string.h>
+#include <stdio.h>
+#include <errno.h>
 
 // default genres by number
 char *genres[192] = {

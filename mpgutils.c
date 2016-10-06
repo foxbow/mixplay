@@ -10,13 +10,15 @@
 #include "utils.h"
 #include <stdlib.h>
 #include <mpg123.h>
+#include <string.h>
+#include <stdio.h>
 
 /**
- * helperfunction to copy tag data
+ * helperfunction to copy V2 tag data
  */
-static void tagCopy( char *target, char *tag, size_t len ) {
-	if( len > NAMELEN ) len=NAMELEN;
-	strip( target, tag, len );
+static void tagCopy( char *target, mpg123_string *tag ) {
+	if( NULL == tag ) return;
+	strip( target, tag->p, (tag->fill < NAMELEN)?tag->fill:NAMELEN );
 }
 
 /**
@@ -91,24 +93,16 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, struct entry_t *ti
 	}
 
 	if( mpg123_id3(mh, &v1, &v2) == MPG123_OK) {
-		if( v2 != NULL ) {
-			if( NULL != v2->title ) {
-				tagCopy( title->title, v2->title->p, v2->title->fill );
-			}
-			if( NULL != v2->artist ) {
-				tagCopy( title->artist, v2->artist->p, v2->artist->fill );
-			}
-			if( NULL != v2->album ) {
-				tagCopy( title->album, v2->album->p, v2->album->fill );
-			}
-			if( NULL != v2->genre) {
-				tagCopy( title->genre, v2->genre->p, v2->genre->fill );
-			}
+		if( v2 != NULL ) { // Prefer v2 tag data
+			tagCopy( title->title, v2->title );
+			tagCopy( title->artist, v2->artist );
+			tagCopy( title->album, v2->album );
+			tagCopy( title->genre, v2->genre );
 		}
 		else if( v1 != NULL ) {
-			tagCopy( title->title, v1->title, sizeof(v1->title) );
-			tagCopy( title->artist, v1->artist, sizeof(v1->artist) );
-			tagCopy( title->album, v1->album, sizeof(v1->album) );
+			strip( title->title, v1->title, 32 );
+			strip( title->artist, v1->artist, 32 );
+			strip( title->album, v1->album, 32 );
 			snprintf( title->genre, NAMELEN, "%i", v1->genre );
 		}
 		else {

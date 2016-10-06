@@ -3,6 +3,13 @@
  */
 
 #include "utils.h"
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+#include <stdarg.h>
+#include <unistd.h>
+#include <ncurses.h>
 
 static int _ftrpos=0;
 static int _ftverbosity=1;
@@ -232,15 +239,16 @@ int isURL( const char *uri ){
 /**
  * show activity roller on console
  * this will only show when the global verbosity is larger than 0
+ * spins faster with increased verbosity
  */
 void activity( const char *msg ){
 	char roller[5]="|/-\\";
 	int pos;
-	if( _ftverbosity && ( _ftrpos%100 == 0 )) {
-		pos=(_ftrpos/100)%4;
+	if( _ftverbosity && ( _ftrpos%(100/_ftverbosity) == 0 )) {
+		pos=(_ftrpos/(100/_ftverbosity))%4;
 		printf( "%s %c\r", msg, roller[pos] ); fflush( stdout );
 	}
-	_ftrpos=(_ftrpos+1)%400;
+	_ftrpos=(_ftrpos+1)%(400/_ftverbosity);
 }	
 
 /*

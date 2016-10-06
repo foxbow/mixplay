@@ -2,7 +2,7 @@
  * collection of ncurses helper functions
  */
 
-#include "ncutils.h"
+#include "ncbox.h"
 #include <ncurses.h>
 
 /**

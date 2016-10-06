@@ -1,7 +1,7 @@
 VERSION:=$(shell git describe --tags --long --dirty --always)
 CCFLAGS=-DVERSION=\"${VERSION}\"
-HDRS=utils.h ncutils.h musicmgr.h dbutils.h mpgutils.h
-OBJS=utils.o ncutils.o musicmgr.o dbutils.c mpgutils.c
+HDRS=utils.h ncbox.h musicmgr.h database.h mpgutils.h
+OBJS=utils.o ncbox.o musicmgr.o database.c mpgutils.c
 EXES=bin/mixplay
 CCFLAGS+=-Wall -g
 

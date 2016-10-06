@@ -11,15 +11,20 @@
  */
 
 #include "utils.h"
-#include "ncutils.h"
+#include "ncbox.h"
 #include "musicmgr.h"
-#include "dbutils.h"
+#include "database.h"
 #include "mpgutils.h"
 
+#include <stdio.h>
 #include <getopt.h>
 #include <signal.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <ncurses.h>
+#include <errno.h>
+#include <string.h>
+#include <unistd.h>
 
 #ifndef VERSION
 #define VERSION "dev"
