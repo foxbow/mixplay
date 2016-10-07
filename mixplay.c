@@ -55,7 +55,6 @@ static void usage( char *progname ){
 	printf( "-C         : clear database and add titles anew *\n" );
 	printf( "-A         : add new titles to the database *\n" );
 	printf( "-D         : delete removed titles from the database *\n" );
-	printf( "-T         : Tagrun, set MP3tags on all titles in the db *\n" );
 	printf( "-F         : disable crossfading between songs\n");
 	printf( "-X         : print some database statistics*\n");
 	printf( "[path|URL] : path to the music files [.]\n" );
@@ -244,7 +243,6 @@ int main(int argc, char **argv) {
 	int search=0;
 	int range=0;
 	int db=0;
-	int tagrun=0;
 	int repeat=1;
 	int scan=0;
 	int fade=3;
@@ -293,7 +291,7 @@ int main(int argc, char **argv) {
 	}
 
 	// parse command line options
-	while ((c = getopt(argc, argv, "ACd:Df:hmp:PQrR:s:SvTFVX")) != -1) {
+	while ((c = getopt(argc, argv, "ACd:Df:hmp:PQrR:s:SvFVX")) != -1) {
 
 		switch (c) {
 		case 'v': // pretty useless in normal use
@@ -369,10 +367,6 @@ int main(int argc, char **argv) {
 			range=SL_PATH;
 			abspath( favname, confdir, MAXPATHLEN );
 			searchlist=loadList( favname );
-			break;
-		case 'T':
-			if( !getVerbosity() ) incVerbosity();
-			tagrun=1;
 			break;
 		case 'C':
 			if( !getVerbosity() ) incVerbosity();
@@ -521,14 +515,6 @@ int main(int argc, char **argv) {
 		}
 		if( scan & 4 ) {
 			dbCheckExist( dbname );
-		}
-		return 0;
-	}
-
-	if( tagrun ) {
-		root=dbGetMusic( dbname );
-		if( tagRun( basedir, root ) ) {
-			dbDump( dbname, root );
 		}
 		return 0;
 	}
@@ -785,23 +771,25 @@ int main(int argc, char **argv) {
 						}
 						// standard mpg123 info
 						else if ( strstr(line, "ID3") != NULL ) {
-							if (NULL != (b = strstr(line, "title:"))) {
-								strip(current->title, b + 6, NAMELEN );
-								snprintf( current->display, MAXPATHLEN, "%s - %s",
-										current->artist, current->title );
-							}
-							// line starts with 'Artist:' this means we had a 'Title:' line before
-							else if (NULL != (b = strstr(line, "artist:"))) {
-								strip(current->artist, b + 7, NAMELEN );
-								snprintf( current->display, MAXPATHLEN, "%s - %s",
-										current->artist, current->title );
-							}
-							// Album
-							else if (NULL != (b = strstr(line, "album:"))) {
-								strip( current->album, b + 6, NAMELEN );
-							}
-							else if( NULL != (b = strstr( line, "genre:" ) ) ) {
-								strip( current->genre, b+6, NAMELEN );
+							if( !usedb ) {
+								if (NULL != (b = strstr(line, "title:"))) {
+									strip(current->title, b + 6, NAMELEN );
+									snprintf( current->display, MAXPATHLEN, "%s - %s",
+											current->artist, current->title );
+								}
+								// line starts with 'Artist:' this means we had a 'Title:' line before
+								else if (NULL != (b = strstr(line, "artist:"))) {
+									strip(current->artist, b + 7, NAMELEN );
+									snprintf( current->display, MAXPATHLEN, "%s - %s",
+											current->artist, current->title );
+								}
+								// Album
+								else if (NULL != (b = strstr(line, "album:"))) {
+									strip( current->album, b + 6, NAMELEN );
+								}
+								else if( NULL != (b = strstr( line, "genre:" ) ) ) {
+									strip( current->genre, b+6, NAMELEN );
+								}
 							}
 						}
 						else {

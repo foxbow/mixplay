@@ -117,38 +117,6 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, struct entry_t *ti
 }
 
 /**
- * tag all titles in the list
- */
-int tagRun( const char *basedir, struct entry_t *base ) {
-	struct entry_t *runner=base;
-	mpg123_handle* mh;
-	unsigned long cnt=0;
-
-	mpg123_init();
-	mh = mpg123_new(NULL, NULL);
-	mpg123_param( mh, MPG123_ADD_FLAGS, MPG123_QUIET, 0.0 );
-
-	do {
-		activity("Tagging");
-		if( 0 == strlen( runner->artist ) ) { // only tag titles without artist
-			fillInfo( mh, basedir, runner );
-			cnt++;
-		}
-		runner=runner->next;
-	} while( runner != base );
-
-	if( cnt > 0 ) {
-		if( getVerbosity() > 1 ) {
-			printf("Tagged %li titles\n", cnt );
-		}
-	}
-
-	mpg123_delete(mh);
-	mpg123_exit();
-	return cnt>0?-1:0;
-}
-
-/**
  * read tags for a single title
  */
 int fillTagInfo( const char *basedir, struct entry_t *title ) {

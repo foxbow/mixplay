@@ -4,6 +4,7 @@
 
 #include "database.h"
 #include "utils.h"
+#include "mpgutils.h"
 #include <stdio.h>
 #include <fcntl.h>
 #include <string.h>
@@ -219,6 +220,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 		activity("Adding");
 		dbrunner = findTitle( dbroot, fsroot->path );
 		if( NULL == dbrunner ) {
+			fillTagInfo( basedir, dbrunner );
 			dbPutTitle(db,fsroot);
 			num++;
 		}
