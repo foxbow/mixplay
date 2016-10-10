@@ -839,9 +839,16 @@ int main(int argc, char **argv) {
 								else tbuf[i]=' ';
 							}
 							sprintf(status, "%i:%02i [%s] %i:%02i", intime/60, intime%60, tbuf, rem/60, rem%60 );
-							if( (mix) && ( fade != 0 ) && ( rem <= fade ) ) {
-								current->played++;
-								dbPutTitle( db, current );
+							if( ( fade != 0 ) && ( rem <= fade ) ) {
+								// should the playcount be increased?
+								// mix     - playcount relevant
+								// usedb   - playcount is persistent
+								// !MP_CNT - title has not been counted yet
+								if( mix && usedb && !( current->flags & MP_CNT ) ) {
+									current->flags |= MP_CNT; // make sure a title is only counted once per session
+									current->played++;
+									dbPutTitle( db, current );
+								}
 								next=current->next;
 								if( ( next == current )
 										|| ( ( !repeat ) && ( next == root ) ) ) {
@@ -870,9 +877,13 @@ int main(int argc, char **argv) {
 						cmd = atoi(&line[3]);
 						switch (cmd) {
 						case 0:
-							// update playcount after 15s
-							// only happens on non fading title change
-							if ( mix && (intime > 15 ) && usedb ) {
+							// should the playcount be increased?
+							// mix     - playcount relevant
+							// intime  - has been played for more than 2 secs
+							// usedb   - playcount is persistent
+							// !MP_CNT - title has not been counted yet
+							if ( mix && (intime > 2 ) && usedb && !( current->flags & MP_CNT )) {
+								current->flags |= MP_CNT;
 								current->played = current->played+1;
 								dbPutTitle( db, current );
 							}

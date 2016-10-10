@@ -13,6 +13,7 @@
 
 #define MP_FAV 1	// Favourite
 #define MP_DNP 2    // do not play
+#define MP_CNT 4	// has been counted
 
 #define SL_TITLE 1
 #define SL_ALBUM 2

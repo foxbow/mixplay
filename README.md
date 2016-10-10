@@ -2,11 +2,11 @@
 console based front-end to mpg123, planned to replace my old squeezebox/squeezeboxserver and act as a radio 
 replacement to play background music but stay sleek enough to run on a mini ARM board.
 
-So far it will scan a given directory for mp3 files, add them to an internal list and then play this list. 
 The featurelist will probably not grow that much further as I just want to play music without the bloat of
 a full featured management software.
 
 ### Features
+* Music database to avoid scanning on every start
 * Skipping titles forward/backward
 * Jumping forward backward during play
 * favourites
@@ -16,7 +16,7 @@ a full featured management software.
 * keyword play
 * URL stream play
 * playlist support
-* Name/Artist guessing by path (shall be replaced by MP3 tag reading)
+* Name/Artist guessing by path if no MP3 Tag info is available
 
 ### Parameters
 * -d <file>  : List of names to exclude [mixplay.dnp]
@@ -27,13 +27,12 @@ a full featured management software.
 * -p <file>  : use file as fuzzy playlist (party mode)
 * -m         : disable shuffle mode on playlist
 * -r         : disable repeat mode on playlist
-* -v         : increase verbosity (just for debugging)
+* -v         : increase verbosity
 * -V         : print version*
 * -h         : print this help*
 * -C         : clear database and add titles anew *
 * -A         : add new titles to the database *
 * -D         : delete removed titles from the database *
-* -T         : Tagrun, set MP3tags on all titles in the db *
 * -F         : disable crossfading between songs
 * -X         : print some database statistics*
 * [path|URL] : path to the music files [.]
@@ -57,5 +56,7 @@ on playlists:
 * f - add to favoutites
 
 ### Planned
-* native MP3 streaming and tagging (lose mpg123 - low priority)
+* native MP3 streaming (depends on more recent libmp3/libout)
+* serve stream (unlikely but desireable)
 * interface revamp (dependant on actual hardware)
+
