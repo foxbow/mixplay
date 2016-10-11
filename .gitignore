@@ -1,6 +1,10 @@
+# Editor backups
+*~
+
 # Eclipse stuff
 .cproject
 .project
+org.eclipse*
 
 # Binaries
 bin/mixplay

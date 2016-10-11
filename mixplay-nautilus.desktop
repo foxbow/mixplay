@@ -2,9 +2,10 @@
 Version=1.0
 Name=Mixplay
 Comment=Play directories m3u playlists and single mp3 files
-Exec=gnome-terminal --disable-factory --class mixplay --command "mixplay %u"
+Exec=gnome-terminal --disable-factory --name mixplay --class mixplay --command "mixplay %u"
 Type=Application
 Icon=/usr/share/pixmaps/mixplay.svg
 Categories=Player;
 MimeType=application/vnd.apple.mpegurl;audio/mp3;audio/mpeg;audio/mpegurl;audio/x-mp3;audio/x-mpeg;audio/x-mpegurl;inode/directory;
 StartupWMClass=mixplay
+StartupNotify=true

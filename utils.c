@@ -248,7 +248,7 @@ void activity( const char *msg ){
 		pos=(_ftrpos/(100/_ftverbosity))%4;
 		printf( "%s %c\r", msg, roller[pos] ); fflush( stdout );
 	}
-	_ftrpos=(_ftrpos+1)%(400/_ftverbosity);
+	if( _ftverbosity > 0 ) _ftrpos=(_ftrpos+1)%(400/_ftverbosity);
 }	
 
 /*
