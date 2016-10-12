@@ -538,6 +538,7 @@ struct entry_t *loadPlaylist( const char *path ) {
 	int cnt=0;
 	struct entry_t *current=NULL;
 	char *buff;
+	char titlePath[MAXPATHLEN];
 
 	buff=calloc( MAXPATHLEN, sizeof(char) );
 	if( !buff ) fail( errno, "%s: can't alloc buffer", __func__ );
@@ -549,7 +550,8 @@ struct entry_t *loadPlaylist( const char *path ) {
 		activity("Loading");
 		buff=fgets( buff, MAXPATHLEN, fp );
 		if( buff && ( strlen( buff ) > 1 ) && ( buff[0] != '#' ) ){
-			current=insertTitle( current, buff );
+			strip( titlePath, buff, MAXPATHLEN ); // remove control chars like CR/LF
+			current=insertTitle( current, titlePath );
 		}
 	}
 	fclose( fp );

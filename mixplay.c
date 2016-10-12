@@ -434,7 +434,6 @@ int main(int argc, char **argv) {
 				endsWith( argv[optind], ".pls" ) ) {
 			usedb=0;
 			mix=0;
-			root=loadPlaylist( argv[optind] );
 			if( NULL != strrchr( argv[optind], '/' ) ) {
 				strcpy(basedir, argv[optind]);
 				i=strlen(basedir);
@@ -442,6 +441,7 @@ int main(int argc, char **argv) {
 				basedir[i]=0;
 				chdir(basedir);
 			}
+			root=loadPlaylist( argv[optind] );
 		}
 		else if ( endsWith( argv[optind], ".db" ) ) {
 			usedb=1;

@@ -84,7 +84,7 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, struct entry_t *ti
 
 	genPathName( basedir, title ); // Set some default values as tag info may be incomplete
 	if(mpg123_open(mh, title->path ) != MPG123_OK) {
-		fail( F_FAIL, "Cannot open %s: %s\n", title->path, mpg123_strerror(mh) );
+		fail( F_FAIL, "fillInfo(): Cannot open %s: %s\n", title->path, mpg123_strerror(mh) );
 	}
 
 	while( mpg123_framebyframe_next( mh ) == MPG123_OK ) {
