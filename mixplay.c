@@ -62,28 +62,6 @@ static void usage( char *progname ){
 	exit(0);
 }
 
-/**
- * @todo multiline pop-up?
- */
-static void popUp( const char *text ) {
-	int row, col;
-	char buff[LINE_BUFLEN];
-
-	refresh();
-	getmaxyx(stdscr, row, col);
-	if ((row > 6) && (col > 19)) {
-		// drawbox( row-3, 2, row, col-2 );
-		mvhline( row-2, 2, ' ', col-4);
-		if( strlen( text ) > col-6 ) {
-			strcpy( buff, ( text )+(strlen(text)-(col-7)) );
-		}
-		else {
-			strip( buff, text, col-6 );
-		}
-		mvprintw( row-2, 3, " %s ", buff);
-	}
-	refresh();
-}
 
 static void drawframe( struct entry_t *current, const char *status, int stream ) {
 	int i, maxlen, pos;
@@ -670,56 +648,72 @@ int main(int argc, char **argv) {
 				}
 				if( !stream ) {
 					switch( key ) {
-						case 'i':
+					case 'i':
+						if( 0 != current->key ) {
 							sprintf( line, "%s[%04li]", current->path, current->key );
 							popUp( line );
-							sleep(2);
-						break;
-						case KEY_DOWN:
-						case 'n':
-							order=1;
-							write( p_command[fdset][1], "STOP\n", 6 );
-						break;
-						case KEY_UP:
-						case 'p':
-							order=-1;
-							write( p_command[fdset][1], "STOP\n", 6 );
-						break;
-						case 'N':
-							order=5;
-							write( p_command[fdset][1], "STOP\n", 6 );
-						break;
-						case 'P':
-							order=-5;
-							write( p_command[fdset][1], "STOP\n", 6 );
-						break;
-						case KEY_LEFT:
-							write( p_command[fdset][1], "JUMP -64\n", 10 );
-						break;
-						case KEY_RIGHT:
-							write( p_command[fdset][1], "JUMP +64\n", 10 );
-						break;
-						case 'r':
-							write( p_command[fdset][1], "JUMP 0\n", 8 );
-						break;
-						case 'b':
-							addToFile( dnpname, strrchr( current->path, '/')+1 );
-							current=removeTitle( current );
-							if( NULL != current->prev ) {
-								current=current->prev;
-							}
-							else {
-								fail( F_FAIL, "Broken link in list at %s", current->path );
-							}
-							order=1;
-							write( p_command[fdset][1], "STOP\n", 6 );
-						break;
-						case 'f': // toggles the favourite flag on a title
-							if( !(current->flags & MP_FAV) ) {
-								addToFile( favname, strrchr( current->path, '/')+1 );
-								current->flags|=MP_FAV;
-							}
-						break;
+						}
+						else {
+							popUp( current->path );
+						}
+						sleep(2);
+					break;
+					case 'I':
+						sprintf( line, "usedb:%i - mix: %i - repeat:%i - fade: %is\n"
+								"basedir: %s\n"
+								"dnplist: %s\n"
+								"favlist: %s\n"
+								"config:  %s"
+								, usedb, mix, repeat, fade,
+								basedir, dnpname, favname, config );
+						popUp( line );
+						sleep(5);
+					break;
+					case KEY_DOWN:
+					case 'n':
+						order=1;
+						write( p_command[fdset][1], "STOP\n", 6 );
+					break;
+					case KEY_UP:
+					case 'p':
+						order=-1;
+						write( p_command[fdset][1], "STOP\n", 6 );
+					break;
+					case 'N':
+						order=5;
+						write( p_command[fdset][1], "STOP\n", 6 );
+					break;
+					case 'P':
+						order=-5;
+						write( p_command[fdset][1], "STOP\n", 6 );
+					break;
+					case KEY_LEFT:
+						write( p_command[fdset][1], "JUMP -64\n", 10 );
+					break;
+					case KEY_RIGHT:
+						write( p_command[fdset][1], "JUMP +64\n", 10 );
+					break;
+					case 'r':
+						write( p_command[fdset][1], "JUMP 0\n", 8 );
+					break;
+					case 'b':
+						addToFile( dnpname, strrchr( current->path, '/')+1 );
+						current=removeTitle( current );
+						if( NULL != current->prev ) {
+							current=current->prev;
+						}
+						else {
+							fail( F_FAIL, "Broken link in list at %s", current->path );
+						}
+						order=1;
+						write( p_command[fdset][1], "STOP\n", 6 );
+					break;
+					case 'f': // toggles the favourite flag on a title
+						if( !(current->flags & MP_FAV) ) {
+							addToFile( favname, strrchr( current->path, '/')+1 );
+							current->flags|=MP_FAV;
+						}
+					break;
 					}
 				}
 			}
