@@ -25,12 +25,15 @@
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
+#include <limits.h>
 
 #ifndef VERSION
 #define VERSION "dev"
 #endif
 
 #define LINE_BUFLEN 256
+
+#define ONOFF(x) (x)?"ON":"OFF"
 
 /**
  * print out CLI usage
@@ -404,6 +407,7 @@ int main(int argc, char **argv) {
 		}
 		else if( endsWith( argv[optind], ".mp3" ) ) {
 			// play single song...
+			fade=0;
 			mix=0;
 			repeat=0;
 			root=insertTitle( root, argv[optind] );
@@ -527,7 +531,7 @@ int main(int argc, char **argv) {
 		if( -1 == dump ) dumpTitles(root);
 
 		unsigned long maxplayed=0;
-		unsigned long minplayed=-1;
+		unsigned long minplayed=ULONG_MAX;
 		unsigned long pl=0;
 
 		current=root;
@@ -650,24 +654,49 @@ int main(int argc, char **argv) {
 					switch( key ) {
 					case 'i':
 						if( 0 != current->key ) {
-							sprintf( line, "%s[%04li]", current->path, current->key );
-							popUp( line );
+							popUp( 2, "%s[%04li]", current->path, current->key );
 						}
 						else {
-							popUp( current->path );
+							popUp( 2, current->path );
 						}
-						sleep(2);
 					break;
+					case 'J':
+						popAsk( "Jump to: ", line );
+						if( strlen( line ) > 2 ) {
+							next=current;
+							do {
+								if( checkMatch( next->path, line ) ) break;
+								next=next->next;
+							} while( current != next );
+							if( next != current ) {
+								current=next->prev;
+								order=1;
+								write( p_command[fdset][1], "STOP\n", 6 );
+							}
+							else {
+								popUp( 2, "Nothing found for %s", line );
+							}
+						}
+						else {
+							popUp( 2, "Need at least 3 characters.." );
+						}
+						break;
+					case 'F':
+						fade=fade?0:3;
+						popUp( 1, "Fading is now %s", ONOFF(fade) );
+						break;
+					case 'R':
+						repeat=repeat?0:1;
+						popUp( 1, "Repeat is now %s", ONOFF(repeat) );
+						break;
 					case 'I':
-						sprintf( line, "usedb:%i - mix: %i - repeat:%i - fade: %is\n"
+						popUp( 0, "usedb: %s - mix: %s - repeat:%s - fade: %is\n"
 								"basedir: %s\n"
 								"dnplist: %s\n"
 								"favlist: %s\n"
 								"config:  %s"
-								, usedb, mix, repeat, fade,
+								, ONOFF(usedb), ONOFF(mix), ONOFF(repeat), fade,
 								basedir, dnpname, favname, config );
-						popUp( line );
-						sleep(5);
 					break;
 					case KEY_DOWN:
 					case 'n':

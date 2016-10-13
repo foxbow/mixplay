@@ -15,7 +15,7 @@ struct dbentry_t {
 	char title[NAMELEN];		// Title info (from mp3)
 	char album[NAMELEN];		// Album info (from mp3)
 	char genre[NAMELEN];		// Album info (from mp3)
-	unsigned long played;		// play counter
+	unsigned int played;		// play counter
 };
 
 #define DBESIZE sizeof(struct dbentry_t)

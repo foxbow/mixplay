@@ -84,7 +84,7 @@ int dbPutTitle( int db, struct entry_t *title ){
  * takes a database entry and adds it to a mixplay entry list
  * if there is no list, a new one will be created
  */
-static struct entry_t *addDBTitle( struct dbentry_t dbentry, struct entry_t *root, unsigned long index ) {
+static struct entry_t *addDBTitle( struct dbentry_t dbentry, struct entry_t *root, unsigned int index ) {
 	struct entry_t *entry;
 	entry=malloc( sizeof( struct entry_t ) );
 	if( NULL == entry ) {
@@ -128,18 +128,23 @@ void dbBackup( const char *dbname ) {
  */
 struct entry_t *dbGetMusic( const char *dbname ) {
 	struct dbentry_t dbentry;
-	unsigned long index = 1; // index 0 is reserved for titles not in the db!
+	unsigned int index = 1; // index 0 is reserved for titles not in the db!
 	struct entry_t *dbroot=NULL;
 	int db;
+	size_t len;
 	db=dbOpen( dbname );
 
-	while( read( db, &dbentry, DBESIZE ) == DBESIZE ) {
+	while( (len = read( db, &dbentry, DBESIZE )) == DBESIZE ) {
 		dbroot = addDBTitle( dbentry, dbroot, index );
 		index++;
 	}
-
 	dbClose( db );
-	if( getVerbosity() ) printf("Loaded %li titles from the database\n", index-1 );
+
+	if( 0 != len ) {
+		fail( F_FAIL, "Database %s is corrupt!\nRun 'mixplay -CA' to scan anew", dbname );
+	}
+
+	if( getVerbosity() ) printf("Loaded %i titles from the database\n", index-1 );
 
 	return (dbroot?dbroot->next:NULL);
 }
@@ -220,7 +225,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 		activity("Adding");
 		dbrunner = findTitle( dbroot, fsroot->path );
 		if( NULL == dbrunner ) {
-			fillTagInfo( basedir, dbrunner );
+			fillTagInfo( basedir, fsroot );
 			dbPutTitle(db,fsroot);
 			num++;
 		}

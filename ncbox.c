@@ -6,22 +6,30 @@
 #include <ncurses.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 /**
  * draws a pop-up into the bottom of the current frame
  * supports multiple lines divided by '\n' characters
  * trailing '\n's are ignored
+ * The format is line *printf()
  * if a line is too long, the beginning of the line is cut
  * until the rest fits.
+ * the function will sleep for time seconds afterwards
+ * if time=0 it will wait for a keypress
  */
-void popUp( const char *text ) {
+void popUp( int time, const char *text, ... ) {
 	int row, col, line;
 	int numlines=1;
 	char buff[1024];
 	char *p;
 	char **lines;
+	va_list vargs;
 
-	strncpy( buff, text, 1024 );
+	va_start( vargs, text );
+	vsnprintf( buff, 1024, text, vargs );
+	va_end( vargs );
+
 	p=buff;
 
 	while( '\n' == buff[ strlen(buff) ] ) buff[ strlen(buff) ]=0;
@@ -58,9 +66,35 @@ void popUp( const char *text ) {
 			mvhline( row-numlines+line-2, 2, ' ', col-4);
 			mvprintw( row-numlines+line-2, 3, " %s ", buff);
 		}
+
+		mvhline( row-2, 2, '=', col-4);
 	}
 	refresh();
 	free(lines);
+
+	if( 0 == time ) {
+		getch();
+	}
+	else {
+		sleep(time);
+	}
+}
+
+void popAsk( const char *text, char *reply ) {
+	int row, col;
+
+	refresh();
+	getmaxyx(stdscr, row, col);
+	if ((row > 6 ) && (col > 19)) {
+		mvhline( row-4, 2, '=', col-4);
+		mvhline( row-3, 2, ' ', col-4);
+		mvhline( row-2, 2, '=', col-4);
+		mvprintw( row-3, 3, " %s ", text );
+		echo();
+		getstr( reply );
+		noecho();
+	}
+	refresh();
 }
 
 /**

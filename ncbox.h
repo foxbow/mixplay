@@ -8,7 +8,8 @@
 /**
  * curses helper functions
  */
-void popUp( const char *text );
+void popUp( int time, const char *text, ... );
+void popAsk( const char *text, char *reply );
 void dhline(int r, int c, int len);
 void dvline(int r, int c, int len);
 void drawbox(int r0, int c0, int r1, int c1);

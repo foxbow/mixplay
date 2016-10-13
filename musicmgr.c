@@ -306,24 +306,6 @@ int getDirs( const char *cd, struct dirent ***dirlist ){
 	return scandir( cd, dirlist, dsel, alphasort);
 }
 
-static int checkMatch( const char* name, const char* pat ) {
-	int len;
-	char loname[MAXPATHLEN];
-	int trigger;
-
-	len=MIN(strlen(name), strlen(pat) );
-	trigger=70;
-	if( len <= 20 ) trigger=80;
-	if( len <= 10 ) trigger=88;
-	if( len <= 5 ) trigger=100;
-	strlncpy( loname, name, MAXPATHLEN );
-	if( trigger <= fncmp( loname, pat ) ){
-		return -1;
-	}
-	return 0;
-}
-
-
 int matchList( struct entry_t **result, struct entry_t **base, struct bwlist_t *term, int range ) {
 	struct entry_t  *runner=*base;
 	struct entry_t  *next=NULL;
@@ -698,7 +680,7 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 				if( !(valid&1) && strlen(lastname) ) {
 					guard=runner;
 					strlncpy( name, runner->artist, NAMELEN );
-					while( 75 < fncmp( name, lastname ) ) {
+					while( checkMatch( name, lastname ) ) {
 						activity("Nameskipping ");
 						runner=runner->next;
 						if( guard == runner ) {
@@ -924,7 +906,7 @@ void dumpTitles( struct entry_t *root ) {
 	struct entry_t *ptr=root;
 	if( NULL==root ) fail( F_FAIL, "NO LIST" );
 	do {
-		printf("[%04li] %s: %s - %s (%s)\n", ptr->key, ptr->path, ptr->artist, ptr->title, ptr->album );
+		printf("[%04i] %s: %s - %s (%s)\n", ptr->key, ptr->path, ptr->artist, ptr->title, ptr->album );
 		ptr=ptr->next;
 	} while( ptr != root );
 	fail( F_FAIL, "END DUMP" );

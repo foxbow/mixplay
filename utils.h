@@ -34,8 +34,6 @@ void muteVerbosity();
 void addToFile( const char *path, const char *line );
 void setTitle(const char* title);
 void fail( int error, const char* msg, ... );
-int fncmp( const char* str1, const char* str2 );
-// char *toLower( char *text );
 int strlncpy( char *dest, const char *src, const size_t len );
 int strlncat( char *dest, const char *src, const size_t len );
 char *strip( char *buff, const char *text, const size_t maxlen );
@@ -45,5 +43,6 @@ int isURL( const char *uri );
 int readline( char *line, size_t len, int fd );
 void activity( const char *msg );
 char *abspath( char *path, char *basedir, int len );
+int checkMatch( const char* name, const char* pat ); // should probably replace fncmp()
 
 #endif

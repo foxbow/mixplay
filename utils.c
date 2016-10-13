@@ -361,7 +361,7 @@ static unsigned int vecmult( strval_t val1, strval_t val2 ){
  * Compares two strings and returns the similarity index
  * 100 == most equal
  **/
-int fncmp( const char* str1, const char* str2 ){
+static int fncmp( const char* str1, const char* str2 ){
 	strval_t str1val, str2val;
 	unsigned int maxval, max1, max2;
 	long result;
@@ -385,4 +385,21 @@ int fncmp( const char* str1, const char* str2 ){
 	free( str2val );
 
 	return step*result;
+}
+
+int checkMatch( const char* name, const char* pat ) {
+	int len;
+	char loname[1024];
+	int trigger;
+
+	len=MIN(strlen(name), strlen(pat) );
+	trigger=70;
+	if( len <= 20 ) trigger=80;
+	if( len <= 10 ) trigger=88;
+	if( len <= 5 ) trigger=100;
+	strlncpy( loname, name, 1024 );
+	if( trigger <= fncmp( loname, pat ) ){
+		return -1;
+	}
+	return 0;
 }

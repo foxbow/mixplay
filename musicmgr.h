@@ -26,10 +26,10 @@ struct entry_t {
 	char artist[NAMELEN];		// Artist info
 	char title[NAMELEN];		// Title info (from mp3)
 	char album[NAMELEN];		// Album info (from mp3)
-	unsigned long played;		// play counter
+	unsigned int played;		// play counter
 	char genre[NAMELEN];
 	struct entry_t *prev;		//
-	unsigned long key;			// DB key/index  - internal
+	unsigned int key;			// DB key/index  - internal
 	char display[MAXPATHLEN];	// Title display - internal
 	unsigned int flags;			// 1=favourite   - internal
 	struct entry_t *next;
