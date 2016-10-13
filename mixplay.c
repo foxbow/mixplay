@@ -233,6 +233,7 @@ int main(int argc, char **argv) {
 	int intime=0;
 	int dump=0;
 	int hascfg=0;
+
 	FILE *fp=NULL;
 
 	muteVerbosity();
@@ -669,6 +670,7 @@ int main(int argc, char **argv) {
 								next=next->next;
 							} while( current != next );
 							if( next != current ) {
+								next->flags|=MP_CNT; // Don't count searched titles.
 								current=next->prev;
 								order=1;
 								write( p_command[fdset][1], "STOP\n", 6 );
@@ -866,8 +868,9 @@ int main(int argc, char **argv) {
 								// should the playcount be increased?
 								// mix     - playcount relevant
 								// usedb   - playcount is persistent
+								// search  - partymode
 								// !MP_CNT - title has not been counted yet
-								if( mix && usedb && !( current->flags & MP_CNT ) ) {
+								if( mix && usedb && !search && !( current->flags & MP_CNT ) ) {
 									current->flags |= MP_CNT; // make sure a title is only counted once per session
 									current->played++;
 									dbPutTitle( db, current );
@@ -901,13 +904,14 @@ int main(int argc, char **argv) {
 						switch (cmd) {
 						case 0:
 							// should the playcount be increased?
+							// search  - partymode
 							// mix     - playcount relevant
 							// intime  - has been played for more than 2 secs
 							// usedb   - playcount is persistent
 							// !MP_CNT - title has not been counted yet
-							if ( mix && (intime > 2 ) && usedb && !( current->flags & MP_CNT )) {
+							if ( !search && mix && (intime > 2 ) && usedb && !( current->flags & MP_CNT )) {
 								current->flags |= MP_CNT;
-								current->played = current->played+1;
+								current->played++;
 								dbPutTitle( db, current );
 							}
 							next = skipTitles( current, order );
