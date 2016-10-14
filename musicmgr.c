@@ -228,6 +228,7 @@ char *getGenre( struct entry_t *title ) {
 
 /**
  * moves *title from the original list and inserts it after *target
+ * creates a new target if necessary
  */
 static struct entry_t *moveTitle( struct entry_t *title, struct entry_t **target ) {
 	// remove title from old list
@@ -486,6 +487,23 @@ struct bwlist_t *loadList( const char *path ){
 	fclose( file );
 
 	return bwlist;
+}
+
+void moveEntry( struct entry_t *entry, struct entry_t *pos ) {
+	if( pos->next == entry ) return;
+	if( pos == entry ) return;
+
+	// close gap in original position
+	entry->next->prev=entry->prev;
+	entry->prev->next=entry->next;
+
+	// insert into new position
+	entry->next=pos->next->next;
+	entry->prev=pos;
+
+	// fix links
+	pos->next=entry;
+	entry->next->prev=entry;
 }
 
 /**

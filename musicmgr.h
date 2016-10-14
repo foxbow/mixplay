@@ -11,9 +11,9 @@
 #define RANDOM(x) (rand()%x)
 
 
-#define MP_FAV 1	// Favourite
-#define MP_DNP 2    // do not play
-#define MP_CNT 4	// has been counted
+#define MP_FAV  1	// Favourite
+#define MP_DNP  2    // do not play
+#define MP_CNTD 4	// has been counted
 
 #define SL_TITLE 1
 #define SL_ALBUM 2
@@ -53,6 +53,8 @@ struct entry_t *insertTitle( struct entry_t *base, const char *path );
 struct entry_t *skipTitles( struct entry_t *current, int num );
 struct entry_t *useDNPlist( struct entry_t *base, struct bwlist_t *list );
 struct entry_t *searchList( struct entry_t *base, struct bwlist_t *term, int range );
+void moveEntry( struct entry_t *entry, struct entry_t *pos );
+
 int countTitles( struct entry_t *base );
 unsigned long getLowestPlaycount( struct entry_t *base );
 struct bwlist_t *loadList( const char *path );

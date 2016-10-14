@@ -653,9 +653,11 @@ int main(int argc, char **argv) {
 				}
 				if( !stream ) {
 					switch( key ) {
-					case 'i':
+					case 'i': // add playcount and flags
 						if( 0 != current->key ) {
-							popUp( 2, "%s[%04li]", current->path, current->key );
+							popUp( 0, "%s\nKey: %04i\nplaycount: %i\nCount: %s",
+									current->path, current->key, current->played,
+									ONOFF(~(current->flags)&MP_CNTD) );
 						}
 						else {
 							popUp( 2, current->path );
@@ -670,8 +672,8 @@ int main(int argc, char **argv) {
 								next=next->next;
 							} while( current != next );
 							if( next != current ) {
-								next->flags|=MP_CNT; // Don't count searched titles.
-								current=next->prev;
+								next->flags|=MP_CNTD; // Don't count searched titles.
+								moveEntry( next, current );
 								order=1;
 								write( p_command[fdset][1], "STOP\n", 6 );
 							}
@@ -869,9 +871,9 @@ int main(int argc, char **argv) {
 								// mix     - playcount relevant
 								// usedb   - playcount is persistent
 								// search  - partymode
-								// !MP_CNT - title has not been counted yet
-								if( mix && usedb && !search && !( current->flags & MP_CNT ) ) {
-									current->flags |= MP_CNT; // make sure a title is only counted once per session
+								// !MP_CNTD - title has not been counted yet
+								if( mix && usedb && !search && !( current->flags & MP_CNTD ) ) {
+									current->flags |= MP_CNTD; // make sure a title is only counted once per session
 									current->played++;
 									dbPutTitle( db, current );
 								}
@@ -908,9 +910,9 @@ int main(int argc, char **argv) {
 							// mix     - playcount relevant
 							// intime  - has been played for more than 2 secs
 							// usedb   - playcount is persistent
-							// !MP_CNT - title has not been counted yet
-							if ( !search && mix && (intime > 2 ) && usedb && !( current->flags & MP_CNT )) {
-								current->flags |= MP_CNT;
+							// !MP_CNTD - title has not been counted yet
+							if ( !search && mix && (intime > 2 ) && usedb && !( current->flags & MP_CNTD )) {
+								current->flags |= MP_CNTD;
 								current->played++;
 								dbPutTitle( db, current );
 							}
