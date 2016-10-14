@@ -924,6 +924,7 @@ int main(int argc, char **argv) {
 								strcpy( status, "STOP" );
 							}
 							else {
+								if( (order==1) && (next == root) ) newCount( root );
 								current=next;
 								sendplay(p_command[fdset][1], current);
 							}

@@ -227,6 +227,27 @@ char *getGenre( struct entry_t *title ) {
 }
 
 /**
+ * resets the counted flag on all titles if at least 50% of the titles have been counted
+ */
+void newCount( struct entry_t *root) {
+	unsigned int num=0, count=0;
+	struct entry_t *runner = root;
+
+	do {
+		num++;
+		if( runner-> flags | MP_CNTD ) count++;
+		runner=runner->next;
+	} while( runner != root );
+
+	if( (100*count)/num > 50 ) {
+		do {
+			runner->flags &= ~MP_CNTD;
+			runner=runner->next;
+		} while( runner != root );
+	}
+}
+
+/**
  * moves *title from the original list and inserts it after *target
  * creates a new target if necessary
  */
