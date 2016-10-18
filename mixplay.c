@@ -778,14 +778,6 @@ int main(int argc, char **argv) {
 						sendplay(p_command[fdset][1], current);
 					break;
 					case 'I': // ID3 info
-						/* @I ID3.2.year:2016
-						 * @I ID3.2.comment:http://www.faderhead.com
-						 * @I ID3.2.genre:EBM / Electronic / Electro
-						 *
-						 * @I <a>
-						 * Status message after loading a song (no ID3 song info)
-						 * a = filename without path and extension
-						 */
 						// ICY stream info
 						if( NULL != strstr( line, "ICY-" ) ) {
 							if( NULL != strstr( line, "ICY-NAME: " ) ) {

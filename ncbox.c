@@ -10,10 +10,16 @@
 
 static int _ncboxpopup = 0;
 
+/**
+ * check if a popUp is currently active
+ */
 int popUpActive() {
 	return _ncboxpopup;
 }
 
+/**
+ * close a popUp
+ */
 void popDown() {
 	_ncboxpopup=0;
 }
@@ -90,6 +96,10 @@ void popUp( int time, const char *text, ... ) {
 	}
 }
 
+/**
+ * ask for a string in a popUp()
+ * this one is modal and will not return enter has been pressed
+ */
 void popAsk( const char *text, char *reply ) {
 	int row, col;
 
