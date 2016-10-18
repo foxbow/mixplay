@@ -8,6 +8,16 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+static int _ncboxpopup = 0;
+
+int popUpActive() {
+	return _ncboxpopup;
+}
+
+void popDown() {
+	_ncboxpopup=0;
+}
+
 /**
  * draws a pop-up into the bottom of the current frame
  * supports multiple lines divided by '\n' characters
@@ -73,7 +83,7 @@ void popUp( int time, const char *text, ... ) {
 	free(lines);
 
 	if( 0 == time ) {
-		getch();
+		_ncboxpopup=-1;
 	}
 	else {
 		sleep(time);

@@ -162,13 +162,10 @@ int readline( char *line, size_t len, int fd ){
 	}
 
 	// avoid returning unterminated strings.
-	if( cnt < len ) {
-		line[cnt]=0;
-		cnt++;
-		return cnt;
-	} else {
-		return -1;
-	}
+	// this code should never be reached but maybe there is
+	// a read() somewhere that timeouts..
+	line[cnt]=0;
+	cnt++;
 
 	return cnt;
 }
@@ -288,7 +285,9 @@ void addToFile( const char *path, const char *line ) {
 		fail( errno, "Could not open %s for writing ", path );
 	}
 	fputs( line, fp );
-	fputc( '\n', fp );
+	if( '\n' != line[strlen(line)] ) {
+		fputc( '\n', fp );
+	}
 	fclose( fp );
 }
 
@@ -387,6 +386,11 @@ static int fncmp( const char* str1, const char* str2 ){
 	return step*result;
 }
 
+/**
+ * returns a similarity check of the two strings
+ * the trigger index is set automatically by the length of the shortest string
+ * returns -1 (true) on match and 0 on mismatch
+ */
 int checkMatch( const char* name, const char* pat ) {
 	int len;
 	char loname[1024];

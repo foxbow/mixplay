@@ -73,6 +73,8 @@ static void drawframe( struct entry_t *current, const char *status, int stream )
 	char buff[LINE_BUFLEN];
 	struct entry_t *runner;
 
+	if( popUpActive() ) return;
+
 	refresh();
 	getmaxyx(stdscr, row, col);
 
@@ -638,115 +640,120 @@ int main(int argc, char **argv) {
 			// Interpret key
 			if( FD_ISSET( fileno(stdin), &fds ) ) {
 				key=getch();
-				switch( key ){
-					case ' ':
-						write( p_command[fdset][1], "PAUSE\n", 7 );
-					break;
-					case 's':
-						order=0;
-						write( p_command[fdset][1], "STOP\n", 6 );
-					break;
-					case 'q':
-						write( p_command[fdset][1], "QUIT\n", 6 );
-						running=0;
-					break;
+				if( popUpActive() ){
+					popDown();
 				}
-				if( !stream ) {
-					switch( key ) {
-					case 'i': // add playcount and flags
-						if( 0 != current->key ) {
-							popUp( 0, "%s\nKey: %04i\nplaycount: %i\nCount: %s",
-									current->path, current->key, current->played,
-									ONOFF(~(current->flags)&MP_CNTD) );
-						}
-						else {
-							popUp( 2, current->path );
-						}
-					break;
-					case 'J':
-						popAsk( "Jump to: ", line );
-						if( strlen( line ) > 2 ) {
-							next=current;
-							do {
-								if( checkMatch( next->path, line ) ) break;
-								next=next->next;
-							} while( current != next );
-							if( next != current ) {
-								next->flags|=MP_CNTD; // Don't count searched titles.
-								moveEntry( next, current );
-								order=1;
-								write( p_command[fdset][1], "STOP\n", 6 );
+				else {
+					switch( key ){
+						case ' ':
+							write( p_command[fdset][1], "PAUSE\n", 7 );
+						break;
+						case 's':
+							order=0;
+							write( p_command[fdset][1], "STOP\n", 6 );
+						break;
+						case 'q':
+							write( p_command[fdset][1], "QUIT\n", 6 );
+							running=0;
+						break;
+					}
+					if( !stream ) {
+						switch( key ) {
+						case 'i': // add playcount and flags
+							if( 0 != current->key ) {
+								popUp( 0, "%s\nKey: %04i\nplaycount: %i\nCount: %s",
+										current->path, current->key, current->played,
+										ONOFF(~(current->flags)&MP_CNTD) );
 							}
 							else {
-								popUp( 2, "Nothing found for %s", line );
+								popUp( 2, current->path );
 							}
-						}
-						else {
-							popUp( 2, "Need at least 3 characters.." );
-						}
 						break;
-					case 'F':
-						fade=fade?0:3;
-						popUp( 1, "Fading is now %s", ONOFF(fade) );
+						case 'J':
+							popAsk( "Jump to: ", line );
+							if( strlen( line ) > 2 ) {
+								next=current;
+								do {
+									if( checkMatch( next->path, line ) ) break;
+									next=next->next;
+								} while( current != next );
+								if( next != current ) {
+									next->flags|=MP_CNTD; // Don't count searched titles.
+									moveEntry( next, current );
+									order=1;
+									write( p_command[fdset][1], "STOP\n", 6 );
+								}
+								else {
+									popUp( 2, "Nothing found for %s", line );
+								}
+							}
+							else {
+								popUp( 2, "Need at least 3 characters.." );
+							}
+							break;
+						case 'F':
+							fade=fade?0:3;
+							popUp( 1, "Fading is now %s", ONOFF(fade) );
+							break;
+						case 'R':
+							repeat=repeat?0:1;
+							popUp( 1, "Repeat is now %s", ONOFF(repeat) );
+							break;
+						case 'I':
+							popUp( 0, "usedb: %s - mix: %s - repeat:%s - fade: %is\n"
+									"basedir: %s\n"
+									"dnplist: %s\n"
+									"favlist: %s\n"
+									"config:  %s"
+									, ONOFF(usedb), ONOFF(mix), ONOFF(repeat), fade,
+									basedir, dnpname, favname, config );
 						break;
-					case 'R':
-						repeat=repeat?0:1;
-						popUp( 1, "Repeat is now %s", ONOFF(repeat) );
+						case KEY_DOWN:
+						case 'n':
+							order=1;
+							write( p_command[fdset][1], "STOP\n", 6 );
 						break;
-					case 'I':
-						popUp( 0, "usedb: %s - mix: %s - repeat:%s - fade: %is\n"
-								"basedir: %s\n"
-								"dnplist: %s\n"
-								"favlist: %s\n"
-								"config:  %s"
-								, ONOFF(usedb), ONOFF(mix), ONOFF(repeat), fade,
-								basedir, dnpname, favname, config );
-					break;
-					case KEY_DOWN:
-					case 'n':
-						order=1;
-						write( p_command[fdset][1], "STOP\n", 6 );
-					break;
-					case KEY_UP:
-					case 'p':
-						order=-1;
-						write( p_command[fdset][1], "STOP\n", 6 );
-					break;
-					case 'N':
-						order=5;
-						write( p_command[fdset][1], "STOP\n", 6 );
-					break;
-					case 'P':
-						order=-5;
-						write( p_command[fdset][1], "STOP\n", 6 );
-					break;
-					case KEY_LEFT:
-						write( p_command[fdset][1], "JUMP -64\n", 10 );
-					break;
-					case KEY_RIGHT:
-						write( p_command[fdset][1], "JUMP +64\n", 10 );
-					break;
-					case 'r':
-						write( p_command[fdset][1], "JUMP 0\n", 8 );
-					break;
-					case 'b':
-						addToFile( dnpname, strrchr( current->path, '/')+1 );
-						current=removeTitle( current );
-						if( NULL != current->prev ) {
-							current=current->prev;
+						case KEY_UP:
+						case 'p':
+							order=-1;
+							write( p_command[fdset][1], "STOP\n", 6 );
+						break;
+						case 'N':
+							order=5;
+							write( p_command[fdset][1], "STOP\n", 6 );
+						break;
+						case 'P':
+							order=-5;
+							write( p_command[fdset][1], "STOP\n", 6 );
+						break;
+						case KEY_LEFT:
+							write( p_command[fdset][1], "JUMP -64\n", 10 );
+						break;
+						case KEY_RIGHT:
+							write( p_command[fdset][1], "JUMP +64\n", 10 );
+						break;
+						case 'r':
+							write( p_command[fdset][1], "JUMP 0\n", 8 );
+						break;
+						case 'b':
+							addToFile( dnpname, strrchr( current->path, '/')+1 );
+							current=removeTitle( current );
+							if( NULL != current->prev ) {
+								current=current->prev;
+							}
+							else {
+								fail( F_FAIL, "Broken link in list at %s", current->path );
+							}
+							order=1;
+							write( p_command[fdset][1], "STOP\n", 6 );
+						break;
+						case 'f': // toggles the favourite flag on a title
+							if( !(current->flags & MP_FAV) ) {
+								addToFile( favname, strrchr( current->path, '/')+1 );
+								current->flags|=MP_FAV;
+							}
+						break;
 						}
-						else {
-							fail( F_FAIL, "Broken link in list at %s", current->path );
-						}
-						order=1;
-						write( p_command[fdset][1], "STOP\n", 6 );
-					break;
-					case 'f': // toggles the favourite flag on a title
-						if( !(current->flags & MP_FAV) ) {
-							addToFile( favname, strrchr( current->path, '/')+1 );
-							current->flags|=MP_FAV;
-						}
-					break;
 					}
 				}
 			}
@@ -937,9 +944,7 @@ int main(int argc, char **argv) {
 							strcpy( status, "PLAYING" );
 							break;
 						default:
-							sprintf( status, "Unknown status %i!", cmd);
-							drawframe( current, status, stream );
-							sleep(1);
+							popUp( 0, "Unknown status!\n %i", cmd );
 							break;
 						}
 						redraw=1;
@@ -951,9 +956,7 @@ int main(int argc, char **argv) {
 						fail( F_FAIL, "ERROR: %s", line );
 					break;
 					default:
-						sprintf(status, "Warning: %s", line );
-						drawframe( current, status, stream );
-						sleep(2);
+						popUp( 0, "Warning!\n%s", line );
 					break;
 					} // case line[1]
 				} // if line starts with '@'

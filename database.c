@@ -141,7 +141,7 @@ struct entry_t *dbGetMusic( const char *dbname ) {
 	dbClose( db );
 
 	if( 0 != len ) {
-		fail( F_FAIL, "Database %s is corrupt!\nRun 'mixplay -CA' to scan anew", dbname );
+		fail( F_FAIL, "Database %s is corrupt!\nRun 'mixplay -C' to rescan", dbname );
 	}
 
 	if( getVerbosity() ) printf("Loaded %i titles from the database\n", index-1 );
