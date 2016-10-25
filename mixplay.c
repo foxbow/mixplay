@@ -659,7 +659,7 @@ int main(int argc, char **argv) {
 					}
 					if( !stream ) {
 						switch( key ) {
-						case 'i': // add playcount and flags
+						case 'i':
 							if( 0 != current->key ) {
 								popUp( 0, "%s\nKey: %04i\nplaycount: %i\nCount: %s",
 										current->path, current->key, current->played,
@@ -737,6 +737,19 @@ int main(int argc, char **argv) {
 						break;
 						case 'b':
 							addToFile( dnpname, strrchr( current->path, '/')+1 );
+							current=removeTitle( current );
+							if( NULL != current->prev ) {
+								current=current->prev;
+							}
+							else {
+								fail( F_FAIL, "Broken link in list at %s", current->path );
+							}
+							order=1;
+							write( p_command[fdset][1], "STOP\n", 6 );
+						break;
+						case 'B':
+							addToFile( dnpname, current->album );
+							popUp( 2, "Added %s to the DNP list\nYMMV..", current->album );
 							current=removeTitle( current );
 							if( NULL != current->prev ) {
 								current=current->prev;
