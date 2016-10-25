@@ -89,7 +89,7 @@ static void drawframe( struct entry_t *current, const char *status, int stream )
 			middle=2;
 		}
 		else {
-			middle=row/2;
+			middle=(row-1)/2;
 		}
 
 		// title
