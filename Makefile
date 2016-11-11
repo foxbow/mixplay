@@ -19,3 +19,11 @@ bin/%: $(OBJS) %.o
 
 %.o: %.c $(HDRS)
 	gcc $(CCFLAGS) -c $<
+
+install: all
+	install -s -m 0755 /bin/mixplay /usr/bin/
+	install -m 0755 mixplay-nautilus.desktop /usr/share/applications/
+	install -m 0644 mixplay.svg /usr/share/pixmaps/
+
+prepare:
+	apt-get install ncurses-dev mpg123 libmpg123-dev

@@ -24,6 +24,7 @@ static int db2entry( struct dbentry_t *dbentry, struct entry_t *entry ) {
 	strcpy( entry->genre, dbentry->genre );
 	snprintf( entry->display, MAXPATHLEN, "%s - %s", entry->artist, entry->title );
 	entry->played=dbentry->played;
+	entry->skipped=dbentry->skipped;
 	return 0;
 }
 
@@ -38,6 +39,7 @@ static int entry2db( struct entry_t *entry, struct dbentry_t *dbentry ) {
 	strcpy( dbentry->album, entry->album );
 	strcpy( dbentry->genre, entry->genre );
 	dbentry->played=entry->played;
+	dbentry->skipped=entry->skipped;
 	return 0;
 }
 

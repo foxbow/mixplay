@@ -661,8 +661,9 @@ int main(int argc, char **argv) {
 						switch( key ) {
 						case 'i':
 							if( 0 != current->key ) {
-								popUp( 0, "%s\nKey: %04i\nplaycount: %i\nCount: %s",
+								popUp( 0, "%s\nKey: %04i\nplaycount: %i\nskipcount: %i\nCount: %s",
 										current->path, current->key, current->played,
+										current->skipped,
 										ONOFF(~(current->flags)&MP_CNTD) );
 							}
 							else {
@@ -711,6 +712,7 @@ int main(int argc, char **argv) {
 						case KEY_DOWN:
 						case 'n':
 							order=1;
+							if( !(current->flags & MP_CNTD) ) current->skipped++;
 							write( p_command[fdset][1], "STOP\n", 6 );
 						break;
 						case KEY_UP:

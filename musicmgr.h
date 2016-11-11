@@ -27,6 +27,7 @@ struct entry_t {
 	char title[NAMELEN];		// Title info (from mp3)
 	char album[NAMELEN];		// Album info (from mp3)
 	unsigned int played;		// play counter
+	unsigned int skipped;		// skip counter
 	char genre[NAMELEN];
 	struct entry_t *prev;		//
 	unsigned int key;			// DB key/index  - internal
