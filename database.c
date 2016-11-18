@@ -13,6 +13,69 @@
 #include <unistd.h>
 
 /**
+ * reates a backup of the current database file and dumps the
+ * current database in a new file
+ */
+static void dbDump( const char *dbname, struct entry_t *root ) {
+	int db;
+	struct entry_t *runner=root;
+	if( NULL == root ) {
+		fail( F_FAIL, "Not dumping an empty database!");
+	}
+	dbBackup( dbname );
+	db=dbOpen( dbname );
+	do {
+		dbPutTitle( db, runner );
+		runner=runner->dbnext;
+	} while( runner != root );
+	dbClose( db );
+}
+
+/**
+ * checks if a given title still exists on the filesystem
+ */
+static int mp3Exists( const struct entry_t *title ) {
+	return( access( title->path, F_OK ) );
+}
+
+/**
+ * clean up a list of entries
+ */
+static void wipeTitles( struct entry_t *files ){
+	struct entry_t *buff=files;
+	if( NULL == files ) return;
+
+	files->dbprev->dbnext=NULL;
+
+	while( buff != NULL ){
+		files=buff;
+		buff=buff->dbnext;
+		free(files);
+	}
+}
+
+/**
+ * deletes an entry from the database list
+ * This should only be used on a database cleanup!
+ */
+static struct entry_t *removeTitle( struct entry_t *entry ) {
+	struct entry_t *next=NULL;
+	if( entry->plnext != entry ) {
+		entry->plnext->plprev=entry->plprev;
+		entry->plprev->plnext=entry->plnext;
+	}
+
+	if( entry->dbnext != entry ) {
+		next=entry->dbnext;
+		entry->dbnext->dbprev=entry->dbprev;
+		entry->dbprev->dbnext=entry->dbnext;
+	}
+	free(entry);
+	return next;
+}
+
+
+/**
  * turn a database entry into a mixplay structure
  */
 static int db2entry( struct dbentry_t *dbentry, struct entry_t *entry ) {
@@ -98,14 +161,16 @@ static struct entry_t *addDBTitle( struct dbentry_t dbentry, struct entry_t *roo
 
 	if( NULL == root ) {
 		root=entry;
-		root->prev=root;
-		root->next=root;
+		root->dbprev=root;
+		root->dbnext=root;
 	}
 	else {
-		entry->next=root->next;
-		entry->prev=root;
-		root->next->prev=entry;
-		root->next=entry;
+		entry->dbnext=root->dbnext;
+		entry->dbprev=root;
+		root->dbnext->dbprev=entry;
+		root->dbnext=entry;
+		entry->plnext=entry;
+		entry->plprev=entry;
 	}
 
 	return entry;
@@ -148,7 +213,7 @@ struct entry_t *dbGetMusic( const char *dbname ) {
 
 	if( getVerbosity() ) printf("Loaded %i titles from the database\n", index-1 );
 
-	return (dbroot?dbroot->next:NULL);
+	return (dbroot?dbroot->dbnext:NULL);
 }
 
 /**
@@ -165,12 +230,12 @@ int dbCheckExist( const char *dbname ) {
 	do {
 		activity( "Cleaning" );
 		if( !mp3Exists(runner) ) {
-			if(root == runner) root=runner->prev;
+			if(root == runner) root=runner->dbprev;
 			runner=removeTitle( runner );
 			num++;
 		}
 		else {
-			runner=runner->next;
+			runner=runner->dbnext;
 		}
 	} while( ( runner != NULL ) && ( root != runner ) );
 
@@ -195,7 +260,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 	struct entry_t *fsroot;
 	struct entry_t *dbroot;
 	struct entry_t *dbrunner;
-	unsigned long low;
+	unsigned int low;
 	int num=0;
 	int db=0;
 
@@ -203,7 +268,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 
 	db=dbOpen( dbname );
 	if( NULL != dbroot ) {
-		low=getLowestPlaycount( dbroot );
+		low=getLowestPlaycount( dbroot, -1 );
 		if( 0 != low ) {
 			do {
 				activity("Smoothe playcount");
@@ -214,14 +279,14 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 					dbrunner->played=dbrunner->played-low;
 				}
 				dbPutTitle( db, dbrunner );
-				dbrunner=dbrunner->next;
+				dbrunner=dbrunner->dbnext;
 			} while( dbrunner != dbroot );
 		}
 	}
 
 	// scan directory
 	fsroot=recurse(basedir, NULL, basedir);
-	fsroot=fsroot->next;
+	fsroot=fsroot->dbnext;
 
 	while( NULL != fsroot ) {
 		activity("Adding");
@@ -237,21 +302,6 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 	printf("Added %i titles to %s\n", num, dbname );
 	dbClose( db );
 	return num;
-}
-
-void dbDump( const char *dbname, struct entry_t *root ) {
-	int db;
-	struct entry_t *runner=root;
-	if( NULL == root ) {
-		fail( F_FAIL, "Not dumping an empty database!");
-	}
-	dbBackup( dbname );
-	db=dbOpen( dbname );
-	do {
-		dbPutTitle( db, runner );
-		runner=runner->next;
-	} while( runner != root );
-	dbClose( db );
 }
 
 /**

@@ -5,6 +5,7 @@
 .cproject
 .project
 org.eclipse*
+language.settings.xml
 
 # Binaries
 bin/mixplay

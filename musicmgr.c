@@ -216,7 +216,7 @@ char *genres[192] = {
  * either it's a number or a literal. If it's a number, the
  * predefined tag will be returned otherwise the literal text
  */
-char *getGenre( struct entry_t *title ) {
+static char *getGenre( struct entry_t *title ) {
 	unsigned int gno;
 	gno=atoi( title->genre );
 	if( ( 0 == gno ) && ( title->genre[0] != '0' ) ) {
@@ -236,38 +236,33 @@ void newCount( struct entry_t *root) {
 	do {
 		num++;
 		if( runner-> flags | MP_CNTD ) count++;
-		runner=runner->next;
+		runner=runner->dbnext;
 	} while( runner != root );
 
 	if( (100*count)/num > 50 ) {
 		do {
 			runner->flags &= ~MP_CNTD;
-			runner=runner->next;
+			runner=runner->dbnext;
 		} while( runner != root );
 	}
 }
 
 /**
- * moves *title from the original list and inserts it after *target
- * creates a new target if necessary
+ * inserts a title into the playlist chain. Creates a new playlist
+ * startpoint if no target is set.
  */
-static struct entry_t *moveTitle( struct entry_t *title, struct entry_t **target ) {
-	// remove title from old list
-	title->prev->next=title->next;
-	title->next->prev=title->prev;
-
-	if( NULL == *target ) {
-		*target=title;
-		(*target)->next=*target;
-		(*target)->prev=*target;
+static struct entry_t *moveToPL( struct entry_t *title, struct entry_t *target ) {
+	if( NULL == target ) {
+		title->plnext=title;
+		title->plprev=title;
 	}
 	else {
-		title->next=(*target)->next;
-		(*target)->next->prev=title;
-		title->prev=*target;
-		(*target)->next=title;
+		title->plnext=target->plnext;
+		title->plprev=target;
+		target->plnext->plprev=title;
+		target->plnext=title;
 	}
-
+	title->flags |= MP_MARK;
 	return title;
 }
 
@@ -277,13 +272,6 @@ static struct entry_t *moveTitle( struct entry_t *title, struct entry_t **target
 static int dsel( const struct dirent *entry ){
 	return( ( entry->d_name[0] != '.' ) &&
 			( ( entry->d_type == DT_DIR ) || ( entry->d_type == DT_LNK ) ) );
-}
-
-/**
- * helperfunction for scandir() - just return unhidden regular files
- */
-static int fsel( const struct dirent *entry ){
-	return( ( entry->d_name[0] != '.' ) && ( entry->d_type == DT_REG ) );
 }
 
 /**
@@ -316,19 +304,20 @@ static int getMusic( const char *cd, struct dirent ***musiclist ){
 
 /**
  * loads all unhidden files in cd into musiclist
- */
+ *
 int getFiles( const char *cd, struct dirent ***filelist ){
 	return scandir( cd, filelist, fsel, alphasort);
 }
+*/
 
 /**
  * loads all directories in cd into musiclist
  */
-int getDirs( const char *cd, struct dirent ***dirlist ){
+static int getDirs( const char *cd, struct dirent ***dirlist ){
 	return scandir( cd, dirlist, dsel, alphasort);
 }
 
-int matchList( struct entry_t **result, struct entry_t **base, struct bwlist_t *term, int range ) {
+static int matchList( struct entry_t **result, struct entry_t **base, struct marklist_t *term, int range ) {
 	struct entry_t  *runner=*base;
 	struct entry_t  *next=NULL;
 	int match, ranged=0;
@@ -347,48 +336,53 @@ int matchList( struct entry_t **result, struct entry_t **base, struct bwlist_t *
 	}
 
 	while( term != NULL ) {
-		while( runner->next != *base ){
+		while( runner->dbnext != *base ){
 			activity("Matching");
-			switch( range ) {
-				case SL_TITLE:
-					ranged=0;
-					match=checkMatch( runner->title, term->dir );
-				break;
-				case SL_ALBUM:
-					ranged=1;
-					match=checkMatch( runner->album, term->dir );
-				break;
-				case SL_ARTIST:
-					ranged=2;
-					match=checkMatch( runner->artist, term->dir );
-				break;
-				case SL_GENRE:
-					ranged=3;
-					match=checkMatch( getGenre(runner), term->dir );
-				break;
-				case SL_PATH:
-					ranged=4;
-					match=checkMatch( runner->path, term->dir );
-				break;
-				default:
-					fail( F_FAIL, "invalid checkMatch call %i", range );
-			}
-
-			if( match ) {
-				next=runner->next;
-				if( runner==*base ) {
-					*base=(*base)->next;       // make sure base stays valid after removal
+			if( !(runner->flags & ( MP_MARK | MP_DNP ) ) ) {
+				switch( range ) {
+					case SL_TITLE:
+						ranged=0;
+						match=checkMatch( runner->title, term->dir );
+					break;
+					case SL_ALBUM:
+						ranged=1;
+						match=checkMatch( runner->album, term->dir );
+					break;
+					case SL_ARTIST:
+						ranged=2;
+						match=checkMatch( runner->artist, term->dir );
+					break;
+					case SL_GENRE:
+						ranged=3;
+						match=checkMatch( getGenre(runner), term->dir );
+					break;
+					case SL_PATH:
+						ranged=4;
+						match=checkMatch( runner->path, term->dir );
+					break;
+					default:
+						fail( F_FAIL, "invalid checkMatch call %i", range );
 				}
 
-				*result=moveTitle( runner, result );
-				cnt++;
-				runner=next;
+				if( match ) {
+					next=runner->dbnext;
+					if( runner==*base ) {
+						*base=(*base)->dbnext;       // make sure base stays valid after removal
+					}
+
+					*result=moveToPL( runner, *result );
+					cnt++;
+					runner=next;
+				}
+				else {
+					runner=runner->dbnext;
+				}
 			}
 			else {
-				runner=runner->next;
+				runner=runner->dbnext;
 			}
 		} //  while( runner->next != base );
-		runner=runner->next; // start from the beginning
+		runner=runner->dbnext; // start from the beginning
 		term=term->next;
 	}
 
@@ -397,7 +391,7 @@ int matchList( struct entry_t **result, struct entry_t **base, struct bwlist_t *
 	return cnt;
 }
 
-struct entry_t *searchList( struct entry_t *base, struct bwlist_t *term, int range ) {
+struct entry_t *searchList( struct entry_t *base, struct marklist_t *term, int range ) {
 	struct entry_t  *result=NULL;
 	int cnt=0;
 
@@ -406,25 +400,22 @@ struct entry_t *searchList( struct entry_t *base, struct bwlist_t *term, int ran
 	}
 
 	if( range & SL_ARTIST ) cnt += matchList( &result, &base, term, SL_ARTIST );
-	if( range & SL_TITLE ) cnt += matchList( &result, &base, term, SL_TITLE );
-	if( range & SL_ALBUM ) cnt += matchList( &result, &base, term, SL_ALBUM );
-	if( range & SL_PATH ) cnt += matchList( &result, &base, term, SL_PATH );
-	if( range & SL_GENRE ) cnt += matchList( &result, &base, term, SL_GENRE );
+	if( range & SL_TITLE )  cnt += matchList( &result, &base, term, SL_TITLE );
+	if( range & SL_ALBUM )  cnt += matchList( &result, &base, term, SL_ALBUM );
+	if( range & SL_PATH )   cnt += matchList( &result, &base, term, SL_PATH );
+	if( range & SL_GENRE )  cnt += matchList( &result, &base, term, SL_GENRE );
 
-	wipeTitles( base );
+	if( getVerbosity() ) printf("Created playlist with %i titles\n", cnt );
 
-	if( getVerbosity() ) printf("Added %i titles\n", cnt );
-
-	return result?result->next:NULL;
+	return result?result->plnext:NULL;
 }
 
 /**
- * applies the dnplist on a list of titles and removes matching titles
- * from the list
+ * applies the dnplist on a list of titles and marks matching titles
  */
-struct entry_t *useDNPlist( struct entry_t *base, struct bwlist_t *list ) {
+struct entry_t *useDNPlist( struct entry_t *base, struct marklist_t *list ) {
 	struct entry_t  *pos = base;
-	struct bwlist_t *ptr = list;
+	struct marklist_t *ptr = list;
 	char loname[NAMELEN+MAXPATHLEN];
 	int cnt=0;
 
@@ -443,23 +434,18 @@ struct entry_t *useDNPlist( struct entry_t *base, struct bwlist_t *list ) {
 		ptr=list;
 		while( ptr ){
 			if( strstr( loname, ptr->dir ) ) {
-				if( pos == base ) base=base->next;
-				pos=removeTitle(pos);
-				pos=pos->prev;
+//				if( pos == base ) base=base->dbnext; // check if this makes sense
+				pos->flags |= MP_DNP;
 				cnt++;
 				break;
 			}
 			ptr=ptr->next;
 		}
 
-		if( pos == NULL ) {
-			fail( F_FAIL, "%s: List emptied, No more titles..", __func__ );
-		}
-
-		pos=pos->next;
+		pos=pos->dbnext;
 	} while( pos != base );
 
-	if( getVerbosity() ) printf("Removed %i titles\n", cnt );
+	if( getVerbosity() ) printf("Marked %i titles as DNP\n", cnt );
 
 	return base;
 }
@@ -467,10 +453,10 @@ struct entry_t *useDNPlist( struct entry_t *base, struct bwlist_t *list ) {
 /**
  * does the actual loading of a list
  */
-struct bwlist_t *loadList( const char *path ){
+struct marklist_t *loadList( const char *path ){
 	FILE *file = NULL;
-	struct bwlist_t *ptr = NULL;
-	struct bwlist_t *bwlist = NULL;
+	struct marklist_t *ptr = NULL;
+	struct marklist_t *bwlist = NULL;
 
 	char *buff;
 	int cnt=0;
@@ -486,10 +472,10 @@ struct bwlist_t *loadList( const char *path ){
 		buff=fgets( buff, MAXPATHLEN, file );
 		if( buff && strlen( buff ) > 1 ){
 			if( !bwlist ){
-				bwlist=calloc( 1, sizeof( struct bwlist_t ) );
+				bwlist=calloc( 1, sizeof( struct marklist_t ) );
 				ptr=bwlist;
 			}else{
-				ptr->next=calloc( 1, sizeof( struct bwlist_t ) );
+				ptr->next=calloc( 1, sizeof( struct marklist_t ) );
 				ptr=ptr->next;
 			}
 			if( !ptr ) fail( errno, "Could not add %s", buff );
@@ -510,29 +496,38 @@ struct bwlist_t *loadList( const char *path ){
 	return bwlist;
 }
 
+/**
+ * moves an entry in the playlist
+ */
 void moveEntry( struct entry_t *entry, struct entry_t *pos ) {
-	if( pos->next == entry ) return;
+	if( pos->plnext == entry ) return;
 	if( pos == entry ) return;
 
-	// close gap in original position
-	entry->next->prev=entry->prev;
-	entry->prev->next=entry->next;
+	// Move title that is not part of the current playlist?
+	if( !(entry->flags & MP_MARK ) ) {
+		pos=moveToPL( entry, pos );
+	}
+	else {
+		// close gap in original position
+		entry->plnext->plprev=entry->plprev;
+		entry->plprev->plnext=entry->plnext;
 
-	// insert into new position
-	entry->next=pos->next->next;
-	entry->prev=pos;
+		// insert into new position
+		entry->plnext=pos->plnext->plnext;
+		entry->plprev=pos;
 
-	// fix links
-	pos->next=entry;
-	entry->next->prev=entry;
+		// fix links
+		pos->plnext=entry;
+		entry->plnext->plprev=entry;
+	}
 }
 
 /**
  * add an entry to a list
  */
-struct bwlist_t *addToList( const char *line, struct bwlist_t **list ) {
-	struct bwlist_t *entry, *runner;
-	entry=calloc( 1, sizeof( struct bwlist_t ) );
+struct marklist_t *addToList( const char *line, struct marklist_t **list ) {
+	struct marklist_t *entry, *runner;
+	entry=calloc( 1, sizeof( struct marklist_t ) );
 	if( NULL == entry ) {
 		fail( errno, "Could not add searchterm %s", line );
 	}
@@ -581,49 +576,91 @@ struct entry_t *loadPlaylist( const char *path ) {
 		printf("Loaded %s with %i entries.\n", path, cnt );
 	}
 
-	return current->next;
+	return current->dbnext;
 }
 
 /**
- * clean up a list of entries
+ * remove a title from the playlist
+ * will return the previous title on success. Will do nothing
+ * if the title is the last on in the playlist.
  */
-void wipeTitles( struct entry_t *files ){
-	struct entry_t *buff=files;
-	if( NULL == files ) return;
-
-	files->prev->next=NULL;
-
-	while( buff != NULL ){
-		files=buff;
-		buff=buff->next;
-		free(files);
+static struct entry_t *plRemove( struct entry_t *entry ) {
+	struct entry_t *next=entry;
+	entry->flags |= MP_DNP;
+	if( entry->plnext != entry ) {
+		next=entry->plprev;
+		entry->plprev->plnext=entry->plnext;
+		entry->plnext->plprev=entry->plprev;
+		entry->plprev=entry;
+		entry->plnext=entry;
 	}
+	return next;
 }
 
 /**
- * helperfunction to remove an entry from a list of titles
+ * compares two titles with regards to the range
+ * used for blacklisting based on the current title
+ */
+static int matchTitle( struct entry_t *entry, struct entry_t *pattern, unsigned int range ) {
+	switch( range ) {
+		case SL_ALBUM:
+			return checkMatch( entry->album, pattern->album );
+		break;
+		case SL_ARTIST:
+			return checkMatch( entry->artist, pattern->artist );
+		break;
+		case SL_GENRE:
+			return checkMatch( entry->genre, pattern->genre );
+		break;
+		case SL_TITLE:
+			return checkMatch( entry->title, pattern->title );
+		break;
+		default:
+			fail( F_FAIL, "Illegal Range %i for matchTitle()", range );
+	}
+	return 0;
+}
+
+/**
+ * Marks an entry as DNP and removes it and additional matching titles
+ * from the playlist. Matching is done based on rage
  *
  * returns the next item in the list. If the next item is NULL, the previous
  * item will be returned. If entry was the last item in the list NULL will be
  * returned.
  */
-struct entry_t *removeTitle( struct entry_t *entry ) {
-	struct entry_t *buff=NULL;
-
-	if( entry == entry->next ) {
-		buff=NULL;
+struct entry_t *removeFromPL( struct entry_t *entry, const unsigned int range ) {
+	struct entry_t *runner=entry;
+	struct entry_t *retval=entry;
+	switch( range ) {
+		case SL_ALBUM:
+		case SL_ARTIST:
+		case SL_GENRE:
+		case SL_TITLE:
+			runner=entry->plnext;
+			while( runner != entry ) {
+				if( matchTitle( runner, entry, range ) ) {
+					runner=plRemove( entry );
+				}
+				else {
+					runner=runner->plnext;
+				}
+			}
+			retval=plRemove(entry);
+		break;
+		case SL_PATH:
+			retval=plRemove(entry);
+		break;
+		default:
+			fail( F_FAIL, "Unknown range ID: %i!", range );
 	}
-	else {
-		buff=entry->next;
-		entry->prev->next=buff;
-		buff->prev=entry->prev;
-	}
-	free(entry);
-	return buff;
+	return retval;
 }
 
 /**
- * helperfunction to insert an entry into a list of titles
+ * Insert an entry into the database list
+ *
+ * @todo: check if this needs to have a flag to connect playlist too
  */
 struct entry_t *insertTitle( struct entry_t *base, const char *path ){
 	struct entry_t *root;
@@ -635,15 +672,19 @@ struct entry_t *insertTitle( struct entry_t *base, const char *path ){
 
 	if( NULL == base ) {
 		base=root;
-		base->next=base;
-		base->prev=base;
+		base->dbnext=base;
+		base->dbprev=base;
 	}
 	else {
-		root->next=base->next;
-		root->prev=base;
-		base->next=root;
-		root->next->prev=root;
+		root->dbnext=base->dbnext;
+		root->dbprev=base;
+		base->dbnext=root;
+		root->dbnext->dbprev=root;
 	}
+
+	// every title is it's own playlist
+	root->plnext = root;
+	root->plprev = root;
 
 	strncpy( root->path, path, MAXPATHLEN );
 
@@ -654,8 +695,13 @@ struct entry_t *insertTitle( struct entry_t *base, const char *path ){
 
 /**
  * return the number of titles in the list
+ *
+ * inc: MP bitmap of flags to include, MP_ALL for all
+ * exc: MP bitmap of flags to exclude, 0 for all
+ *
+ * MP_DNP|MP_FAV will match any title where either flag is set
  */
-int countTitles( struct entry_t *base ) {
+static int countTitles( struct entry_t *base, const unsigned int inc, const unsigned int exc ) {
 	int cnt=0;
 	struct entry_t *runner=base;
 	if( NULL == base ){
@@ -663,36 +709,65 @@ int countTitles( struct entry_t *base ) {
 	}
 
 	do {
-		cnt++;
-		runner=runner->prev;
+		if( ( ( (inc == MP_ALL ) || ( runner->flags & inc ) ) &&
+			( ( exc == 0 ) || !(runner->flags & exc ) ) ) ) cnt++;
+		runner=runner->dbprev;
 	} while( runner != base );
-	if (getVerbosity() > 1 ) printf("Found %i titles\n", cnt );
 
 	return cnt;
 }
 
-unsigned long getLowestPlaycount( struct entry_t *base ) {
+/**
+ * returns the lowest playcount of the current list
+ *
+ * global: 0 - ignore titles marked as MP_DNP, -1 - check all titles
+ */
+unsigned int getLowestPlaycount( struct entry_t *base, const int global ) {
 	struct entry_t *runner=base;
-	unsigned long min=-1;
+	unsigned int min=-1;
 
 	do {
-		if( runner->played < min ) min=runner->played;
-		runner=runner->next;
+		if( global || !(runner->flags & MP_DNP) ) {
+			if( runner->played < min ) min=runner->played;
+		}
+		runner=runner->dbnext;
 	} while( runner != base );
 
 	return min;
 }
 
 /**
+ * skips the global list until a title is found that has not been marked
+ * and is not marked as DNP
+ */
+static struct entry_t *skipOver( struct entry_t *current ) {
+	struct entry_t *marker=current;
+
+	while( marker->flags & (MP_DNP|MP_MARK) ) {
+		marker=marker->dbnext;
+		if( marker == current ) fail( F_FAIL, "Ran out of titles!" );
+	}
+
+	return marker;
+}
+
+/**
  * mix a list of titles into a random order
+ *
+ * Core functionality of the mixplay architecture:
+ * - does not play the same artist twice in a row
+ * - prefers titles with lower playcount
+ * + skipcount needs to be considered too
  */
 struct entry_t *shuffleTitles( struct entry_t *base ) {
 	struct entry_t *end=NULL;
-	struct entry_t *runner=NULL;
+	struct entry_t *runner=base;
 	struct entry_t *guard=NULL;
-	int num=0, skipguard=-1;
+	unsigned int num=0, skipguard=-1;
+	unsigned int i;
 	int nameskip=0;
 	int playskip=0;
+	int insskip=0;
 	struct timeval tv;
 	unsigned long count=0;
 	char name[NAMELEN], lastname[NAMELEN]="";
@@ -703,14 +778,14 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 	gettimeofday(&tv,NULL);
 	srand(getpid()*tv.tv_sec);
 
-	count=getLowestPlaycount( base );
-	num = countTitles(base)+1;
+	count=getLowestPlaycount( base, 0 );
+	num = countTitles(base, MP_ALL, MP_DNP );
+	if (getVerbosity() > 1 ) printf("Shuffling %i titles\n", num );
 
-	// Stepping through every item
-	while( base->next != base ) {
+	for( i=0; i<num; i++ ) {
 		activity("Shuffling ");
-		// select a title at random
-		runner=skipTitles( base, RANDOM(num) );
+		runner=skipTitles( runner, RANDOM(num), -1 );
+		runner=skipOver( runner );
 		valid=0; // title has not passed any tests
 
 		if( skipguard ) {
@@ -721,8 +796,12 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 					strlncpy( name, runner->artist, NAMELEN );
 					while( checkMatch( name, lastname ) ) {
 						activity("Nameskipping ");
-						runner=runner->next;
-						if( guard == runner ) {
+						runner=runner->dbnext;
+						runner=skipOver( runner );
+						if( guard==runner ) {
+							if( getVerbosity() > 2 ) {
+								printf( "Stopped nameskipping at %i/%i\n%s\n", i, num, runner->display );
+							}
 							skipguard=0; // No more alternatives
 							break;
 						}
@@ -754,7 +833,8 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 						}
 						if( !(valid & 2) ){
 							activity("Playcountskipping ");
-							runner=runner->next;
+							runner=runner->dbnext;
+							runner=skipOver( runner );
 						}
 					} while( (valid != 3) && (runner != guard) );
 
@@ -770,32 +850,38 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 				}
 			} while( !skipguard && ( valid != 3 ) );
 			strlncpy(lastname, runner->artist, NAMELEN );
+			end = moveToPL( runner, end );
+		} // if( skipguard )
+		else {
+			// find a random position
+			valid=0;
+			while( !valid ) {
+				activity("Stuffing");
+				guard=skipTitles( guard, RANDOM(num), -1 );
+				if( !checkMatch( runner->artist, runner->artist )
+					&& !checkMatch( runner->plnext->artist, runner->artist ) ) {
+					valid=-1;
+				}
+			}
+			insskip++;
+			guard=moveToPL( runner, guard );
 		}
-
-		// Make sure we stay in the right list
-		if(runner == base) {
-			base=runner->next;
-		}
-
-		end = moveTitle( runner, &end );
-		num--;
 	}
-
-	// add the last title
-	end=moveTitle( base, &end );
 
 	if( getVerbosity() > 1 ) {
 		printf("Skipped %i titles to avoid artist repeats\n", nameskip );
 		printf("Skipped %i titles to keep playrate even (max=%li)\n", playskip, count );
+		printf("Stuffed %i titles into playlist\n", insskip );
 	}
 
-	return end->next;
+	return end->plnext;
 }
 
 /**
  * skips the given number of titles
+ * global - select if titles should be skipped in the playlist or the database
  */
-struct entry_t *skipTitles( struct entry_t *current, int num ) {
+struct entry_t *skipTitles( struct entry_t *current, int num, const int global ) {
 	int dir=num;
 	num=abs(num);
 
@@ -809,10 +895,12 @@ struct entry_t *skipTitles( struct entry_t *current, int num ) {
 
 	while( num > 0 ) {
 		if( dir < 0 ) {
-			current=current->prev;
+			if( global ) current=current->dbprev;
+			else current=current->plprev;
 		}
 		else {
-			current=current->next;
+			if( global ) current=current->dbnext;
+			else current=current->plnext;
 		}
 		num--;
 	}
@@ -824,9 +912,9 @@ struct entry_t *skipTitles( struct entry_t *current, int num ) {
  * This function sets the favourite bit on titles found in the given list
  * a literal comparison is used to identify true favourites
  */
-int applyFavourites( struct entry_t *root, struct bwlist_t *favourites ) {
+int applyFavourites( struct entry_t *root, struct marklist_t *favourites ) {
 	char loname[MAXPATHLEN];
-	struct bwlist_t *ptr = NULL;
+	struct marklist_t *ptr = NULL;
 	struct entry_t *runner=root;
 	int cnt=0;
 
@@ -842,16 +930,12 @@ int applyFavourites( struct entry_t *root, struct bwlist_t *favourites ) {
 			}
 			ptr=ptr->next;
 		}
-		runner=runner->next;
+		runner=runner->dbnext;
 	} while ( runner != root );
 
 	if( getVerbosity() ) printf("Marked %i favourites\n", cnt );
 
 	return 0;
-}
-
-int mp3Exists( const struct entry_t *title ) {
-	return( access( title->path, F_OK ) );
 }
 
 /*
@@ -889,6 +973,8 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 		buff=(struct entry_t *)calloc(1, sizeof(struct entry_t));
 		if(buff == NULL) fail( errno, "%s: Could not alloc buffer", __func__ );
 
+		files=insertTitle( files, dirbuff );
+		/*
 		strncpy( buff->path, dirbuff, MAXPATHLEN );
 		fillTagInfo( basedir, buff );
 		if( NULL == files ){
@@ -904,6 +990,7 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 		}
 
 		files=buff;
+		*/
 		free(entry[i]);
 	}
 	free(entry);
@@ -932,7 +1019,7 @@ struct entry_t *findTitle( struct entry_t *base, const char *path ) {
 	runner=base;
 	do {
 		if( strstr( runner->path, path ) ) return runner;
-		runner=runner->next;
+		runner=runner->dbnext;
 	} while ( runner != base );
 
 	return NULL;
@@ -946,7 +1033,7 @@ void dumpTitles( struct entry_t *root ) {
 	if( NULL==root ) fail( F_FAIL, "NO LIST" );
 	do {
 		printf("[%04i] %s: %s - %s (%s)\n", ptr->key, ptr->path, ptr->artist, ptr->title, ptr->album );
-		ptr=ptr->next;
+		ptr=ptr->dbnext;
 	} while( ptr != root );
 	fail( F_FAIL, "END DUMP" );
 }

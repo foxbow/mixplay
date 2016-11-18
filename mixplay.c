@@ -41,10 +41,9 @@
  */
 static void usage( char *progname ){
 	printf( "%s-%s - console frontend to mpg123\n", progname, VERSION );
-	printf( "Usage: %s [-d <file>] [-f <file>] [-s <key>|-S] [-R <talgp>] [-p <file>] [-m] [-r] "
+	printf( "Usage: %s [-u <user>] [-s <key>|-S] [-R <talgp>] [-p <file>] [-m] [-r] "
 			"[-v] [-V] [-h] [-C] [-A] [-D] [-T] [-F] [-X] [path|URL]\n", progname );
-	printf( "-d <file>  : List of names to exclude\n" );
-	printf( "-f <file>  : List of favourites\n" );
+	printf( "-u <user>  : User for DNP and favourites [mixplay]\n" );
 	printf( "-s <term>  : add search term (can be used multiple times)\n" );
 	printf( "-S         : interactive search\n" );
 	printf( "-R <talgp> : Set range (Title, Artist, aLbum, Genre, Path) [p]\n");
@@ -130,14 +129,14 @@ static void drawframe( struct entry_t *current, const char *status, int stream )
 		// song list
 		if( NULL != current ) {
 			// previous songs
-			runner=current->prev;
+			runner=current->plprev;
 			for( i=middle-2; i>0; i-- ){
 				if( current != runner ) {
 					strip( buff, runner->display, maxlen );
 					if(runner->flags & MP_FAV) {
 						attron(A_BOLD);
 					}
-					runner=runner->prev;
+					runner=runner->plprev;
 				}
 				else {
 					strcpy( buff, "---" );
@@ -147,14 +146,14 @@ static void drawframe( struct entry_t *current, const char *status, int stream )
 				attroff(A_BOLD);
 			}
 			// past songs
-			runner=current->next;
+			runner=current->plnext;
 			for( i=middle+2; i<row-2; i++ ){
 				if( current != runner ) {
 					strip( buff, runner->display, maxlen );
 					if(runner->flags & MP_FAV ) {
 						attron(A_BOLD);
 					}
-					runner=runner->next;
+					runner=runner->plnext;
 				}
 				else {
 					strcpy( buff, "---" );
@@ -190,9 +189,9 @@ int main(int argc, char **argv) {
 	struct entry_t *current = NULL;
 	struct entry_t *next = NULL;
 
-	struct bwlist_t *dnplist=NULL;
-	struct bwlist_t *favourites=NULL;
-	struct bwlist_t *searchlist=NULL;
+	struct marklist_t *dnplist=NULL;
+	struct marklist_t *favourites=NULL;
+	struct marklist_t *searchlist=NULL;
 
 	// pipes to communicate with mpg123
 	int p_status[2][2];
@@ -275,7 +274,7 @@ int main(int argc, char **argv) {
 	}
 
 	// parse command line options
-	while ((c = getopt(argc, argv, "ACd:Df:hmp:PQrR:s:SvFVX")) != -1) {
+	while ((c = getopt(argc, argv, "ACDhmp:PQrR:s:Su:vFVX")) != -1) {
 
 		switch (c) {
 		case 'v': // pretty useless in normal use
@@ -287,11 +286,9 @@ int main(int argc, char **argv) {
 		case 'r':
 			repeat=0;
 			break;
-		case 'd':
-			strncpy(dnpname, optarg, MAXPATHLEN);
-			break;
-		case 'f':
-			strncpy(favname, optarg, MAXPATHLEN);
+		case 'u':
+			snprintf( favname, MAXPATHLEN, "%s.fav", optarg );
+			snprintf( dnpname, MAXPATHLEN, "%s.dnp", optarg );
 			break;
 		case 'S':
 			printf("Search: ");
@@ -517,7 +514,7 @@ int main(int argc, char **argv) {
 			root=dbGetMusic( dbname );
 		} else {
 			root=recurse(basedir, NULL, basedir);
-			root=root->next;
+			root=root->dbnext;
 		}
 		root=useDNPlist( root, dnplist );
 		applyFavourites( root, favourites );
@@ -533,41 +530,47 @@ int main(int argc, char **argv) {
 	if( dump ) { // database statistics
 		if( -1 == dump ) dumpTitles(root);
 
-		unsigned long maxplayed=0;
-		unsigned long minplayed=ULONG_MAX;
-		unsigned long pl=0;
+		unsigned int maxplayed=0;
+		unsigned int minplayed=UINT_MAX;
+		unsigned int pl=0;
+		unsigned int skipped=0;
 
 		current=root;
 		do {
 			if( current->played < minplayed ) minplayed=current->played;
 			if( current->played > maxplayed ) maxplayed=current->played;
-			current=current->next;
+			if( current->skipped > 0 ) skipped++;
+			current=current->dbnext;
 		} while( current != root );
 
 		for( pl=minplayed; pl <= maxplayed; pl++ ) {
-			unsigned long pcount=0;
+			unsigned int pcount=0;
 			do {
 				if( current->played == pl ) pcount++;
-				current=current->next;
+				current=current->dbnext;
 			} while( current != root );
 			switch( pl ) {
 			case 0:
-				printf(" Never  played:\t%5li titles\n", pcount );
+				printf(" Never  played:\t%5i titles\n", pcount );
 				break;
 			case 1:
-				printf(" Once   played:\t%5li titles\n", pcount );
+				printf(" Once   played:\t%5i titles\n", pcount );
 				break;
 			case 2:
-				printf(" Twice  played:\t%5li titles\n", pcount );
+				printf(" Twice  played:\t%5i titles\n", pcount );
 				break;
 			default:
-				printf("%li times played:\t%5li titles\n", pl, pcount );
+				printf("%i times played:\t%5i titles\n", pl, pcount );
 			}
 		}
+
+		printf("skipped:\t%5i titles\n", skipped );
+
 		puts("");
 
 		return 0;
 	}
+
 	// No else as the above calls may return with an empty playlist!
 	// prepare playing the titles
 	if (NULL != root) {
@@ -661,10 +664,11 @@ int main(int argc, char **argv) {
 						switch( key ) {
 						case 'i':
 							if( 0 != current->key ) {
-								popUp( 0, "%s\nKey: %04i\nplaycount: %i\nskipcount: %i\nCount: %s",
+								popUp( 0, "%s\nKey: %04i\nplaycount: %i\nskipcount: %i\nCount: %s - Skip: %s",
 										current->path, current->key, current->played,
 										current->skipped,
-										ONOFF(~(current->flags)&MP_CNTD) );
+										ONOFF(~(current->flags)&MP_CNTD),
+										ONOFF(~(current->flags)&MP_SKPD));
 							}
 							else {
 								popUp( 2, current->path );
@@ -676,7 +680,7 @@ int main(int argc, char **argv) {
 								next=current;
 								do {
 									if( checkMatch( next->path, line ) ) break;
-									next=next->next;
+									next=next->plnext; // @TODO: include DNPs
 								} while( current != next );
 								if( next != current ) {
 									next->flags|=MP_CNTD; // Don't count searched titles.
@@ -712,7 +716,10 @@ int main(int argc, char **argv) {
 						case KEY_DOWN:
 						case 'n':
 							order=1;
-							if( !(current->flags & MP_CNTD) ) current->skipped++;
+							if( !(current->flags & ( MP_SKPD | MP_CNTD ) ) ) {
+								current->skipped++;
+								current->flags |= MP_SKPD;
+							}
 							write( p_command[fdset][1], "STOP\n", 6 );
 						break;
 						case KEY_UP:
@@ -739,26 +746,14 @@ int main(int argc, char **argv) {
 						break;
 						case 'b':
 							addToFile( dnpname, strrchr( current->path, '/')+1 );
-							current=removeTitle( current );
-							if( NULL != current->prev ) {
-								current=current->prev;
-							}
-							else {
-								fail( F_FAIL, "Broken link in list at %s", current->path );
-							}
+							current=removeFromPL( current, SL_TITLE );
 							order=1;
 							write( p_command[fdset][1], "STOP\n", 6 );
 						break;
 						case 'B':
 							addToFile( dnpname, current->album );
 							popUp( 2, "Added %s to the DNP list\nYMMV..", current->album );
-							current=removeTitle( current );
-							if( NULL != current->prev ) {
-								current=current->prev;
-							}
-							else {
-								fail( F_FAIL, "Broken link in list at %s", current->path );
-							}
+							current=removeFromPL( current, SL_ARTIST );
 							order=1;
 							write( p_command[fdset][1], "STOP\n", 6 );
 						break;
@@ -891,7 +886,7 @@ int main(int argc, char **argv) {
 									current->played++;
 									dbPutTitle( db, current );
 								}
-								next=current->next;
+								next=current->plnext;
 								if( ( next == current )
 										|| ( ( !repeat ) && ( next == root ) ) ) {
 									strcpy( status, "STOP" );
@@ -930,11 +925,11 @@ int main(int argc, char **argv) {
 								current->played++;
 								dbPutTitle( db, current );
 							}
-							next = skipTitles( current, order );
+							next = skipTitles( current, order, 0 );
 							if ( ( next == current ) ||
 									( !repeat &&
 											( ( ( order == 1 ) && ( next == root ) ) ||
-											( ( order == -1 ) && ( next == root->prev ) ) ) ) ) {
+											( ( order == -1 ) && ( next == root->plprev ) ) ) ) ) {
 								strcpy( status, "STOP" );
 							}
 							else {
