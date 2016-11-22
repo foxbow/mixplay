@@ -680,7 +680,7 @@ int main(int argc, char **argv) {
 								next=current;
 								do {
 									if( checkMatch( next->path, line ) ) break;
-									next=next->plnext; // @TODO: include DNPs
+									next=next->plnext; // @TODO: include DNPs?
 								} while( current != next );
 								if( next != current ) {
 									next->flags|=MP_CNTD; // Don't count searched titles.

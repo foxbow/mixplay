@@ -10,4 +10,6 @@ Icon=/usr/share/pixmaps/mixplay.svg
 Categories=Player;
 MimeType=application/vnd.apple.mpegurl;audio/mp3;audio/mpeg;audio/mpegurl;audio/x-mp3;audio/x-mpeg;audio/x-mpegurl;inode/directory;
 StartupWMClass=mixplay
-StartupNotify=false
+StartupNotify=true
+OnlyShowIn=GNOME;Unity;
+

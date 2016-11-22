@@ -568,6 +568,9 @@ struct entry_t *loadPlaylist( const char *path ) {
 		if( buff && ( strlen( buff ) > 1 ) && ( buff[0] != '#' ) ){
 			strip( titlePath, buff, MAXPATHLEN ); // remove control chars like CR/LF
 			current=insertTitle( current, titlePath );
+			// turn list into playlist too
+			current->plprev=current->dbprev;
+			current->plnext=current->dbnext;
 		}
 	}
 	fclose( fp );
@@ -659,8 +662,6 @@ struct entry_t *removeFromPL( struct entry_t *entry, const unsigned int range ) 
 
 /**
  * Insert an entry into the database list
- *
- * @todo: check if this needs to have a flag to connect playlist too
  */
 struct entry_t *insertTitle( struct entry_t *base, const char *path ){
 	struct entry_t *root;
