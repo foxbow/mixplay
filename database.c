@@ -13,6 +13,22 @@
 #include <unistd.h>
 
 /**
+ * 	searches for a given path in the mixplay entry list
+ */
+static struct entry_t *findTitle( struct entry_t *base, const char *path ) {
+	struct entry_t *runner;
+	if( NULL == base ) return NULL;
+
+	runner=base;
+	do {
+		if( strstr( runner->path, path ) ) return runner;
+		runner=runner->dbnext;
+	} while ( runner != base );
+
+	return NULL;
+}
+
+/**
  * reates a backup of the current database file and dumps the
  * current database in a new file
  */

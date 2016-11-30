@@ -303,14 +303,6 @@ static int getMusic( const char *cd, struct dirent ***musiclist ){
 }
 
 /**
- * loads all unhidden files in cd into musiclist
- *
-int getFiles( const char *cd, struct dirent ***filelist ){
-	return scandir( cd, filelist, fsel, alphasort);
-}
-*/
-
-/**
  * loads all directories in cd into musiclist
  */
 static int getDirs( const char *cd, struct dirent ***dirlist ){
@@ -413,7 +405,7 @@ struct entry_t *searchList( struct entry_t *base, struct marklist_t *term, int r
 /**
  * applies the dnplist on a list of titles and marks matching titles
  */
-struct entry_t *useDNPlist( struct entry_t *base, struct marklist_t *list ) {
+struct entry_t *applyDNPlist( struct entry_t *base, struct marklist_t *list ) {
 	struct entry_t  *pos = base;
 	struct marklist_t *ptr = list;
 	char loname[NAMELEN+MAXPATHLEN];
@@ -850,15 +842,17 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 					}
 				}
 			} while( !skipguard && ( valid != 3 ) );
-			strlncpy(lastname, runner->artist, NAMELEN );
-			end = moveToPL( runner, end );
+			if( valid == 3 ) {
+				strlncpy(lastname, runner->artist, NAMELEN );
+				end = moveToPL( runner, end );
+			}
 		} // if( skipguard )
 		else {
 			// find a random position
 			valid=0;
 			while( !valid ) {
 				activity("Stuffing");
-				guard=skipTitles( guard, RANDOM(num), -1 );
+				guard=skipTitles( guard, RANDOM(num), 0 );
 				if( !checkMatch( runner->artist, runner->artist )
 					&& !checkMatch( runner->plnext->artist, runner->artist ) ) {
 					valid=-1;
@@ -958,7 +952,7 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 	if( getVerbosity() > 2 ) {
 		printf("Checking %s\n", curdir );
 	}
-	// get all music files according to the dnplist
+	// get all music files
 	num = getMusic( curdir, &entry );
 	if( num < 0 ) {
 		fail( errno, "getMusic failed in %s", curdir );
@@ -975,27 +969,11 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 		if(buff == NULL) fail( errno, "%s: Could not alloc buffer", __func__ );
 
 		files=insertTitle( files, dirbuff );
-		/*
-		strncpy( buff->path, dirbuff, MAXPATHLEN );
-		fillTagInfo( basedir, buff );
-		if( NULL == files ){
-			files=buff;
-			buff->prev=files;
-			buff->next=files;
-		}
-		else {
-			buff->prev=files;
-			buff->next=files->next;
-			files->next->prev=buff;
-			files->next=buff;
-		}
-
-		files=buff;
-		*/
 		free(entry[i]);
 	}
 	free(entry);
 
+	// step down subdirectories
 	num=getDirs( curdir, &entry );
 	if( num < 0 ) {
 		fail( errno, "getDirs failed on %s", curdir );
@@ -1008,22 +986,6 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 	free(entry);
 
 	return files;
-}
-
-/**
- * 	searches for a given path in the mixplay entry list
- */
-struct entry_t *findTitle( struct entry_t *base, const char *path ) {
-	struct entry_t *runner;
-	if( NULL == base ) return NULL;
-
-	runner=base;
-	do {
-		if( strstr( runner->path, path ) ) return runner;
-		runner=runner->dbnext;
-	} while ( runner != base );
-
-	return NULL;
 }
 
 /**

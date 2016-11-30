@@ -64,6 +64,45 @@ static void usage( char *progname ){
 	exit(0);
 }
 
+static void dumpInfo( struct entry_t *root ) {
+	struct entry_t *current=root;
+	unsigned int maxplayed=0;
+	unsigned int minplayed=UINT_MAX;
+	unsigned int pl=0;
+	unsigned int skipped=0;
+
+	do {
+		if( current->played < minplayed ) minplayed=current->played;
+		if( current->played > maxplayed ) maxplayed=current->played;
+		if( current->skipped > 0 ) skipped++;
+		current=current->dbnext;
+	} while( current != root );
+
+	for( pl=minplayed; pl <= maxplayed; pl++ ) {
+		unsigned int pcount=0;
+		do {
+			if( current->played == pl ) pcount++;
+			current=current->dbnext;
+		} while( current != root );
+		switch( pl ) {
+		case 0:
+			printf(" Never  played:\t%5i titles\n", pcount );
+			break;
+		case 1:
+			printf(" Once   played:\t%5i titles\n", pcount );
+			break;
+		case 2:
+			printf(" Twice  played:\t%5i titles\n", pcount );
+			break;
+		default:
+			printf("%i times played:\t%5i titles\n", pl, pcount );
+		}
+	}
+
+	printf("skipped:\t%5i titles\n", skipped );
+
+	puts("");
+}
 
 static void drawframe( struct entry_t *current, const char *status, int stream ) {
 	int i, maxlen, pos;
@@ -171,11 +210,12 @@ static void drawframe( struct entry_t *current, const char *status, int stream )
  * make mpeg123 play the given title
  */
 static void sendplay( int fd, struct entry_t *song ) {
-	char line[LINE_BUFLEN];
-	strncpy( line, "load ", LINE_BUFLEN );
+	char line[LINE_BUFLEN]="load ";
 	strncat( line, song->path, LINE_BUFLEN );
 	strncat( line, "\n", LINE_BUFLEN );
-	write( fd, line, LINE_BUFLEN );
+	if ( write( fd, line, LINE_BUFLEN ) < strlen(line) ) {
+		fail( F_FAIL, "Could not write\n%s", line );
+	}
 }
 
 /*
@@ -516,7 +556,7 @@ int main(int argc, char **argv) {
 			root=recurse(basedir, NULL, basedir);
 			root=root->dbnext;
 		}
-		root=useDNPlist( root, dnplist );
+		root=applyDNPlist( root, dnplist );
 		applyFavourites( root, favourites );
 
 		if(search){
@@ -529,45 +569,7 @@ int main(int argc, char **argv) {
 
 	if( dump ) { // database statistics
 		if( -1 == dump ) dumpTitles(root);
-
-		unsigned int maxplayed=0;
-		unsigned int minplayed=UINT_MAX;
-		unsigned int pl=0;
-		unsigned int skipped=0;
-
-		current=root;
-		do {
-			if( current->played < minplayed ) minplayed=current->played;
-			if( current->played > maxplayed ) maxplayed=current->played;
-			if( current->skipped > 0 ) skipped++;
-			current=current->dbnext;
-		} while( current != root );
-
-		for( pl=minplayed; pl <= maxplayed; pl++ ) {
-			unsigned int pcount=0;
-			do {
-				if( current->played == pl ) pcount++;
-				current=current->dbnext;
-			} while( current != root );
-			switch( pl ) {
-			case 0:
-				printf(" Never  played:\t%5i titles\n", pcount );
-				break;
-			case 1:
-				printf(" Once   played:\t%5i titles\n", pcount );
-				break;
-			case 2:
-				printf(" Twice  played:\t%5i titles\n", pcount );
-				break;
-			default:
-				printf("%i times played:\t%5i titles\n", pl, pcount );
-			}
-		}
-
-		printf("skipped:\t%5i titles\n", skipped );
-
-		puts("");
-
+		dumpInfo( root );
 		return 0;
 	}
 
@@ -674,8 +676,9 @@ int main(int argc, char **argv) {
 								popUp( 2, current->path );
 							}
 						break;
+						case 'S':
 						case 'J':
-							popAsk( "Jump to: ", line );
+							popAsk( "Search: ", line );
 							if( strlen( line ) > 2 ) {
 								next=current;
 								do {
@@ -955,7 +958,10 @@ int main(int argc, char **argv) {
 						redraw=0;
 					break;
 					case 'E':
-						fail( F_FAIL, "ERROR: %s", line );
+						fail( F_FAIL, "ERROR: %s\nIndex: %i\nName: %s\nPath: %s", line,
+								current->key,
+								current->display,
+								current->path);
 					break;
 					default:
 						popUp( 0, "Warning!\n%s", line );

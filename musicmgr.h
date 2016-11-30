@@ -56,17 +56,15 @@ struct entry_t *removeFromPL( struct entry_t *current, const unsigned int range 
 struct entry_t *loadPlaylist( const char *path );
 struct entry_t *insertTitle( struct entry_t *base, const char *path );
 struct entry_t *skipTitles( struct entry_t *current, int num, const int global );
-struct entry_t *useDNPlist( struct entry_t *base, struct marklist_t *list );
+struct entry_t *applyDNPlist( struct entry_t *base, struct marklist_t *list );
 struct entry_t *searchList( struct entry_t *base, struct marklist_t *term, int range );
 void moveEntry( struct entry_t *entry, struct entry_t *pos );
 void newCount( struct entry_t * root);
-// int countTitles( struct entry_t *base, const unsigned int inc, const unsigned int exc );
 unsigned int getLowestPlaycount( struct entry_t *base, const int global );
 struct marklist_t *loadList( const char *path );
 int isMusic( const char *name );
 struct marklist_t *addToList( const char *line, struct marklist_t **list );
 int applyFavourites( struct entry_t *root, struct marklist_t *list );
-struct entry_t *findTitle( struct entry_t *base, const char *path );
 void dumpTitles( struct entry_t *root );
 
 #endif /* MUSICMGR_H_ */
