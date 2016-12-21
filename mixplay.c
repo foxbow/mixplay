@@ -335,6 +335,7 @@ int main(int argc, char **argv) {
 			fflush(stdout);
 			if( readline( line, MAXPATHLEN, fileno(stdin) ) > 1 ) {
 				search=1;
+				mix=0;
 				searchlist=addToList( line, &searchlist );
 			}
 			else {
@@ -346,6 +347,7 @@ int main(int argc, char **argv) {
 		case 's':
 			if( strlen(optarg) > 2 ) {
 				search=1;
+				mix=0;
 				searchlist=addToList( optarg, &searchlist );
 			}
 			else {

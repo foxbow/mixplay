@@ -385,6 +385,7 @@ static int matchList( struct entry_t **result, struct entry_t **base, struct mar
 
 struct entry_t *searchList( struct entry_t *base, struct marklist_t *term, int range ) {
 	struct entry_t  *result=NULL;
+	struct entry_t  *runner=NULL;
 	int cnt=0;
 
 	if( NULL == base ) {
@@ -398,6 +399,17 @@ struct entry_t *searchList( struct entry_t *base, struct marklist_t *term, int r
 	if( range & SL_GENRE )  cnt += matchList( &result, &base, term, SL_GENRE );
 
 	if( getVerbosity() ) printf("Created playlist with %i titles\n", cnt );
+
+	// Mark every other title so they won't be shuffled.
+	if( result != NULL ) {
+		runner=result;
+		do {
+			if( runner->plnext == runner ) {
+				runner->flags |= MP_MARK;
+			}
+			runner=runner->dbnext;
+		}while( runner != result );
+	}
 
 	return result?result->plnext:NULL;
 }
@@ -867,6 +879,15 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 		printf("Skipped %i titles to avoid artist repeats\n", nameskip );
 		printf("Skipped %i titles to keep playrate even (max=%li)\n", playskip, count );
 		printf("Stuffed %i titles into playlist\n", insskip );
+	}
+
+	// Make sure something valid is returned
+	if( NULL == end ) {
+		if( NULL == guard ) {
+			fail( F_FAIL, "No titles were shuffled!" );
+		}
+		fail( F_WARN, "All titles were inserted!" );
+		end=guard;
 	}
 
 	return end->plnext;
