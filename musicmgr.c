@@ -251,7 +251,11 @@ void newCount( struct entry_t *root) {
  * inserts a title into the playlist chain. Creates a new playlist
  * startpoint if no target is set.
  */
-static struct entry_t *moveToPL( struct entry_t *title, struct entry_t *target ) {
+static struct entry_t *addToPL( struct entry_t *title, struct entry_t *target ) {
+	if( title->flags & MP_MARK ) {
+		fail( F_FAIL, "Trying to add %s twice! (%i)", title->display, title->flags );
+	}
+
 	if( NULL == target ) {
 		title->plnext=title;
 		title->plprev=title;
@@ -311,7 +315,6 @@ static int getDirs( const char *cd, struct dirent ***dirlist ){
 
 static int matchList( struct entry_t **result, struct entry_t **base, struct marklist_t *term, int range ) {
 	struct entry_t  *runner=*base;
-	struct entry_t  *next=NULL;
 	int match, ranged=0;
 	int cnt=0;
 
@@ -357,28 +360,17 @@ static int matchList( struct entry_t **result, struct entry_t **base, struct mar
 				}
 
 				if( match ) {
-					next=runner->dbnext;
-					if( runner==*base ) {
-						*base=(*base)->dbnext;       // make sure base stays valid after removal
-					}
-
-					*result=moveToPL( runner, *result );
+					*result=addToPL( runner, *result );
 					cnt++;
-					runner=next;
-				}
-				else {
-					runner=runner->dbnext;
 				}
 			}
-			else {
-				runner=runner->dbnext;
-			}
+			runner=runner->dbnext;
 		} //  while( runner->next != base );
 		runner=runner->dbnext; // start from the beginning
 		term=term->next;
 	}
 
-	if( getVerbosity() ) printf("Added %i titles by %s \n", cnt, mdesc[ranged] );
+	printver( 1, "Added %i titles by %s \n", cnt, mdesc[ranged] );
 
 	return cnt;
 }
@@ -398,7 +390,7 @@ struct entry_t *searchList( struct entry_t *base, struct marklist_t *term, int r
 	if( range & SL_PATH )   cnt += matchList( &result, &base, term, SL_PATH );
 	if( range & SL_GENRE )  cnt += matchList( &result, &base, term, SL_GENRE );
 
-	if( getVerbosity() ) printf("Created playlist with %i titles\n", cnt );
+	printver( 1, "Created playlist with %i titles\n", cnt );
 
 	// Mark every other title so they won't be shuffled.
 	if( result != NULL ) {
@@ -449,7 +441,7 @@ struct entry_t *applyDNPlist( struct entry_t *base, struct marklist_t *list ) {
 		pos=pos->dbnext;
 	} while( pos != base );
 
-	if( getVerbosity() ) printf("Marked %i titles as DNP\n", cnt );
+	printver( 1, "Marked %i titles as DNP\n", cnt );
 
 	return base;
 }
@@ -490,9 +482,7 @@ struct marklist_t *loadList( const char *path ){
 		}
 	}
 
-	if( getVerbosity() > 1 ) {
-		printf("Loaded %s with %i entries.\n", path, cnt );
-	}
+	printver( 2, "Loaded %s with %i entries.\n", path, cnt );
 
 	free( buff );
 	fclose( file );
@@ -509,7 +499,7 @@ void moveEntry( struct entry_t *entry, struct entry_t *pos ) {
 
 	// Move title that is not part of the current playlist?
 	if( !(entry->flags & MP_MARK ) ) {
-		pos=moveToPL( entry, pos );
+		pos=addToPL( entry, pos );
 	}
 	else {
 		// close gap in original position
@@ -579,9 +569,7 @@ struct entry_t *loadPlaylist( const char *path ) {
 	}
 	fclose( fp );
 
-	if( getVerbosity() > 2 ) {
-		printf("Loaded %s with %i entries.\n", path, cnt );
-	}
+	printver( 3, "Loaded %s with %i entries.\n", path, cnt );
 
 	return current->dbnext;
 }
@@ -768,118 +756,144 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 	struct entry_t *end=NULL;
 	struct entry_t *runner=base;
 	struct entry_t *guard=NULL;
-	unsigned int num=0, skipguard=-1;
+	unsigned int num=0;
+	int skipguard=-1;
 	unsigned int i;
-	int nameskip=0;
-	int playskip=0;
-	int insskip=0;
+	unsigned int nameskip=0;
+	unsigned int playskip=0;
+	unsigned int insskip=0;
+	unsigned int added=0;
+	unsigned int cycles=0, maxcycles=0;
 	struct timeval tv;
-	unsigned long count=0;
+	unsigned long pcount=0;
 	char name[NAMELEN], lastname[NAMELEN]="";
 
 	int valid=0;
+	/* 0 - nothing checked
+	   1 - namecheck okay
+	   2 - playcount okay
+	   3 - all okay
+	*/
 
 	// improve 'randomization'
 	gettimeofday(&tv,NULL);
 	srand(getpid()*tv.tv_sec);
 
-	count=getLowestPlaycount( base, 0 );
+	pcount=getLowestPlaycount( base, 0 );
 	num = countTitles(base, MP_ALL, MP_DNP );
-	if (getVerbosity() > 1 ) printf("Shuffling %i titles\n", num );
+	printver( 2, "Shuffling %i titles\n", num );
 
 	for( i=0; i<num; i++ ) {
 		activity("Shuffling ");
+		// select a random title from the database
 		runner=skipTitles( runner, RANDOM(num), -1 );
+		// skip forward until a title is found the is neither DNP nor MARK
 		runner=skipOver( runner );
 		valid=0; // title has not passed any tests
 
-		if( skipguard ) {
-			do {
-				// check for duplicates
-				if( !(valid&1) && strlen(lastname) ) {
-					guard=runner;
+		if( runner->flags & MP_MARK ) {
+			fail( F_FAIL, "%s is marked!?", runner->display );
+		}
+
+		if( cycles>maxcycles ) maxcycles=cycles;
+		cycles=0;
+		while( skipguard && ( valid != 3 ) ) {
+			// First title? That's valid by default
+			if( 0 == strlen(lastname) ) valid=3;
+
+			if( !(valid&1) ) {
+				guard=runner;
+				strlncpy( name, runner->artist, NAMELEN );
+				while( checkMatch( name, lastname ) ) {
+					activity("Nameskipping ");
+					runner=runner->dbnext;
+					runner=skipOver( runner );
+					if( guard==runner ) {
+						printver( 2, "\nStopped nameskipping at %i/%i\n%s\n", i, num, runner->display );
+						skipguard=0; // No more alternatives
+						break;
+					}
 					strlncpy( name, runner->artist, NAMELEN );
-					while( checkMatch( name, lastname ) ) {
-						activity("Nameskipping ");
-						runner=runner->dbnext;
-						runner=skipOver( runner );
-						if( guard==runner ) {
-							if( getVerbosity() > 2 ) {
-								printf( "Stopped nameskipping at %i/%i\n%s\n", i, num, runner->display );
-							}
-							skipguard=0; // No more alternatives
+				}
+				if( !skipguard ) break;
+				if( guard != runner ){
+					nameskip++;
+					valid=1; // we skipped and need to check playcount
+				}
+				else {
+					valid |= 1; // we did not skip, so if playcount was fine it's still fine
+				}
+			}
+
+			// check for playcount
+			guard=runner;
+
+			if( !(valid & 2) ) {
+				while(1) {
+					if( runner->flags & MP_FAV) {
+						if ( runner-> played <= 2*pcount ) {
+							valid|=2;
 							break;
 						}
-						strlncpy( name, runner->artist, NAMELEN );
-					}
-					if( guard != runner ){
-						nameskip++;
-						valid=1; // we skipped and need to check playcount
 					}
 					else {
-						valid |= 1; // we did not skip, so if playcount was fine it's still fine
+						if ( runner->played <= pcount ) {
+							valid|=2;
+							break;
+						}
+					}
+
+					if( !(valid & 2) ){
+						activity("Playcountskipping ");
+						runner=runner->dbnext;
+						runner=skipOver( runner );
+						valid=0;
+						if( guard == runner ) {
+							pcount++;   // allow replays
+							printver( 2, "Increasing maxplaycount to %li\n", pcount );
+						}
 					}
 				}
 
-				// check for playcount
-				guard=runner;
-
-				if( !(valid & 2) ) {
-					do {
-						if( runner->flags & MP_FAV) {
-							if ( runner-> played <= 2*count ) {
-								valid=3;
-							}
-						}
-						else {
-							if ( runner->played <= count ) {
-								valid=3;
-							}
-						}
-						if( !(valid & 2) ){
-							activity("Playcountskipping ");
-							runner=runner->dbnext;
-							runner=skipOver( runner );
-						}
-					} while( (valid != 3) && (runner != guard) );
-
-					if( runner != guard ) {
-						playskip++;    // we needed to skip
-						valid=2;       // check for double artist
-					}
-					else{
-						if( valid == 1 ) { // we went once through without finding a title
-							count++;   // allow replays
-						}
-					}
+				if( runner != guard ) {
+					playskip++;    // we needed to skip
 				}
-			} while( !skipguard && ( valid != 3 ) );
-			if( valid == 3 ) {
-				strlncpy(lastname, runner->artist, NAMELEN );
-				end = moveToPL( runner, end );
 			}
-		} // if( skipguard )
-		else {
+
+			if( ++cycles > 10 ) {
+				printver( 2, "Looks like we ran into a loop in round %i/%i\n", i, num );
+				cycles=0;
+				skipguard=0;
+			}
+		}
+
+		if( valid == 3 ) {
+			printver( 3, "[+] (%i/%li) %s\n", runner->played, pcount, runner->display );
+			strlncpy(lastname, runner->artist, NAMELEN );
+			end = addToPL( runner, end );
+			added++;
+		}
+
+		if( !skipguard ) {
 			// find a random position
-			valid=0;
-			while( !valid ) {
-				activity("Stuffing");
-				guard=skipTitles( guard, RANDOM(num), 0 );
-				if( !checkMatch( runner->artist, runner->artist )
-					&& !checkMatch( runner->plnext->artist, runner->artist ) ) {
-					valid=-1;
-				}
+			activity("Stuffing");
+			guard=skipTitles( guard, RANDOM(num), 0 );
+			if( ( guard->flags & MP_DNP )
+				&& !checkMatch( guard->artist, runner->artist )
+				&& !checkMatch( guard->plnext->artist, runner->artist ) ) {
+				guard=guard->dbnext;
 			}
 			insskip++;
-			guard=moveToPL( runner, guard );
+			guard=addToPL( runner, guard );
+			added++;
 		}
 	}
 
-	if( getVerbosity() > 1 ) {
-		printf("Skipped %i titles to avoid artist repeats\n", nameskip );
-		printf("Skipped %i titles to keep playrate even (max=%li)\n", playskip, count );
-		printf("Stuffed %i titles into playlist\n", insskip );
-	}
+	printver( 2, "\nAdded %i titles\n", added );
+	printver( 2, "Skipped %i titles to avoid artist repeats\n", nameskip );
+	printver( 2, "Skipped %i titles to keep playrate even (max=%i)\n", playskip, pcount );
+	printver( 2, "Stuffed %i titles into playlist\n", insskip );
+	printver( 2, "Had a maximum of %i cycles\n", maxcycles );
 
 	// Make sure something valid is returned
 	if( NULL == end ) {
@@ -949,7 +963,7 @@ int applyFavourites( struct entry_t *root, struct marklist_t *favourites ) {
 		runner=runner->dbnext;
 	} while ( runner != root );
 
-	if( getVerbosity() ) printf("Marked %i favourites\n", cnt );
+	printver( 1, "Marked %i favourites\n", cnt );
 
 	return 0;
 }
@@ -970,9 +984,8 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 		curdir[strlen(curdir)-1]=0;
 	}
 
-	if( getVerbosity() > 2 ) {
-		printf("Checking %s\n", curdir );
-	}
+	printver( 3, "Checking %s\n", curdir );
+
 	// get all music files
 	num = getMusic( curdir, &entry );
 	if( num < 0 ) {
@@ -1012,12 +1025,13 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 /**
  * just for debugging purposes!
  */
-void dumpTitles( struct entry_t *root ) {
+void dumpTitles( struct entry_t *root, const int pl ) {
 	struct entry_t *ptr=root;
 	if( NULL==root ) fail( F_FAIL, "NO LIST" );
 	do {
 		printf("[%04i] %s: %s - %s (%s)\n", ptr->key, ptr->path, ptr->artist, ptr->title, ptr->album );
-		ptr=ptr->dbnext;
+		if( pl ) ptr=ptr->plnext;
+		else ptr=ptr->dbnext;
 	} while( ptr != root );
-	fail( F_FAIL, "END DUMP" );
+	// fail( F_WARN, "END DUMP" );
 }

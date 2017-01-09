@@ -392,15 +392,15 @@ int main(int argc, char **argv) {
 			searchlist=loadList( favname );
 			break;
 		case 'C':
-			if( !getVerbosity() ) incVerbosity();
+			incVerbosity();
 			scan|=3;
 			break;
 		case 'A':
-			if( !getVerbosity() ) incVerbosity();
+			incVerbosity();
 			scan|=2;
 			break;
 		case 'D':
-			if( !getVerbosity() ) incVerbosity();
+			incVerbosity();
 			scan|=4;
 			break;
 		case 'F':
@@ -570,7 +570,7 @@ int main(int argc, char **argv) {
 	}
 
 	if( dump ) { // database statistics
-		if( -1 == dump ) dumpTitles(root);
+		if( -1 == dump ) dumpTitles(root,0);
 		dumpInfo( root );
 		return 0;
 	}

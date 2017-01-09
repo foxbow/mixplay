@@ -14,10 +14,6 @@
 static int _ftrpos=0;
 static int _ftverbosity=1;
 
-int getVerbosity() {
-	return _ftverbosity;
-}
-
 int setVerbosity(int v) {
 	_ftverbosity=v;
 	return _ftverbosity;
@@ -139,6 +135,18 @@ void fail( int error, const char* msg, ... ){
 	return;
 }
 
+/**
+ * print the given message when the verbosity is at
+ * least vl
+ */
+void printver( int vl, const char *msg, ... ) {
+	va_list args;
+	if( vl <= _ftverbosity ) {
+		va_start( args, msg );
+		vprintf( msg, args );
+		va_end( args );
+	}
+}
 /**
  * reads from the fd into the line buffer until either a CR
  * comes or the fd stops sending characters.

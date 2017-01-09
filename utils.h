@@ -23,10 +23,12 @@ typedef unsigned char* strval_t;
 /*
  * Verbosity handling of the utils functions
  */
-int getVerbosity();
+// int getVerbosity();
 int setVerbosity(int);
 int incVerbosity();
 void muteVerbosity();
+
+void printver( int vl, const char *msg, ... );
 
 /**
  * General utility functions

@@ -20,6 +20,7 @@ struct dbentry_t {
 };
 
 #define DBESIZE sizeof(struct dbentry_t)
+#define ESIZE sizeof(struct entry_t)
 
 int dbOpen( const char *path );
 int dbPutTitle( int db, struct entry_t *title );

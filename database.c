@@ -95,7 +95,7 @@ static struct entry_t *removeTitle( struct entry_t *entry ) {
  * turn a database entry into a mixplay structure
  */
 static int db2entry( struct dbentry_t *dbentry, struct entry_t *entry ) {
-	memset( entry, 0, DBESIZE );
+	memset( entry, 0, ESIZE );
 	strcpy( entry->path, dbentry->path );
 	strcpy( entry->artist, dbentry->artist );
 	strcpy( entry->title, dbentry->title );
@@ -131,7 +131,7 @@ int dbOpen( const char *path ){
 	if( -1 == db ) {
 		fail( errno, "Could not open database %s", path );
 	}
-	if( getVerbosity() > 1 ) printf("Opened database %s\n", path);
+	printver( 2, "Opened database %s\n", path);
 	return db;
 }
 
@@ -227,7 +227,7 @@ struct entry_t *dbGetMusic( const char *dbname ) {
 		fail( F_FAIL, "Database %s is corrupt!\nRun 'mixplay -C' to rescan", dbname );
 	}
 
-	if( getVerbosity() ) printf("Loaded %i titles from the database\n", index-1 );
+	printver( 1, "Loaded %i titles from the database\n", index-1 );
 
 	return (dbroot?dbroot->dbnext:NULL);
 }
