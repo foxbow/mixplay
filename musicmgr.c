@@ -779,16 +779,22 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 	gettimeofday(&tv,NULL);
 	srand(getpid()*tv.tv_sec);
 
-	pcount=getLowestPlaycount( base, 0 );
+	// pcount=getLowestPlaycount( base, 0 );
 	num = countTitles(base, MP_ALL, MP_DNP );
 	printver( 2, "Shuffling %i titles\n", num );
 
 	for( i=0; i<num; i++ ) {
+		long skip;
 		activity("Shuffling ");
 		// select a random title from the database
-		runner=skipTitles( runner, RANDOM(num), -1 );
+		skip=RANDOM(num-i);
+		runner=skipTitles( runner, skip, -1 );
+		while( runner->flags & MP_MARK ) {
+
+			fail( F_FAIL, "%s is marked %i %i/%i!", runner->display, skip, i, num );
+		}
 		// skip forward until a title is found the is neither DNP nor MARK
-		runner=skipOver( runner );
+		// runner=skipOver( runner ); // moved into skipTitles()
 		valid=0; // title has not passed any tests
 
 		if( runner->flags & MP_MARK ) {
@@ -850,7 +856,7 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 						valid=0;
 						if( guard == runner ) {
 							pcount++;   // allow replays
-							printver( 2, "Increasing maxplaycount to %li\n", pcount );
+							printver( 2, "Increasing maxplaycount to %li at %i\n", pcount, i );
 						}
 					}
 				}
@@ -863,7 +869,9 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 			if( ++cycles > 10 ) {
 				printver( 2, "Looks like we ran into a loop in round %i/%i\n", i, num );
 				cycles=0;
-				skipguard=0;
+				// skipguard=0;
+				pcount++;   // allow replays
+				printver( 2, "Increasing maxplaycount to %li\n", pcount );
 			}
 		}
 
@@ -884,12 +892,13 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 				guard=guard->dbnext;
 			}
 			insskip++;
+			printver( 3, "[*] (%i/%li) %s\n", runner->played, pcount, runner->display );
 			guard=addToPL( runner, guard );
 			added++;
 		}
 	}
 
-	printver( 2, "\nAdded %i titles\n", added );
+	printver( 2, "Added %i titles                          \n", added );
 	printver( 2, "Skipped %i titles to avoid artist repeats\n", nameskip );
 	printver( 2, "Skipped %i titles to keep playrate even (max=%i)\n", playskip, pcount );
 	printver( 2, "Stuffed %i titles into playlist\n", insskip );
@@ -915,12 +924,13 @@ struct entry_t *skipTitles( struct entry_t *current, int num, const int global )
 	int dir=num;
 	num=abs(num);
 
-	if( 0 == num ) {
-		return current;
-	}
-
 	if( NULL == current ){
 		return NULL;
+	}
+
+	if( 0 == num ) {
+		if( global ) return skipOver( current );
+		else return current;
 	}
 
 	while( num > 0 ) {
@@ -929,7 +939,7 @@ struct entry_t *skipTitles( struct entry_t *current, int num, const int global )
 			else current=current->plprev;
 		}
 		else {
-			if( global ) current=current->dbnext;
+			if( global ) current=skipOver(current->dbnext);
 			else current=current->plnext;
 		}
 		num--;
