@@ -49,7 +49,7 @@ static void usage( char *progname ){
 	printf( "-R <talgp> : Set range (Title, Artist, aLbum, Genre, Path) [p]\n");
 	printf( "-p <file>  : use file as fuzzy playlist (party mode - resets range to Path!)\n" );
 	printf( "-P         : Like -p but uses the default favourites\n" );
-	printf( "-m         : disable shuffle mode on playlist\n" );
+	printf( "-m         : toggle shuffle (mix) mode\n" );
 	printf( "-r         : disable repeat mode on playlist\n");
 	printf( "-v         : increase verbosity (just for debugging)\n" );
 	printf( "-V         : print version*\n");
@@ -64,7 +64,7 @@ static void usage( char *progname ){
 	exit(0);
 }
 
-static void dumpInfo( struct entry_t *root ) {
+static void dumpInfo( struct entry_t *root, int db ) {
 	struct entry_t *current=root;
 	unsigned int maxplayed=0;
 	unsigned int minplayed=UINT_MAX;
@@ -75,14 +75,16 @@ static void dumpInfo( struct entry_t *root ) {
 		if( current->played < minplayed ) minplayed=current->played;
 		if( current->played > maxplayed ) maxplayed=current->played;
 		if( current->skipped > 0 ) skipped++;
-		current=current->dbnext;
+		if( db ) current=current->dbnext;
+		else current=current->plnext;
 	} while( current != root );
 
 	for( pl=minplayed; pl <= maxplayed; pl++ ) {
 		unsigned int pcount=0;
 		do {
 			if( current->played == pl ) pcount++;
-			current=current->dbnext;
+			if( db ) current=current->dbnext;
+			else current=current->plnext;
 		} while( current != root );
 		switch( pl ) {
 		case 0:
@@ -249,7 +251,7 @@ int main(int argc, char **argv) {
 	int key;
 	char c;
 	char *b;
-	int mix = 1;
+	int mix = -1;
 	int i;
 	fd_set fds;
 	struct timeval to;
@@ -321,7 +323,7 @@ int main(int argc, char **argv) {
 			incVerbosity();
 		break;
 		case 'm':
-			mix = 0;
+			mix = ~mix;
 			break;
 		case 'r':
 			repeat=0;
@@ -414,11 +416,13 @@ int main(int argc, char **argv) {
 			usage(argv[0]);
 			break;
 		case 'X':
+			mix=0;
 			dump=1;
 			puts("-- Dumping Database statistics --");
 			setVerbosity(2);
 			break;
 		case 'Q':
+			mix=0;
 			dump=-1;
 			setVerbosity(2);
 			break;
@@ -569,18 +573,18 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if( dump ) { // database statistics
-		if( -1 == dump ) dumpTitles(root,0);
-		dumpInfo( root );
-		return 0;
-	}
-
 	// No else as the above calls may return with an empty playlist!
 	// prepare playing the titles
 	if (NULL != root) {
 
 		if (mix) {
 			root=shuffleTitles(root);
+		}
+
+		if( dump ) { // database statistics
+			if( -1 == dump ) dumpTitles(root,0);
+			dumpInfo( root, ~mix );
+			return 0;
 		}
 
 		// start the player processes
