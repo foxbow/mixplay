@@ -672,8 +672,9 @@ int main(int argc, char **argv) {
 						switch( key ) {
 						case 'i':
 							if( 0 != current->key ) {
-								popUp( 0, "%s\nKey: %04i\nplaycount: %i\nskipcount: %i\nCount: %s - Skip: %s",
-										current->path, current->key, current->played,
+								popUp( 0, "%s\nGenre: %s\nKey: %04i\nplaycount: %i\nskipcount: %i\nCount: %s - Skip: %s",
+										current->path, current->genre,
+										current->key, current->played,
 										current->skipped,
 										ONOFF(~(current->flags)&MP_CNTD),
 										ONOFF(~(current->flags)&MP_SKPD));
