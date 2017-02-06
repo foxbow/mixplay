@@ -33,22 +33,22 @@
 
 #define LINE_BUFLEN 256
 
-#define ONOFF(x) (x)?"ON":"OFF"
-
 /**
  * print out CLI usage
- * ACd:Df:hmp:PQrR:s:SvTFVX
+ * ACd:Df:hl:mp:PQrR:s:SvTFVX
  */
 static void usage( char *progname ){
 	printf( "%s-%s - console frontend to mpg123\n", progname, VERSION );
 	printf( "Usage: %s [-u <user>] [-s <key>|-S] [-R <talgp>] [-p <file>] [-m] [-r] "
-			"[-v] [-V] [-h] [-C] [-A] [-D] [-T] [-F] [-X] [path|URL]\n", progname );
-	printf( "-u <user>  : User for DNP and favourites [mixplay]\n" );
+			"[-v] [-V] [-h] [-C] [-A] [-D] [-T] [-F] [-X] "
+			"[-l <skip>] [path|URL]\n", progname );
+	printf( "-u <user>  : user for DNP and favourites [mixplay]\n" );
 	printf( "-s <term>  : add search term (can be used multiple times)\n" );
 	printf( "-S         : interactive search\n" );
 	printf( "-R <talgp> : Set range (Title, Artist, aLbum, Genre, Path) [p]\n");
 	printf( "-p <file>  : use file as fuzzy playlist (party mode - resets range to Path!)\n" );
-	printf( "-P         : Like -p but uses the default favourites\n" );
+	printf( "-P         : like -p but uses the default favourites\n" );
+	printf( "-l <skip>  : titles skipped more than <skip> times will be marked DNP [2]\n");
 	printf( "-m         : toggle shuffle (mix) mode\n" );
 	printf( "-r         : disable repeat mode on playlist\n");
 	printf( "-v         : increase verbosity (just for debugging)\n" );
@@ -276,6 +276,7 @@ int main(int argc, char **argv) {
 	int intime=0;
 	int dump=0;
 	int hascfg=0;
+	unsigned int skiplevel=2;
 
 	FILE *fp=NULL;
 
@@ -316,7 +317,7 @@ int main(int argc, char **argv) {
 	}
 
 	// parse command line options
-	while ((c = getopt(argc, argv, "ACDhmp:PQrR:s:Su:vFVX")) != -1) {
+	while ((c = getopt(argc, argv, "ACDhl:mp:PQrR:s:Su:vFVX")) != -1) {
 
 		switch (c) {
 		case 'v': // pretty useless in normal use
@@ -404,6 +405,9 @@ int main(int argc, char **argv) {
 		case 'D':
 			incVerbosity();
 			scan|=4;
+			break;
+		case 'l':
+			skiplevel=atoi(optarg);
 			break;
 		case 'F':
 			fade=0;// atoi(optarg);
@@ -562,6 +566,8 @@ int main(int argc, char **argv) {
 			root=recurse(basedir, NULL, basedir);
 			root=root->dbnext;
 		}
+		if( skiplevel > 0 )
+			root=DNPSkip( root, skiplevel );
 		root=applyDNPlist( root, dnplist );
 		applyFavourites( root, favourites );
 
@@ -894,6 +900,7 @@ int main(int argc, char **argv) {
 								if( mix && usedb && !search && !( current->flags & MP_CNTD ) ) {
 									current->flags |= MP_CNTD; // make sure a title is only counted once per session
 									current->played++;
+									if( current->skipped > 0 ) current->skipped--;
 									dbPutTitle( db, current );
 								}
 								next=current->plnext;
@@ -933,6 +940,7 @@ int main(int argc, char **argv) {
 							if ( !search && mix && (intime > 2 ) && usedb && !( current->flags & MP_CNTD )) {
 								current->flags |= MP_CNTD;
 								current->played++;
+								if( current->skipped > 0 ) current->skipped--;
 								dbPutTitle( db, current );
 							}
 							next = skipTitles( current, order, 0 );

@@ -745,6 +745,27 @@ static struct entry_t *skipOver( struct entry_t *current ) {
 }
 
 /**
+ * marks titles that have been skipped for at least level times
+ * as DNP so they will not end up in a mix.
+ */
+struct entry_t *DNPSkip( struct entry_t *base, const unsigned int level ) {
+	struct entry_t *runner=base;
+	unsigned int skipskip=0;
+// Sort out skipped titles
+	do {
+		activity( "DNPSkipping" );
+		if( runner->skipped >= level ){
+			runner->flags |= MP_DNP;
+			printver( 3, "Marked %s as DNP after %i skips\n", runner->display, runner->skipped );
+			skipskip++;
+		}
+		runner=runner->dbnext;
+	} while( base != runner );
+	printver( 2, "Marked %i titles as DNP for being skipped\n", skipskip );
+	return base;
+}
+
+/**
  * mix a list of titles into a random order
  *
  * Core functionality of the mixplay architecture:
@@ -779,7 +800,6 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 	gettimeofday(&tv,NULL);
 	srand(getpid()*tv.tv_sec);
 
-	// pcount=getLowestPlaycount( base, 0 );
 	num = countTitles(base, MP_ALL, MP_DNP );
 	printver( 2, "Shuffling %i titles\n", num );
 
@@ -876,7 +896,7 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 		}
 
 		if( valid == 3 ) {
-			printver( 3, "[+] (%i/%li) %s\n", runner->played, pcount, runner->display );
+			printver( 3, "[+] (%i/%li/%3s) %s\n", runner->played, pcount, ONOFF(runner->flags&MP_FAV), runner->display );
 			strlncpy(lastname, runner->artist, NAMELEN );
 			end = addToPL( runner, end );
 			added++;

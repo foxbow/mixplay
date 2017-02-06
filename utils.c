@@ -143,7 +143,7 @@ void printver( int vl, const char *msg, ... ) {
 	va_list args;
 	if( vl <= _ftverbosity ) {
 		va_start( args, msg );
-		vprintf( msg, args );
+		vfprintf( stderr, msg, args );
 		va_end( args );
 	}
 }

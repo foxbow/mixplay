@@ -3,6 +3,7 @@
 
 /* Default values */
 #include <stdlib.h>
+#define ONOFF(x) (x)?"ON":"OFF"
 
 #define CMP_CHARS 127
 #define CMP_BITS (CMP_CHARS*CMP_CHARS)

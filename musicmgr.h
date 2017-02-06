@@ -58,6 +58,7 @@ struct entry_t *insertTitle( struct entry_t *base, const char *path );
 struct entry_t *skipTitles( struct entry_t *current, int num, const int global );
 struct entry_t *applyDNPlist( struct entry_t *base, struct marklist_t *list );
 struct entry_t *searchList( struct entry_t *base, struct marklist_t *term, int range );
+struct entry_t *DNPSkip( struct entry_t *base, const unsigned int level );
 void moveEntry( struct entry_t *entry, struct entry_t *pos );
 void newCount( struct entry_t * root);
 unsigned int getLowestPlaycount( struct entry_t *base, const int global );
