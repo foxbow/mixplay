@@ -276,7 +276,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 	struct entry_t *fsroot;
 	struct entry_t *dbroot;
 	struct entry_t *dbrunner;
-	unsigned int low;
+	unsigned int low=0;
 	int num=0;
 	int db=0;
 
@@ -284,20 +284,12 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 
 	db=dbOpen( dbname );
 	if( NULL != dbroot ) {
-		low=getLowestPlaycount( dbroot, -1 );
-		if( 0 != low ) {
-			do {
-				activity("Smoothe playcount");
-				if( ( dbrunner->flags & MP_FAV ) && ( dbrunner->played >= 2*low ) ) {
-					dbrunner->played=dbrunner->played-(2*low);
-				}
-				else {
-					dbrunner->played=dbrunner->played-low;
-				}
-				dbPutTitle( db, dbrunner );
-				dbrunner=dbrunner->dbnext;
-			} while( dbrunner != dbroot );
-		}
+		dbrunner=dbroot;
+		do {
+			if( dbrunner->played > low ) low=dbrunner->played;
+			dbrunner=dbrunner->dbnext;
+		} while( dbrunner != dbroot );
+		low=low/2;
 	}
 
 	// scan directory
@@ -309,13 +301,14 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 		dbrunner = findTitle( dbroot, fsroot->path );
 		if( NULL == dbrunner ) {
 			fillTagInfo( basedir, fsroot );
+			fsroot->played=low;
 			dbPutTitle(db,fsroot);
 			num++;
 		}
 		fsroot=removeTitle( fsroot );
 	}
 
-	printf("Added %i titles to %s\n", num, dbname );
+	printf("Added %i titles with playcount %i to %s\n", num, low, dbname );
 	dbClose( db );
 	return num;
 }

@@ -804,13 +804,12 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 	printver( 2, "Shuffling %i titles\n", num );
 
 	for( i=0; i<num; i++ ) {
-		long skip;
+		unsigned long skip;
 		activity("Shuffling ");
 		// select a random title from the database
 		skip=RANDOM(num-i);
 		runner=skipTitles( runner, skip, -1 );
 		while( runner->flags & MP_MARK ) {
-
 			fail( F_FAIL, "%s is marked %i %i/%i!", runner->display, skip, i, num );
 		}
 		// skip forward until a title is found the is neither DNP nor MARK
@@ -824,8 +823,8 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 		if( cycles>maxcycles ) maxcycles=cycles;
 		cycles=0;
 		while( skipguard && ( valid != 3 ) ) {
-			// First title? That's valid by default
-			if( 0 == strlen(lastname) ) valid=3;
+			// First title? That name is valid by default
+			if( 0 == strlen(lastname) ) valid=1;
 
 			if( !(valid&1) ) {
 				guard=runner;

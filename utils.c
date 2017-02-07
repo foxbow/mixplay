@@ -251,7 +251,7 @@ void activity( const char *msg ){
 	int pos;
 	if( _ftverbosity && ( _ftrpos%(100/_ftverbosity) == 0 )) {
 		pos=(_ftrpos/(100/_ftverbosity))%4;
-		printf( "%s %c\r", msg, roller[pos] ); fflush( stdout );
+		printf( "%s %c          \r", msg, roller[pos] ); fflush( stdout );
 	}
 	if( _ftverbosity > 0 ) _ftrpos=(_ftrpos+1)%(400/_ftverbosity);
 }	
