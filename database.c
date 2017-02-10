@@ -269,8 +269,7 @@ int dbCheckExist( const char *dbname ) {
 
 /**
  * adds new titles to the database
- * before adding, the playcount is minimized, so that the new titles will mingle with
- * the least played titles.
+ * the new titles will have a playcount set to blend into the mix
  */
 int dbAddTitles( const char *dbname, char *basedir ) {
 	struct entry_t *fsroot;
@@ -289,6 +288,10 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 			if( dbrunner->played > low ) low=dbrunner->played;
 			dbrunner=dbrunner->dbnext;
 		} while( dbrunner != dbroot );
+		/*
+		 * this should probably be made dependent on the spread of
+		 * playcount values
+		 */
 		low=low/2;
 	}
 

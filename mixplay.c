@@ -35,7 +35,7 @@
 
 /**
  * print out CLI usage
- * ACd:Df:hl:mp:PQrR:s:SvTFVX
+ * ACd:Df:hl:mp:Pq:QrR:s:SvTFVX
  */
 static void usage( char *progname ){
 	printf( "%s-%s - console frontend to mpg123\n", progname, VERSION );
@@ -48,6 +48,7 @@ static void usage( char *progname ){
 	printf( "-R <talgp> : Set range (Title, Artist, aLbum, Genre, Path) [p]\n");
 	printf( "-p <file>  : use file as fuzzy playlist (party mode - resets range to Path!)\n" );
 	printf( "-P         : like -p but uses the default favourites\n" );
+	printf( "-q <dir>   : copy favourites to target <dir> (USB stick, MP3 player..)\n" );
 	printf( "-l <skip>  : titles skipped more than <skip> times will be marked DNP [2]\n");
 	printf( "-m         : toggle shuffle (mix) mode\n" );
 	printf( "-r         : disable repeat mode on playlist\n");
@@ -220,6 +221,45 @@ static void sendplay( int fd, struct entry_t *song ) {
 	}
 }
 
+#define CP_BUFFSIZE 4096
+
+static void copyTitle( struct entry_t *title, const char* target, const unsigned int index ){
+	FILE *in, *out;
+	char filename[MAXPATHLEN];
+	unsigned char *buffer;
+	int size;
+
+	buffer=malloc( CP_BUFFSIZE );
+	if( NULL == buffer ) {
+		fail( errno, "Out of memory!" );
+	}
+
+	snprintf( filename, MAXPATHLEN, "%strack%03i.mp3", target, index );
+
+	printver( 2, "Copy %s to %s\n", title->display, filename );
+
+	in=fopen( title->path, "rb" );
+	if( NULL == in ){
+		fail( errno, "Couldn't open %s for reading", title->path );
+	}
+
+	out=fopen( filename, "wb" );
+	if( NULL == out ){
+		fail( errno, "Couldn't open %s for writing", filename );
+	}
+
+	size = fread( buffer, sizeof( unsigned char ), CP_BUFFSIZE, in );
+	while( 0 != size ){
+		activity("Copying file %03i", index );
+		if( 0 == fwrite( buffer, sizeof( unsigned char ), size, out ) )
+			fail( errno, "Target is full!" );
+		size = fread( buffer, sizeof( unsigned char ), CP_BUFFSIZE, in );
+	}
+
+	fclose( in );
+	fclose( out );
+	free(buffer);
+}
 /*
  *
  */
@@ -244,6 +284,7 @@ int main(int argc, char **argv) {
 	char tbuf[LINE_BUFLEN];
 	char basedir[MAXPATHLEN];
 	char confdir[MAXPATHLEN];
+	char target[MAXPATHLEN] = "";
 	char dbname[MAXPATHLEN]  = "mixplay.db";
 	char dnpname[MAXPATHLEN] = "mixplay.dnp";
 	char favname[MAXPATHLEN] = "mixplay.fav";
@@ -317,7 +358,7 @@ int main(int argc, char **argv) {
 	}
 
 	// parse command line options
-	while ((c = getopt(argc, argv, "ACDhl:mp:PQrR:s:Su:vFVX")) != -1) {
+	while ((c = getopt(argc, argv, "ACDhl:mp:Pq:QrR:s:Su:vFVX")) != -1) {
 
 		switch (c) {
 		case 'v': // pretty useless in normal use
@@ -387,6 +428,12 @@ int main(int argc, char **argv) {
 			search=1;
 			range=SL_PATH;
 			searchlist=loadList( optarg );
+			break;
+		case 'q':
+			if( optarg[ strlen(optarg)-1 ] != '/' ) {
+				fail( F_FAIL, "%s is not a directory", optarg );
+			}
+			strncpy( target, optarg, MAXPATHLEN );
 			break;
 		case 'P':
 			search=1;
@@ -562,12 +609,16 @@ int main(int argc, char **argv) {
 	if( NULL == root ) {
 		if( usedb ) {
 			root=dbGetMusic( dbname );
-		} else {
+		}
+		else {
 			root=recurse(basedir, NULL, basedir);
 			root=root->dbnext;
 		}
-		if( skiplevel > 0 )
+
+		if( skiplevel > 0 ) {
 			root=DNPSkip( root, skiplevel );
+		}
+
 		root=applyDNPlist( root, dnplist );
 		applyFavourites( root, favourites );
 
@@ -585,6 +636,19 @@ int main(int argc, char **argv) {
 
 		if (mix) {
 			root=shuffleTitles(root);
+		}
+
+		if( strlen( target ) > 0 ) {
+			unsigned int index=0;
+			current=root;
+			do {
+				if( current->flags & MP_FAV ) {
+					copyTitle( current, target, index++ );
+				}
+				current=current->plnext;
+			} while( current != root );
+			printver(1, "Copied %i titles to %s\n", index, target );
+			return 0;
 		}
 
 		if( dump ) { // database statistics
@@ -993,7 +1057,12 @@ int main(int argc, char **argv) {
 		endwin();
 	} // root==NULL
 	else {
-		fail( F_WARN, "No music found at %s", basedir );
+		if( usedb ) {
+			fail( F_WARN, "No matching music found in %s", dbname );
+		}
+		else {
+			fail( F_WARN, "No matching music found at %s", basedir );
+		}
 	}
 	return 0;
 }
