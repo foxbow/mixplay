@@ -35,7 +35,7 @@ void popDown() {
  * if time=0 it will wait for a keypress
  */
 void popUp( int time, const char *text, ... ) {
-	int row, col, line;
+	int row, col, line, middle;
 	int numlines=1;
 	char buff[1024];
 	char *p;
@@ -67,8 +67,11 @@ void popUp( int time, const char *text, ... ) {
 
 	refresh();
 	getmaxyx(stdscr, row, col);
-	if ((row > (6+numlines) ) && (col > 19)) {
-		mvhline( row-(numlines+3), 2, '=', col-4);
+	if ((row > (2*numlines)+2 ) && (col > 19)) {
+		middle=((row-1)/2)+1;
+//		mvhline( row-(numlines+3), 2, '=', col-4);
+		mvhline( middle, 2, '=', col-4);
+		middle++;
 
 		for( line=0; line < numlines; line++ ) {
 
@@ -79,11 +82,13 @@ void popUp( int time, const char *text, ... ) {
 				strcpy( buff, lines[line] );
 			}
 
-			mvhline( row-numlines+line-2, 2, ' ', col-4);
-			mvprintw( row-numlines+line-2, 3, " %s ", buff);
+//			mvhline( row-numlines+line-2, 2, ' ', col-4);
+//			mvprintw( row-numlines+line-2, 3, " %s ", buff);
+			mvhline( middle+line, 2, ' ', col-4);
+			mvprintw( middle+line, 3, " %s ", buff);
 		}
 
-		mvhline( row-2, 2, '=', col-4);
+		mvhline( middle+line, 2, '=', col-4);
 	}
 	refresh();
 	free(lines);
