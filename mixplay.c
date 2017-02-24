@@ -528,6 +528,7 @@ int main(int argc, char **argv) {
 		}
 		else {
 			if( !scan ) usedb=0;
+			mix=0;
 			getcwd( basedir, MAXPATHLEN );
 			if( argv[optind][0] != '/' ) {
 				snprintf( line, MAXPATHLEN, "%s/%s", basedir, argv[optind] );
@@ -599,11 +600,11 @@ int main(int argc, char **argv) {
 	}
 
 	abspath( dnpname, confdir, MAXPATHLEN );
-	dnplist=loadList( dnpname );
+	if(usedb) dnplist=loadList( dnpname );
 
 	// set default favourites name
 	abspath( favname, confdir, MAXPATHLEN );
-	favourites=loadList( favname );
+	if(usedb) favourites=loadList( favname );
 
 	// load and prepare titles
 	if( NULL == root ) {
@@ -612,15 +613,26 @@ int main(int argc, char **argv) {
 		}
 		else {
 			root=recurse(basedir, NULL, basedir);
-			root=root->dbnext;
+			if( root != NULL ) {
+				root=root->dbnext;
+				current=root;
+				do {
+					activity("Relinking");
+					current->plnext=current->dbnext;
+					current->plprev=current->dbprev;
+					current=current->dbnext;
+				} while( current != root );
+			}
 		}
 
-		if( skiplevel > 0 ) {
+		if( usedb && ( skiplevel > 0 ) ) {
 			root=DNPSkip( root, skiplevel );
 		}
 
-		root=applyDNPlist( root, dnplist );
-		applyFavourites( root, favourites );
+		if (usedb) {
+			root=applyDNPlist( root, dnplist );
+			applyFavourites( root, favourites );
+		}
 
 		if(search){
 			if( 0 == range ) {

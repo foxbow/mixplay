@@ -29,11 +29,12 @@ static struct entry_t *findTitle( struct entry_t *base, const char *path ) {
 }
 
 /**
- * reates a backup of the current database file and dumps the
- * current database in a new file
+ * Creates a backup of the current database file and dumps the
+ * current reindexed database in a new file
  */
 static void dbDump( const char *dbname, struct entry_t *root ) {
 	int db;
+	unsigned int index=1;
 	struct entry_t *runner=root;
 	if( NULL == root ) {
 		fail( F_FAIL, "Not dumping an empty database!");
@@ -41,7 +42,9 @@ static void dbDump( const char *dbname, struct entry_t *root ) {
 	dbBackup( dbname );
 	db=dbOpen( dbname );
 	do {
+		runner->key=index;
 		dbPutTitle( db, runner );
+		index++;
 		runner=runner->dbnext;
 	} while( runner != root );
 	dbClose( db );
@@ -51,7 +54,7 @@ static void dbDump( const char *dbname, struct entry_t *root ) {
  * checks if a given title still exists on the filesystem
  */
 static int mp3Exists( const struct entry_t *title ) {
-	return( access( title->path, F_OK ) );
+	return( access( title->path, F_OK ) == 0 );
 }
 
 /**
@@ -179,6 +182,8 @@ static struct entry_t *addDBTitle( struct dbentry_t dbentry, struct entry_t *roo
 		root=entry;
 		root->dbprev=root;
 		root->dbnext=root;
+		root->plnext=root;
+		root->plprev=root;
 	}
 	else {
 		entry->dbnext=root->dbnext;
