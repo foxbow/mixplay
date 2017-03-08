@@ -10,6 +10,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <ncurses.h>
+#include <sys/stat.h>
 
 static int _ftrpos=0;
 static int _ftverbosity=1;
@@ -117,16 +118,16 @@ void fail( int error, const char* msg, ... ){
 	va_start( args, msg );
 	endwin();
 	if(error <= 0 ) {
-		fprintf(stderr, "\n");
-		vfprintf(stderr, msg, args );
-		fprintf( stderr, "\n" );
+		fprintf( stdout, "\n");
+		vfprintf( stdout, msg, args );
+		fprintf( stdout, "\n" );
 	}
 	else {
-		fprintf(stderr, "\n");
-		vfprintf(stderr, msg, args );
-		fprintf( stderr, "\n ERROR: %i - %s\n", abs(error), strerror( abs(error) ) );
+		fprintf(stdout, "\n");
+		vfprintf(stdout, msg, args );
+		fprintf( stdout, "\n ERROR: %i - %s\n", abs(error), strerror( abs(error) ) );
 	}
-	fprintf(stderr, "Press [ENTER]\n" );
+	fprintf(stdout, "Press [ENTER]\n" );
 	fflush( stdout );
 	fflush( stderr );
 	va_end(args);
@@ -418,6 +419,17 @@ int checkMatch( const char* name, const char* pat ) {
 	if( len <= 5 ) trigger=100;
 	strlncpy( loname, name, 1024 );
 	if( trigger <= fncmp( loname, pat ) ){
+		return -1;
+	}
+	return 0;
+}
+
+/**
+ * checks if the given path is an accessible directory
+ */
+int isDir( const char *path ) {
+	struct stat st;
+	if( !stat( path, &st ) && S_ISDIR( st.st_mode ) ){
 		return -1;
 	}
 	return 0;

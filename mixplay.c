@@ -19,13 +19,14 @@
 #include <stdio.h>
 #include <getopt.h>
 #include <signal.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <ncurses.h>
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
 #include <limits.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #ifndef VERSION
 #define VERSION "dev"
@@ -430,7 +431,7 @@ int main(int argc, char **argv) {
 			searchlist=loadList( optarg );
 			break;
 		case 'q':
-			if( optarg[ strlen(optarg)-1 ] != '/' ) {
+			if( !isDir(optarg) ) {
 				fail( F_FAIL, "%s is not a directory", optarg );
 			}
 			strncpy( target, optarg, MAXPATHLEN );
@@ -546,7 +547,6 @@ int main(int argc, char **argv) {
 	abspath( dbname, confdir, MAXPATHLEN );
 
 	if( hascfg==0 && ( strcmp(  getenv("HOME"), basedir ) == 0 ) ) {
-		struct stat st;
 		printf("basedir is set to %s\n", basedir );
 		printf("This is usually a bad idea and a sign that the default\n");
 		printf("music directory needs to be set.\n");
@@ -561,15 +561,8 @@ int main(int argc, char **argv) {
 			fgets( basedir, MAXPATHLEN, stdin );
 			basedir[strlen(basedir)-1]=0; // cut off CR
 			abspath( basedir, getenv("HOME"), MAXPATHLEN );
-			if( stat( basedir, &st ) ) {
-				printf("Cannot access %s!\n", basedir );
-			}
-			else if( S_ISDIR( st.st_mode ) ){
-				break;
-			}
-			else {
-				printf("%s is not a directory!\n", basedir );
-			}
+			if( isDir(basedir ) ) break;
+			else printf("%s is not a directory!\n", basedir );
 		}
 		fp=fopen(config, "w");
 		if( NULL != fp ) {
@@ -646,6 +639,16 @@ int main(int argc, char **argv) {
 	// prepare playing the titles
 	if (NULL != root) {
 
+		if( strlen( target ) > 0 ) {
+			current=root;
+			do {
+				if( !(current->flags & MP_FAV) ) {
+					current->flags |= MP_MARK;
+				}
+				current=current->dbnext;
+			} while( current != root );
+		}
+
 		if (mix) {
 			root=shuffleTitles(root);
 		}
@@ -654,9 +657,7 @@ int main(int argc, char **argv) {
 			unsigned int index=0;
 			current=root;
 			do {
-				if( current->flags & MP_FAV ) {
-					copyTitle( current, target, index++ );
-				}
+				copyTitle( current, target, index++ );
 				current=current->plnext;
 			} while( current != root );
 			printver(1, "Copied %i titles to %s\n", index, target );

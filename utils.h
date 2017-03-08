@@ -43,6 +43,7 @@ char *strip( char *buff, const char *text, const size_t maxlen );
 int endsWith( const char *text, const char *suffix );
 int startsWith( const char *text, const char *prefix );
 int isURL( const char *uri );
+int isDir( const char *path );
 int readline( char *line, size_t len, int fd );
 void activity( const char *msg, ... );
 char *abspath( char *path, char *basedir, int len );

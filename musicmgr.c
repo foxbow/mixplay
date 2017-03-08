@@ -399,6 +399,9 @@ struct entry_t *searchList( struct entry_t *base, struct marklist_t *term, int r
 			if( runner->plnext == runner ) {
 				runner->flags |= MP_MARK;
 			}
+			else {
+				runner->flags &= ~MP_MARK;
+			}
 			runner=runner->dbnext;
 		}while( runner != result );
 	}
@@ -702,8 +705,9 @@ static int countTitles( struct entry_t *base, const unsigned int inc, const unsi
 	}
 
 	do {
+		activity("Counting");
 		if( ( ( (inc == MP_ALL ) || ( runner->flags & inc ) ) &&
-			( ( exc == 0 ) || !(runner->flags & exc ) ) ) ) cnt++;
+			!(runner->flags & exc ) ) ) cnt++;
 		runner=runner->dbprev;
 	} while( runner != base );
 
@@ -800,7 +804,7 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 	gettimeofday(&tv,NULL);
 	srand(getpid()*tv.tv_sec);
 
-	num = countTitles(base, MP_ALL, MP_DNP );
+	num = countTitles(base, MP_ALL, MP_DNP|MP_MARK );
 	printver( 2, "Shuffling %i titles\n", num );
 
 	for( i=0; i<num; i++ ) {
@@ -809,7 +813,7 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 		// select a random title from the database
 		skip=RANDOM(num-i);
 		runner=skipTitles( runner, skip, -1 );
-		while( runner->flags & MP_MARK ) {
+		if( runner->flags & MP_MARK ) {
 			fail( F_FAIL, "%s is marked %i %i/%i!", runner->display, skip, i, num );
 		}
 		// skip forward until a title is found the is neither DNP nor MARK
