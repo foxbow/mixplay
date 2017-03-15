@@ -40,13 +40,13 @@
  */
 static void usage( char *progname ){
 	printf( "%s-%s - console frontend to mpg123\n", progname, VERSION );
-	printf( "Usage: %s [-u <user>] [-s <key>|-S] [-R <talgp>] [-p <file>] [-m] [-r] "
+	printf( "Usage: %s [-u <user>] [-s <key>|-S] [-p <file>] [-m] [-r] "
 			"[-v] [-V] [-h] [-C] [-A] [-D] [-T] [-F] [-X] "
 			"[-l <skip>] [path|URL]\n", progname );
 	printf( "-u <user>  : user for DNP and favourites [mixplay]\n" );
 	printf( "-s <term>  : add search term (can be used multiple times)\n" );
+	printf( "             [<talgp><=*>]term\n" );
 	printf( "-S         : interactive search\n" );
-	printf( "-R <talgp> : Set range (Title, Artist, aLbum, Genre, Path) [p]\n");
 	printf( "-p <file>  : use file as fuzzy playlist (party mode - resets range to Path!)\n" );
 	printf( "-P         : like -p but uses the default favourites\n" );
 	printf( "-q <dir>   : copy favourites to target <dir> (USB stick, MP3 player..)\n" );
@@ -307,7 +307,6 @@ int main(int argc, char **argv) {
 	int running;
 	int usedb=1;
 	int search=0;
-	int range=0;
 	int db=0;
 	int repeat=1;
 	int scan=0;
@@ -359,7 +358,7 @@ int main(int argc, char **argv) {
 	}
 
 	// parse command line options
-	while ((c = getopt(argc, argv, "ACDhl:mp:Pq:QrR:s:Su:vFVX")) != -1) {
+	while ((c = getopt(argc, argv, "ACDhl:mp:Pq:Qrs:Su:vFVX")) != -1) {
 
 		switch (c) {
 		case 'v': // pretty useless in normal use
@@ -401,33 +400,8 @@ int main(int argc, char **argv) {
 				return -1;
 			}
 			break;
-		case 'R':
-			for( i=0; i<strlen(optarg); i++ ) {
-				switch( optarg[i] ) {
-				case 'a':
-					range |= SL_ARTIST;
-				break;
-				case 'l':
-					range |= SL_ALBUM;
-				break;
-				case 't':
-					range |= SL_TITLE;
-				break;
-				case 'g':
-					range |= SL_GENRE;
-				break;
-				case 'p':
-					range |= SL_PATH;
-				break;
-				default:
-					fail( F_FAIL, "Unknown range given in: %s", optarg );
-				break;
-				}
-			}
-			break;
 		case 'p':
 			search=1;
-			range=SL_PATH;
 			searchlist=loadList( optarg );
 			break;
 		case 'q':
@@ -438,7 +412,6 @@ int main(int argc, char **argv) {
 			break;
 		case 'P':
 			search=1;
-			range=SL_PATH;
 			abspath( favname, confdir, MAXPATHLEN );
 			searchlist=loadList( favname );
 			break;
@@ -628,10 +601,7 @@ int main(int argc, char **argv) {
 		}
 
 		if(search){
-			if( 0 == range ) {
-				range=SL_PATH;
-			}
-			root=searchList(root, searchlist, range );
+			root=searchList(root, searchlist );
 		}
 	}
 

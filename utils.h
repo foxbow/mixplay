@@ -47,6 +47,6 @@ int isDir( const char *path );
 int readline( char *line, size_t len, int fd );
 void activity( const char *msg, ... );
 char *abspath( char *path, char *basedir, int len );
-int checkMatch( const char* name, const char* pat ); // should probably replace fncmp()
+int checkMatch( const char* name, const char* pat );
 
 #endif

@@ -313,53 +313,76 @@ static int getDirs( const char *cd, struct dirent ***dirlist ){
 	return scandir( cd, dirlist, dsel, alphasort);
 }
 
-static int matchList( struct entry_t **result, struct entry_t **base, struct marklist_t *term, int range ) {
-	struct entry_t  *runner=*base;
-	int match, ranged=0;
-	int cnt=0;
 
-	char *mdesc[]={
-			"title"
-			,"album"
-			,"artist"
-			,"genre"
-			,"path"
-	};
+static int matchTitle( struct entry_t *title, const char* pat ) {
+	int fuzzy=-1;
+	char loname[1024];
+	char lopat[1024];
+
+	if( ( '=' == pat[1] ) || ( '*' == pat[1] ) ) {
+		strlncpy( lopat, &pat[2], 1024 );
+		if( '=' == pat[1] ) fuzzy=0;
+
+		switch( pat[0] ) {
+		case 't':
+			strlncpy( loname, title->title, 1024 );
+			break;
+		case 'a':
+			strlncpy( loname, title->artist, 1024 );
+			break;
+		case 'l':
+			strlncpy( loname, title->album, 1024 );
+			break;
+		case 'g':
+			strlncpy( loname, getGenre( title ), 1024 );
+			break;
+		case 'p':
+			strlncpy( loname, title->path, 1024 );
+			break;
+		default:
+			fail( F_WARN, "Unknown range %c in %s!", pat[0], pat );
+			strlncpy( loname, title->path, 1024 );
+		}
+	}
+	else {
+		strlncpy( loname, title->path, 1024 );
+		strlncpy( lopat, pat, 1024 );
+	}
+
+	if( fuzzy ) {
+		return checkMatch( loname, lopat );
+	}
+
+	else {
+		if( NULL == strstr( loname, pat ) ) {
+			return 0;
+		}
+		else {
+			return -1;
+		}
+	}
+}
+
+/**
+ * range is set via entry:
+ * first char:  talgp (Title, Artist, aLbum, Genre, Path )
+ * second char: =*
+ *
+ * if the second char is anything else, the default (p=) is used.
+ */
+static int matchList( struct entry_t **result, struct entry_t **base, struct marklist_t *term ) {
+	struct entry_t  *runner=*base;
+	int cnt=0;
 
 	if( NULL == *base ) {
 		fail( F_FAIL, "No music in list!" );
 	}
 
-	while( term != NULL ) {
+	while( NULL != term ) {
 		while( runner->dbnext != *base ){
 			activity("Matching");
 			if( !(runner->flags & ( MP_MARK | MP_DNP ) ) ) {
-				switch( range ) {
-					case SL_TITLE:
-						ranged=0;
-						match=checkMatch( runner->title, term->dir );
-					break;
-					case SL_ALBUM:
-						ranged=1;
-						match=checkMatch( runner->album, term->dir );
-					break;
-					case SL_ARTIST:
-						ranged=2;
-						match=checkMatch( runner->artist, term->dir );
-					break;
-					case SL_GENRE:
-						ranged=3;
-						match=checkMatch( getGenre(runner), term->dir );
-					break;
-					case SL_PATH:
-						ranged=4;
-						match=checkMatch( runner->path, term->dir );
-					break;
-					default:
-						fail( F_FAIL, "invalid checkMatch call %i", range );
-				}
-
-				if( match ) {
+				if( matchTitle( runner, term->dir ) ) {
 					*result=addToPL( runner, *result );
 					cnt++;
 				}
@@ -370,12 +393,12 @@ static int matchList( struct entry_t **result, struct entry_t **base, struct mar
 		term=term->next;
 	}
 
-	printver( 1, "Added %i titles by %s \n", cnt, mdesc[ranged] );
+	printver( 1, "Added %i titles\n", cnt );
 
 	return cnt;
 }
 
-struct entry_t *searchList( struct entry_t *base, struct marklist_t *term, int range ) {
+struct entry_t *searchList( struct entry_t *base, struct marklist_t *term ) {
 	struct entry_t  *result=NULL;
 	struct entry_t  *runner=NULL;
 	int cnt=0;
@@ -384,11 +407,7 @@ struct entry_t *searchList( struct entry_t *base, struct marklist_t *term, int r
 		fail( F_FAIL, "%s: No music loaded", __func__ );
 	}
 
-	if( range & SL_ARTIST ) cnt += matchList( &result, &base, term, SL_ARTIST );
-	if( range & SL_TITLE )  cnt += matchList( &result, &base, term, SL_TITLE );
-	if( range & SL_ALBUM )  cnt += matchList( &result, &base, term, SL_ALBUM );
-	if( range & SL_PATH )   cnt += matchList( &result, &base, term, SL_PATH );
-	if( range & SL_GENRE )  cnt += matchList( &result, &base, term, SL_GENRE );
+	cnt = matchList( &result, &base, term );
 
 	printver( 1, "Created playlist with %i titles\n", cnt );
 
@@ -596,32 +615,8 @@ static struct entry_t *plRemove( struct entry_t *entry ) {
 }
 
 /**
- * compares two titles with regards to the range
- * used for blacklisting based on the current title
- */
-static int matchTitle( struct entry_t *entry, struct entry_t *pattern, unsigned int range ) {
-	switch( range ) {
-		case SL_ALBUM:
-			return checkMatch( entry->album, pattern->album );
-		break;
-		case SL_ARTIST:
-			return checkMatch( entry->artist, pattern->artist );
-		break;
-		case SL_GENRE:
-			return checkMatch( entry->genre, pattern->genre );
-		break;
-		case SL_TITLE:
-			return checkMatch( entry->title, pattern->title );
-		break;
-		default:
-			fail( F_FAIL, "Illegal Range %i for matchTitle()", range );
-	}
-	return 0;
-}
-
-/**
  * Marks an entry as DNP and removes it and additional matching titles
- * from the playlist. Matching is done based on rage
+ * from the playlist. Matching is done based on range
  *
  * returns the next item in the list. If the next item is NULL, the previous
  * item will be returned. If entry was the last item in the list NULL will be
@@ -630,28 +625,44 @@ static int matchTitle( struct entry_t *entry, struct entry_t *pattern, unsigned 
 struct entry_t *removeFromPL( struct entry_t *entry, const unsigned int range ) {
 	struct entry_t *runner=entry;
 	struct entry_t *retval=entry;
+	char pattern[NAMELEN+2];
+
+	pattern[1]='*';
 	switch( range ) {
 		case SL_ALBUM:
+			pattern[0]='l';
+			strlncpy( &pattern[2], entry->album, NAMELEN );
+			break;
 		case SL_ARTIST:
+			pattern[0]='a';
+			strlncpy( &pattern[2], entry->artist, NAMELEN );
+			break;
 		case SL_GENRE:
+			pattern[0]='g';
+			strlncpy( &pattern[2], getGenre( entry ), NAMELEN );
+			break;
 		case SL_TITLE:
-			runner=entry->plnext;
-			while( runner != entry ) {
-				if( matchTitle( runner, entry, range ) ) {
-					runner=plRemove( entry );
-				}
-				else {
-					runner=runner->plnext;
-				}
-			}
-			retval=plRemove(entry);
-		break;
+			pattern[0]='t';
+			strlncpy( &pattern[2], entry->title, NAMELEN );
+			break;
 		case SL_PATH:
-			retval=plRemove(entry);
-		break;
+			return plRemove(entry);
+			break;
 		default:
 			fail( F_FAIL, "Unknown range ID: %i!", range );
 	}
+
+	runner=entry->plnext;
+	while( runner != entry ) {
+		if( matchTitle( runner, pattern ) ) {
+			runner=plRemove( runner );
+		}
+		else {
+			runner=runner->plnext;
+		}
+	}
+	retval=plRemove(entry);
+
 	return retval;
 }
 

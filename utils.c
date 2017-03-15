@@ -412,12 +412,13 @@ int checkMatch( const char* name, const char* pat ) {
 	char loname[1024];
 	int trigger;
 
-	len=MIN(strlen(name), strlen(pat) );
+	strlncpy( loname, name, 1024 );
+
+	len=MIN(strlen(loname), strlen(pat) );
 	trigger=70;
 	if( len <= 20 ) trigger=80;
 	if( len <= 10 ) trigger=88;
 	if( len <= 5 ) trigger=100;
-	strlncpy( loname, name, 1024 );
 	if( trigger <= fncmp( loname, pat ) ){
 		return -1;
 	}
