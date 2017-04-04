@@ -313,7 +313,13 @@ static int getDirs( const char *cd, struct dirent ***dirlist ){
 	return scandir( cd, dirlist, dsel, alphasort);
 }
 
-
+/*
+ * checks if a title entry 'title' matches the search term 'pat'
+ * the test is driven by the first two characters in the
+ * search term. The first character gives the range (taLgp)
+ * the second character notes if the search should be
+ * exact or fuzzy (=*)
+ */
 static int matchTitle( struct entry_t *title, const char* pat ) {
 	int fuzzy=-1;
 	char loname[1024];
@@ -340,7 +346,7 @@ static int matchTitle( struct entry_t *title, const char* pat ) {
 			strlncpy( loname, title->path, 1024 );
 			break;
 		default:
-			fail( F_WARN, "Unknown range %c in %s!", pat[0], pat );
+			fail( F_FAIL, "Unknown range %c in %s!", pat[0], pat );
 			strlncpy( loname, title->path, 1024 );
 		}
 	}
@@ -354,12 +360,7 @@ static int matchTitle( struct entry_t *title, const char* pat ) {
 	}
 
 	else {
-		if( NULL == strstr( loname, pat ) ) {
-			return 0;
-		}
-		else {
-			return -1;
-		}
+		return ( NULL != strstr( loname, lopat ) );
 	}
 }
 
@@ -398,6 +399,12 @@ static int matchList( struct entry_t **result, struct entry_t **base, struct mar
 	return cnt;
 }
 
+/**
+ * Search the music database at 'base' for all terms in the
+ * marklist 'term' all other titles get marked.
+ *
+ * return the first entry in the playlist
+ */
 struct entry_t *searchList( struct entry_t *base, struct marklist_t *term ) {
 	struct entry_t  *result=NULL;
 	struct entry_t  *runner=NULL;
