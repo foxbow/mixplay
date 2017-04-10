@@ -11,16 +11,17 @@
  */
 
 #include "utils.h"
-#include "ncbox.h"
 #include "musicmgr.h"
 #include "database.h"
 #include "mpgutils.h"
+#define FAIL endwin(); fail
+#include "ncbox.h"
 
+#include <ncurses.h>
 #include <stdio.h>
 #include <getopt.h>
 #include <signal.h>
 #include <fcntl.h>
-#include <ncurses.h>
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
@@ -31,8 +32,6 @@
 #ifndef VERSION
 #define VERSION "dev"
 #endif
-
-#define LINE_BUFLEN 256
 
 /**
  * print out CLI usage
@@ -66,159 +65,15 @@ static void usage( char *progname ){
 	exit(0);
 }
 
-static void dumpInfo( struct entry_t *root, int db ) {
-	struct entry_t *current=root;
-	unsigned int maxplayed=0;
-	unsigned int minplayed=UINT_MAX;
-	unsigned int pl=0;
-	unsigned int skipped=0;
-
-	do {
-		if( current->played < minplayed ) minplayed=current->played;
-		if( current->played > maxplayed ) maxplayed=current->played;
-		if( current->skipped > 0 ) skipped++;
-		if( db ) current=current->dbnext;
-		else current=current->plnext;
-	} while( current != root );
-
-	for( pl=minplayed; pl <= maxplayed; pl++ ) {
-		unsigned int pcount=0;
-		do {
-			if( current->played == pl ) pcount++;
-			if( db ) current=current->dbnext;
-			else current=current->plnext;
-		} while( current != root );
-		switch( pl ) {
-		case 0:
-			printf(" Never  played:\t%5i titles\n", pcount );
-			break;
-		case 1:
-			printf(" Once   played:\t%5i titles\n", pcount );
-			break;
-		case 2:
-			printf(" Twice  played:\t%5i titles\n", pcount );
-			break;
-		default:
-			printf("%i times played:\t%5i titles\n", pl, pcount );
-		}
-	}
-
-	printf("skipped:\t%5i titles\n", skipped );
-
-	puts("");
-}
-
-static void drawframe( struct entry_t *current, const char *status, int stream ) {
-	int i, maxlen, pos;
-	int row, col;
-	int middle;
-	char buff[LINE_BUFLEN];
-	struct entry_t *runner;
-
-	if( popUpActive() ) return;
-
-	refresh();
-	getmaxyx(stdscr, row, col);
-
-	// Keep a minimum size to make sure
-	if ((row > 6) && (col > 19)) {
-		// main frame
-		drawbox(0, 1, row - 2, col - 2);
-
-		maxlen = col - 6;
-
-		if( stream ) {
-			middle=2;
-		}
-		else {
-			middle=(row-1)/2;
-		}
-
-		// title
-		dhline( middle-1, 1, col-3 );
-		if( NULL != current ) {
-			strip( buff, current->album, maxlen );
-		} else {
-			strip( buff, "mixplay "VERSION, maxlen );
-		}
-		pos = (col - (strlen(buff) + 2)) / 2;
-		mvprintw(middle-1, pos, " %s ", buff);
-
-		// Set the current playing title
-		if( NULL != current ) {
-			strip(buff, current->display, maxlen);
-			if(current->flags & MP_FAV) {
-				attron(A_BOLD);
-			}
-
-		}
-		else {
-			strcpy( buff, "---" );
-		}
-		setTitle(buff);
-
-		pos = (col - strlen(buff)) / 2;
-		mvhline(middle, 2, ' ', maxlen + 2);
-		mvprintw(middle, pos, "%s", buff);
-		attroff(A_BOLD);
-
-		dhline( middle+1, 1, col-3 );
-
-		// print the status
-		strip(buff, status, maxlen);
-		pos = (col - (strlen(buff) + 2)) / 2;
-		mvprintw( row - 2, pos, " %s ", buff);
-
-		// song list
-		if( NULL != current ) {
-			// previous songs
-			runner=current->plprev;
-			for( i=middle-2; i>0; i-- ){
-				if( current != runner ) {
-					strip( buff, runner->display, maxlen );
-					if(runner->flags & MP_FAV) {
-						attron(A_BOLD);
-					}
-					runner=runner->plprev;
-				}
-				else {
-					strcpy( buff, "---" );
-				}
-				mvhline( i, 2, ' ', maxlen + 2);
-				mvprintw( i, 3, "%s", buff);
-				attroff(A_BOLD);
-			}
-			// past songs
-			runner=current->plnext;
-			for( i=middle+2; i<row-2; i++ ){
-				if( current != runner ) {
-					strip( buff, runner->display, maxlen );
-					if(runner->flags & MP_FAV ) {
-						attron(A_BOLD);
-					}
-					runner=runner->plnext;
-				}
-				else {
-					strcpy( buff, "---" );
-				}
-				mvhline( i, 2, ' ', maxlen + 2);
-				mvprintw( i, 2, "%s", buff);
-				attroff(A_BOLD);
-			}
-		}
-	}
-	refresh();
-}
-
 /**
  * make mpeg123 play the given title
  */
 static void sendplay( int fd, struct entry_t *song ) {
-	char line[LINE_BUFLEN]="load ";
-	strncat( line, song->path, LINE_BUFLEN );
-	strncat( line, "\n", LINE_BUFLEN );
-	if ( write( fd, line, LINE_BUFLEN ) < strlen(line) ) {
-		fail( F_FAIL, "Could not write\n%s", line );
+	char line[MAXPATHLEN]="load ";
+	strncat( line, song->path, MAXPATHLEN );
+	strncat( line, "\n", MAXPATHLEN );
+	if ( write( fd, line, MAXPATHLEN ) < strlen(line) ) {
+		FAIL( F_FAIL, "Could not write\n%s", line );
 	}
 }
 
@@ -232,7 +87,7 @@ static void copyTitle( struct entry_t *title, const char* target, const unsigned
 
 	buffer=malloc( CP_BUFFSIZE );
 	if( NULL == buffer ) {
-		fail( errno, "Out of memory!" );
+		FAIL( errno, "Out of memory!" );
 	}
 
 	snprintf( filename, MAXPATHLEN, "%strack%03i.mp3", target, index );
@@ -241,19 +96,19 @@ static void copyTitle( struct entry_t *title, const char* target, const unsigned
 
 	in=fopen( title->path, "rb" );
 	if( NULL == in ){
-		fail( errno, "Couldn't open %s for reading", title->path );
+		FAIL( errno, "Couldn't open %s for reading", title->path );
 	}
 
 	out=fopen( filename, "wb" );
 	if( NULL == out ){
-		fail( errno, "Couldn't open %s for writing", filename );
+		FAIL( errno, "Couldn't open %s for writing", filename );
 	}
 
 	size = fread( buffer, sizeof( unsigned char ), CP_BUFFSIZE, in );
 	while( 0 != size ){
 		activity("Copying file %03i", index );
 		if( 0 == fwrite( buffer, sizeof( unsigned char ), size, out ) )
-			fail( errno, "Target is full!" );
+			FAIL( errno, "Target is full!" );
 		size = fread( buffer, sizeof( unsigned char ), CP_BUFFSIZE, in );
 	}
 
@@ -280,9 +135,9 @@ int main(int argc, char **argv) {
 	int p_status[2][2];
 	int p_command[2][2];
 
-	char line[LINE_BUFLEN];
-	char status[LINE_BUFLEN] = "INIT";
-	char tbuf[LINE_BUFLEN];
+	char line[MAXPATHLEN];
+	char status[MAXPATHLEN] = "INIT";
+	char tbuf[MAXPATHLEN];
 	char basedir[MAXPATHLEN];
 	char confdir[MAXPATHLEN];
 	char target[MAXPATHLEN] = "";
@@ -332,7 +187,7 @@ int main(int argc, char **argv) {
 	if( NULL != fp ) {
 		do {
 			i=0;
-			fgets( line, LINE_BUFLEN, fp );
+			fgets( line, MAXPATHLEN, fp );
 			if( strlen(line) > 2 ) {
 				switch( line[0] ) {
 				case 'd':
@@ -344,7 +199,7 @@ int main(int argc, char **argv) {
 				case '#':
 					break;
 				default:
-					fail( F_FAIL, "Config error: %s", line );
+					FAIL( F_FAIL, "Config error: %s", line );
 					break;
 				}
 			}
@@ -354,7 +209,7 @@ int main(int argc, char **argv) {
 
 	// if no basedir has been set, use the current directory as default
 	if( 0 == strlen(basedir) && ( NULL == getcwd( basedir, MAXPATHLEN ) ) ) {
-		fail( errno, "Could not get current directory!" );
+		FAIL( errno, "Could not get current directory!" );
 	}
 
 	// parse command line options
@@ -406,7 +261,7 @@ int main(int argc, char **argv) {
 			break;
 		case 'q':
 			if( !isDir(optarg) ) {
-				fail( F_FAIL, "%s is not a directory", optarg );
+				FAIL( F_FAIL, "%s is not a directory", optarg );
 			}
 			strncpy( target, optarg, MAXPATHLEN );
 			break;
@@ -525,7 +380,7 @@ int main(int argc, char **argv) {
 		printf("music directory needs to be set.\n");
 		printf("It will be set up now\n");
 		if( mkdir( confdir, 0700 ) == -1 ) {
-			fail( errno, "Could not create config dir %s", confdir );
+			FAIL( errno, "Could not create config dir %s", confdir );
 		}
 
 		while(1){
@@ -544,10 +399,10 @@ int main(int argc, char **argv) {
 			fputs( basedir, fp );
 			fputc( '\n', fp );
 			fclose(fp);
-			fail( F_FAIL, "Done." );
+			FAIL( F_FAIL, "Done." );
 		}
 		else {
-			fail( errno, "Could not open %s", line );
+			FAIL( errno, "Could not open %s", line );
 		}
 	}
 
@@ -648,15 +503,15 @@ int main(int argc, char **argv) {
 
 			pid[i] = fork();
 			if (0 > pid[i]) {
-				fail( errno, "could not fork" );
+				FAIL( errno, "could not fork" );
 			}
 			// child process
 			if (0 == pid[i]) {
 				if (dup2(p_command[i][0], STDIN_FILENO) != STDIN_FILENO) {
-					fail( errno, "Could not dup stdin for player %i", i+1 );
+					FAIL( errno, "Could not dup stdin for player %i", i+1 );
 				}
 				if (dup2(p_status[i][1], STDOUT_FILENO) != STDOUT_FILENO) {
-					fail( errno, "Could not dup stdout for player %i", i+1 );
+					FAIL( errno, "Could not dup stdout for player %i", i+1 );
 				}
 
 				// this process needs no pipes
@@ -668,7 +523,7 @@ int main(int argc, char **argv) {
 				// Start mpg123 in Remote mode
 				execlp("mpg123", "mpg123", "-R", "2>/dev/null", NULL);
 				// execlp("mpg123", "mpg123", "-R", "--remote-err", NULL); // breaks the reply parsing!
-				fail( errno, "Could not exec mpg123" );
+				FAIL( errno, "Could not exec mpg123" );
 			}
 			close(p_command[i][0]);
 			close(p_status[i][1]);
@@ -835,7 +690,7 @@ int main(int argc, char **argv) {
 				key=readline(line, 512, p_status[fdset?0:1][0]);
 				if( ( key > 0 ) && ( outvol > 0 ) && ( line[1] == 'F' ) ){
 					outvol--;
-					snprintf( line, LINE_BUFLEN, "volume %i\n", outvol );
+					snprintf( line, MAXPATHLEN, "volume %i\n", outvol );
 					write( p_command[fdset?0:1][1], line, strlen(line) );
 				}
 			}
@@ -899,7 +754,7 @@ int main(int argc, char **argv) {
 						redraw=1;
 					break;
 					case 'T': // TAG reply
-						fail( F_FAIL, "Got TAG reply!" );
+						FAIL( F_FAIL, "Got TAG reply!" );
 						break;
 					break;
 					case 'J': // JUMP reply
@@ -931,7 +786,7 @@ int main(int argc, char **argv) {
 						// file play
 						else {
 							q=(30*intime)/(rem+intime);
-							memset( tbuf, 0, LINE_BUFLEN );
+							memset( tbuf, 0, MAXPATHLEN );
 							for( i=0; i<30; i++ ) {
 								if( i < q ) tbuf[i]='=';
 								else if( i == q ) tbuf[i]='>';
@@ -967,7 +822,7 @@ int main(int argc, char **argv) {
 							}
 							if( invol < 100 ) {
 								invol++;
-								snprintf( line, LINE_BUFLEN, "volume %i\n", invol );
+								snprintf( line, MAXPATHLEN, "volume %i\n", invol );
 								write( p_command[fdset][1], line, strlen(line) );
 							}
 
@@ -1020,7 +875,7 @@ int main(int argc, char **argv) {
 						redraw=0;
 					break;
 					case 'E':
-						fail( F_FAIL, "ERROR: %s\nIndex: %i\nName: %s\nPath: %s", line,
+						FAIL( F_FAIL, "ERROR: %s\nIndex: %i\nName: %s\nPath: %s", line,
 								current->key,
 								current->display,
 								current->path);
@@ -1041,10 +896,10 @@ int main(int argc, char **argv) {
 	} // root==NULL
 	else {
 		if( usedb ) {
-			fail( F_WARN, "No matching music found in %s", dbname );
+			FAIL( F_WARN, "No matching music found in %s", dbname );
 		}
 		else {
-			fail( F_WARN, "No matching music found at %s", basedir );
+			FAIL( F_WARN, "No matching music found at %s", basedir );
 		}
 	}
 	return 0;

@@ -10,6 +10,7 @@ language.settings.xml
 # Binaries
 bin/mixplay
 bin/scanformusic
+core
 
 # Object files
 *.o

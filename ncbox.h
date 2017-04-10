@@ -5,6 +5,8 @@
 #define VER '|'
 #define EDG "+"
 
+#include "musicmgr.h"
+
 /**
  * curses helper functions
  */
@@ -15,5 +17,6 @@ void dvline(int r, int c, int len);
 void drawbox(int r0, int c0, int r1, int c1);
 int popUpActive();
 void popDown();
+void drawframe( struct entry_t *current, const char *status, int stream );
 
 #endif /* NCBOX_H_ */

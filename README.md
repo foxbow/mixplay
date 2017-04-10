@@ -5,6 +5,9 @@ replacement to play background music but stay sleek enough to run on a mini ARM 
 The featurelist will probably not grow that much further as I just want to play music without the bloat of
 a full featured management software.
 
+# gmixplay
+the glade/gtk front end to mixplay. This is stil in development and due to changes in layout and features but will finally replace the ncurses mixplay.
+
 ### Features
 * Music database to avoid scanning on every start
 * Skipping titles forward/backward
@@ -12,7 +15,7 @@ a full featured management software.
 * favourites
 * do-not-play lists
 * shuffle play that avoids the same artist twice in a row
-* shuffle will play each file before shuffling again
+* shuffle will play each title before shuffling again
 * keyword play
 * URL stream play
 * playlist support
@@ -41,7 +44,7 @@ a full featured management software.
 ### Control Keys
 * [SPACE] - toggle pause
 * s - stop playing
-* q - quite player
+* q - quit player
 
 on playlists:
 * i - show path information
@@ -58,5 +61,4 @@ on playlists:
 ### Planned
 * native MP3 streaming (depends on more recent libmp3/libout)
 * serve stream (unlikely but desireable)
-* interface revamp (dependant on actual hardware)
 

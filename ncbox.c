@@ -3,6 +3,7 @@
  */
 
 #include "ncbox.h"
+#include "utils.h"
 #include <ncurses.h>
 #include <string.h>
 #include <stdlib.h>
@@ -148,4 +149,106 @@ void drawbox(int r0, int c0, int r1, int c1) {
 	dhline(r1, c0, c1 - c0);
 	mvvline(r0 + 1, c0, VER, r1 - r0 - 1);
 	mvvline(r0 + 1, c1, VER, r1 - r0 - 1);
+}
+
+void drawframe( struct entry_t *current, const char *status, int stream ) {
+	int i, maxlen, pos;
+	int row, col;
+	int middle;
+	char buff[MAXPATHLEN];
+	struct entry_t *runner;
+
+	if( popUpActive() ) return;
+
+	refresh();
+	getmaxyx(stdscr, row, col);
+
+	// Keep a minimum size to make sure
+	if ((row > 6) && (col > 19)) {
+		// main frame
+		drawbox(0, 1, row - 2, col - 2);
+
+		maxlen = col - 6;
+
+		if( stream ) {
+			middle=2;
+		}
+		else {
+			middle=(row-1)/2;
+		}
+
+		// title
+		dhline( middle-1, 1, col-3 );
+		if( NULL != current ) {
+			strip( buff, current->album, maxlen );
+		} else {
+			strip( buff, "mixplay "VERSION, maxlen );
+		}
+		pos = (col - (strlen(buff) + 2)) / 2;
+		mvprintw(middle-1, pos, " %s ", buff);
+
+		// Set the current playing title
+		if( NULL != current ) {
+			strip(buff, current->display, maxlen);
+			if(current->flags & MP_FAV) {
+				attron(A_BOLD);
+			}
+
+		}
+		else {
+			strcpy( buff, "---" );
+		}
+		setTitle(buff);
+
+		pos = (col - strlen(buff)) / 2;
+		mvhline(middle, 2, ' ', maxlen + 2);
+		mvprintw(middle, pos, "%s", buff);
+		attroff(A_BOLD);
+
+		dhline( middle+1, 1, col-3 );
+
+		// print the status
+		strip(buff, status, maxlen);
+		pos = (col - (strlen(buff) + 2)) / 2;
+		mvprintw( row - 2, pos, " %s ", buff);
+
+		// song list
+		if( NULL != current ) {
+			// previous songs
+			runner=current->plprev;
+			for( i=middle-2; i>0; i-- ){
+				if( current != runner ) {
+					strip( buff, runner->display, maxlen );
+					if(runner->flags & MP_FAV) {
+						attron(A_BOLD);
+					}
+					runner=runner->plprev;
+				}
+				else {
+					strcpy( buff, "---" );
+				}
+				mvhline( i, 2, ' ', maxlen + 2);
+				mvprintw( i, 3, "%s", buff);
+				attroff(A_BOLD);
+			}
+			// past songs
+			runner=current->plnext;
+			for( i=middle+2; i<row-2; i++ ){
+				if( current != runner ) {
+					strip( buff, runner->display, maxlen );
+					if(runner->flags & MP_FAV ) {
+						attron(A_BOLD);
+					}
+					runner=runner->plnext;
+				}
+				else {
+					strcpy( buff, "---" );
+				}
+				mvhline( i, 2, ' ', maxlen + 2);
+				mvprintw( i, 2, "%s", buff);
+				attroff(A_BOLD);
+			}
+		}
+	}
+	refresh();
 }

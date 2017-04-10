@@ -16,216 +16,6 @@
 #include <stdio.h>
 #include <errno.h>
 
-// default genres by number
-char *genres[192] = {
-		"Blues"
-		,"Classic Rock"
-		,"Country"
-		,"Dance"
-		,"Disco"
-		,"Funk"
-		,"Grunge"
-		,"Hip-Hop"
-		,"Jazz"
-		,"Metal"
-		,"New Age"
-		,"Oldies"
-		,"Other"
-		,"Pop"
-		,"R&B"
-		,"Rap"
-		,"Reggae"
-		,"Rock"
-		,"Techno"
-		,"Industrial"
-		,"Alternative"
-		,"Ska"
-		,"Death Metal"
-		,"Pranks"
-		,"Soundtrack"
-		,"Euro-Techno"
-		,"Ambient"
-		,"Trip-Hop"
-		,"Vocal"
-		,"Jazz+Funk"
-		,"Fusion"
-		,"Trance"
-		,"Classical"
-		,"Instrumental"
-		,"Acid"
-		,"House"
-		,"Game"
-		,"Sound Clip"
-		,"Gospel"
-		,"Noise"
-		,"AlternRock"
-		,"Bass"
-		,"Soul"
-		,"Punk"
-		,"Space"
-		,"Meditative"
-		,"Instrumental Pop"
-		,"Instrumental Rock"
-		,"Ethnic"
-		,"Gothic"
-		,"Darkwave"
-		,"Techno-Industrial"
-		,"Electronic"
-		,"Pop-Folk"
-		,"Eurodance"
-		,"Dream"
-		,"Southern Rock"
-		,"Comedy"
-		,"Cult"
-		,"Gangsta"
-		,"Top 40"
-		,"Christian Rap"
-		,"Pop/Funk"
-		,"Jungle"
-		,"Native American"
-		,"Cabaret"
-		,"New Wave"
-		,"Psychadelic"
-		,"Rave"
-		,"Showtunes"
-		,"Trailer"
-		,"Lo-Fi"
-		,"Tribal"
-		,"Acid Punk"
-		,"Acid Jazz"
-		,"Polka"
-		,"Retro"
-		,"Musical"
-		,"Rock & Roll"
-		,"Hard Rock"
-		,"Folk"
-		,"Folk-Rock"
-		,"National Folk"
-		,"Swing"
-		,"Fast Fusion"
-		,"Bebob"
-		,"Latin"
-		,"Revival"
-		,"Celtic"
-		,"Bluegrass"
-		,"Avantgarde"
-		,"Gothic Rock"
-		,"Progressive Rock"
-		,"Psychedelic Rock"
-		,"Symphonic Rock"
-		,"Slow Rock"
-		,"Big Band"
-		,"Chorus"
-		,"Easy Listening"
-		,"Acoustic"
-		,"Humour"
-		,"Speech"
-		,"Chanson"
-		,"Opera"
-		,"Chamber Music"
-		,"Sonata"
-		,"Symphony"
-		,"Booty Bass"
-		,"Primus"
-		,"Porn Groove"
-		,"Satire"
-		,"Slow Jam"
-		,"Club"
-		,"Tango"
-		,"Samba"
-		,"Folklore"
-		,"Ballad"
-		,"Power Ballad"
-		,"Rhythmic Soul"
-		,"Freestyle"
-		,"Duet"
-		,"Punk Rock"
-		,"Drum Solo"
-		,"Acapella"
-		,"Euro-House"
-		,"Dance Hall"
-		,"Drum & Bass"
-		,"Club-House"
-		,"Hardcore Techno"
-		,"Terror"
-		,"Indie"
-		,"BritPop"
-		,"Negerpunk"
-		,"Polsk Punk"
-		,"Beat"
-		,"Christian Gangsta Rap"
-		,"Heavy Metal"
-		,"Black Metal"
-		,"Crossover"
-		,"Contemporary Christian"
-		,"Christian Rock"
-		,"Merengue"
-		,"Salsa"
-		,"Thrash Metal"
-		,"Anime"
-		,"Jpop"
-		,"Synthpop"
-		,"Abstract"
-		,"Art Rock"
-		,"Baroque"
-		,"Bhangra"
-		,"Big Beat"
-		,"Breakbeat"
-		,"Chillout"
-		,"Downtempo"
-		,"Dub"
-		,"EBM"
-		,"Eclectic"
-		,"Electro"
-		,"Electroclash"
-		,"Emo"
-		,"Experimental"
-		,"Garage"
-		,"Global"
-		,"IDM"
-		,"Illbient"
-		,"Industro-Goth"
-		,"Jam Band"
-		,"Krautrock"
-		,"Leftfield"
-		,"Lounge"
-		,"Math Rock"
-		,"New Romantic"
-		,"Nu-Breakz"
-		,"Post-Punk"
-		,"Post-Rock"
-		,"Psytrance"
-		,"Shoegaze"
-		,"Space Rock"
-		,"Trop Rock"
-		,"World Music"
-		,"Neoclassical"
-		,"Audiobook"
-		,"Audio Theatre"
-		,"Neue Deutsche Welle"
-		,"Podcast"
-		,"Indie Rock"
-		,"G-Funk"
-		,"Dubstep"
-		,"Garage Rock"
-		,"Psybient"
-};
-
-/**
- * returns the genre from the tag
- * either it's a number or a literal. If it's a number, the
- * predefined tag will be returned otherwise the literal text
- */
-static char *getGenre( struct entry_t *title ) {
-	unsigned int gno;
-	gno=atoi( title->genre );
-	if( ( 0 == gno ) && ( title->genre[0] != '0' ) ) {
-		return title->genre;
-	}
-	if( gno > 191 ) return "invalid";
-	return genres[gno];
-}
-
 /**
  * resets the counted flag on all titles if at least 50% of the titles have been counted
  */
@@ -340,7 +130,7 @@ static int matchTitle( struct entry_t *title, const char* pat ) {
 			strlncpy( loname, title->album, 1024 );
 			break;
 		case 'g':
-			strlncpy( loname, getGenre( title ), 1024 );
+			strlncpy( loname, title->genre, 1024 );
 			break;
 		case 'p':
 			strlncpy( loname, title->path, 1024 );
@@ -646,7 +436,7 @@ struct entry_t *removeFromPL( struct entry_t *entry, const unsigned int range ) 
 			break;
 		case SL_GENRE:
 			pattern[0]='g';
-			strlncpy( &pattern[2], getGenre( entry ), NAMELEN );
+			strlncpy( &pattern[2], entry->genre, NAMELEN );
 			break;
 		case SL_TITLE:
 			pattern[0]='t';
@@ -1085,4 +875,46 @@ void dumpTitles( struct entry_t *root, const int pl ) {
 		else ptr=ptr->dbnext;
 	} while( ptr != root );
 	// fail( F_WARN, "END DUMP" );
+}
+
+void dumpInfo( struct entry_t *root, int db ) {
+	struct entry_t *current=root;
+	unsigned int maxplayed=0;
+	unsigned int minplayed=-1; // UINT_MAX;
+	unsigned int pl=0;
+	unsigned int skipped=0;
+
+	do {
+		if( current->played < minplayed ) minplayed=current->played;
+		if( current->played > maxplayed ) maxplayed=current->played;
+		if( current->skipped > 0 ) skipped++;
+		if( db ) current=current->dbnext;
+		else current=current->plnext;
+	} while( current != root );
+
+	for( pl=minplayed; pl <= maxplayed; pl++ ) {
+		unsigned int pcount=0;
+		do {
+			if( current->played == pl ) pcount++;
+			if( db ) current=current->dbnext;
+			else current=current->plnext;
+		} while( current != root );
+		switch( pl ) {
+		case 0:
+			printf(" Never  played:\t%5i titles\n", pcount );
+			break;
+		case 1:
+			printf(" Once   played:\t%5i titles\n", pcount );
+			break;
+		case 2:
+			printf(" Twice  played:\t%5i titles\n", pcount );
+			break;
+		default:
+			printf("%i times played:\t%5i titles\n", pl, pcount );
+		}
+	}
+
+	printf("skipped:\t%5i titles\n", skipped );
+
+	puts("");
 }

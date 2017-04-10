@@ -116,7 +116,6 @@ char *strip( char *buff, const char *text, const size_t maxlen ) {
 void fail( int error, const char* msg, ... ){
 	va_list args;
 	va_start( args, msg );
-	endwin();
 	if(error <= 0 ) {
 		fprintf( stdout, "\n");
 		vfprintf( stdout, msg, args );
