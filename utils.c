@@ -35,7 +35,7 @@ void muteVerbosity() {
  * be the real current directory and may be used to maintain config and data
  * directory structures
  */
-char *abspath( char *path, char *basedir, int len ){
+char *abspath( char *path, const char *basedir, int len ){
 	char *buff;
 
 	if( path[0] != '/' ) {
@@ -289,23 +289,6 @@ int strlncat( char *dest, const char *src, const size_t len ) {
 	dest=toLower(dest);
 	return strlen(dest);
 }
-
-/**
- * add a line to a file
- */
-void addToFile( const char *path, const char *line ) {
-	FILE *fp;
-	fp=fopen( path, "a" );
-	if( NULL == fp ) {
-		fail( errno, "Could not open %s for writing ", path );
-	}
-	fputs( line, fp );
-	if( '\n' != line[strlen(line)] ) {
-		fputc( '\n', fp );
-	}
-	fclose( fp );
-}
-
 
 /*
  * internally used to set a bit in a long bitlist

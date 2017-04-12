@@ -663,21 +663,21 @@ int main(int argc, char **argv) {
 							write( p_command[fdset][1], "JUMP 0\n", 8 );
 						break;
 						case 'b':
-							addToFile( dnpname, strrchr( current->path, '/')+1 );
+							addToFile( dnpname, current->display, "d=" );
 							current=removeFromPL( current, SL_TITLE );
 							order=1;
 							write( p_command[fdset][1], "STOP\n", 6 );
 						break;
 						case 'B':
-							addToFile( dnpname, current->album );
-							popUp( 2, "Added %s to the DNP list\nYMMV..", current->album );
+							addToFile( dnpname, current->album, "l=" );
+							popUp( 2, "Added %s to the DNP list\n", current->album );
 							current=removeFromPL( current, SL_ARTIST );
 							order=1;
 							write( p_command[fdset][1], "STOP\n", 6 );
 						break;
 						case 'f': // toggles the favourite flag on a title
 							if( !(current->flags & MP_FAV) ) {
-								addToFile( favname, strrchr( current->path, '/')+1 );
+								addToFile( favname, current->display, "d=" );
 								current->flags|=MP_FAV;
 							}
 						break;

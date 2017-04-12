@@ -9,6 +9,7 @@ language.settings.xml
 
 # Binaries
 bin/mixplay
+bin/gmixplay
 bin/scanformusic
 core
 

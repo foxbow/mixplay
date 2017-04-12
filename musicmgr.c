@@ -37,6 +37,50 @@ void newCount( struct entry_t *root) {
 	}
 }
 
+
+struct entry_t *cleanTitles( struct entry_t *root ) {
+	struct entry_t *runner=root;
+	if( NULL != root ) {
+		root->dbprev->dbnext=NULL;
+		while( runner != NULL ) {
+			root=runner->dbnext;
+			free(runner);
+			runner=root;
+		}
+	}
+	return NULL;
+}
+
+struct marklist_t *cleanList( struct marklist_t *root ) {
+	struct marklist_t *runner=root;
+	if( NULL != root ) {
+		while( runner != NULL ) {
+			root=runner->next;
+			free(runner);
+			runner=root;
+		}
+	}
+	return NULL;
+}
+
+/**
+ * add a line to a file
+ */
+void addToFile( const char *path, const char *line, const char* prefix ) {
+	FILE *fp;
+	fp=fopen( path, "a" );
+	if( NULL == fp ) {
+		fail( errno, "Could not open %s for writing ", path );
+	}
+	fputs( prefix, fp );
+	fputs( line, fp );
+	if( '\n' != line[strlen(line)] ) {
+		fputc( '\n', fp );
+	}
+	fclose( fp );
+}
+
+
 /**
  * inserts a title into the playlist chain. Creates a new playlist
  * startpoint if no target is set.
@@ -111,13 +155,13 @@ static int getDirs( const char *cd, struct dirent ***dirlist ){
  * exact or fuzzy (=*)
  */
 static int matchTitle( struct entry_t *title, const char* pat ) {
-	int fuzzy=-1;
+	int fuzzy=0;
 	char loname[1024];
 	char lopat[1024];
 
 	if( ( '=' == pat[1] ) || ( '*' == pat[1] ) ) {
 		strlncpy( lopat, &pat[2], 1024 );
-		if( '=' == pat[1] ) fuzzy=0;
+		if( '*' == pat[1] ) fuzzy=-1;
 
 		switch( pat[0] ) {
 		case 't':
@@ -132,16 +176,18 @@ static int matchTitle( struct entry_t *title, const char* pat ) {
 		case 'g':
 			strlncpy( loname, title->genre, 1024 );
 			break;
-		case 'p':
+		case 'd':
+			strlncpy( loname, title->display, 1024 );
+			break;
+		case 'p': // @obsolete!
 			strlncpy( loname, title->path, 1024 );
 			break;
 		default:
 			fail( F_FAIL, "Unknown range %c in %s!", pat[0], pat );
-			strlncpy( loname, title->path, 1024 );
 		}
 	}
 	else {
-		strlncpy( loname, title->path, 1024 );
+		strlncpy( loname, title->display, 1024 );
 		strlncpy( lopat, pat, 1024 );
 	}
 
@@ -156,7 +202,7 @@ static int matchTitle( struct entry_t *title, const char* pat ) {
 
 /**
  * range is set via entry:
- * first char:  talgp (Title, Artist, aLbum, Genre, Path )
+ * first char:  talgd[p] (Title, Artist, aLbum, Genre, Display[, Path] )
  * second char: =*
  *
  * if the second char is anything else, the default (p=) is used.
@@ -231,7 +277,6 @@ struct entry_t *searchList( struct entry_t *base, struct marklist_t *term ) {
 struct entry_t *applyDNPlist( struct entry_t *base, struct marklist_t *list ) {
 	struct entry_t  *pos = base;
 	struct marklist_t *ptr = list;
-	char loname[NAMELEN+MAXPATHLEN];
 	int cnt=0;
 
 	if( NULL == base ) {
@@ -243,13 +288,9 @@ struct entry_t *applyDNPlist( struct entry_t *base, struct marklist_t *list ) {
 	}
 
 	do{
-		strlncpy( loname, pos->path, NAMELEN+MAXPATHLEN );
-		strlncat( loname, pos->display, NAMELEN+MAXPATHLEN-strlen(loname) );
-
 		ptr=list;
 		while( ptr ){
-			if( strstr( loname, ptr->dir ) ) {
-//				if( pos == base ) base=base->dbnext; // check if this makes sense
+			if( matchTitle( pos, ptr->dir ) ) {
 				pos->flags |= MP_DNP;
 				cnt++;
 				break;
@@ -783,7 +824,7 @@ struct entry_t *skipTitles( struct entry_t *current, int num, const int global )
  * This function sets the favourite bit on titles found in the given list
  * a literal comparison is used to identify true favourites
  */
-int applyFavourites( struct entry_t *root, struct marklist_t *favourites ) {
+struct entry_t *applyFavourites( struct entry_t *root, struct marklist_t *favourites ) {
 	char loname[MAXPATHLEN];
 	struct marklist_t *ptr = NULL;
 	struct entry_t *runner=root;
@@ -806,7 +847,7 @@ int applyFavourites( struct entry_t *root, struct marklist_t *favourites ) {
 
 	printver( 1, "Marked %i favourites\n", cnt );
 
-	return 0;
+	return root;
 }
 
 /*

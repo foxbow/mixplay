@@ -2,6 +2,7 @@
 #define __GLADEUTILS_H__
 
 #include "musicmgr.h"
+#include <glib.h>
 #include <gtk/gtk.h>
 
 #define UI_FILE "gmixplay.glade"
@@ -13,6 +14,7 @@
 #define MPCMD_MDNP 4
 #define MPCMD_MFAV 5
 #define MPCMD_REPL 6
+#define MPCMD_NXTP 7
 
 /* Convenience macros for obtaining objects from UI file */
 #define MP_GET_OBJECT( builder, name, type, data ) \
@@ -47,13 +49,24 @@ struct _MpData
 	GtkWidget *play;
 	GtkWidget *down;
 	GtkWidget *skip;
+	GtkWidget *noentry;
+	GtkWidget *menu_profiles;
+	GtkWidget *menu_streams;
+	GtkWidget *button_profile;
 };
 
 /**
- * holds the widgets and pipes for communication
+ * holds the widgets and pipesnoentry for communication
  */
-struct control_t {
+struct mpcontrol_t {
 	MpData *widgets;
+	char *musicdir;
+	unsigned long profiles;
+	unsigned long active;
+	char **profile;
+	unsigned long streams;
+	char **stream;
+	char **sname;
 	int p_status[2][2];
 	int p_command[2][2];
 	struct entry_t *root;
@@ -66,12 +79,10 @@ struct control_t {
 	char playtime[10];
 	char remtime[10];
 	int percent;
-	int stream;
+	int playstream;
 	int command;
 	int status;
 };
 
 void popUp( int time, const char *text, ... );
-void drawframe( struct entry_t *current, const char *status, int stream );
-
 #endif /* __GLADEUTILS_H__ */

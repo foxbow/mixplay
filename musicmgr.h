@@ -50,6 +50,8 @@ struct marklist_t {
 /**
  * Music helper functions
  */
+void addToFile( const char *path, const char *line, const char* prefix );
+
 struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedir );
 struct entry_t *shuffleTitles( struct entry_t *base );
 struct entry_t *rewindTitles( struct entry_t *base );
@@ -60,13 +62,17 @@ struct entry_t *skipTitles( struct entry_t *current, int num, const int global )
 struct entry_t *applyDNPlist( struct entry_t *base, struct marklist_t *list );
 struct entry_t *searchList( struct entry_t *base, struct marklist_t *term );
 struct entry_t *DNPSkip( struct entry_t *base, const unsigned int level );
+struct entry_t *applyFavourites( struct entry_t *root, struct marklist_t *list );
+
+struct entry_t *cleanTitles( struct entry_t *root );
+struct marklist_t *cleanList( struct marklist_t *root );
+
 void moveEntry( struct entry_t *entry, struct entry_t *pos );
 void newCount( struct entry_t * root);
 unsigned int getLowestPlaycount( struct entry_t *base, const int global );
 struct marklist_t *loadList( const char *path );
 int isMusic( const char *name );
 struct marklist_t *addToList( const char *line, struct marklist_t **list );
-int applyFavourites( struct entry_t *root, struct marklist_t *list );
 void dumpTitles( struct entry_t *root, const int pl );
 void dumpInfo( struct entry_t *root, int db );
 #endif /* MUSICMGR_H_ */

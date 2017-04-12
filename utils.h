@@ -34,7 +34,6 @@ void printver( int vl, const char *msg, ... );
 /**
  * General utility functions
  */
-void addToFile( const char *path, const char *line );
 void setTitle(const char* title);
 void fail( int error, const char* msg, ... );
 int strlncpy( char *dest, const char *src, const size_t len );
@@ -46,7 +45,7 @@ int isURL( const char *uri );
 int isDir( const char *path );
 int readline( char *line, size_t len, int fd );
 void activity( const char *msg, ... );
-char *abspath( char *path, char *basedir, int len );
+char *abspath( char *path, const char *basedir, int len );
 int checkMatch( const char* name, const char* pat );
 
 #endif
