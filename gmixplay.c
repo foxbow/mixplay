@@ -59,7 +59,7 @@ static int updateUI( void *data ) {
 				control->widgets->play );
 	}
 
-#ifdef debug
+#ifdef DEBUG
 	if( control->current->skipped > 0 ) {
 		sprintf( buff, "%2i", control->current->skipped );
 		gtk_button_set_label( GTK_BUTTON( control->widgets->button_next ),
@@ -114,11 +114,11 @@ static void setProfile( struct mpcontrol_t *ctrl, const char *basedir, const cha
 
 	ctrl->favname=calloc( MAXPATHLEN, sizeof(char) );
 	snprintf( ctrl->favname, MAXPATHLEN, "%s/%s.fav", basedir, profile );
-
 	dnplist=loadList( ctrl->dnpname );
 	favourites=loadList( ctrl->favname );
 
 	cleanTitles( ctrl->root );
+
 	ctrl->root=dbGetMusic( ctrl->dbname );
 	if( NULL == ctrl->root ) {
 		fail( F_FAIL, "No music/database at %s", ctrl->dbname );
@@ -132,15 +132,9 @@ static void setProfile( struct mpcontrol_t *ctrl, const char *basedir, const cha
 	cleanList( favourites );
 }
 
-static struct mpcontrol_t *loadConfig( const char *path ) {
-	struct mpcontrol_t *config;
+static void loadConfig( struct mpcontrol_t *config, const char *path ) {
 	GKeyFile	*keyfile;
 	GError		*error=NULL;
-
-	config = calloc( 1, sizeof( struct mpcontrol_t) );
-	if( NULL == config ) {
-		fail( errno, "Could not create config structure!" );
-	}
 
 	keyfile=g_key_file_new();
 	if( ! g_key_file_load_from_file( keyfile, path, G_KEY_FILE_NONE, &error ) ) {
@@ -169,8 +163,6 @@ static struct mpcontrol_t *loadConfig( const char *path ) {
 			fail( F_FAIL, "Streams set but no names!\n%s", error->message );
 		}
 	}
-
-	return config;
 }
 
 /**
@@ -423,44 +415,46 @@ int main( int argc, char **argv ) {
     GtkBuilder *builder;
     GError     *error = NULL;
 
-    struct mpcontrol_t *control;
+    struct mpcontrol_t control;
 
-    int i;
-    int db=0;
-	pid_t     pid[2];
-	pthread_t tid;
+    int			i;
+    int 		db=0;
+	pid_t		pid[2];
+	pthread_t	tid;
 
 	char basedir[MAXPATHLEN]; // = ".";
 	char confdir[MAXPATHLEN]; // = "~/.mixplay";
 	char conffile[MAXPATHLEN]; //  = "mixplay.conf";
 
-	// The handles to talk with the player processes
+#ifdef DEBUG
+	setVerbosity(1);
+#else
 	muteVerbosity();
-
+#endif
 	memset( basedir, 0, MAXPATHLEN );
 
 	// load default configuration
 	snprintf( confdir, MAXPATHLEN, "%s/.mixplay", getenv("HOME") );
 	snprintf( conffile, MAXPATHLEN, "%s/mixplay.conf", confdir );
-	control=loadConfig( conffile );
+	loadConfig( &control, conffile );
 
-	control->dbname=calloc( MAXPATHLEN, sizeof( char ) );
-	snprintf( control->dbname, MAXPATHLEN, "%s/mixplay.db", confdir );
 
+	control.dbname=calloc( MAXPATHLEN, sizeof( char ) );
+	snprintf( control.dbname, MAXPATHLEN, "%s/mixplay.db", confdir );
 
 	// if no basedir has been set, use the current directory as default
 	if( 0 == strlen(basedir) && ( NULL == getcwd( basedir, MAXPATHLEN ) ) ) {
 		fail( errno, "Could not get current directory!" );
 	}
 
-	control->root=NULL;
-	setProfile( control, confdir, control->profile[control->active] );
+	control.root=NULL;
+	setProfile( &control, confdir, control.profile[control.active] );
 
-	control->stream=0;
-	strcpy( control->playtime, "00:00" );
-	strcpy( control->remtime, "00:00" );
-	control->percent=0;
-	control->status=MPCMD_PLAY;
+	control.stream=0;
+	strcpy( control.playtime, "00:00" );
+	strcpy( control.remtime, "00:00" );
+	control.percent=0;
+	control.status=MPCMD_PLAY;
 
     /* Init GTK+ */
     gtk_init( &argc, &argv );
@@ -475,10 +469,10 @@ int main( int argc, char **argv ) {
     }
 
     /* Allocate data structure */
-    control->widgets = g_slice_new( MpData );
+    control.widgets = g_slice_new( MpData );
 
     /* Get objects from UI */
-#define GW( name ) MP_GET_WIDGET( builder, name, control->widgets )
+#define GW( name ) MP_GET_WIDGET( builder, name, control.widgets )
 	GW( mixplay_main );
 	GW( button_prev );
 	GW( button_next );
@@ -504,22 +498,22 @@ int main( int argc, char **argv ) {
 	GW( button_profile );
 #undef GW
 
-	g_object_ref(control->widgets->play );
-	g_object_ref(control->widgets->pause );
-	g_object_ref(control->widgets->down );
-	g_object_ref(control->widgets->noentry );
+	g_object_ref(control.widgets->play );
+	g_object_ref(control.widgets->pause );
+	g_object_ref(control.widgets->down );
+	g_object_ref(control.widgets->noentry );
 
 	// attach data to the buttons, so they can communicate with the player
-	g_object_set_qdata( (GObject *)control->widgets->button_play, g_quark_from_static_string("control"), &control );
-	g_object_set_qdata( (GObject *)control->widgets->button_prev, g_quark_from_static_string("control"), &control );
-	g_object_set_qdata( (GObject *)control->widgets->button_next, g_quark_from_static_string("control"), &control );
-	g_object_set_qdata( (GObject *)control->widgets->button_dnp, g_quark_from_static_string("control"), &control );
-	g_object_set_qdata( (GObject *)control->widgets->button_fav, g_quark_from_static_string("control"), &control );
-	g_object_set_qdata( (GObject *)control->widgets->button_replay, g_quark_from_static_string("control"), &control );
-	g_object_set_qdata( (GObject *)control->widgets->button_profile, g_quark_from_static_string("control"), &control );
+	g_object_set_qdata( (GObject *)control.widgets->button_play, g_quark_from_static_string("control"), &control );
+	g_object_set_qdata( (GObject *)control.widgets->button_prev, g_quark_from_static_string("control"), &control );
+	g_object_set_qdata( (GObject *)control.widgets->button_next, g_quark_from_static_string("control"), &control );
+	g_object_set_qdata( (GObject *)control.widgets->button_dnp, g_quark_from_static_string("control"), &control );
+	g_object_set_qdata( (GObject *)control.widgets->button_fav, g_quark_from_static_string("control"), &control );
+	g_object_set_qdata( (GObject *)control.widgets->button_replay, g_quark_from_static_string("control"), &control );
+	g_object_set_qdata( (GObject *)control.widgets->button_profile, g_quark_from_static_string("control"), &control );
 
     /* Connect signals */
-    gtk_builder_connect_signals( builder, control->widgets );
+    gtk_builder_connect_signals( builder, control.widgets );
 
     /* Destroy builder, since we don't need it anymore */
     g_object_unref( G_OBJECT( builder ) );
@@ -527,41 +521,38 @@ int main( int argc, char **argv ) {
 	// start the player processes
 	for( i=0; i <= 1; i++ ) {
 		// create communication pipes
-		pipe(control->p_status[i]);
-		pipe(control->p_command[i]);
-
+		pipe(control.p_status[i]);
+		pipe(control.p_command[i]);
 		pid[i] = fork();
 		if (0 > pid[i]) {
 			fail( errno, "could not fork" );
 		}
 		// child process
 		if (0 == pid[i]) {
-			if (dup2(control->p_command[i][0], STDIN_FILENO) != STDIN_FILENO) {
+			if (dup2(control.p_command[i][0], STDIN_FILENO) != STDIN_FILENO) {
 				fail( errno, "Could not dup stdin for player %i", i+1 );
 			}
-			if (dup2(control->p_status[i][1], STDOUT_FILENO) != STDOUT_FILENO) {
+			if (dup2(control.p_status[i][1], STDOUT_FILENO) != STDOUT_FILENO) {
 				fail( errno, "Could not dup stdout for player %i", i+1 );
 			}
-
 			// this process needs no pipes
-			close(control->p_command[i][0]);
-			close(control->p_command[i][1]);
-			close(control->p_status[i][0]);
-			close(control->p_status[i][1]);
-
+			close(control.p_command[i][0]);
+			close(control.p_command[i][1]);
+			close(control.p_status[i][0]);
+			close(control.p_status[i][1]);
 			// Start mpg123 in Remote mode
 			execlp("mpg123", "mpg123", "-R", "2>/dev/null", NULL);
 			// execlp("mpg123", "mpg123", "-R", "--remote-err", NULL); // breaks the reply parsing!
 			fail( errno, "Could not exec mpg123" );
 		}
-		close(control->p_command[i][0]);
-		close(control->p_status[i][1]);
+		close(control.p_command[i][0]);
+		close(control.p_status[i][1]);
 	}
 
 	pthread_create( &tid, NULL, reader, &control );
 
 	/* Show window. All other widgets are automatically shown by GtkBuilder */
-    gtk_widget_show( control->widgets->mixplay_main );
+    gtk_widget_show( control.widgets->mixplay_main );
 
     /* Start main loop */
     gtk_main();
@@ -571,8 +562,8 @@ int main( int argc, char **argv ) {
 	kill( pid[1], SIGTERM );
 
     /* Free any allocated data */
-    g_slice_free( MpData, control->widgets );
-    cleanTitles( control->root );
+    g_slice_free( MpData, control.widgets );
+    cleanTitles( control.root );
 	dbClose( db );
 
 	return( 0 );

@@ -39,4 +39,4 @@ install: all
 	install -m 0644 mixplay.svg /usr/share/pixmaps/
 
 prepare:
-	apt-get install ncurses-dev mpg123 libmpg123-dev
+	apt-get install ncurses-dev mpg123 libmpg123-dev libgtk-3-dev

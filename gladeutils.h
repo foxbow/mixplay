@@ -61,10 +61,10 @@ struct _MpData
 struct mpcontrol_t {
 	MpData *widgets;
 	char *musicdir;
-	unsigned long profiles;
+	gsize profiles;
 	unsigned long active;
 	char **profile;
-	unsigned long streams;
+	gsize streams;
 	char **stream;
 	char **sname;
 	int p_status[2][2];
