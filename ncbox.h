@@ -18,5 +18,6 @@ void drawbox(int r0, int c0, int r1, int c1);
 int popUpActive();
 void popDown();
 void drawframe( struct entry_t *current, const char *status, int stream );
+// void fail( int error, const char* msg, ... );
 
 #endif /* NCBOX_H_ */

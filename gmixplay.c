@@ -99,9 +99,6 @@ static int updateUI( void *data ) {
 			control->percent/100.0 );
 	gtk_widget_set_sensitive( control->widgets->button_fav, ( !(control->current->flags & MP_FAV) ) );
 
-	gtk_button_set_label( GTK_BUTTON( control->widgets->button_profile ),
-			control->profile[control->active] );
-
 	return 0;
 }
 
@@ -191,7 +188,7 @@ static void *reader( void *cont ) {
 	control=(struct mpcontrol_t *)cont;
 	db=dbOpen( control->dbname );
 
-	while ( control->running ) {
+	while ( control->status != MPCMD_QUIT ) {
 		FD_ZERO( &fds );
 		FD_SET( control->p_status[0][0], &fds );
 		FD_SET( control->p_status[1][0], &fds );
@@ -230,7 +227,9 @@ static void *reader( void *cont ) {
 		case MPCMD_REPL:
 			write( control->p_command[fdset][1], "JUMP 0\n", 8 );
 			break;
-		break;
+		case MPCMD_QUIT:
+			control->status=MPCMD_QUIT;
+			break;
 		}
 		control->command=MPCMD_IDLE;
 
@@ -411,6 +410,37 @@ static void *reader( void *cont ) {
 	return NULL;
 }
 
+/**
+ * should be triggered after the app window is realized
+ */
+int initAll( void *data ) {
+	struct mpcontrol_t *control;
+	control=(struct mpcontrol_t*)data;
+	char confdir[MAXPATHLEN]; // = "~/.mixplay";
+	char conffile[MAXPATHLEN]; //  = "mixplay.conf";
+
+	// load default configuration
+	snprintf( confdir, MAXPATHLEN, "%s/.mixplay", getenv("HOME") );
+	snprintf( conffile, MAXPATHLEN, "%s/mixplay.conf", confdir );
+	loadConfig( control, conffile );
+
+	control->dbname=calloc( MAXPATHLEN, sizeof( char ) );
+	snprintf( control->dbname, MAXPATHLEN, "%s/mixplay.db", confdir );
+
+	control->root=NULL;
+
+	control->stream=0;
+	strcpy( control->playtime, "00:00" );
+	strcpy( control->remtime, "00:00" );
+	control->percent=0;
+	control->status=MPCMD_PLAY;
+	setProfile( control, confdir, control->profile[control->active] );
+
+	pthread_create( &control->rtid, NULL, reader, control );
+
+	return 0;
+}
+
 int main( int argc, char **argv ) {
     GtkBuilder *builder;
     GError     *error = NULL;
@@ -420,11 +450,12 @@ int main( int argc, char **argv ) {
     int			i;
     int 		db=0;
 	pid_t		pid[2];
-	pthread_t	tid;
 
 	char basedir[MAXPATHLEN]; // = ".";
-	char confdir[MAXPATHLEN]; // = "~/.mixplay";
-	char conffile[MAXPATHLEN]; //  = "mixplay.conf";
+	// if no basedir has been set, use the current directory as default
+	if( 0 == strlen(basedir) && ( NULL == getcwd( basedir, MAXPATHLEN ) ) ) {
+		fail( errno, "Could not get current directory!" );
+	}
 
 #ifdef DEBUG
 	setVerbosity(1);
@@ -433,35 +464,12 @@ int main( int argc, char **argv ) {
 #endif
 	memset( basedir, 0, MAXPATHLEN );
 
-	// load default configuration
-	snprintf( confdir, MAXPATHLEN, "%s/.mixplay", getenv("HOME") );
-	snprintf( conffile, MAXPATHLEN, "%s/mixplay.conf", confdir );
-	loadConfig( &control, conffile );
-
-
-	control.dbname=calloc( MAXPATHLEN, sizeof( char ) );
-	snprintf( control.dbname, MAXPATHLEN, "%s/mixplay.db", confdir );
-
-	// if no basedir has been set, use the current directory as default
-	if( 0 == strlen(basedir) && ( NULL == getcwd( basedir, MAXPATHLEN ) ) ) {
-		fail( errno, "Could not get current directory!" );
-	}
-
-	control.root=NULL;
-	setProfile( &control, confdir, control.profile[control.active] );
-
-	control.stream=0;
-	strcpy( control.playtime, "00:00" );
-	strcpy( control.remtime, "00:00" );
-	control.percent=0;
-	control.status=MPCMD_PLAY;
-
     /* Init GTK+ */
     gtk_init( &argc, &argv );
 
     /* Create new GtkBuilder object */
     builder = gtk_builder_new();
-    if( ! gtk_builder_add_from_file( builder, UI_FILE, &error ) )
+    if( ! gtk_builder_add_from_file( builder, "gmixplay.glade", &error ) )
     {
         g_warning( "%s", error->message );
         g_free( error );
@@ -510,7 +518,6 @@ int main( int argc, char **argv ) {
 	g_object_set_qdata( (GObject *)control.widgets->button_dnp, g_quark_from_static_string("control"), &control );
 	g_object_set_qdata( (GObject *)control.widgets->button_fav, g_quark_from_static_string("control"), &control );
 	g_object_set_qdata( (GObject *)control.widgets->button_replay, g_quark_from_static_string("control"), &control );
-	g_object_set_qdata( (GObject *)control.widgets->button_profile, g_quark_from_static_string("control"), &control );
 
     /* Connect signals */
     gtk_builder_connect_signals( builder, control.widgets );
@@ -518,7 +525,13 @@ int main( int argc, char **argv ) {
     /* Destroy builder, since we don't need it anymore */
     g_object_unref( G_OBJECT( builder ) );
 
+	/* Show window. All other widgets are automatically shown by GtkBuilder */
+    gtk_widget_show( control.widgets->mixplay_main );
+
+
 	// start the player processes
+	// these may wait in the background until
+	// something needs to be played at all
 	for( i=0; i <= 1; i++ ) {
 		// create communication pipes
 		pipe(control.p_status[i]);
@@ -549,15 +562,14 @@ int main( int argc, char **argv ) {
 		close(control.p_status[i][1]);
 	}
 
-	pthread_create( &tid, NULL, reader, &control );
-
-	/* Show window. All other widgets are automatically shown by GtkBuilder */
-    gtk_widget_show( control.widgets->mixplay_main );
+    // first thing to be called after the GUI is enabled
+    g_idle_add( initAll, &control );
 
     /* Start main loop */
     gtk_main();
+    control.status=MPCMD_QUIT;
 
-    pthread_cancel( tid );
+    pthread_join( control.rtid, NULL );
 	kill( pid[0], SIGTERM);
 	kill( pid[1], SIGTERM );
 

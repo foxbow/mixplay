@@ -11,6 +11,36 @@
 
 static int _ncboxpopup = 0;
 
+/*
+ * Print errormessage, errno and wait for [enter]
+ * msg - Message to print
+ * info - second part of the massage, for instance a variable
+ * error - errno that was set
+ *         F_WARN = print message w/o errno and return
+ *         F_FAIL = print message w/o errno and exit
+ */
+void fail( int error, const char* msg, ... ){
+	va_list args;
+	va_start( args, msg );
+	if(error <= 0 ) {
+		fprintf( stdout, "\n");
+		vfprintf( stdout, msg, args );
+		fprintf( stdout, "\n" );
+	}
+	else {
+		fprintf(stdout, "\n");
+		vfprintf(stdout, msg, args );
+		fprintf( stdout, "\n ERROR: %i - %s\n", abs(error), strerror( abs(error) ) );
+	}
+	fprintf(stdout, "Press [ENTER]\n" );
+	fflush( stdout );
+	fflush( stderr );
+	va_end(args);
+	while(getc(stdin)!=10);
+	if (error != 0 ) exit(error);
+	return;
+}
+
 /**
  * check if a popUp is currently active
  */
