@@ -24,7 +24,7 @@ typedef unsigned char* strval_t;
 /*
  * Verbosity handling of the utils functions
  */
-// int getVerbosity();
+int getVerbosity( void );
 int setVerbosity(int);
 int incVerbosity();
 void muteVerbosity();

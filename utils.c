@@ -20,6 +20,10 @@ int setVerbosity(int v) {
 	return _ftverbosity;
 }
 
+int getVerbosity( void ) {
+	return _ftverbosity;
+}
+
 int incVerbosity() {
 	_ftverbosity++;
 	return _ftverbosity;
@@ -105,18 +109,6 @@ char *strip( char *buff, const char *text, const size_t maxlen ) {
 	return buff;
 }
 
-/**
- * print the given message when the verbosity is at
- * least vl
- */
-void printver( int vl, const char *msg, ... ) {
-	va_list args;
-	if( vl <= _ftverbosity ) {
-		va_start( args, msg );
-		vfprintf( stderr, msg, args );
-		va_end( args );
-	}
-}
 /**
  * reads from the fd into the line buffer until either a CR
  * comes or the fd stops sending characters.

@@ -1,6 +1,7 @@
 #ifndef __GLADEUTILS_H__
 #define __GLADEUTILS_H__
 
+#include "utils.h"
 #include "musicmgr.h"
 #include <glib.h>
 #include <gtk/gtk.h>
@@ -19,6 +20,7 @@
 #define MPCMD_DBNEW		10
 #define MPCMD_WARN	11
 #define MPCMD_ERR	12
+#define MPCMD_STOP	13
 
 /* Convenience macros for obtaining objects from UI file */
 #define MP_GET_OBJECT( builder, name, type, data ) \
@@ -48,12 +50,18 @@ struct _MpData
 	GtkWidget *played;
 	GtkWidget *remain;
 	GtkWidget *progress;
+	// images
 //	GtkWidget *checkmark;
 	GtkWidget *pause;
 	GtkWidget *play;
 	GtkWidget *down;
 	GtkWidget *skip;
 	GtkWidget *noentry;
+	// popup elements
+	GtkWidget *mp_popup;
+	GtkWidget *popupText;
+	GtkWidget *button_popupOkay;
+
 	GtkWidget *menu_profiles;
 	GtkWidget *menu_streams;
 	GtkWidget *button_profile;
@@ -88,6 +96,7 @@ struct mpcontrol_t {
 	pthread_t rtid;				// thread ID of the reader
 };
 
+void unblockReq( const char *msg, ... );
 // void fail( int error, const char* msg, ... );
-void popUp( int time, const char *text, ... );
+// void popUp( int level, const char *text, ... );
 #endif /* __GLADEUTILS_H__ */

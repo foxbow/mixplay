@@ -5,6 +5,7 @@
 #define VER '|'
 #define EDG "+"
 
+#include "utils.h"
 #include "musicmgr.h"
 
 /**

@@ -3,13 +3,25 @@
  */
 
 #include "ncbox.h"
-#include "utils.h"
 #include <ncurses.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 
 static int _ncboxpopup = 0;
+
+/**
+ * print the given message when the verbosity is at
+ * least vl
+ */
+void printver( int vl, const char *msg, ... ) {
+	va_list args;
+	if( vl <= getVerbosity() ) {
+		va_start( args, msg );
+		vfprintf( stderr, msg, args );
+		va_end( args );
+	}
+}
 
 /*
  * Print errormessage, errno and wait for [enter]

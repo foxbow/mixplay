@@ -9,6 +9,8 @@
 #include <errno.h>
 #include <string.h>
 
+volatile struct mpcontrol_t *mpcontrol;
+
 /**
  * make mpeg123 play the given title
  */
@@ -167,7 +169,7 @@ static void loadConfig( struct mpcontrol_t *config, const char *path ) {
  */
 static void *reader( void *cont ) {
 	struct mpcontrol_t *control;
-	struct entry_t *current;
+//	struct entry_t *current;
 	struct entry_t *next;
 	fd_set fds;
 	struct timeval to;
@@ -206,22 +208,40 @@ static void *reader( void *cont ) {
 			break;
 		case MPCMD_NEXT:
 			order=1;
-			if( !(current->flags & ( MP_SKPD | MP_CNTD ) ) ) {
-				current->skipped++;
-				current->flags |= MP_SKPD;
+			if( !(control->current->flags & ( MP_SKPD | MP_CNTD ) ) ) {
+				control->current->skipped++;
+				control->current->flags |= MP_SKPD;
 			}
 			write( control->p_command[fdset][1], "STOP\n", 6 );
 			break;
+		case MPCMD_DBSCAN:
+			order=0;
+			write( control->p_command[fdset][1], "STOP\n", 6 );
+			control->status=MPCMD_DBSCAN;
+			sleep(2);
+			unblockReq("OK");
+			break;
+		case MPCMD_DBNEW:
+			order=0;
+			write( control->p_command[fdset][1], "STOP\n", 6 );
+			control->status=MPCMD_DBNEW;
+			unblockReq( "OK" );
+			break;
+		case MPCMD_STOP:
+			order=0;
+			write( control->p_command[fdset][1], "STOP\n", 6 );
+			control->status=MPCMD_IDLE;
+			break;
 		case MPCMD_MDNP:
-			addToFile( control->dnpname, current->display, "d=" );
-			current=removeFromPL( current, SL_TITLE );
+			addToFile( control->dnpname, control->current->display, "d=" );
+			control->current=removeFromPL( control->current, SL_TITLE );
 			order=1;
 			write( control->p_command[fdset][1], "STOP\n", 6 );
 			break;
 		case MPCMD_MFAV:
-			if( !(current->flags & MP_FAV) ) {
-				addToFile( control->favname, current->display, "d=" );
-				current->flags|=MP_FAV;
+			if( !(control->current->flags & MP_FAV) ) {
+				addToFile( control->favname, control->current->display, "d=" );
+				control->current->flags|=MP_FAV;
 			}
 			break;
 		case MPCMD_REPL:
@@ -251,25 +271,25 @@ static void *reader( void *cont ) {
 				switch (line[1]) {
 				int cmd=0, rem=0;
 				case 'R': // startup
-					current = control->root;
-					sendplay( control->p_command[fdset][1], current);
+					control->current = control->root;
+					sendplay( control->p_command[fdset][1], control->current);
 				break;
 				case 'I': // ID3 info
 					// ICY stream info
 					if( NULL != strstr( line, "ICY-" ) ) {
 						if( NULL != strstr( line, "ICY-NAME: " ) ) {
-							strip( current->album, line+13, NAMELEN );
+							strip( control->current->album, line+13, NAMELEN );
 						}
 						if( NULL != ( b = strstr( line, "StreamTitle") ) ) {
 							b = b + 13;
 							*strchr(b, '\'') = '\0';
-							if( strlen(current->display) != 0 ) {
-								strcpy(tbuf, current->display);
-								next=insertTitle( current, tbuf );
+							if( strlen(control->current->display) != 0 ) {
+								strcpy(tbuf, control->current->display);
+								next=insertTitle( control->current, tbuf );
 								// fix genpathname() from insertTitle
 								strip(next->display, tbuf, MAXPATHLEN );
 							}
-							strip(current->display, b, MAXPATHLEN );
+							strip(control->current->display, b, MAXPATHLEN );
 						}
 					}
 					// standard mpg123 info
@@ -315,24 +335,24 @@ static void *reader( void *cont ) {
 						if( rem <= fade ) {
 							// should the playcount be increased?
 							// !MP_CNTD - title has not been counted yet
-							if( !( current->flags & MP_CNTD ) ) {
-								current->flags |= MP_CNTD; // make sure a title is only counted once per session
-								current->played++;
-								if( current->skipped > 0 ) current->skipped--;
-								dbPutTitle( db, current );
+							if( !( control->current->flags & MP_CNTD ) ) {
+								control->current->flags |= MP_CNTD; // make sure a title is only counted once per session
+								control->current->played++;
+								if( control->current->skipped > 0 ) control->current->skipped--;
+								dbPutTitle( db, control->current );
 							}
-							next=current->plnext;
-							if( next == current ) {
+							next=control->current->plnext;
+							if( next == control->current ) {
 								strcpy( status, "STOP" );
 							}
 							else {
-								current=next;
+								control->current=next;
 								// swap player
 								fdset=fdset?0:1;
 								invol=0;
 								outvol=100;
 								write( control->p_command[fdset][1], "volume 0\n", 9 );
-								sendplay( control->p_command[fdset][1], current);
+								sendplay( control->p_command[fdset][1], control->current);
 							}
 						}
 						if( invol < 100 ) {
@@ -354,22 +374,22 @@ static void *reader( void *cont ) {
 						// intime  - has been played for more than 2 secs
 						// usedb   - playcount is persistent
 						// !MP_CNTD - title has not been counted yet
-						if ( ( intime > 2 )  && !( current->flags & MP_CNTD ) ) {
-							current->flags |= MP_CNTD;
-							current->played++;
-							if( current->skipped > 0 ) current->skipped--;
-							dbPutTitle( db, current );
+						if ( ( intime > 2 )  && !( control->current->flags & MP_CNTD ) ) {
+							control->current->flags |= MP_CNTD;
+							control->current->played++;
+							if( control->current->skipped > 0 ) control->current->skipped--;
+							dbPutTitle( db, control->current );
 						}
-						next = skipTitles( current, order, 0 );
-						if ( ( next == current ) ||
+						next = skipTitles( control->current, order, 0 );
+						if ( ( next == control->current ) ||
 								( ( ( order == 1  ) && ( next == control->root ) ) ||
 								  ( ( order == -1 ) && ( next == control->root->plprev ) ) ) ) {
 							strcpy( status, "STOP" );
 						}
 						else {
 							if( (order==1) && (next == control->root) ) newCount( control->root );
-							current=next;
-							sendplay( control->p_command[fdset][1], current);
+							control->current=next;
+							sendplay( control->p_command[fdset][1], control->current);
 						}
 						order=1;
 						break;
@@ -380,7 +400,7 @@ static void *reader( void *cont ) {
 						strcpy( status, "PLAYING" );
 						break;
 					default:
-						popUp( 0, "Unknown status!\n %i", cmd );
+						fail( F_WARN, "Unknown status!\n %i", cmd );
 						break;
 					}
 					redraw=1;
@@ -390,19 +410,19 @@ static void *reader( void *cont ) {
 				break;
 				case 'E':
 					fail( F_FAIL, "ERROR: %s\nIndex: %i\nName: %s\nPath: %s", line,
-							current->key,
-							current->display,
-							current->path);
+							control->current->key,
+							control->current->display,
+							control->current->path);
 				break;
 				default:
-					popUp( 0, "Warning!\n%s", line );
+					fail( F_WARN, "Warning!\n%s", line );
 				break;
 				} // case line[1]
 			} // if line starts with '@'
 			// Ignore other mpg123 output
 		} // fgets() > 0
 		if( redraw ) {
-			control->current=current;
+//			control->current=current;
 			gdk_threads_add_idle( updateUI, control );
 		}
 	} // while(running)
@@ -450,6 +470,8 @@ int main( int argc, char **argv ) {
     int			i;
     int 		db=0;
 	pid_t		pid[2];
+
+	mpcontrol=&control;
 
 	char basedir[MAXPATHLEN]; // = ".";
 	// if no basedir has been set, use the current directory as default
@@ -504,20 +526,15 @@ int main( int argc, char **argv ) {
 	GW( skip );
 	GW( noentry );
 	GW( button_profile );
+	GW( mp_popup );
+	GW( popupText );
+	GW( button_popupOkay );
 #undef GW
 
 	g_object_ref(control.widgets->play );
 	g_object_ref(control.widgets->pause );
 	g_object_ref(control.widgets->down );
 	g_object_ref(control.widgets->noentry );
-
-	// attach data to the buttons, so they can communicate with the player
-	g_object_set_qdata( (GObject *)control.widgets->button_play, g_quark_from_static_string("control"), &control );
-	g_object_set_qdata( (GObject *)control.widgets->button_prev, g_quark_from_static_string("control"), &control );
-	g_object_set_qdata( (GObject *)control.widgets->button_next, g_quark_from_static_string("control"), &control );
-	g_object_set_qdata( (GObject *)control.widgets->button_dnp, g_quark_from_static_string("control"), &control );
-	g_object_set_qdata( (GObject *)control.widgets->button_fav, g_quark_from_static_string("control"), &control );
-	g_object_set_qdata( (GObject *)control.widgets->button_replay, g_quark_from_static_string("control"), &control );
 
     /* Connect signals */
     gtk_builder_connect_signals( builder, control.widgets );
