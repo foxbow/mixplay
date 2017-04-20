@@ -158,18 +158,18 @@
                       <object class="GtkMenuItem" id="db_rescan">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">Rescan</property>
+                        <property name="label" translatable="yes">Scan for new music</property>
                         <property name="use_underline">True</property>
-                        <signal name="activate" handler="db_rescan" swapped="no"/>
+                        <signal name="activate" handler="db_scan" swapped="no"/>
                       </object>
                     </child>
                     <child>
                       <object class="GtkMenuItem" id="db_new">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">Neu Anlegen</property>
+                        <property name="label" translatable="yes">Recreate DB</property>
                         <property name="use_underline">True</property>
-                        <signal name="activate" handler="db_newscan" swapped="no"/>
+                        <signal name="activate" handler="db_clean" swapped="no"/>
                       </object>
                     </child>
                   </object>
@@ -405,8 +405,8 @@
                     <property name="image_position">top</property>
                     <property name="always_show_image">True</property>
                     <signal name="clicked" handler="playprev" swapped="no"/>
-                    <accelerator key="p" signal="clicked"/>
                     <accelerator key="Up" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
+                    <accelerator key="p" signal="clicked"/>
                   </object>
                   <packing>
                     <property name="expand">True</property>
@@ -424,8 +424,8 @@
                     <property name="image_position">bottom</property>
                     <property name="always_show_image">True</property>
                     <signal name="clicked" handler="playnext" swapped="no"/>
-                    <accelerator key="Down" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
                     <accelerator key="n" signal="clicked"/>
+                    <accelerator key="Down" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
                   </object>
                   <packing>
                     <property name="expand">True</property>
@@ -508,8 +508,8 @@
                 <property name="image_position">top</property>
                 <property name="always_show_image">True</property>
                 <signal name="clicked" handler="playpause" swapped="no"/>
-                <accelerator key="space" signal="clicked"/>
                 <accelerator key="AudioPlay" signal="clicked"/>
+                <accelerator key="space" signal="clicked"/>
               </object>
               <packing>
                 <property name="expand">True</property>

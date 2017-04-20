@@ -1,4 +1,4 @@
-# CC=/usr/bin/gcc
+CC=/usr/bin/gcc
 VERSION:=$(shell git describe --tags --abbrev=1 --dirty=-dev --always)
 CCFLAGS=-DVERSION=\"${VERSION}\"
 CCFLAGS+=-Wall -g 
@@ -14,13 +14,7 @@ EXES=bin/mixplay bin/gmixplay
 # Keep object files
 .PRECIOUS: %.o
 
-arm:
-	make exes CC=arm-linux-gnueabi-gcc 
-
-all:
-	make exes CC=gcc
-
-exes: $(EXES)
+all: $(EXES)
 
 clean:
 	rm -f *.o
