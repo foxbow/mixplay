@@ -873,6 +873,7 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 	if( num < 0 ) {
 		fail( errno, "getMusic failed in %s", curdir );
 	}
+
 	for( i=0; i<num; i++ ) {
 		activity("Scanning");
 		strncpy( dirbuff, curdir, MAXPATHLEN );

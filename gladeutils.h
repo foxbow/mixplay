@@ -17,7 +17,7 @@
 #define MPCMD_NXTP	7
 #define MPCMD_QUIT	8
 #define MPCMD_DBSCAN	9
-#define MPCMD_DBNEW		10
+#define MPCMD_DBCLEAN	10
 #define MPCMD_WARN	11
 #define MPCMD_ERR	12
 #define MPCMD_STOP	13
@@ -62,6 +62,8 @@ struct _MpData
 	GtkWidget *popupText;
 	GtkWidget *button_popupOkay;
 
+	GtkWidget *fileselect;
+
 	GtkWidget *menu_profiles;
 	GtkWidget *menu_streams;
 	GtkWidget *button_profile;
@@ -96,7 +98,7 @@ struct mpcontrol_t {
 	pthread_t rtid;				// thread ID of the reader
 };
 
-void unblockReq( const char *msg, ... );
+void contReq( const char *msg, ... );
 // void fail( int error, const char* msg, ... );
 // void popUp( int level, const char *text, ... );
 #endif /* __GLADEUTILS_H__ */

@@ -1,4 +1,4 @@
-CC=/usr/bin/gcc
+# CC=/usr/bin/gcc
 VERSION:=$(shell git describe --tags --abbrev=1 --dirty=-dev --always)
 CCFLAGS=-DVERSION=\"${VERSION}\"
 CCFLAGS+=-Wall -g 
@@ -14,23 +14,26 @@ EXES=bin/mixplay bin/gmixplay
 # Keep object files
 .PRECIOUS: %.o
 
-all: $(EXES)
+arm:
+	make exes CC=arm-linux-gnueabi-gcc 
+
+all:
+	make exes CC=gcc
+
+exes: $(EXES)
 
 clean:
 	rm -f *.o
 	rm -f $(EXES)
 
-bin/mixplay: $(OBJS) $(NCOBJS) mixplay.o
+bin/mixplay: $(OBJS) $(NCOBJS) ncbox.h 
 	$(CC) $(CCFLAGS_NCURSES) $^ -o $@ -lncurses -lmpg123
 
-bin/gmixplay: $(OBJS) $(GLOBJS)
+bin/gmixplay: $(OBJS) $(GLOBJS) gladeutils.h
 	$(CC) $(CCFLAGS_GLADE) $^ -o $@ $(LDFLAGS_GLADE) -lmpg123
 
-$(GLOBJS): $(GLSRC) $(HDRS) gladeutils.h
-	$(CC) $(CCFLAGS_GLADE) -c $^
-
-%.o: %.c $(HDRS) ncbox.h
-	$(CC) $(CCFLAGS) -c $<
+%.o: %.c $(HDRS)
+	$(CC) $(CCFLAGS_GLADE) -c $<
 
 install: all
 	install -s -m 0755 /bin/mixplay /usr/bin/

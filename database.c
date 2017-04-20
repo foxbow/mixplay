@@ -203,6 +203,7 @@ static struct entry_t *addDBTitle( struct dbentry_t dbentry, struct entry_t *roo
  */
 void dbBackup( const char *dbname ) {
 	char backupname[MAXPATHLEN]="";
+	printver( 1, "Backing up database\n" );
 
 	strncpy( backupname, dbname, MAXPATHLEN );
 	strncat( backupname, ".bak", MAXPATHLEN );
@@ -247,7 +248,7 @@ int dbCheckExist( const char *dbname ) {
 	int num=0;
 
 	root=dbGetMusic( dbname );
-
+	printver( 0, "Cleaning database...\n" );
 	do {
 		activity( "Cleaning" );
 		if( !mp3Exists(runner) ) {
@@ -262,10 +263,10 @@ int dbCheckExist( const char *dbname ) {
 
 	if( num > 0 ) {
 		dbDump( dbname, root );
-		printf("Removed %i titles\n", num );
+		printver( 0, "Removed %i titles\n", num );
 	}
 	else {
-		printf("No titles to remove\n" );
+		printver( 0, "No titles to remove\n" );
 	}
 	wipeTitles( root );
 
@@ -287,6 +288,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 	dbroot=dbGetMusic( dbname );
 
 	db=dbOpen( dbname );
+	printver( 0, "Calculating mean playcount...\n" );
 	if( NULL != dbroot ) {
 		dbrunner=dbroot;
 		do {
@@ -301,9 +303,11 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 	}
 
 	// scan directory
+	printver( 0, "Scanning...\n" );
 	fsroot=recurse(basedir, NULL, basedir);
 	fsroot=fsroot->dbnext;
 
+	printver( 0, "Adding titles...\n" );
 	while( NULL != fsroot ) {
 		activity("Adding");
 		dbrunner = findTitle( dbroot, fsroot->path );
@@ -316,7 +320,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 		fsroot=removeTitle( fsroot );
 	}
 
-	printf("Added %i titles with playcount %i to %s\n", num, low, dbname );
+	printver( 0, "Added %i titles with playcount %i to %s\n", num, low, dbname );
 	dbClose( db );
 	return num;
 }

@@ -6,8 +6,9 @@ extern volatile struct mpcontrol_t *mpcontrol;
 
 enum mpRequestmode {
 	mpr_normal,		// async mode, shows info and can be closed at will
-	mpr_blocking,	// can be closed anytime, blocks operation
+	mpr_blocking,   // can be closed anytime, blocks operation
 	mpr_waiting,	// blocks and cannot be closed
+	mpr_closing		// finishes waiting
 };
 
 struct mpRequestInfo_t {
@@ -45,10 +46,12 @@ static int popUp( void *data ) {
 		gtk_widget_set_sensitive( mpcontrol->widgets->mixplay_main, FALSE );
 		gtk_widget_set_sensitive( mpcontrol->widgets->button_popupOkay, FALSE );
 		break;
-	case mpr_normal:
-		gtk_widget_show_all( mpcontrol->widgets->mp_popup );
+	case mpr_closing:
 		gtk_widget_set_sensitive( mpcontrol->widgets->mixplay_main, TRUE );
 		gtk_widget_set_sensitive( mpcontrol->widgets->button_popupOkay, TRUE );
+		break;
+	case mpr_normal:
+		gtk_widget_show_all( mpcontrol->widgets->mp_popup );
 		break;
 	}
 	free(req);
@@ -107,7 +110,14 @@ void printver( int vl, const char *msg, ... ) {
 	}
 }
 
-void blockReq( const char *msg, ... ) {
+/**
+ * open a blocking requester for status/process
+ * informations
+ *
+ * The main app and the OK button are disabled until
+ * unblockReq() is called.
+ */
+void waitReq( const char *msg, ... ) {
 	va_list args;
 	struct mpRequestInfo_t *req;
 	req=calloc( 1, sizeof( struct mpRequestInfo_t ) );
@@ -119,7 +129,7 @@ void blockReq( const char *msg, ... ) {
 	gdk_threads_add_idle( popUp, req );
 }
 
-void unblockReq( const char *msg, ... ) {
+void contReq( const char *msg, ... ) {
 	va_list args;
 	struct mpRequestInfo_t *req;
 	req=calloc( 1, sizeof( struct mpRequestInfo_t ) );
@@ -127,7 +137,7 @@ void unblockReq( const char *msg, ... ) {
 	va_start( args, msg );
 	vsnprintf( req->text, 1024, msg, args );
 	va_end(args);
-	req->mode=mpr_normal;
+	req->mode=mpr_closing;
 	gdk_threads_add_idle( popUp, req );
 }
 
@@ -174,16 +184,16 @@ G_MODULE_EXPORT void destroy( GtkWidget *widget, gpointer   data )
     gtk_main_quit ();
 }
 
-G_MODULE_EXPORT void db_rescan( GtkWidget *menu, gpointer   data )
+G_MODULE_EXPORT void db_clean( GtkWidget *menu, gpointer   data )
 {
-	mpcontrol->command=MPCMD_DBSCAN;
-	blockReq( "Scan for new titles" );
+	mpcontrol->command=MPCMD_DBCLEAN;
+	waitReq( "Clean database" );
 }
 
-G_MODULE_EXPORT void db_newscan( GtkWidget *menu, gpointer   data )
+G_MODULE_EXPORT void db_scan( GtkWidget *menu, gpointer   data )
 {
-	mpcontrol->command=MPCMD_DBNEW;
-	blockReq( "Database rescan" );
+	mpcontrol->command=MPCMD_DBSCAN;
+	waitReq( "Add new titles" );
 }
 
 G_MODULE_EXPORT void switchProfile( GtkWidget *menu, gpointer data )

@@ -8,6 +8,8 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 volatile struct mpcontrol_t *mpcontrol;
 
@@ -104,15 +106,20 @@ static int updateUI( void *data ) {
 	return 0;
 }
 
-static void setProfile( struct mpcontrol_t *ctrl, const char *basedir, const char *profile ) {
+static void setProfile( struct mpcontrol_t *ctrl ) {
+	char		confdir[MAXPATHLEN]; // = "~/.mixplay";
+	char 		*profile;
 	struct marklist_t *dnplist=NULL;
 	struct marklist_t *favourites=NULL;
 
+	profile=ctrl->profile[ctrl->active];
+	snprintf( confdir, MAXPATHLEN, "%s/.mixplay", getenv("HOME") );
+
 	ctrl->dnpname=calloc( MAXPATHLEN, sizeof(char) );
-	snprintf( ctrl->dnpname, MAXPATHLEN, "%s/%s.dnp", basedir, profile );
+	snprintf( ctrl->dnpname, MAXPATHLEN, "%s/%s.dnp", confdir, profile );
 
 	ctrl->favname=calloc( MAXPATHLEN, sizeof(char) );
-	snprintf( ctrl->favname, MAXPATHLEN, "%s/%s.fav", basedir, profile );
+	snprintf( ctrl->favname, MAXPATHLEN, "%s/%s.fav", confdir, profile );
 	dnplist=loadList( ctrl->dnpname );
 	favourites=loadList( ctrl->favname );
 
@@ -131,35 +138,60 @@ static void setProfile( struct mpcontrol_t *ctrl, const char *basedir, const cha
 	cleanList( favourites );
 }
 
-static void loadConfig( struct mpcontrol_t *config, const char *path ) {
+static void loadConfig( struct mpcontrol_t *config ) {
 	GKeyFile	*keyfile;
 	GError		*error=NULL;
+	char		confdir[MAXPATHLEN]; // = "~/.mixplay";
+	char		conffile[MAXPATHLEN]; //  = "mixplay.conf";
+	int			res;
+
+	// load default configuration
+	snprintf( confdir, MAXPATHLEN, "%s/.mixplay", getenv("HOME") );
+	snprintf( conffile, MAXPATHLEN, "%s/mixplay.conf", confdir );
+	config->dbname=calloc( MAXPATHLEN, sizeof( char ) );
+	snprintf( config->dbname, MAXPATHLEN, "%s/mixplay.db", confdir );
+
+	if( !isDir( confdir ) ) {
+		if( mkdir( confdir, 0700 ) == -1 ) {
+			fail( errno, "Could not create config dir %s", confdir );
+		}
+	}
 
 	keyfile=g_key_file_new();
-	if( ! g_key_file_load_from_file( keyfile, path, G_KEY_FILE_NONE, &error ) ) {
-
-		fail( F_FAIL, "Could not load %s\n%s", path, error->message );
-	}
-
-	config->musicdir=g_key_file_get_string( keyfile, "mixplay", "musicdir", &error );
-	if( NULL == config->musicdir ) {
-		fail( F_FAIL, "No music dir set in configuration!\n%s", error->message );
-	}
-	config->profile =g_key_file_get_string_list( keyfile, "mixplay", "profiles", &config->profiles, &error );
-	if( NULL == config->profile ) {
-		error=NULL;
-		config->profile[0]=calloc( 8, sizeof( char ) );
-		strcpy( config->profile[0], "mixplay" );
-		config->active=0;
+	if( ! g_key_file_load_from_file( keyfile, conffile, G_KEY_FILE_NONE, &error ) ) {
+		res = gtk_dialog_run (GTK_DIALOG ( config->widgets->fileselect ));
+		if (res == GTK_RESPONSE_ACCEPT) {
+		    config->musicdir = gtk_file_chooser_get_filename( GTK_FILE_CHOOSER( config->widgets->fileselect ) );
+		    error=NULL;
+		    if( !g_key_file_save_to_file( keyfile, conffile, &error ) ) {
+		    	fail( F_FAIL, "Could not write configuration!\n%s", error->message );
+		    }
+		}
+		else {
+			fail( F_FAIL, "No Music directory chosen!" );
+		}
 	}
 	else {
-		config->active  =g_key_file_get_uint64( keyfile, "mixplay", "active", &error );
-	}
-	config->stream=g_key_file_get_string_list( keyfile, "mixplay", "streams", &config->streams, &error );
-	if( NULL != config->stream ) {
-		config->sname =g_key_file_get_string_list( keyfile, "mixplay", "snames", &config->streams, &error );
-		if( error ) {
-			fail( F_FAIL, "Streams set but no names!\n%s", error->message );
+		config->musicdir=g_key_file_get_string( keyfile, "mixplay", "musicdir", &error );
+		if( NULL == config->musicdir ) {
+			fail( F_FAIL, "No music dir set in configuration!\n%s", error->message );
+		}
+		config->profile =g_key_file_get_string_list( keyfile, "mixplay", "profiles", &config->profiles, &error );
+		if( NULL == config->profile ) {
+			error=NULL;
+			config->profile[0]=calloc( 8, sizeof( char ) );
+			strcpy( config->profile[0], "mixplay" );
+			config->active=0;
+		}
+		else {
+			config->active  =g_key_file_get_uint64( keyfile, "mixplay", "active", &error );
+		}
+		config->stream=g_key_file_get_string_list( keyfile, "mixplay", "streams", &config->streams, &error );
+		if( NULL != config->stream ) {
+			config->sname =g_key_file_get_string_list( keyfile, "mixplay", "snames", &config->streams, &error );
+			if( error ) {
+				fail( F_FAIL, "Streams set but no names!\n%s", error->message );
+			}
 		}
 	}
 }
@@ -218,14 +250,19 @@ static void *reader( void *cont ) {
 			order=0;
 			write( control->p_command[fdset][1], "STOP\n", 6 );
 			control->status=MPCMD_DBSCAN;
-			sleep(2);
-			unblockReq("OK");
+			dbAddTitles( control->dbname, control->musicdir );
+			contReq("OK - restart");
+			mpcontrol->command=MPCMD_QUIT;
+			gtk_main_quit ();
 			break;
-		case MPCMD_DBNEW:
+		case MPCMD_DBCLEAN:
 			order=0;
 			write( control->p_command[fdset][1], "STOP\n", 6 );
-			control->status=MPCMD_DBNEW;
-			unblockReq( "OK" );
+			control->status=MPCMD_DBCLEAN;
+			dbCheckExist( control->dbname );
+			contReq( "OK - restart" );
+			mpcontrol->command=MPCMD_QUIT;
+			gtk_main_quit ();
 			break;
 		case MPCMD_STOP:
 			order=0;
@@ -436,16 +473,7 @@ static void *reader( void *cont ) {
 int initAll( void *data ) {
 	struct mpcontrol_t *control;
 	control=(struct mpcontrol_t*)data;
-	char confdir[MAXPATHLEN]; // = "~/.mixplay";
-	char conffile[MAXPATHLEN]; //  = "mixplay.conf";
-
-	// load default configuration
-	snprintf( confdir, MAXPATHLEN, "%s/.mixplay", getenv("HOME") );
-	snprintf( conffile, MAXPATHLEN, "%s/mixplay.conf", confdir );
-	loadConfig( control, conffile );
-
-	control->dbname=calloc( MAXPATHLEN, sizeof( char ) );
-	snprintf( control->dbname, MAXPATHLEN, "%s/mixplay.db", confdir );
+	loadConfig( control );
 
 	control->root=NULL;
 
@@ -454,7 +482,7 @@ int initAll( void *data ) {
 	strcpy( control->remtime, "00:00" );
 	control->percent=0;
 	control->status=MPCMD_PLAY;
-	setProfile( control, confdir, control->profile[control->active] );
+	setProfile( control );
 
 	pthread_create( &control->rtid, NULL, reader, control );
 
@@ -529,6 +557,7 @@ int main( int argc, char **argv ) {
 	GW( mp_popup );
 	GW( popupText );
 	GW( button_popupOkay );
+	GW( fileselect );
 #undef GW
 
 	g_object_ref(control.widgets->play );
