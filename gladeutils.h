@@ -21,6 +21,7 @@
 #define MPCMD_WARN	11
 #define MPCMD_ERR	12
 #define MPCMD_STOP	13
+#define MPCMD_START	14
 
 /* Convenience macros for obtaining objects from UI file */
 #define MP_GET_OBJECT( builder, name, type, data ) \
@@ -61,8 +62,6 @@ struct _MpData
 	GtkWidget *mp_popup;
 	GtkWidget *popupText;
 	GtkWidget *button_popupOkay;
-
-	GtkWidget *fileselect;
 
 	GtkWidget *menu_profiles;
 	GtkWidget *menu_streams;

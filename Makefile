@@ -1,7 +1,7 @@
 CC=/usr/bin/gcc
 VERSION:=$(shell git describe --tags --abbrev=1 --dirty=-dev --always)
 CCFLAGS=-DVERSION=\"${VERSION}\"
-CCFLAGS+=-Wall -g 
+CCFLAGS+=-Wall -g -DDEBUG
 HDRS=utils.h musicmgr.h database.h mpgutils.h 
 OBJS=utils.o musicmgr.o database.o mpgutils.o
 NCOBJS=ncbox.o mixplay.o

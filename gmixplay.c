@@ -1,5 +1,3 @@
-#define DEBUG
-
 #include "utils.h"
 #include "musicmgr.h"
 #include "database.h"
@@ -47,9 +45,27 @@ static int updateUI( void *data ) {
 		snprintf( buff, MAXPATHLEN, "[%i]", control->current->played );
 		gtk_button_set_label( GTK_BUTTON( control->widgets->button_play ),
 				buff );
+		if( control->current->skipped > 0 ) {
+			sprintf( buff, "%2i", control->current->skipped );
+			gtk_button_set_label( GTK_BUTTON( control->widgets->button_next ),
+					buff );
+		}
+		else {
+			gtk_button_set_label( GTK_BUTTON( control->widgets->button_next ),
+					NULL );
+		}
 #endif
-	}
-	if( NULL != control->current ) {
+
+		if( control->current->skipped > 2 ) {
+			gtk_button_set_image( GTK_BUTTON( control->widgets->button_next ),
+					control->widgets->noentry );
+		}
+		else {
+			gtk_button_set_image( GTK_BUTTON( control->widgets->button_next ),
+					control->widgets->down );
+		}
+		gtk_widget_set_sensitive( control->widgets->button_fav, ( !(control->current->flags & MP_FAV) ) );
+
 		gtk_window_set_title ( GTK_WINDOW( control->widgets->mixplay_main ),
 							  control->current->display );
 	}
@@ -63,26 +79,6 @@ static int updateUI( void *data ) {
 				control->widgets->play );
 	}
 
-#ifdef DEBUG
-	if( control->current->skipped > 0 ) {
-		sprintf( buff, "%2i", control->current->skipped );
-		gtk_button_set_label( GTK_BUTTON( control->widgets->button_next ),
-				buff );
-	}
-	else {
-		gtk_button_set_label( GTK_BUTTON( control->widgets->button_next ),
-				NULL );
-	}
-#endif
-
-	if( control->current->skipped > 2 ) {
-		gtk_button_set_image( GTK_BUTTON( control->widgets->button_next ),
-				control->widgets->noentry );
-	}
-	else {
-		gtk_button_set_image( GTK_BUTTON( control->widgets->button_next ),
-				control->widgets->down );
-	}
 
 /** skipcontrol is off
 	if( control->percent < 5 ) {
@@ -101,7 +97,6 @@ static int updateUI( void *data ) {
 			control->remtime );
 	gtk_progress_bar_set_fraction( GTK_PROGRESS_BAR( control->widgets->progress),
 			control->percent/100.0 );
-	gtk_widget_set_sensitive( control->widgets->button_fav, ( !(control->current->flags & MP_FAV) ) );
 
 	return 0;
 }
@@ -127,13 +122,18 @@ static void setProfile( struct mpcontrol_t *ctrl ) {
 
 	ctrl->root=dbGetMusic( ctrl->dbname );
 	if( NULL == ctrl->root ) {
-		fail( F_FAIL, "No music/database at %s", ctrl->dbname );
+		dbAddTitles( ctrl->dbname, ctrl->musicdir );
+		contReq("OK");
+		ctrl->root=dbGetMusic( ctrl->dbname );
+		if( NULL == ctrl->root ) {
+			fail( F_FAIL, "No music found at %s for database %s", ctrl->musicdir,  ctrl->dbname );
+		}
 	}
 	ctrl->root=DNPSkip( ctrl->root, 3 );
 	ctrl->root=applyDNPlist( ctrl->root, dnplist );
 	ctrl->root=applyFavourites( ctrl->root, favourites );
 	ctrl->root=shuffleTitles(ctrl->root);
-
+	ctrl->command=MPCMD_START;
 	cleanList( dnplist );
 	cleanList( favourites );
 }
@@ -143,7 +143,9 @@ static void loadConfig( struct mpcontrol_t *config ) {
 	GError		*error=NULL;
 	char		confdir[MAXPATHLEN]; // = "~/.mixplay";
 	char		conffile[MAXPATHLEN]; //  = "mixplay.conf";
-	int			res;
+	GtkWidget 	*dialog;
+	GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER;
+	gint 		res;
 
 	// load default configuration
 	snprintf( confdir, MAXPATHLEN, "%s/.mixplay", getenv("HOME") );
@@ -158,40 +160,59 @@ static void loadConfig( struct mpcontrol_t *config ) {
 	}
 
 	keyfile=g_key_file_new();
-	if( ! g_key_file_load_from_file( keyfile, conffile, G_KEY_FILE_NONE, &error ) ) {
-		res = gtk_dialog_run (GTK_DIALOG ( config->widgets->fileselect ));
+	g_key_file_load_from_file( keyfile, conffile, G_KEY_FILE_NONE, &error );
+	if( NULL != error ) {
+#ifdef DEBUG
+		fail( F_WARN, "Could not load config from %s\n%s", conffile, error->message );
+#endif
+		error=NULL;
+		dialog = gtk_file_chooser_dialog_new ("Select Music directory",
+		                                      GTK_WINDOW( config->widgets->mixplay_main ),
+		                                      action,
+		                                      "_Cancel",
+		                                      GTK_RESPONSE_CANCEL,
+		                                      "_Okay",
+		                                      GTK_RESPONSE_ACCEPT,
+		                                      NULL);
+
+		res = gtk_dialog_run( GTK_DIALOG ( dialog ) );
 		if (res == GTK_RESPONSE_ACCEPT) {
-		    config->musicdir = gtk_file_chooser_get_filename( GTK_FILE_CHOOSER( config->widgets->fileselect ) );
-		    error=NULL;
-		    if( !g_key_file_save_to_file( keyfile, conffile, &error ) ) {
+		    config->musicdir = gtk_file_chooser_get_filename( GTK_FILE_CHOOSER( dialog ) );
+		    g_key_file_set_string( keyfile, "mixplay", "musicdir", config->musicdir );
+		    g_key_file_save_to_file( keyfile, conffile, &error );
+		    if( NULL != error ) {
 		    	fail( F_FAIL, "Could not write configuration!\n%s", error->message );
 		    }
+			gtk_widget_destroy (dialog);
 		}
 		else {
 			fail( F_FAIL, "No Music directory chosen!" );
 		}
 	}
+
+	config->musicdir=g_key_file_get_string( keyfile, "mixplay", "musicdir", &error );
+	if( NULL != error ) {
+		fail( F_FAIL, "No music dir set in configuration!\n%s", error->message );
+	}
+	config->profile =g_key_file_get_string_list( keyfile, "mixplay", "profiles", &config->profiles, &error );
+	if( NULL != error ) {
+		error=NULL;
+		config->profile=calloc(1, sizeof( char * ) );
+		config->profile[0]=calloc( 8, sizeof( char ) );
+		strcpy( config->profile[0], "mixplay" );
+		config->active=0;
+	}
 	else {
-		config->musicdir=g_key_file_get_string( keyfile, "mixplay", "musicdir", &error );
-		if( NULL == config->musicdir ) {
-			fail( F_FAIL, "No music dir set in configuration!\n%s", error->message );
+		config->active  =g_key_file_get_uint64( keyfile, "mixplay", "active", &error );
+		if( NULL != error ) {
+			fail( F_FAIL, "No active profile set!" );
 		}
-		config->profile =g_key_file_get_string_list( keyfile, "mixplay", "profiles", &config->profiles, &error );
-		if( NULL == config->profile ) {
-			error=NULL;
-			config->profile[0]=calloc( 8, sizeof( char ) );
-			strcpy( config->profile[0], "mixplay" );
-			config->active=0;
-		}
-		else {
-			config->active  =g_key_file_get_uint64( keyfile, "mixplay", "active", &error );
-		}
-		config->stream=g_key_file_get_string_list( keyfile, "mixplay", "streams", &config->streams, &error );
-		if( NULL != config->stream ) {
-			config->sname =g_key_file_get_string_list( keyfile, "mixplay", "snames", &config->streams, &error );
-			if( error ) {
-				fail( F_FAIL, "Streams set but no names!\n%s", error->message );
-			}
+	}
+	config->stream=g_key_file_get_string_list( keyfile, "mixplay", "streams", &config->streams, &error );
+	if( NULL == error ) {
+		config->sname =g_key_file_get_string_list( keyfile, "mixplay", "snames", &config->streams, &error );
+		if( NULL != error ) {
+			fail( F_FAIL, "Streams set but no names!\n%s", error->message );
 		}
 	}
 }
@@ -230,6 +251,10 @@ static void *reader( void *cont ) {
 		to.tv_usec=100000; // 1/10 second
 		i=select( FD_SETSIZE, &fds, NULL, NULL, &to );
 		switch( control->command ) {
+		case MPCMD_START:
+			control->current = control->root;
+			sendplay( control->p_command[fdset][1], control->current);
+			break;
 		case MPCMD_PLAY:
 			write( control->p_command[fdset][1], "PAUSE\n", 7 );
 			control->status ^= MPCMD_PLAY;
@@ -251,18 +276,20 @@ static void *reader( void *cont ) {
 			write( control->p_command[fdset][1], "STOP\n", 6 );
 			control->status=MPCMD_DBSCAN;
 			dbAddTitles( control->dbname, control->musicdir );
-			contReq("OK - restart");
-			mpcontrol->command=MPCMD_QUIT;
-			gtk_main_quit ();
+			contReq("OK - restarting");
+			setProfile( control );
+			control->current = control->root;
+			sendplay( control->p_command[fdset][1], control->current);
 			break;
 		case MPCMD_DBCLEAN:
 			order=0;
 			write( control->p_command[fdset][1], "STOP\n", 6 );
 			control->status=MPCMD_DBCLEAN;
 			dbCheckExist( control->dbname );
-			contReq( "OK - restart" );
-			mpcontrol->command=MPCMD_QUIT;
-			gtk_main_quit ();
+			contReq( "OK - restarting" );
+			setProfile( control );
+			control->current = control->root;
+			sendplay( control->p_command[fdset][1], control->current);
 			break;
 		case MPCMD_STOP:
 			order=0;
@@ -308,8 +335,10 @@ static void *reader( void *cont ) {
 				switch (line[1]) {
 				int cmd=0, rem=0;
 				case 'R': // startup
-					control->current = control->root;
-					sendplay( control->p_command[fdset][1], control->current);
+					if( NULL != control->root ) {
+						control->current = control->root;
+						sendplay( control->p_command[fdset][1], control->current);
+					}
 				break;
 				case 'I': // ID3 info
 					// ICY stream info
@@ -476,16 +505,16 @@ int initAll( void *data ) {
 	loadConfig( control );
 
 	control->root=NULL;
+	control->current=NULL;
 
 	control->stream=0;
 	strcpy( control->playtime, "00:00" );
 	strcpy( control->remtime, "00:00" );
 	control->percent=0;
-	control->status=MPCMD_PLAY;
-	setProfile( control );
-
+	control->status=MPCMD_IDLE;
 	pthread_create( &control->rtid, NULL, reader, control );
 
+	setProfile( control );
 	return 0;
 }
 
@@ -557,7 +586,6 @@ int main( int argc, char **argv ) {
 	GW( mp_popup );
 	GW( popupText );
 	GW( button_popupOkay );
-	GW( fileselect );
 #undef GW
 
 	g_object_ref(control.widgets->play );

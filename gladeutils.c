@@ -15,6 +15,7 @@ struct mpRequestInfo_t {
 	char	title[80];
 	char	text[1024];
 	enum mpRequestmode	mode;
+	int clean;
 };
 
 /**
@@ -25,7 +26,7 @@ static int popUp( void *data ) {
 	req=(struct mpRequestInfo_t *)data;
 	int retval=0;
 	char buff[1024];
-	if( gtk_widget_is_visible( mpcontrol->widgets->mp_popup ) ) {
+	if( gtk_widget_is_visible( mpcontrol->widgets->mp_popup ) && !req->clean ) {
 		snprintf( buff, 1024, "%s%s",
 				gtk_label_get_text( GTK_LABEL( mpcontrol->widgets->popupText ) ),
 				req->text );
@@ -74,10 +75,12 @@ void fail( int error, const char* msg, ... ){
 	char eline[512];
 	struct mpRequestInfo_t *req;
 	req=calloc( 1, sizeof( struct mpRequestInfo_t ) );
+	req->clean=-1;
 
 	va_start( args, msg );
 	vsnprintf( req->text, 1024, msg, args );
-	if(error > 0 ) {
+	strncat( req->text, "\n", 1024 );
+	if(error != 0 ) {
 		snprintf( eline, 512, "\n ERROR: %i - %s\n", abs(error), strerror( abs(error) ) );
 		strncat( req->text, eline, 1024 );
 		req->mode=mpr_blocking;
@@ -87,8 +90,16 @@ void fail( int error, const char* msg, ... ){
 		req->mode=mpr_normal;
 	}
 	va_end(args);
-
-	gdk_threads_add_idle( popUp, req );
+#ifdef DEBUG
+	fputs( req->text, stderr );
+#endif
+	if( error == 0 ) {
+		gdk_threads_add_idle( popUp, req );
+	}
+	else {
+		popUp( req );
+		exit(-1);
+	}
 	return;
 }
 
@@ -121,7 +132,7 @@ void waitReq( const char *msg, ... ) {
 	va_list args;
 	struct mpRequestInfo_t *req;
 	req=calloc( 1, sizeof( struct mpRequestInfo_t ) );
-
+	req->clean = -1;
 	va_start( args, msg );
 	vsnprintf( req->text, 1024, msg, args );
 	va_end(args);

@@ -666,7 +666,6 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 			fail( F_FAIL, "%s is marked %i %i/%i!", runner->display, skip, i, num );
 		}
 		// skip forward until a title is found the is neither DNP nor MARK
-		// runner=skipOver( runner ); // moved into skipTitles()
 		valid=0; // title has not passed any tests
 
 		if( runner->flags & MP_MARK ) {
@@ -677,7 +676,7 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 		cycles=0;
 		while( skipguard && ( valid != 3 ) ) {
 			// First title? That name is valid by default
-			if( 0 == strlen(lastname) ) valid=1;
+			if( 0 == strlen(lastname) ) valid=3;
 
 			if( !(valid&1) ) {
 				guard=runner;
@@ -757,11 +756,11 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 		if( !skipguard ) {
 			// find a random position
 			activity("Stuffing");
-			guard=skipTitles( guard, RANDOM(num), 0 );
-			if( ( guard->flags & MP_DNP )
+			guard=skipTitles( end, RANDOM(num), 0 );
+			while( ( guard->plnext != guard )
 				&& !checkMatch( guard->artist, runner->artist )
 				&& !checkMatch( guard->plnext->artist, runner->artist ) ) {
-				guard=guard->dbnext;
+				guard=guard->plnext;
 			}
 			insskip++;
 			printver( 3, "[*] (%i/%li) %s\n", runner->played, pcount, runner->display );
@@ -778,11 +777,7 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 
 	// Make sure something valid is returned
 	if( NULL == end ) {
-		if( NULL == guard ) {
-			fail( F_FAIL, "No titles were shuffled!" );
-		}
-		fail( F_WARN, "All titles were inserted!" );
-		end=guard;
+		fail( F_FAIL, "No titles were inserted!" );
 	}
 
 	return end->plnext;
