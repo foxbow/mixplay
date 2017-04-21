@@ -60,12 +60,9 @@ struct _MpData
 	GtkWidget *noentry;
 	// popup elements
 	GtkWidget *mp_popup;
-	GtkWidget *popupText;
-	GtkWidget *button_popupOkay;
 
 	GtkWidget *menu_profiles;
 	GtkWidget *menu_streams;
-	GtkWidget *button_profile;
 	GtkWidget *menu_profile[5];
 };
 
@@ -95,9 +92,11 @@ struct mpcontrol_t {
 	int command;				// command to the player
 	int status;					// status of the player/system
 	pthread_t rtid;				// thread ID of the reader
+	char log[2048];
 };
 
-void contReq( const char *msg, ... );
+void progressLog( const char *msg, ... );
+void progressDone( const char *msg, ... );
 // void fail( int error, const char* msg, ... );
 // void popUp( int level, const char *text, ... );
 #endif /* __GLADEUTILS_H__ */

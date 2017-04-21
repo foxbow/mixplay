@@ -9,7 +9,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-volatile struct mpcontrol_t *mpcontrol;
+struct mpcontrol_t *mpcontrol;
 
 /**
  * make mpeg123 play the given title
@@ -122,8 +122,9 @@ static void setProfile( struct mpcontrol_t *ctrl ) {
 
 	ctrl->root=dbGetMusic( ctrl->dbname );
 	if( NULL == ctrl->root ) {
+		progressLog("Adding titles");
 		dbAddTitles( ctrl->dbname, ctrl->musicdir );
-		contReq("OK");
+		progressDone("OK");
 		ctrl->root=dbGetMusic( ctrl->dbname );
 		if( NULL == ctrl->root ) {
 			fail( F_FAIL, "No music found at %s for database %s", ctrl->musicdir,  ctrl->dbname );
@@ -274,20 +275,22 @@ static void *reader( void *cont ) {
 		case MPCMD_DBSCAN:
 			order=0;
 			write( control->p_command[fdset][1], "STOP\n", 6 );
-			control->status=MPCMD_DBSCAN;
+			control->status|=MPCMD_DBSCAN;
 			dbAddTitles( control->dbname, control->musicdir );
-			contReq("OK - restarting");
+			progressDone("OK - restarting");
 			setProfile( control );
+			control->status&=~MPCMD_DBSCAN;
 			control->current = control->root;
 			sendplay( control->p_command[fdset][1], control->current);
 			break;
 		case MPCMD_DBCLEAN:
 			order=0;
 			write( control->p_command[fdset][1], "STOP\n", 6 );
-			control->status=MPCMD_DBCLEAN;
+			control->status|=MPCMD_DBCLEAN;
 			dbCheckExist( control->dbname );
-			contReq( "OK - restarting" );
+			progressDone( "OK - restarting" );
 			setProfile( control );
+			control->status&=~MPCMD_DBCLEAN;
 			control->current = control->root;
 			sendplay( control->p_command[fdset][1], control->current);
 			break;
@@ -537,7 +540,7 @@ int main( int argc, char **argv ) {
 	}
 
 #ifdef DEBUG
-	setVerbosity(1);
+	setVerbosity(2);
 #else
 	muteVerbosity();
 #endif
@@ -582,11 +585,8 @@ int main( int argc, char **argv ) {
 	GW( down );
 	GW( skip );
 	GW( noentry );
-	GW( button_profile );
-	GW( mp_popup );
-	GW( popupText );
-	GW( button_popupOkay );
 #undef GW
+	control.widgets->mp_popup = NULL;
 
 	g_object_ref(control.widgets->play );
 	g_object_ref(control.widgets->pause );

@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-extern volatile struct mpcontrol_t *mpcontrol;
+extern struct mpcontrol_t *mpcontrol;
 
 enum mpRequestmode {
 	mpr_normal,		// async mode, shows info and can be closed at will
@@ -18,88 +18,47 @@ struct mpRequestInfo_t {
 	int clean;
 };
 
-/**
- * adds a line to the popUp window and shows it
- */
-static int popUp( void *data ) {
-	struct mpRequestInfo_t *req;
-	req=(struct mpRequestInfo_t *)data;
-	int retval=0;
-	char buff[1024];
-	if( gtk_widget_is_visible( mpcontrol->widgets->mp_popup ) && !req->clean ) {
-		snprintf( buff, 1024, "%s%s",
-				gtk_label_get_text( GTK_LABEL( mpcontrol->widgets->popupText ) ),
-				req->text );
-	}
-	else {
-		strncpy( buff, req->text, 1024 );
-	}
-	gtk_label_set_text( GTK_LABEL( mpcontrol->widgets->popupText ),
-						buff );
-	switch( req->mode ) {
-	case mpr_blocking:
-		gtk_widget_set_sensitive( mpcontrol->widgets->mixplay_main, FALSE );
-		retval=gtk_dialog_run( GTK_DIALOG( mpcontrol->widgets->mp_popup ) );
-		gtk_widget_set_sensitive( mpcontrol->widgets->mixplay_main, TRUE );
-		break;
-	case mpr_waiting:
-		gtk_widget_show_all( mpcontrol->widgets->mp_popup );
-		gtk_widget_set_sensitive( mpcontrol->widgets->mixplay_main, FALSE );
-		gtk_widget_set_sensitive( mpcontrol->widgets->button_popupOkay, FALSE );
-		break;
-	case mpr_closing:
-		gtk_widget_set_sensitive( mpcontrol->widgets->mixplay_main, TRUE );
-		gtk_widget_set_sensitive( mpcontrol->widgets->button_popupOkay, TRUE );
-		break;
-	case mpr_normal:
-		gtk_widget_show_all( mpcontrol->widgets->mp_popup );
-		break;
-	}
-	free(req);
-	return retval;
-}
-
 /*
- * Print errormessage, errno and wait for [enter]
+ * Show errormessage quit
  * msg - Message to print
- * info - second part of the massage, for instance a variable
- * error - errno that was set
- *         F_WARN = print message w/o errno and return
- *         F_FAIL = print message w/o errno and exit
- *
- * @deprecated: wrapperfunction for old functions that should
- * not be used!
+ * error - errno that was set or 0 for no error to print
  */
 void fail( int error, const char* msg, ... ){
 	va_list args;
-	char eline[512];
-	struct mpRequestInfo_t *req;
-	req=calloc( 1, sizeof( struct mpRequestInfo_t ) );
-	req->clean=-1;
+	char line[1024];
+
+	GtkWidget *dialog;
+	GtkMessageType type = GTK_MESSAGE_ERROR;
+
+	if( F_WARN == error ) {
+		type=GTK_MESSAGE_WARNING;
+	}
 
 	va_start( args, msg );
-	vsnprintf( req->text, 1024, msg, args );
-	strncat( req->text, "\n", 1024 );
-	if(error != 0 ) {
-		snprintf( eline, 512, "\n ERROR: %i - %s\n", abs(error), strerror( abs(error) ) );
-		strncat( req->text, eline, 1024 );
-		req->mode=mpr_blocking;
-		mpcontrol->command=MPCMD_ERR;
-	}
-	else {
-		req->mode=mpr_normal;
-	}
+	vsnprintf( line, 1024, msg, args );
 	va_end(args);
 #ifdef DEBUG
-	fputs( req->text, stderr );
+	printf( "FAIL: %s\n", line );
 #endif
-	if( error == 0 ) {
-		gdk_threads_add_idle( popUp, req );
+
+	if(error > 0 ) {
+		dialog = gtk_message_dialog_new (GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+				GTK_DIALOG_DESTROY_WITH_PARENT, type, GTK_BUTTONS_CLOSE,
+				"%s\nERROR: %i - %s", line, abs(error), strerror( abs(error) ));
 	}
 	else {
-		popUp( req );
+		dialog = gtk_message_dialog_new (GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+				GTK_DIALOG_DESTROY_WITH_PARENT, type, GTK_BUTTONS_CLOSE,
+				"%s", line );
+	}
+	gtk_dialog_run (GTK_DIALOG (dialog));
+	gtk_widget_destroy (dialog);
+	if( error != F_WARN ) {
+		mpcontrol->command=MPCMD_QUIT;
+		gtk_main_quit();
 		exit(-1);
 	}
+
 	return;
 }
 
@@ -109,47 +68,80 @@ void fail( int error, const char* msg, ... ){
  */
 void printver( int vl, const char *msg, ... ) {
 	va_list args;
-	struct mpRequestInfo_t *req;
-	req=calloc( 1, sizeof( struct mpRequestInfo_t ) );
+	char line[512];
 
 	if( vl <= getVerbosity() ) {
 		va_start( args, msg );
-		vsnprintf( req->text, 1024, msg, args );
+		vsnprintf( line, 512, msg, args );
 		va_end(args);
-		req->mode=mpr_normal;
-		gdk_threads_add_idle( popUp, req );
+
+		if( NULL != mpcontrol->widgets->mp_popup ) {
+			strncat( mpcontrol->log, line, 1024 );
+			gtk_message_dialog_format_secondary_text( GTK_MESSAGE_DIALOG( mpcontrol->widgets->mp_popup ),
+					"%s", mpcontrol->log );
+#ifdef DEBUG
+			printf("VER: %s", line );
+#endif
+		}
+		else {
+			printf("%s", line );
+		}
 	}
+
 }
 
 /**
- * open a blocking requester for status/process
- * informations
- *
- * The main app and the OK button are disabled until
- * unblockReq() is called.
+ * disables the main app window and opens an info requester
  */
-void waitReq( const char *msg, ... ) {
+void progressLog( const char *msg, ... ) {
 	va_list args;
-	struct mpRequestInfo_t *req;
-	req=calloc( 1, sizeof( struct mpRequestInfo_t ) );
-	req->clean = -1;
+	char line[512];
+
 	va_start( args, msg );
-	vsnprintf( req->text, 1024, msg, args );
+	vsnprintf( line, 512, msg, args );
 	va_end(args);
-	req->mode=mpr_waiting;
-	gdk_threads_add_idle( popUp, req );
+#ifdef DEBUG
+	printf("LOG: %s\n", line);
+#endif
+
+	if( NULL == mpcontrol->widgets->mp_popup ) {
+		mpcontrol->widgets->mp_popup = gtk_message_dialog_new (GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+				GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_INFO, GTK_BUTTONS_CLOSE,
+				"%s", line );
+		gtk_widget_show_all( mpcontrol->widgets->mp_popup );
+		gtk_widget_set_sensitive( mpcontrol->widgets->mixplay_main, FALSE );
+	}
+	else {
+		fail( F_FAIL, "progress req already open!\n%s", line );
+	}
+
 }
-
-void contReq( const char *msg, ... ) {
+/**
+ * enables close button of info request and reenables main window
+ */
+void progressDone( const char *msg, ... ) {
 	va_list args;
-	struct mpRequestInfo_t *req;
-	req=calloc( 1, sizeof( struct mpRequestInfo_t ) );
+	char line[512];
 
 	va_start( args, msg );
-	vsnprintf( req->text, 1024, msg, args );
+	vsnprintf( line, 512, msg, args );
 	va_end(args);
-	req->mode=mpr_closing;
-	gdk_threads_add_idle( popUp, req );
+	printf("DONE: %s\n", line);
+
+	if( NULL == mpcontrol->widgets->mp_popup ) {
+		fail( F_FAIL, "No progress request open for\n%s", line );
+	}
+
+	strncat( mpcontrol->log, "\n", 1024 );
+	strncat( mpcontrol->log, line, 1024 );
+	gtk_message_dialog_format_secondary_text( GTK_MESSAGE_DIALOG( mpcontrol->widgets->mp_popup ),
+			"%s", mpcontrol->log );
+
+	g_signal_connect_swapped (mpcontrol->widgets->mp_popup, "response",
+	                          G_CALLBACK (gtk_widget_destroy),
+	                          mpcontrol->widgets->mp_popup );
+	mpcontrol->log[0]='\0';
+	gtk_widget_set_sensitive( mpcontrol->widgets->mixplay_main, TRUE );
 }
 
 G_MODULE_EXPORT void markfav( GtkButton *button, gpointer data ) {
@@ -182,14 +174,6 @@ G_MODULE_EXPORT void replay( GtkButton *button, gpointer data ) {
 	/* CODE HERE */
 }
 
-G_MODULE_EXPORT void folder_ok_clicked_cb( GtkButton *button, gpointer data ) {
-
-}
-
-G_MODULE_EXPORT void folder_cancel_clicked_cb( GtkButton *button, gpointer data ) {
-
-}
-
 G_MODULE_EXPORT void destroy( GtkWidget *widget, gpointer   data )
 {
     gtk_main_quit ();
@@ -198,36 +182,18 @@ G_MODULE_EXPORT void destroy( GtkWidget *widget, gpointer   data )
 G_MODULE_EXPORT void db_clean( GtkWidget *menu, gpointer   data )
 {
 	mpcontrol->command=MPCMD_DBCLEAN;
-	waitReq( "Clean database" );
+	progressLog( "Clean database" );
 }
 
 G_MODULE_EXPORT void db_scan( GtkWidget *menu, gpointer   data )
 {
 	mpcontrol->command=MPCMD_DBSCAN;
-	waitReq( "Add new titles" );
+	progressLog( "Add new titles" );
 }
 
 G_MODULE_EXPORT void switchProfile( GtkWidget *menu, gpointer data )
 {
 	mpcontrol->command=MPCMD_NXTP;
-}
-
-G_MODULE_EXPORT void popupCancel_clicked( GtkButton *button, gpointer data ) {
-	gtk_widget_hide( mpcontrol->widgets->mp_popup );
-	if( MPCMD_ERR == mpcontrol->command ) {
-		mpcontrol->command=MPCMD_QUIT;
-		gtk_main_quit ();
-	}
-}
-
-G_MODULE_EXPORT void popupOkay_clicked( GtkButton *button, gpointer data ) {
-	gtk_label_set_text( GTK_LABEL( mpcontrol->widgets->popupText ),
-					"" );
-	gtk_widget_hide( mpcontrol->widgets->mp_popup );
-	if( MPCMD_ERR == mpcontrol->command ) {
-		mpcontrol->command=MPCMD_QUIT;
-		gtk_main_quit ();
-	}
 }
 
 G_MODULE_EXPORT void info_db( GtkWidget *menu, gpointer data ) {
