@@ -70,7 +70,7 @@ static int updateUI( void *data ) {
 							  control->current->display );
 	}
 
-	if( MPCMD_PLAY == control->status ) {
+	if( MPCMD_PLAY | control->status ) {
 		gtk_button_set_image( GTK_BUTTON( control->widgets->button_play ),
 				control->widgets->pause );
 	}

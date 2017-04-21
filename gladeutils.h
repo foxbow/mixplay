@@ -5,6 +5,7 @@
 #include "musicmgr.h"
 #include <glib.h>
 #include <gtk/gtk.h>
+#include <pthread.h>
 
 // command and status values
 #define MPCMD_IDLE	0
