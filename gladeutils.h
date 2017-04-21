@@ -94,6 +94,7 @@ struct mpcontrol_t {
 	int status;					// status of the player/system
 	pthread_t rtid;				// thread ID of the reader
 	char log[2048];
+	int fullscreen;
 };
 
 void progressLog( const char *msg, ... );

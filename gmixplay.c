@@ -175,7 +175,9 @@ static void loadConfig( struct mpcontrol_t *config ) {
 		                                      "_Okay",
 		                                      GTK_RESPONSE_ACCEPT,
 		                                      NULL);
-
+		if( config->fullscreen ) {
+			gtk_window_fullscreen( GTK_WINDOW( dialog) );
+		}
 		res = gtk_dialog_run( GTK_DIALOG ( dialog ) );
 		if (res == GTK_RESPONSE_ACCEPT) {
 		    config->musicdir = gtk_file_chooser_get_filename( GTK_FILE_CHOOSER( dialog ) );
@@ -524,7 +526,6 @@ int initAll( void *data ) {
 int main( int argc, char **argv ) {
     GtkBuilder *builder;
     GError     *error = NULL;
-    int fullscreen=0;
 
     struct mpcontrol_t control;
 
@@ -550,15 +551,17 @@ int main( int argc, char **argv ) {
     /* Init GTK+ */
     gtk_init( &argc, &argv );
 
+    control.fullscreen=0;
+
     if( argc > 1 ) {
-    	fullscreen=1;
+    	control.fullscreen=1;
     }
 
 
     /* Create new GtkBuilder object */
     builder = gtk_builder_new();
 
-    if( fullscreen ) {
+    if( control.fullscreen ) {
     	gtk_builder_add_from_file( builder, "gmixplay_fs.glade", &error );
     }
     else {
@@ -614,7 +617,7 @@ int main( int argc, char **argv ) {
 
 	/* Show window. All other widgets are automatically shown by GtkBuilder */
     gtk_widget_show( control.widgets->mixplay_main );
-    if( fullscreen ) {
+    if( control.fullscreen ) {
     	gtk_window_fullscreen( GTK_WINDOW( control.widgets->mixplay_main) );
     }
 
