@@ -524,6 +524,7 @@ int initAll( void *data ) {
 int main( int argc, char **argv ) {
     GtkBuilder *builder;
     GError     *error = NULL;
+    int fullscreen=0;
 
     struct mpcontrol_t control;
 
@@ -549,9 +550,21 @@ int main( int argc, char **argv ) {
     /* Init GTK+ */
     gtk_init( &argc, &argv );
 
+    if( argc > 1 ) {
+    	fullscreen=1;
+    }
+
+
     /* Create new GtkBuilder object */
     builder = gtk_builder_new();
-    if( ! gtk_builder_add_from_file( builder, "gmixplay.glade", &error ) )
+
+    if( fullscreen ) {
+    	gtk_builder_add_from_file( builder, "gmixplay_fs.glade", &error );
+    }
+    else {
+    	gtk_builder_add_from_file( builder, "gmixplay_app.glade", &error );
+    }
+    if( NULL != error  )
     {
         g_warning( "%s", error->message );
         g_free( error );
@@ -601,7 +614,9 @@ int main( int argc, char **argv ) {
 
 	/* Show window. All other widgets are automatically shown by GtkBuilder */
     gtk_widget_show( control.widgets->mixplay_main );
-
+    if( fullscreen ) {
+    	gtk_window_fullscreen( GTK_WINDOW( control.widgets->mixplay_main) );
+    }
 
 	// start the player processes
 	// these may wait in the background until
