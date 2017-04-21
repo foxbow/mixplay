@@ -2,6 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+pthread_mutex_t msglock=PTHREAD_MUTEX_INITIALIZER;
+
 extern struct mpcontrol_t *mpcontrol;
 
 enum mpRequestmode {
@@ -65,27 +67,39 @@ void fail( int error, const char* msg, ... ){
 /**
  * print the given message when the verbosity is at
  * least vl
+ *
+ * threadsafe...
  */
 void printver( int vl, const char *msg, ... ) {
 	va_list args;
 	char line[512];
 
 	if( vl <= getVerbosity() ) {
+		pthread_mutex_lock( &msglock );
 		va_start( args, msg );
 		vsnprintf( line, 512, msg, args );
 		va_end(args);
 
-		if( NULL != mpcontrol->widgets->mp_popup ) {
-			strncat( mpcontrol->log, line, 1024 );
-			gtk_message_dialog_format_secondary_text( GTK_MESSAGE_DIALOG( mpcontrol->widgets->mp_popup ),
-					"%s", mpcontrol->log );
+		if( NULL == mpcontrol->widgets->mp_popup ) {
+			progressLog("Info:");
+			g_signal_connect_swapped (mpcontrol->widgets->mp_popup, "response",
+			                          G_CALLBACK (gtk_widget_destroy),
+			                          mpcontrol->widgets->mp_popup );
+			gtk_widget_set_sensitive( mpcontrol->widgets->mixplay_main, TRUE );
+		}
+
+		strncat( mpcontrol->log, line, 1024 );
+		gtk_message_dialog_format_secondary_text( GTK_MESSAGE_DIALOG( mpcontrol->widgets->mp_popup ),
+				"%s", mpcontrol->log );
+
+		gtk_widget_queue_draw( mpcontrol->widgets->mp_popup );
+		while (gtk_events_pending ()) gtk_main_iteration ();
+
+		pthread_mutex_unlock( &msglock );
+
 #ifdef DEBUG
-			printf("VER: %s", line );
+		printf("VER: %s", line );
 #endif
-		}
-		else {
-			printf("%s", line );
-		}
 	}
 
 }
@@ -105,6 +119,7 @@ void progressLog( const char *msg, ... ) {
 #endif
 
 	if( NULL == mpcontrol->widgets->mp_popup ) {
+		mpcontrol->log[0]='\0';
 		mpcontrol->widgets->mp_popup = gtk_message_dialog_new (GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
 				GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_INFO, GTK_BUTTONS_CLOSE,
 				"%s", line );
@@ -112,7 +127,8 @@ void progressLog( const char *msg, ... ) {
 		gtk_widget_set_sensitive( mpcontrol->widgets->mixplay_main, FALSE );
 	}
 	else {
-		fail( F_FAIL, "progress req already open!\n%s", line );
+		gtk_widget_set_sensitive( mpcontrol->widgets->mixplay_main, FALSE );
+//		fail( F_FAIL, "progress req already open!\n%s", line );
 	}
 
 }
@@ -140,7 +156,6 @@ void progressDone( const char *msg, ... ) {
 	g_signal_connect_swapped (mpcontrol->widgets->mp_popup, "response",
 	                          G_CALLBACK (gtk_widget_destroy),
 	                          mpcontrol->widgets->mp_popup );
-	mpcontrol->log[0]='\0';
 	gtk_widget_set_sensitive( mpcontrol->widgets->mixplay_main, TRUE );
 }
 
