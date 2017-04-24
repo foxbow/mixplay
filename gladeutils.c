@@ -145,16 +145,56 @@ void progressDone( const char *msg, ... ) {
 	gtk_widget_set_sensitive( mpcontrol->widgets->mixplay_main, TRUE );
 }
 
+G_MODULE_EXPORT void showInfo( GtkButton *button, gpointer data ) {
+	gtk_show_about_dialog ( GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+	                       "program-name", "gmixplay",
+	                       "copyright", "2017 B.Weber",
+	                       "license-type", GTK_LICENSE_MIT_X11,
+	                       "version", VERSION,
+	                       "comments", "console based front-end to mpg123, planned to replace my old "
+	                       	   "squeezebox/squeezeboxserver and act as a radio replacement to play "
+	                       	   "background music but stay sleek enough to run on a mini ARM board.",
+	                       "website", "https://github.com/foxbow/mixplay",
+	                       NULL, NULL);
+}
+
 G_MODULE_EXPORT void markfav( GtkButton *button, gpointer data ) {
-	mpcontrol->command=mpc_fav;
-    /* CODE HERE */
+	GtkWidget *dialog;
+	int reply;
+	dialog = gtk_message_dialog_new ( GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+			GTK_DIALOG_DESTROY_WITH_PARENT,
+			GTK_MESSAGE_QUESTION,
+			GTK_BUTTONS_YES_NO,
+			"Mark %s as favourite?",
+			mpcontrol->current->display );
+	reply=gtk_dialog_run (GTK_DIALOG (dialog));
+
+	if( GTK_RESPONSE_YES == reply ) {
+		mpcontrol->command=mpc_fav;
+	}
+	gtk_widget_destroy( dialog );
 }
 
 G_MODULE_EXPORT void markdnp( GtkButton *button, gpointer data ) {
-
-
-
-	mpcontrol->command=mpc_dnptitle;
+	GtkWidget *dialog;
+	int reply;
+	dialog = gtk_dialog_new_with_buttons ("Mark as DNP",
+	                                      GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+	                                      GTK_DIALOG_DESTROY_WITH_PARENT,
+	                                      "_Title",
+	                                      mpc_dnptitle,
+	                                      "A_lbum",
+	                                      mpc_dnpalbum,
+	                                      "_Artist",
+	                                      mpc_dnpartist,
+	                                      "_Cancel",
+	                                      GTK_RESPONSE_CANCEL,
+	                                      NULL);
+	reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
+	if( reply > 0 ) {
+		mpcontrol->command=reply;
+	}
+	gtk_widget_destroy( dialog );
     /* CODE HERE */
 }
 

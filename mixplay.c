@@ -447,11 +447,11 @@ int main(int argc, char **argv) {
 		}
 
 		if( usedb && ( skiplevel > 0 ) ) {
-			root=DNPSkip( root, skiplevel );
+			DNPSkip( root, skiplevel );
 		}
 
 		if (usedb) {
-			root=applyDNPlist( root, dnplist );
+			applyDNPlist( root, dnplist );
 			applyFavourites( root, favourites );
 		}
 

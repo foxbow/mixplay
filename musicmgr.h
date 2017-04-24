@@ -59,10 +59,10 @@ struct entry_t *removeFromPL( struct entry_t *current, const unsigned int range 
 struct entry_t *loadPlaylist( const char *path );
 struct entry_t *insertTitle( struct entry_t *base, const char *path );
 struct entry_t *skipTitles( struct entry_t *current, int num, const int global );
-struct entry_t *applyDNPlist( struct entry_t *base, struct marklist_t *list );
 struct entry_t *searchList( struct entry_t *base, struct marklist_t *term );
-struct entry_t *DNPSkip( struct entry_t *base, const unsigned int level );
-struct entry_t *applyFavourites( struct entry_t *root, struct marklist_t *list );
+int DNPSkip( struct entry_t *base, const unsigned int level );
+int applyDNPlist( struct entry_t *base, struct marklist_t *list );
+int applyFavourites( struct entry_t *root, struct marklist_t *list );
 
 struct entry_t *cleanTitles( struct entry_t *root );
 struct marklist_t *cleanList( struct marklist_t *root );

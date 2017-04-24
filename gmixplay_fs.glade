@@ -140,6 +140,22 @@
                         <signal name="activate" handler="switchProfile" swapped="no"/>
                       </object>
                     </child>
+                    <child>
+                      <object class="GtkSeparatorMenuItem" id="menuitem1">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkMenuItem" id="menu_quit">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">_Quit</property>
+                        <property name="use_underline">True</property>
+                        <signal name="activate" handler="destroy" swapped="no"/>
+                        <accelerator key="q" signal="activate" modifiers="GDK_SHIFT_MASK"/>
+                      </object>
+                    </child>
                   </object>
                 </child>
               </object>
@@ -200,6 +216,15 @@
                         <property name="can_focus">False</property>
                         <property name="label" translatable="yes">Datenbankinfo</property>
                         <signal name="activate" handler="info_db" swapped="no"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkMenuItem" id="Info">
+                        <property name="visible">True</property>
+                        <property name="can_focus">False</property>
+                        <property name="label" translatable="yes">Info</property>
+                        <property name="use_underline">True</property>
+                        <signal name="activate" handler="showInfo" swapped="no"/>
                       </object>
                     </child>
                   </object>
@@ -272,7 +297,7 @@
                         <property name="lines">1</property>
                         <attributes>
                           <attribute name="weight" value="normal"/>
-                          <attribute name="scale" value="4"/>
+                          <attribute name="scale" value="3"/>
                         </attributes>
                       </object>
                       <packing>
@@ -295,7 +320,7 @@
                         <property name="track_visited_links">False</property>
                         <property name="lines">2</property>
                         <attributes>
-                          <attribute name="scale" value="6"/>
+                          <attribute name="scale" value="4"/>
                         </attributes>
                       </object>
                       <packing>
@@ -318,7 +343,7 @@
                         <property name="track_visited_links">False</property>
                         <property name="lines">1</property>
                         <attributes>
-                          <attribute name="scale" value="4"/>
+                          <attribute name="scale" value="3"/>
                         </attributes>
                       </object>
                       <packing>
@@ -411,8 +436,8 @@
                     <property name="image_position">top</property>
                     <property name="always_show_image">True</property>
                     <signal name="clicked" handler="playprev" swapped="no"/>
-                    <accelerator key="p" signal="clicked"/>
                     <accelerator key="Up" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
+                    <accelerator key="p" signal="clicked"/>
                   </object>
                   <packing>
                     <property name="expand">True</property>
@@ -430,8 +455,8 @@
                     <property name="image_position">bottom</property>
                     <property name="always_show_image">True</property>
                     <signal name="clicked" handler="playnext" swapped="no"/>
-                    <accelerator key="Down" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
                     <accelerator key="n" signal="clicked"/>
+                    <accelerator key="Down" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
                   </object>
                   <packing>
                     <property name="expand">True</property>
@@ -516,8 +541,8 @@
                 <property name="image_position">top</property>
                 <property name="always_show_image">True</property>
                 <signal name="clicked" handler="playpause" swapped="no"/>
-                <accelerator key="space" signal="clicked"/>
                 <accelerator key="AudioPlay" signal="clicked"/>
+                <accelerator key="space" signal="clicked"/>
               </object>
               <packing>
                 <property name="expand">True</property>

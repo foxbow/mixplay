@@ -274,7 +274,7 @@ struct entry_t *searchList( struct entry_t *base, struct marklist_t *term ) {
 /**
  * applies the dnplist on a list of titles and marks matching titles
  */
-struct entry_t *applyDNPlist( struct entry_t *base, struct marklist_t *list ) {
+int applyDNPlist( struct entry_t *base, struct marklist_t *list ) {
 	struct entry_t  *pos = base;
 	struct marklist_t *ptr = list;
 	int cnt=0;
@@ -303,7 +303,7 @@ struct entry_t *applyDNPlist( struct entry_t *base, struct marklist_t *list ) {
 
 	printver( 1, "Marked %i titles as DNP\n", cnt );
 
-	return base;
+	return cnt;
 }
 
 /**
@@ -601,7 +601,7 @@ static struct entry_t *skipOver( struct entry_t *current ) {
  * marks titles that have been skipped for at least level times
  * as DNP so they will not end up in a mix.
  */
-struct entry_t *DNPSkip( struct entry_t *base, const unsigned int level ) {
+int DNPSkip( struct entry_t *base, const unsigned int level ) {
 	struct entry_t *runner=base;
 	unsigned int skipskip=0;
 // Sort out skipped titles
@@ -615,7 +615,7 @@ struct entry_t *DNPSkip( struct entry_t *base, const unsigned int level ) {
 		runner=runner->dbnext;
 	} while( base != runner );
 	printver( 2, "Marked %i titles as DNP for being skipped\n", skipskip );
-	return base;
+	return skipskip;
 }
 
 /**
@@ -819,18 +819,16 @@ struct entry_t *skipTitles( struct entry_t *current, int num, const int global )
  * This function sets the favourite bit on titles found in the given list
  * a literal comparison is used to identify true favourites
  */
-struct entry_t *applyFavourites( struct entry_t *root, struct marklist_t *favourites ) {
-	char loname[MAXPATHLEN];
+int applyFavourites( struct entry_t *root, struct marklist_t *favourites ) {
 	struct marklist_t *ptr = NULL;
 	struct entry_t *runner=root;
 	int cnt=0;
 
 	do {
 		activity("Favourites ");
-		strlncpy( loname, runner->path, MAXPATHLEN );
 		ptr=favourites;
 		while( ptr ){
-			if( strstr( loname, ptr->dir ) ){
+			if( matchTitle( runner, ptr->dir ) ){
 				runner->flags|=MP_FAV;
 				cnt++;
 				break;
@@ -842,7 +840,7 @@ struct entry_t *applyFavourites( struct entry_t *root, struct marklist_t *favour
 
 	printver( 1, "Marked %i favourites\n", cnt );
 
-	return root;
+	return cnt;
 }
 
 /*
@@ -938,20 +936,18 @@ void dumpInfo( struct entry_t *root, int db ) {
 		} while( current != root );
 		switch( pl ) {
 		case 0:
-			printf(" Never  played:\t%5i titles\n", pcount );
+			printver( 0, " Never  played:\t%5i titles\n", pcount );
 			break;
 		case 1:
-			printf(" Once   played:\t%5i titles\n", pcount );
+			printver( 0, " Once   played:\t%5i titles\n", pcount );
 			break;
 		case 2:
-			printf(" Twice  played:\t%5i titles\n", pcount );
+			printver( 0, " Twice  played:\t%5i titles\n", pcount );
 			break;
 		default:
-			printf("%i times played:\t%5i titles\n", pl, pcount );
+			printver( 0, "%i times played:\t%5i titles\n", pl, pcount );
 		}
 	}
 
-	printf("skipped:\t%5i titles\n", skipped );
-
-	puts("");
+	printver( 0, "skipped:\t%5i titles\n", skipped );
 }

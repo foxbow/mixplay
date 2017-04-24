@@ -45,15 +45,9 @@ static int updateUI( void *data ) {
 		snprintf( buff, MAXPATHLEN, "[%i]", control->current->played );
 		gtk_button_set_label( GTK_BUTTON( control->widgets->button_play ),
 				buff );
-		if( control->current->skipped > 0 ) {
-			sprintf( buff, "%2i", control->current->skipped );
-			gtk_button_set_label( GTK_BUTTON( control->widgets->button_next ),
-					buff );
-		}
-		else {
-			gtk_button_set_label( GTK_BUTTON( control->widgets->button_next ),
-					NULL );
-		}
+		sprintf( buff, "%2i", control->current->skipped );
+		gtk_button_set_label( GTK_BUTTON( control->widgets->button_next ),
+				buff );
 #endif
 
 		if( control->current->skipped > 2 ) {
@@ -70,7 +64,7 @@ static int updateUI( void *data ) {
 							  control->current->display );
 	}
 
-	if( mpc_play | control->status ) {
+	if( mpc_play == control->status ) {
 		gtk_button_set_image( GTK_BUTTON( control->widgets->button_play ),
 				control->widgets->pause );
 	}
@@ -135,9 +129,9 @@ static void setProfile( struct mpcontrol_t *ctrl ) {
 					ctrl->musicdir,  ctrl->dbname );
 		}
 	}
-	ctrl->root=DNPSkip( ctrl->root, 3 );
-	ctrl->root=applyDNPlist( ctrl->root, dnplist );
-	ctrl->root=applyFavourites( ctrl->root, favourites );
+	DNPSkip( ctrl->root, 3 );
+	applyDNPlist( ctrl->root, dnplist );
+	applyFavourites( ctrl->root, favourites );
 	ctrl->root=shuffleTitles(ctrl->root);
 	ctrl->command=mpc_start;
 	cleanList( dnplist );
@@ -261,11 +255,12 @@ static void *reader( void *cont ) {
 		switch( control->command ) {
 		case mpc_start:
 			control->current = control->root;
+			control->status=mpc_play;
 			sendplay( control->p_command[fdset][1], control->current);
 			break;
 		case mpc_play:
 			write( control->p_command[fdset][1], "PAUSE\n", 7 );
-			control->status ^= mpc_play;
+			control->status = (mpc_play == control->status)?mpc_idle:mpc_play;
 			break;
 		case mpc_prev:
 			order=-1;
@@ -341,6 +336,12 @@ static void *reader( void *cont ) {
 			break;
 		case mpc_quit:
 			control->status=mpc_quit;
+			break;
+		case mpc_profile:
+			// @todo - change profile - probably done in callback itself
+			break;
+		case mpc_idle:
+			// do null
 			break;
 		}
 		control->command=mpc_idle;
