@@ -70,7 +70,7 @@ static int updateUI( void *data ) {
 							  control->current->display );
 	}
 
-	if( MPCMD_PLAY | control->status ) {
+	if( mpc_play | control->status ) {
 		gtk_button_set_image( GTK_BUTTON( control->widgets->button_play ),
 				control->widgets->pause );
 	}
@@ -106,6 +106,7 @@ static void setProfile( struct mpcontrol_t *ctrl ) {
 	char 		*profile;
 	struct marklist_t *dnplist=NULL;
 	struct marklist_t *favourites=NULL;
+	int num;
 
 	profile=ctrl->profile[ctrl->active];
 	snprintf( confdir, MAXPATHLEN, "%s/.mixplay", getenv("HOME") );
@@ -123,18 +124,22 @@ static void setProfile( struct mpcontrol_t *ctrl ) {
 	ctrl->root=dbGetMusic( ctrl->dbname );
 	if( NULL == ctrl->root ) {
 		progressLog("Adding titles");
-		dbAddTitles( ctrl->dbname, ctrl->musicdir );
-		progressDone("OK");
+		num = dbAddTitles( ctrl->dbname, ctrl->musicdir );
+		if( 0 == num ){
+			fail( F_FAIL, "No music found at %s!", ctrl->musicdir );
+		}
+		progressDone("Added %i titles", num );
 		ctrl->root=dbGetMusic( ctrl->dbname );
 		if( NULL == ctrl->root ) {
-			fail( F_FAIL, "No music found at %s for database %s", ctrl->musicdir,  ctrl->dbname );
+			fail( F_FAIL, "No music found at %s for database %s!\nThis should never happen!",
+					ctrl->musicdir,  ctrl->dbname );
 		}
 	}
 	ctrl->root=DNPSkip( ctrl->root, 3 );
 	ctrl->root=applyDNPlist( ctrl->root, dnplist );
 	ctrl->root=applyFavourites( ctrl->root, favourites );
 	ctrl->root=shuffleTitles(ctrl->root);
-	ctrl->command=MPCMD_START;
+	ctrl->command=mpc_start;
 	cleanList( dnplist );
 	cleanList( favourites );
 }
@@ -246,7 +251,7 @@ static void *reader( void *cont ) {
 	control=(struct mpcontrol_t *)cont;
 	db=dbOpen( control->dbname );
 
-	while ( control->status != MPCMD_QUIT ) {
+	while ( control->status != mpc_quit ) {
 		FD_ZERO( &fds );
 		FD_SET( control->p_status[0][0], &fds );
 		FD_SET( control->p_status[1][0], &fds );
@@ -254,19 +259,19 @@ static void *reader( void *cont ) {
 		to.tv_usec=100000; // 1/10 second
 		i=select( FD_SETSIZE, &fds, NULL, NULL, &to );
 		switch( control->command ) {
-		case MPCMD_START:
+		case mpc_start:
 			control->current = control->root;
 			sendplay( control->p_command[fdset][1], control->current);
 			break;
-		case MPCMD_PLAY:
+		case mpc_play:
 			write( control->p_command[fdset][1], "PAUSE\n", 7 );
-			control->status ^= MPCMD_PLAY;
+			control->status ^= mpc_play;
 			break;
-		case MPCMD_PREV:
+		case mpc_prev:
 			order=-1;
 			write( control->p_command[fdset][1], "STOP\n", 6 );
 			break;
-		case MPCMD_NEXT:
+		case mpc_next:
 			order=1;
 			if( !(control->current->flags & ( MP_SKPD | MP_CNTD ) ) ) {
 				control->current->skipped++;
@@ -274,53 +279,71 @@ static void *reader( void *cont ) {
 			}
 			write( control->p_command[fdset][1], "STOP\n", 6 );
 			break;
-		case MPCMD_DBSCAN:
+		case mpc_dbscan:
 			order=0;
 			write( control->p_command[fdset][1], "STOP\n", 6 );
-			control->status|=MPCMD_DBSCAN;
-			dbAddTitles( control->dbname, control->musicdir );
-			progressDone("OK - restarting");
-			setProfile( control );
-			control->status&=~MPCMD_DBSCAN;
-			control->current = control->root;
+			i=dbAddTitles( control->dbname, control->musicdir );
+			if( i > 0 ) {
+				progressDone("Added %i titles\nRestarting player", i );
+				setProfile( control );
+				control->current = control->root;
+			}
+			else {
+				progressDone("No titles to be added");
+			}
 			sendplay( control->p_command[fdset][1], control->current);
 			break;
-		case MPCMD_DBCLEAN:
+		case mpc_dbclean:
 			order=0;
 			write( control->p_command[fdset][1], "STOP\n", 6 );
-			control->status|=MPCMD_DBCLEAN;
-			dbCheckExist( control->dbname );
-			progressDone( "OK - restarting" );
-			setProfile( control );
-			control->status&=~MPCMD_DBCLEAN;
-			control->current = control->root;
+			i=dbCheckExist( control->dbname );
+			if( i > 0 ) {
+				progressDone( "Removed $i titles\nRestarting player", i );
+				setProfile( control );
+				control->current = control->root;
+			}
+			else {
+				progressDone( "No titles removed" );
+			}
 			sendplay( control->p_command[fdset][1], control->current);
 			break;
-		case MPCMD_STOP:
+		case mpc_stop:
 			order=0;
 			write( control->p_command[fdset][1], "STOP\n", 6 );
-			control->status=MPCMD_IDLE;
+			control->status=mpc_idle;
 			break;
-		case MPCMD_MDNP:
+		case mpc_dnptitle:
 			addToFile( control->dnpname, control->current->display, "d=" );
 			control->current=removeFromPL( control->current, SL_TITLE );
 			order=1;
 			write( control->p_command[fdset][1], "STOP\n", 6 );
 			break;
-		case MPCMD_MFAV:
+		case mpc_dnpalbum:
+			addToFile( control->dnpname, control->current->display, "l=" );
+			control->current=removeFromPL( control->current, SL_ALBUM );
+			order=1;
+			write( control->p_command[fdset][1], "STOP\n", 6 );
+			break;
+		case mpc_dnpartist:
+			addToFile( control->dnpname, control->current->display, "a=" );
+			control->current=removeFromPL( control->current, SL_ARTIST );
+			order=1;
+			write( control->p_command[fdset][1], "STOP\n", 6 );
+			break;
+		case mpc_fav:
 			if( !(control->current->flags & MP_FAV) ) {
 				addToFile( control->favname, control->current->display, "d=" );
 				control->current->flags|=MP_FAV;
 			}
 			break;
-		case MPCMD_REPL:
+		case mpc_repl:
 			write( control->p_command[fdset][1], "JUMP 0\n", 8 );
 			break;
-		case MPCMD_QUIT:
-			control->status=MPCMD_QUIT;
+		case mpc_quit:
+			control->status=mpc_quit;
 			break;
 		}
-		control->command=MPCMD_IDLE;
+		control->command=mpc_idle;
 
 		if( i>0 ) redraw=1;
 		// drain inactive player
@@ -516,7 +539,7 @@ int initAll( void *data ) {
 	strcpy( control->playtime, "00:00" );
 	strcpy( control->remtime, "00:00" );
 	control->percent=0;
-	control->status=MPCMD_IDLE;
+	control->status=mpc_idle;
 	pthread_create( &control->rtid, NULL, reader, control );
 
 	setProfile( control );
@@ -659,7 +682,7 @@ int main( int argc, char **argv ) {
 
     /* Start main loop */
     gtk_main();
-    control.status=MPCMD_QUIT;
+    control.status=mpc_quit;
 
     pthread_join( control.rtid, NULL );
 	kill( pid[0], SIGTERM);

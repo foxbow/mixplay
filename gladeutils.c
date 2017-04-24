@@ -6,20 +6,6 @@ pthread_mutex_t msglock=PTHREAD_MUTEX_INITIALIZER;
 
 extern struct mpcontrol_t *mpcontrol;
 
-enum mpRequestmode {
-	mpr_normal,		// async mode, shows info and can be closed at will
-	mpr_blocking,   // can be closed anytime, blocks operation
-	mpr_waiting,	// blocks and cannot be closed
-	mpr_closing		// finishes waiting
-};
-
-struct mpRequestInfo_t {
-	char	title[80];
-	char	text[1024];
-	enum mpRequestmode	mode;
-	int clean;
-};
-
 /*
  * Show errormessage quit
  * msg - Message to print
@@ -56,7 +42,7 @@ void fail( int error, const char* msg, ... ){
 	gtk_dialog_run (GTK_DIALOG (dialog));
 	gtk_widget_destroy (dialog);
 	if( error != F_WARN ) {
-		mpcontrol->command=MPCMD_QUIT;
+		mpcontrol->command=mpc_quit;
 		gtk_main_quit();
 		exit(-1);
 	}
@@ -68,7 +54,7 @@ void fail( int error, const char* msg, ... ){
  * print the given message when the verbosity is at
  * least vl
  *
- * threadsafe...
+ * kind of threadsafe...
  */
 void printver( int vl, const char *msg, ... ) {
 	va_list args;
@@ -160,55 +146,59 @@ void progressDone( const char *msg, ... ) {
 }
 
 G_MODULE_EXPORT void markfav( GtkButton *button, gpointer data ) {
-	mpcontrol->command=MPCMD_MFAV;
+	mpcontrol->command=mpc_fav;
     /* CODE HERE */
 }
 
 G_MODULE_EXPORT void markdnp( GtkButton *button, gpointer data ) {
-	mpcontrol->command=MPCMD_MDNP;
+
+
+
+	mpcontrol->command=mpc_dnptitle;
     /* CODE HERE */
 }
 
 G_MODULE_EXPORT void playpause( GtkButton *button, gpointer data ) {
-	mpcontrol->command=MPCMD_PLAY;
+	mpcontrol->command=mpc_play;
     /* CODE HERE */
 }
 
 G_MODULE_EXPORT void playprev( GtkButton *button, gpointer data ) {
-	mpcontrol->command=MPCMD_PREV;
+	mpcontrol->command=mpc_prev;
     /* CODE HERE */
 }
 
 G_MODULE_EXPORT void playnext( GtkButton *button, gpointer data ) {
-	mpcontrol->command=MPCMD_NEXT;
+	mpcontrol->command=mpc_next;
 	/* CODE HERE */
 }
 
 G_MODULE_EXPORT void replay( GtkButton *button, gpointer data ) {
-	mpcontrol->command=MPCMD_REPL;
+	mpcontrol->command=mpc_repl;
 	/* CODE HERE */
 }
 
 G_MODULE_EXPORT void destroy( GtkWidget *widget, gpointer   data )
 {
+	mpcontrol->command=mpc_quit;
     gtk_main_quit ();
 }
 
 G_MODULE_EXPORT void db_clean( GtkWidget *menu, gpointer   data )
 {
-	mpcontrol->command=MPCMD_DBCLEAN;
+	mpcontrol->command=mpc_dbclean;
 	progressLog( "Clean database" );
 }
 
 G_MODULE_EXPORT void db_scan( GtkWidget *menu, gpointer   data )
 {
-	mpcontrol->command=MPCMD_DBSCAN;
+	mpcontrol->command=mpc_dbscan;
 	progressLog( "Add new titles" );
 }
 
 G_MODULE_EXPORT void switchProfile( GtkWidget *menu, gpointer data )
 {
-	mpcontrol->command=MPCMD_NXTP;
+	mpcontrol->command=mpc_profile;
 }
 
 G_MODULE_EXPORT void info_db( GtkWidget *menu, gpointer data ) {

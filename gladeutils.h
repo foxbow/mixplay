@@ -7,22 +7,27 @@
 #include <gtk/gtk.h>
 #include <pthread.h>
 
-// command and status values
-#define MPCMD_IDLE	0
-#define MPCMD_PLAY	1
-#define MPCMD_PREV	2
-#define MPCMD_NEXT	3
-#define MPCMD_MDNP	4
-#define MPCMD_MFAV	5
-#define MPCMD_REPL	6
-#define MPCMD_NXTP	7
-#define MPCMD_QUIT	8
-#define MPCMD_DBSCAN	9
-#define MPCMD_DBCLEAN	10
-#define MPCMD_WARN	11
-#define MPCMD_ERR	12
-#define MPCMD_STOP	13
-#define MPCMD_START	14
+enum mpcmd_t {
+	mpc_idle,
+	mpc_play,
+	mpc_stop,
+	mpc_prev,
+	mpc_next,
+	mpc_start,
+	mpc_fav,
+	mpc_repl,
+	mpc_profile,
+	mpc_quit,
+	mpc_dbscan,
+	mpc_dbclean,
+//	mpc_warn,
+//	mpc_error,
+	mpc_dnptitle,
+	mpc_dnpartist,
+	mpc_dnpalbum
+};
+
+typedef enum mpcmd_t mpcmd;
 
 /* Convenience macros for obtaining objects from UI file */
 #define MP_GET_OBJECT( builder, name, type, data ) \
@@ -90,7 +95,7 @@ struct mpcontrol_t {
 	char remtime[10];			// string containing remaining playtime 00:00
 	int percent;				// how many percent of the song have been played
 	int playstream;				// playlist or stream
-	int command;				// command to the player
+	mpcmd command;				// command to the player
 	int status;					// status of the player/system
 	pthread_t rtid;				// thread ID of the reader
 	char log[2048];

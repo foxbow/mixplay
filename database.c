@@ -248,7 +248,7 @@ int dbCheckExist( const char *dbname ) {
 	int num=0;
 
 	root=dbGetMusic( dbname );
-	printver( 0, "Cleaning database...\n" );
+	printver( 1, "Cleaning database...\n" );
 	do {
 		activity( "Cleaning" );
 		if( !mp3Exists(runner) ) {
@@ -263,10 +263,10 @@ int dbCheckExist( const char *dbname ) {
 
 	if( num > 0 ) {
 		dbDump( dbname, root );
-		printver( 0, "Removed %i titles\n", num );
+		printver( 1, "Removed %i titles\n", num );
 	}
 	else {
-		printver( 0, "No titles to remove\n" );
+		printver( 1, "No titles to remove\n" );
 	}
 	wipeTitles( root );
 
@@ -288,7 +288,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 	dbroot=dbGetMusic( dbname );
 
 	db=dbOpen( dbname );
-	printver( 0, "Calculating mean playcount...\n" );
+	printver( 1, "Calculating mean playcount...\n" );
 	if( NULL != dbroot ) {
 		dbrunner=dbroot;
 		do {
@@ -303,11 +303,11 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 	}
 
 	// scan directory
-	printver( 0, "Scanning...\n" );
+	printver( 1, "Scanning...\n" );
 	fsroot=recurse(basedir, NULL, basedir);
 	fsroot=fsroot->dbnext;
 
-	printver( 0, "Adding titles...\n" );
+	printver( 1, "Adding titles...\n" );
 	while( NULL != fsroot ) {
 		activity("Adding");
 		dbrunner = findTitle( dbroot, fsroot->path );
@@ -320,7 +320,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 		fsroot=removeTitle( fsroot );
 	}
 
-	printver( 0, "Added %i titles with playcount %i to %s\n", num, low, dbname );
+	printver( 1, "Added %i titles with playcount %i to %s\n", num, low, dbname );
 	dbClose( db );
 	return num;
 }
