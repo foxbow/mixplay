@@ -224,7 +224,6 @@ static void loadConfig( struct mpcontrol_t *config ) {
  */
 static void *reader( void *cont ) {
 	struct mpcontrol_t *control;
-//	struct entry_t *current;
 	struct entry_t *next;
 	fd_set fds;
 	struct timeval to;
@@ -308,28 +307,34 @@ static void *reader( void *cont ) {
 			control->status=mpc_idle;
 			break;
 		case mpc_dnptitle:
-			addToFile( control->dnpname, control->current->display, "d=" );
+			addToFile( control->dnpname, control->current->title, "t=" );
 			control->current=removeFromPL( control->current, SL_TITLE );
 			order=1;
 			write( control->p_command[fdset][1], "STOP\n", 6 );
 			break;
 		case mpc_dnpalbum:
-			addToFile( control->dnpname, control->current->display, "l=" );
+			addToFile( control->dnpname, control->current->album, "l=" );
 			control->current=removeFromPL( control->current, SL_ALBUM );
 			order=1;
 			write( control->p_command[fdset][1], "STOP\n", 6 );
 			break;
 		case mpc_dnpartist:
-			addToFile( control->dnpname, control->current->display, "a=" );
+			addToFile( control->dnpname, control->current->artist, "a=" );
 			control->current=removeFromPL( control->current, SL_ARTIST );
 			order=1;
 			write( control->p_command[fdset][1], "STOP\n", 6 );
 			break;
-		case mpc_fav:
-			if( !(control->current->flags & MP_FAV) ) {
-				addToFile( control->favname, control->current->display, "d=" );
-				control->current->flags|=MP_FAV;
-			}
+		case mpc_favtitle:
+			addToFile( control->favname, control->current->title, "t=" );
+			control->current->flags|=MP_FAV;
+			break;
+		case mpc_favalbum:
+			addToFile( control->favname, control->current->album, "l=" );
+			markFavourite( control->current, SL_ALBUM );
+			break;
+		case mpc_favartist:
+			addToFile( control->favname, control->current->artist, "a=" );
+			markFavourite( control->current, SL_ARTIST );
 			break;
 		case mpc_repl:
 			write( control->p_command[fdset][1], "JUMP 0\n", 8 );
@@ -535,7 +540,7 @@ int initAll( void *data ) {
 
 	control->root=NULL;
 	control->current=NULL;
-
+	control->log[0]='\0';
 	control->stream=0;
 	strcpy( control->playtime, "00:00" );
 	strcpy( control->remtime, "00:00" );
@@ -544,6 +549,9 @@ int initAll( void *data ) {
 	pthread_create( &control->rtid, NULL, reader, control );
 
 	setProfile( control );
+#ifdef DEBUG
+	progressDone();
+#endif
 	return 0;
 }
 
@@ -644,6 +652,10 @@ int main( int argc, char **argv ) {
     if( control.fullscreen ) {
     	gtk_window_fullscreen( GTK_WINDOW( control.widgets->mixplay_main) );
     }
+
+#ifdef DEBUG
+    progressLog("Debug");
+#endif
 
 	// start the player processes
 	// these may wait in the background until

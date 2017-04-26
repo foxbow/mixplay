@@ -14,14 +14,14 @@ enum mpcmd_t {
 	mpc_prev,
 	mpc_next,
 	mpc_start,
-	mpc_fav,
+	mpc_favtitle,
+	mpc_favartist,
+	mpc_favalbum,
 	mpc_repl,
 	mpc_profile,
 	mpc_quit,
 	mpc_dbscan,
 	mpc_dbclean,
-//	mpc_warn,
-//	mpc_error,
 	mpc_dnptitle,
 	mpc_dnpartist,
 	mpc_dnpalbum
@@ -102,8 +102,10 @@ struct mpcontrol_t {
 	int fullscreen;
 };
 
+#define progress( ... ) printver( 0, __VA_ARGS__ )
 void progressLog( const char *msg, ... );
-void progressDone( const char *msg, ... );
+void progressDone( );
+/** defined in utils.h **/
 // void fail( int error, const char* msg, ... );
 // void popUp( int level, const char *text, ... );
 #endif /* __GLADEUTILS_H__ */

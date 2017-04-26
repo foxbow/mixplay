@@ -284,7 +284,7 @@ int applyDNPlist( struct entry_t *base, struct marklist_t *list ) {
 	}
 
 	if( NULL == list ) {
-		return base;
+		return 0;
 	}
 
 	do{
@@ -843,6 +843,30 @@ int applyFavourites( struct entry_t *root, struct marklist_t *favourites ) {
 	return cnt;
 }
 
+int markFavourite( struct entry_t *title, int range ) {
+	struct marklist_t buff;
+	buff.next=NULL;
+	switch( range ){
+	case SL_ALBUM:
+		snprintf( buff.dir, MAXPATHLEN, "l=%s", title->album );
+	break;
+	case SL_ARTIST:
+		snprintf( buff.dir, MAXPATHLEN, "a=%s", title->artist );
+	break;
+	case SL_GENRE:
+		snprintf( buff.dir, MAXPATHLEN, "g*%s", title->genre );
+	break;
+	case SL_PATH:
+		snprintf( buff.dir, MAXPATHLEN, "p=%s", title->path );
+		fail( F_WARN, "Range path is obsolete!\n%s", title->display );
+	break;
+	case SL_TITLE:
+		snprintf( buff.dir, MAXPATHLEN, "t=%s", title->title );
+	break;
+	}
+	return applyFavourites( title, &buff );
+}
+
 /*
  * Steps recursively through a directory and collects all music files in a list
  * curdir: current directory path
@@ -918,11 +942,19 @@ void dumpInfo( struct entry_t *root, int db ) {
 	unsigned int minplayed=-1; // UINT_MAX;
 	unsigned int pl=0;
 	unsigned int skipped=0;
+	unsigned int dnp=0;
+	unsigned int fav=0;
 
 	do {
-		if( current->played < minplayed ) minplayed=current->played;
-		if( current->played > maxplayed ) maxplayed=current->played;
-		if( current->skipped > 0 ) skipped++;
+		if( current->flags & MP_FAV ) fav++;
+		if( current->flags & MP_DNP ) {
+			dnp++;
+		}
+		else {
+			if( current->played < minplayed ) minplayed=current->played;
+			if( current->played > maxplayed ) maxplayed=current->played;
+			if( current->skipped > 0 ) skipped++;
+		}
 		if( db ) current=current->dbnext;
 		else current=current->plnext;
 	} while( current != root );
@@ -930,7 +962,7 @@ void dumpInfo( struct entry_t *root, int db ) {
 	for( pl=minplayed; pl <= maxplayed; pl++ ) {
 		unsigned int pcount=0;
 		do {
-			if( current->played == pl ) pcount++;
+			if( !( current->flags & MP_DNP ) && ( current->played == pl ) ) pcount++;
 			if( db ) current=current->dbnext;
 			else current=current->plnext;
 		} while( current != root );
@@ -948,6 +980,7 @@ void dumpInfo( struct entry_t *root, int db ) {
 			printver( 0, "%i times played:\t%5i titles\n", pl, pcount );
 		}
 	}
-
+	printver( 0, "%3i favourites\n", fav );
+	if( db ) printver( 0, "%3i do not plays\n", dnp );
 	printver( 0, "skipped:\t%5i titles\n", skipped );
 }

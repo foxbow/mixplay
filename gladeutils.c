@@ -67,11 +67,7 @@ void printver( int vl, const char *msg, ... ) {
 		va_end(args);
 
 		if( NULL == mpcontrol->widgets->mp_popup ) {
-			progressLog("Info:");
-			g_signal_connect_swapped (mpcontrol->widgets->mp_popup, "response",
-			                          G_CALLBACK (gtk_widget_destroy),
-			                          mpcontrol->widgets->mp_popup );
-			gtk_widget_set_sensitive( mpcontrol->widgets->mixplay_main, TRUE );
+			fail(F_FAIL, "No log widget open!");
 		}
 
 		strncat( mpcontrol->log, line, 1024 );
@@ -91,7 +87,20 @@ void printver( int vl, const char *msg, ... ) {
 }
 
 /**
- * disables the main app window and opens an info requester
+ * callback for the progress close button
+ * only closes the requester if the message buffer
+ * is empty.
+ */
+static void progressClose( GtkDialog *dialog, gint res, gpointer data )
+{
+	if( strlen( mpcontrol->log ) == 0 ){
+		gtk_widget_destroy( GTK_WIDGET( dialog ) );
+		mpcontrol->widgets->mp_popup=NULL;
+	}
+}
+
+/**
+ * Opens an info requester
  */
 void progressLog( const char *msg, ... ) {
 	va_list args;
@@ -104,159 +113,34 @@ void progressLog( const char *msg, ... ) {
 	printf("LOG: %s\n", line);
 #endif
 
-	if( NULL == mpcontrol->widgets->mp_popup ) {
-		mpcontrol->log[0]='\0';
-		mpcontrol->widgets->mp_popup = gtk_message_dialog_new (GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
-				GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_INFO, GTK_BUTTONS_CLOSE,
-				"%s", line );
-		gtk_widget_show_all( mpcontrol->widgets->mp_popup );
-		gtk_widget_set_sensitive( mpcontrol->widgets->mixplay_main, FALSE );
+	if( NULL != mpcontrol->widgets->mp_popup ) {
+		fail( F_WARN, "Log widget is already open!" );
+		return;
 	}
-	else {
-		gtk_widget_set_sensitive( mpcontrol->widgets->mixplay_main, FALSE );
-//		fail( F_FAIL, "progress req already open!\n%s", line );
-	}
-
+	mpcontrol->widgets->mp_popup = gtk_message_dialog_new (GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+			GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_INFO, GTK_BUTTONS_NONE,
+			"%s", line );
+	gtk_dialog_add_button( GTK_DIALOG( mpcontrol->widgets->mp_popup ), "OK", 1 );
+	g_signal_connect_swapped (mpcontrol->widgets->mp_popup, "response",
+	                          G_CALLBACK( progressClose ),
+	                          mpcontrol->widgets->mp_popup );
+	gtk_widget_show_all( mpcontrol->widgets->mp_popup );
 }
+
 /**
- * enables close button of info request and reenables main window
+ * enables closing of the info requester
  */
-void progressDone( const char *msg, ... ) {
-	va_list args;
-	char line[512];
-
-	va_start( args, msg );
-	vsnprintf( line, 512, msg, args );
-	va_end(args);
-	printf("DONE: %s\n", line);
-
-	if( NULL == mpcontrol->widgets->mp_popup ) {
-		fail( F_FAIL, "No progress request open for\n%s", line );
+void progressDone() {
+#ifdef DEBUG
+	printf("DONE\n");
+#endif
+	if( NULL == mpcontrol->widgets->mp_popup ){
+		fail( F_FAIL, "No progress request open!" );
 	}
-
 	strncat( mpcontrol->log, "\n", 1024 );
-	strncat( mpcontrol->log, line, 1024 );
+	strncat( mpcontrol->log, "Done.", 1024 );
 	gtk_message_dialog_format_secondary_text( GTK_MESSAGE_DIALOG( mpcontrol->widgets->mp_popup ),
 			"%s", mpcontrol->log );
-
-	g_signal_connect_swapped (mpcontrol->widgets->mp_popup, "response",
-	                          G_CALLBACK (gtk_widget_destroy),
-	                          mpcontrol->widgets->mp_popup );
-	gtk_widget_set_sensitive( mpcontrol->widgets->mixplay_main, TRUE );
-}
-
-G_MODULE_EXPORT void showInfo( GtkButton *button, gpointer data ) {
-	gtk_show_about_dialog ( GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
-	                       "program-name", "gmixplay",
-	                       "copyright", "2017 B.Weber",
-	                       "license-type", GTK_LICENSE_MIT_X11,
-	                       "version", VERSION,
-	                       "comments", "console based front-end to mpg123, planned to replace my old "
-	                       	   "squeezebox/squeezeboxserver and act as a radio replacement to play "
-	                       	   "background music but stay sleek enough to run on a mini ARM board.",
-	                       "website", "https://github.com/foxbow/mixplay",
-	                       NULL, NULL);
-}
-
-G_MODULE_EXPORT void markfav( GtkButton *button, gpointer data ) {
-	GtkWidget *dialog;
-	int reply;
-	dialog = gtk_message_dialog_new ( GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
-			GTK_DIALOG_DESTROY_WITH_PARENT,
-			GTK_MESSAGE_QUESTION,
-			GTK_BUTTONS_YES_NO,
-			"Mark %s as favourite?",
-			mpcontrol->current->display );
-	reply=gtk_dialog_run (GTK_DIALOG (dialog));
-
-	if( GTK_RESPONSE_YES == reply ) {
-		mpcontrol->command=mpc_fav;
-	}
-	gtk_widget_destroy( dialog );
-}
-
-G_MODULE_EXPORT void markdnp( GtkButton *button, gpointer data ) {
-	GtkWidget *dialog;
-	int reply;
-	dialog = gtk_dialog_new_with_buttons ("Mark as DNP",
-	                                      GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
-	                                      GTK_DIALOG_DESTROY_WITH_PARENT,
-	                                      "_Title",
-	                                      mpc_dnptitle,
-	                                      "A_lbum",
-	                                      mpc_dnpalbum,
-	                                      "_Artist",
-	                                      mpc_dnpartist,
-	                                      "_Cancel",
-	                                      GTK_RESPONSE_CANCEL,
-	                                      NULL);
-	reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
-	if( reply > 0 ) {
-		mpcontrol->command=reply;
-	}
-	gtk_widget_destroy( dialog );
-    /* CODE HERE */
-}
-
-G_MODULE_EXPORT void playpause( GtkButton *button, gpointer data ) {
-	mpcontrol->command=mpc_play;
-    /* CODE HERE */
-}
-
-G_MODULE_EXPORT void playprev( GtkButton *button, gpointer data ) {
-	mpcontrol->command=mpc_prev;
-    /* CODE HERE */
-}
-
-G_MODULE_EXPORT void playnext( GtkButton *button, gpointer data ) {
-	mpcontrol->command=mpc_next;
-	/* CODE HERE */
-}
-
-G_MODULE_EXPORT void replay( GtkButton *button, gpointer data ) {
-	mpcontrol->command=mpc_repl;
-	/* CODE HERE */
-}
-
-G_MODULE_EXPORT void destroy( GtkWidget *widget, gpointer   data )
-{
-	mpcontrol->command=mpc_quit;
-    gtk_main_quit ();
-}
-
-G_MODULE_EXPORT void db_clean( GtkWidget *menu, gpointer   data )
-{
-	mpcontrol->command=mpc_dbclean;
-	progressLog( "Clean database" );
-}
-
-G_MODULE_EXPORT void db_scan( GtkWidget *menu, gpointer   data )
-{
-	mpcontrol->command=mpc_dbscan;
-	progressLog( "Add new titles" );
-}
-
-G_MODULE_EXPORT void switchProfile( GtkWidget *menu, gpointer data )
-{
-	mpcontrol->command=mpc_profile;
-}
-
-G_MODULE_EXPORT void info_db( GtkWidget *menu, gpointer data ) {
-	fail( 0, "basedir: %s\ndnplist: %s\nfavlist: %s",
-			mpcontrol->musicdir, mpcontrol->dnpname, mpcontrol->favname );
-
-}
-
-G_MODULE_EXPORT void info_title( GtkWidget *menu, gpointer data ) {
-	if( 0 != mpcontrol->current->key ) {
-		fail( 0, "%s\nGenre: %s\nKey: %04i\nplaycount: %i\nskipcount: %i\nCount: %s - Skip: %s",
-				mpcontrol->current->path, mpcontrol->current->genre,
-				mpcontrol->current->key, mpcontrol->current->played,
-				mpcontrol->current->skipped,
-				ONOFF(~(mpcontrol->current->flags)&MP_CNTD),
-				ONOFF(~(mpcontrol->current->flags)&MP_SKPD));
-	}
-	else {
-		fail( 0, mpcontrol->current->path );
-	}
+	mpcontrol->log[0]='\0';
+	while (gtk_events_pending ()) gtk_main_iteration ();
 }
