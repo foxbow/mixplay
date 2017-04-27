@@ -164,8 +164,10 @@ void *reader( void *cont ) {
 			control->status=mpc_idle;
 			break;
 		case mpc_dnptitle:
-			addToFile( control->dnpname, control->current->title, "t=" );
-			control->current=removeFromPL( control->current, SL_TITLE );
+//			addToFile( control->dnpname, control->current->title, "t=" );
+//			control->current=removeFromPL( control->current, SL_TITLE );
+			addToFile( control->dnpname, control->current->title, "d=" );
+			control->current=removeFromPL( control->current, SL_DISPLAY );
 			order=1;
 			write( control->p_command[fdset][1], "STOP\n", 6 );
 			break;
@@ -182,7 +184,8 @@ void *reader( void *cont ) {
 			write( control->p_command[fdset][1], "STOP\n", 6 );
 			break;
 		case mpc_favtitle:
-			addToFile( control->favname, control->current->title, "t=" );
+//			addToFile( control->favname, control->current->title, "t=" );
+			addToFile( control->favname, control->current->display, "d=" );
 			control->current->flags|=MP_FAV;
 			break;
 		case mpc_favalbum:
@@ -229,10 +232,7 @@ void *reader( void *cont ) {
 				switch (line[1]) {
 				int cmd=0, rem=0;
 				case 'R': // startup
-					if( NULL != control->root ) {
-						control->current = control->root;
-						sendplay( control->p_command[fdset][1], control->current);
-					}
+					printver( 1, "MPG123 instance %i is running\n", fdset );
 				break;
 				case 'I': // ID3 info
 					// ICY stream info

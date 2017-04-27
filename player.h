@@ -59,6 +59,7 @@ struct mpcontrol_t {
 	pthread_t rtid;				// thread ID of the reader
 	char log[2048];
 	int fullscreen;
+	int debug;
 };
 
 void setCommand( struct mpcontrol_t *control, mpcmd cmd );

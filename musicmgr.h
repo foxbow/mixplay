@@ -24,6 +24,7 @@
 #define SL_ARTIST  4
 #define SL_GENRE   8
 #define SL_PATH   16
+#define SL_DISPLAY 32
 
 struct entry_t {
 	char path[MAXPATHLEN];		// path on the filesystem to the file

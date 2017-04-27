@@ -37,9 +37,8 @@ static void loadConfig( struct mpcontrol_t *config ) {
 	keyfile=g_key_file_new();
 	g_key_file_load_from_file( keyfile, conffile, G_KEY_FILE_NONE, &error );
 	if( NULL != error ) {
-#ifdef DEBUG
-		fail( F_WARN, "Could not load config from %s\n%s", conffile, error->message );
-#endif
+
+		if( config->debug ) fail( F_WARN, "Could not load config from %s\n%s", conffile, error->message );
 		error=NULL;
 		dialog = gtk_file_chooser_dialog_new ("Select Music directory",
 		                                      GTK_WINDOW( config->widgets->mixplay_main ),
@@ -115,17 +114,15 @@ int initAll( void *data ) {
 	control->status=mpc_idle;
 	pthread_create( &control->rtid, NULL, reader, control );
 	setProfile( control );
-#ifdef DEBUG
-	progressDone();
-#endif
+	if( control->debug ) progressDone();
 	return 0;
 }
 
 int main( int argc, char **argv ) {
     GtkBuilder *builder;
     GError     *error = NULL;
-
-    struct mpcontrol_t control;
+    char 		c;
+    struct 		mpcontrol_t control;
 
     int			i;
     int 		db=0;
@@ -139,22 +136,31 @@ int main( int argc, char **argv ) {
 		fail( errno, "Could not get current directory!" );
 	}
 
-#ifdef DEBUG
-	setVerbosity(2);
-#else
 	muteVerbosity();
-#endif
+
 	memset( basedir, 0, MAXPATHLEN );
 
     /* Init GTK+ */
     gtk_init( &argc, &argv );
 
     control.fullscreen=0;
+    control.debug=0;
 
-    if( argc > 1 ) {
-    	control.fullscreen=1;
-    }
-
+	// parse command line options
+	while ((c = getopt(argc, argv, "vfd")) != -1) {
+		switch (c) {
+		case 'v': // pretty useless in normal use
+			control.debug=1;
+			incVerbosity();
+		break;
+		case 'f':
+			control.fullscreen=1;
+		break;
+		case 'd':
+			control.debug=1;
+		break;
+		}
+	}
 
     /* Create new GtkBuilder object */
     builder = gtk_builder_new();
@@ -219,9 +225,9 @@ int main( int argc, char **argv ) {
     	gtk_window_fullscreen( GTK_WINDOW( control.widgets->mixplay_main) );
     }
 
-#ifdef DEBUG
-    progressLog("Debug");
-#endif
+    if( control.debug ) {
+    	progressLog("Debug");
+    }
 
 	// start the player processes
 	// these may wait in the background until

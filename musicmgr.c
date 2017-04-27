@@ -486,6 +486,10 @@ struct entry_t *removeFromPL( struct entry_t *entry, const unsigned int range ) 
 		case SL_PATH:
 			return plRemove(entry);
 			break;
+		case SL_DISPLAY:
+			pattern[0]='d';
+			strlncpy( &pattern[2], entry->display, NAMELEN );
+			break;
 		default:
 			fail( F_FAIL, "Unknown range ID: %i!", range );
 	}
@@ -862,6 +866,9 @@ int markFavourite( struct entry_t *title, int range ) {
 	break;
 	case SL_TITLE:
 		snprintf( buff.dir, MAXPATHLEN, "t=%s", title->title );
+	break;
+	case SL_DISPLAY:
+		snprintf( buff.dir, MAXPATHLEN, "d=%s", title->display );
 	break;
 	}
 	return applyFavourites( title, &buff );

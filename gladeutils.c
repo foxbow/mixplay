@@ -26,9 +26,7 @@ void fail( int error, const char* msg, ... ){
 	va_start( args, msg );
 	vsnprintf( line, 1024, msg, args );
 	va_end(args);
-#ifdef DEBUG
-	printf( "FAIL: %s\n", line );
-#endif
+	if( mpcontrol->debug ) printf( "FAIL: %s\n", line );
 
 	if(error > 0 ) {
 		dialog = gtk_message_dialog_new (GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
@@ -80,9 +78,7 @@ void printver( int vl, const char *msg, ... ) {
 
 		pthread_mutex_unlock( &msglock );
 
-#ifdef DEBUG
-		printf("VER: %s", line );
-#endif
+		if( mpcontrol->debug ) printf("VER: %s", line );
 	}
 
 }
@@ -110,9 +106,8 @@ void progressLog( const char *msg, ... ) {
 	va_start( args, msg );
 	vsnprintf( line, 512, msg, args );
 	va_end(args);
-#ifdef DEBUG
-	printf("LOG: %s\n", line);
-#endif
+
+	if( mpcontrol->debug ) printf("LOG: %s\n", line);
 
 	if( NULL != mpcontrol->widgets->mp_popup ) {
 		fail( F_WARN, "Log widget is already open!" );
@@ -132,9 +127,7 @@ void progressLog( const char *msg, ... ) {
  * enables closing of the info requester
  */
 void progressDone() {
-#ifdef DEBUG
-	printf("DONE\n");
-#endif
+	if( mpcontrol->debug ) printf("DONE\n");
 	if( NULL == mpcontrol->widgets->mp_popup ){
 		fail( F_FAIL, "No progress request open!" );
 	}
@@ -164,14 +157,14 @@ int updateUI( void *data ) {
 				control->current->plprev->display );
 		gtk_label_set_text( GTK_LABEL( control->widgets->displayname_next ),
 				control->current->plnext->display );
-#ifdef DEBUG
-		snprintf( buff, MAXPATHLEN, "[%i]", control->current->played );
-		gtk_button_set_label( GTK_BUTTON( control->widgets->button_play ),
-				buff );
-		sprintf( buff, "%2i", control->current->skipped );
-		gtk_button_set_label( GTK_BUTTON( control->widgets->button_next ),
-				buff );
-#endif
+		if( mpcontrol->debug ) {
+			snprintf( buff, MAXPATHLEN, "[%i]", control->current->played );
+			gtk_button_set_label( GTK_BUTTON( control->widgets->button_play ),
+					buff );
+			sprintf( buff, "%2i", control->current->skipped );
+			gtk_button_set_label( GTK_BUTTON( control->widgets->button_next ),
+					buff );
+		}
 
 		if( control->current->skipped > 2 ) {
 			gtk_button_set_image( GTK_BUTTON( control->widgets->button_next ),
