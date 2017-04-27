@@ -5,8 +5,8 @@ CCFLAGS+=-Wall -g -DDEBUG
 HDRS=utils.h musicmgr.h database.h mpgutils.h 
 OBJS=utils.o musicmgr.o database.o mpgutils.o
 NCOBJS=ncbox.o mixplay.o
-GLOBJS=gladeutils.o callbacks.o gmixplay.o
-GLSRC=gmixplay.c gladeutils.c callbacks.c
+GLOBJS=gladeutils.o callbacks.o gmixplay.o player.o
+GLSRC=gmixplay.c gladeutils.c callbacks.c player.c
 LDFLAGS_GLADE=`pkg-config --libs gtk+-3.0 gmodule-2.0`
 CCFLAGS_GLADE=$(CCFLAGS) `pkg-config --cflags gtk+-3.0 gmodule-2.0`
 EXES=bin/mixplay bin/gmixplay
@@ -23,7 +23,7 @@ clean:
 bin/mixplay: $(OBJS) $(NCOBJS) ncbox.h 
 	$(CC) $(CCFLAGS_NCURSES) $^ -o $@ -lncurses -lmpg123
 
-bin/gmixplay: $(OBJS) $(GLOBJS) gladeutils.h 
+bin/gmixplay: $(OBJS) $(GLOBJS) gladeutils.h player.h
 	$(CC) $(CCFLAGS_GLADE) $^ -o $@ $(LDFLAGS_GLADE) -lmpg123
 
 %.o: %.c $(HDRS)

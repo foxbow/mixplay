@@ -968,19 +968,19 @@ void dumpInfo( struct entry_t *root, int db ) {
 		} while( current != root );
 		switch( pl ) {
 		case 0:
-			printver( 0, " Never  played:\t%5i titles\n", pcount );
+			printver( 0, "Never played:\t%i titles\n", pcount );
 			break;
 		case 1:
-			printver( 0, " Once   played:\t%5i titles\n", pcount );
+			printver( 0, "Once played:\t%i titles\n", pcount );
 			break;
 		case 2:
-			printver( 0, " Twice  played:\t%5i titles\n", pcount );
+			printver( 0, "Twice played:\t%i titles\n", pcount );
 			break;
 		default:
-			printver( 0, "%i times played:\t%5i titles\n", pl, pcount );
+			printver( 0, "%i times played:\t%i titles\n", pl, pcount );
 		}
 	}
-	printver( 0, "%3i favourites\n", fav );
-	if( db ) printver( 0, "%3i do not plays\n", dnp );
-	printver( 0, "skipped:\t%5i titles\n", skipped );
+	printver( 0, "%i\tfavourites\n", fav );
+	if( db ) printver( 0, "%i\tdo not plays\n", dnp );
+	printver( 0, "%i\t skipped\n", skipped );
 }

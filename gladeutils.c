@@ -1,3 +1,4 @@
+#include "player.h"
 #include "gladeutils.h"
 #include <string.h>
 #include <stdlib.h>
@@ -137,10 +138,82 @@ void progressDone() {
 	if( NULL == mpcontrol->widgets->mp_popup ){
 		fail( F_FAIL, "No progress request open!" );
 	}
-	strncat( mpcontrol->log, "\n", 1024 );
+//	strncat( mpcontrol->log, "\n", 1024 );
 	strncat( mpcontrol->log, "Done.", 1024 );
 	gtk_message_dialog_format_secondary_text( GTK_MESSAGE_DIALOG( mpcontrol->widgets->mp_popup ),
 			"%s", mpcontrol->log );
 	mpcontrol->log[0]='\0';
 	while (gtk_events_pending ()) gtk_main_iteration ();
+}
+
+int updateUI( void *data ) {
+	struct mpcontrol_t *control;
+	char buff[MAXPATHLEN];
+	control=(struct mpcontrol_t*)data;
+
+	if( ( NULL != control->current ) && ( 0 != strlen( control->current->path ) ) ) {
+		gtk_label_set_text( GTK_LABEL( control->widgets->title_current ),
+				control->current->title );
+		gtk_label_set_text( GTK_LABEL( control->widgets->artist_current ),
+				control->current->artist );
+		gtk_label_set_text( GTK_LABEL( control->widgets->album_current ),
+				control->current->album );
+		gtk_label_set_text( GTK_LABEL( control->widgets->genre_current ),
+				control->current->genre );
+		gtk_label_set_text( GTK_LABEL( control->widgets->displayname_prev ),
+				control->current->plprev->display );
+		gtk_label_set_text( GTK_LABEL( control->widgets->displayname_next ),
+				control->current->plnext->display );
+#ifdef DEBUG
+		snprintf( buff, MAXPATHLEN, "[%i]", control->current->played );
+		gtk_button_set_label( GTK_BUTTON( control->widgets->button_play ),
+				buff );
+		sprintf( buff, "%2i", control->current->skipped );
+		gtk_button_set_label( GTK_BUTTON( control->widgets->button_next ),
+				buff );
+#endif
+
+		if( control->current->skipped > 2 ) {
+			gtk_button_set_image( GTK_BUTTON( control->widgets->button_next ),
+					control->widgets->noentry );
+		}
+		else {
+			gtk_button_set_image( GTK_BUTTON( control->widgets->button_next ),
+					control->widgets->down );
+		}
+		gtk_widget_set_sensitive( control->widgets->button_fav, ( !(control->current->flags & MP_FAV) ) );
+
+		gtk_window_set_title ( GTK_WINDOW( control->widgets->mixplay_main ),
+							  control->current->display );
+	}
+
+	if( mpc_play == control->status ) {
+		gtk_button_set_image( GTK_BUTTON( control->widgets->button_play ),
+				control->widgets->pause );
+	}
+	else {
+		gtk_button_set_image( GTK_BUTTON( control->widgets->button_play ),
+				control->widgets->play );
+	}
+
+
+/** skipcontrol is off
+	if( control->percent < 5 ) {
+		gtk_button_set_image( GTK_BUTTON( control->widgets->button_next ),
+				control->widgets->skip );
+	}
+	else {
+		gtk_button_set_image( GTK_BUTTON( control->widgets->button_next ),
+				control->widgets->down );
+	}
+**/
+	// other settings
+	gtk_label_set_text( GTK_LABEL( control->widgets->played ),
+			control->playtime );
+	gtk_label_set_text( GTK_LABEL( control->widgets->remain ),
+			control->remtime );
+	gtk_progress_bar_set_fraction( GTK_PROGRESS_BAR( control->widgets->progress),
+			control->percent/100.0 );
+
+	return 0;
 }
