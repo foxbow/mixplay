@@ -121,7 +121,7 @@ void *reader( void *cont ) {
 			break;
 		case mpc_next:
 			order=1;
-			if( !(control->current->flags & ( MP_SKPD | MP_CNTD ) ) ) {
+			if( !(control->current->flags & MP_SKPD  ) ) {
 				control->current->skipped++;
 				control->current->flags |= MP_SKPD;
 				dbPutTitle( db, control->current );
@@ -294,11 +294,10 @@ void *reader( void *cont ) {
 						sprintf( control->remtime, "%02i:%02i", rem/60, rem%60 );
 						if( rem <= fade ) {
 							// should the playcount be increased?
-							// !MP_CNTD - title has not been counted yet
 							if( !( control->current->flags & MP_CNTD ) ) {
 								control->current->flags |= MP_CNTD; // make sure a title is only counted once per session
 								control->current->played++;
-								if( control->current->skipped > 0 ) control->current->skipped--;
+								control->current->skipped--;
 								dbPutTitle( db, control->current );
 							}
 							next=control->current->plnext;
@@ -327,14 +326,13 @@ void *reader( void *cont ) {
 				case 'P': // Player status
 					cmd = atoi(&line[3]);
 					switch (cmd) {
-					case 0:
+					case 0: // STOP
 						// should the playcount be increased?
-						// intime  - has been played for more than 2 secs
-						// !MP_CNTD - title has not been counted yet
-						if ( ( intime > 2 )  && !( control->current->flags & MP_CNTD ) ) {
+						if( !( control->current->flags & ( MP_CNTD | MP_SKPD ) ) ) {
 							control->current->flags |= MP_CNTD;
 							control->current->played++;
-							if( control->current->skipped > 0 ) control->current->skipped--;
+							if( !(control->current->flags & MP_SKPD ) && ( control->current->skipped > 0 ) )
+								control->current->skipped--;
 							dbPutTitle( db, control->current );
 						}
 						next = skipTitles( control->current, order, 0 );
