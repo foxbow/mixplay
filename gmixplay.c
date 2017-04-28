@@ -122,7 +122,7 @@ int initAll( void *data ) {
 
 int main( int argc, char **argv ) {
     GtkBuilder *builder;
-    char 		c;
+    unsigned char	c;
     struct 		mpcontrol_t control;
 
     int			i;
@@ -148,7 +148,8 @@ int main( int argc, char **argv ) {
     control.debug=0;
 
 	// parse command line options
-	while ((c = getopt(argc, argv, "vfd")) != -1) {
+    // using unsigned char *c to work around getopt bug on ARM
+	while ((c = getopt(argc, argv, "vfd")) != 255 ) {
 		switch (c) {
 		case 'v': // pretty useless in normal use
 			control.debug=1;

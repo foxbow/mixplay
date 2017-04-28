@@ -2,7 +2,7 @@ CC=/usr/bin/gcc
 VERSION:=$(shell git describe --tags --abbrev=1 --dirty=-dev --always)
 CCFLAGS=-DVERSION=\"${VERSION}\"
 CCFLAGS+=-Wall -g
-HDRS=utils.h musicmgr.h database.h mpgutils.h 
+HDRS=utils.h musicmgr.h database.h mpgutils.h gladeutils.h player.h gmixplay_app.h gmixplay_fs.h
 OBJS=utils.o musicmgr.o database.o mpgutils.o
 NCOBJS=ncbox.o mixplay.o
 GLOBJS=gladeutils.o callbacks.o gmixplay.o player.o
@@ -28,10 +28,10 @@ distclean: clean
 bin/mixplay: $(OBJS) $(NCOBJS) ncbox.h 
 	$(CC) $(CCFLAGS_NCURSES) $^ -o $@ -lncurses -lmpg123
 
-bin/gmixplay: $(OBJS) $(GLOBJS) gladeutils.h player.h gmixplay_app.h gmixplay_fs.h
+bin/gmixplay: $(OBJS) $(GLOBJS)
 	$(CC) $(CCFLAGS_GLADE) $^ -o $@ $(LDFLAGS_GLADE) -lmpg123
 
-%.o: %.c $(HDRS)
+%.o: %.c $(HDRS) 
 	$(CC) $(CCFLAGS_GLADE) -c $<
 
 install: all
