@@ -3,6 +3,8 @@
 #include "database.h"
 #include "gladeutils.h"
 #include "player.h"
+#include "gmixplay_app.h"
+#include "gmixplay_fs.h"
 
 #include <stdio.h>
 #include <errno.h>
@@ -120,7 +122,6 @@ int initAll( void *data ) {
 
 int main( int argc, char **argv ) {
     GtkBuilder *builder;
-    GError     *error = NULL;
     char 		c;
     struct 		mpcontrol_t control;
 
@@ -162,21 +163,13 @@ int main( int argc, char **argv ) {
 		}
 	}
 
-    /* Create new GtkBuilder object */
-    builder = gtk_builder_new();
-
     if( control.fullscreen ) {
-    	gtk_builder_add_from_file( builder, "gmixplay_fs.glade", &error );
+    	builder=gtk_builder_new_from_string( (const char *)gmixplay_fs_glade, gmixplay_fs_glade_len );
     }
     else {
-    	gtk_builder_add_from_file( builder, "gmixplay_app.glade", &error );
+    	builder=gtk_builder_new_from_string( (const char *)gmixplay_app_glade, gmixplay_app_glade_len );
     }
-    if( NULL != error  )
-    {
-        g_warning( "%s", error->message );
-        g_free( error );
-        return( 1 );
-    }
+
 
     /* Allocate data structure */
     control.widgets = g_slice_new( MpData );

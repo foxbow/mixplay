@@ -37,7 +37,10 @@ void newCount( struct entry_t *root) {
 	}
 }
 
-
+/**
+ * discards a list of titles and frees the memory
+ * returns NULL for intuitive calling
+ */
 struct entry_t *cleanTitles( struct entry_t *root ) {
 	struct entry_t *runner=root;
 	if( NULL != root ) {
@@ -51,6 +54,10 @@ struct entry_t *cleanTitles( struct entry_t *root ) {
 	return NULL;
 }
 
+/**
+ * discards a list of searchterms and frees the memory
+ * returns NULL for intuitive calling
+ */
 struct marklist_t *cleanList( struct marklist_t *root ) {
 	struct marklist_t *runner=root;
 	if( NULL != root ) {
@@ -141,7 +148,7 @@ static int getMusic( const char *cd, struct dirent ***musiclist ){
 }
 
 /**
- * loads all directories in cd into musiclist
+ * loads all directories in cd into dirlist
  */
 static int getDirs( const char *cd, struct dirent ***dirlist ){
 	return scandir( cd, dirlist, dsel, alphasort);
@@ -150,7 +157,7 @@ static int getDirs( const char *cd, struct dirent ***dirlist ){
 /*
  * checks if a title entry 'title' matches the search term 'pat'
  * the test is driven by the first two characters in the
- * search term. The first character gives the range (taLgp)
+ * search term. The first character gives the range (taLgd(p))
  * the second character notes if the search should be
  * exact or fuzzy (=*)
  */
@@ -322,7 +329,6 @@ struct marklist_t *loadList( const char *path ){
 
 	file=fopen( path, "r" );
 	if( !file ) return NULL;
-		// fail("Couldn't open list ", path,  errno);
 
 	while( !feof( file ) ){
 		buff=fgets( buff, MAXPATHLEN, file );
@@ -441,6 +447,9 @@ struct entry_t *loadPlaylist( const char *path ) {
  */
 static struct entry_t *plRemove( struct entry_t *entry ) {
 	struct entry_t *next=entry;
+	if( NULL == entry ) {
+		fail( F_FAIL, "plRemove() called with NULL!" );
+	}
 	entry->flags |= MP_DNP;
 	if( entry->plnext != entry ) {
 		next=entry->plprev;
@@ -613,12 +622,12 @@ int DNPSkip( struct entry_t *base, const unsigned int level ) {
 		activity( "DNPSkipping" );
 		if( runner->skipped >= level ){
 			runner->flags |= MP_DNP;
-			printver( 3, "Marked %s as DNP after %i skips\n", runner->display, runner->skipped );
+			printver( 2, "Marked %s as DNP after %i skips\n", runner->display, runner->skipped );
 			skipskip++;
 		}
 		runner=runner->dbnext;
 	} while( base != runner );
-	printver( 2, "Marked %i titles as DNP for being skipped\n", skipskip );
+	printver( 1, "Marked %i titles as DNP for being skipped\n", skipskip );
 	return skipskip;
 }
 
@@ -628,7 +637,6 @@ int DNPSkip( struct entry_t *base, const unsigned int level ) {
  * Core functionality of the mixplay architecture:
  * - does not play the same artist twice in a row
  * - prefers titles with lower playcount
- * + skipcount needs to be considered too
  */
 struct entry_t *shuffleTitles( struct entry_t *base ) {
 	struct entry_t *end=NULL;
@@ -696,13 +704,14 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 					}
 					strlncpy( name, runner->artist, NAMELEN );
 				}
-				if( !skipguard ) break;
-				if( guard != runner ){
-					nameskip++;
-					valid=1; // we skipped and need to check playcount
-				}
-				else {
-					valid |= 1; // we did not skip, so if playcount was fine it's still fine
+				if( skipguard ) {
+					if( guard != runner ){
+						nameskip++;
+						valid=1; // we skipped and need to check playcount
+					}
+					else {
+						valid |= 1; // we did not skip, so if playcount was fine it's still fine
+					}
 				}
 			}
 
@@ -821,7 +830,6 @@ struct entry_t *skipTitles( struct entry_t *current, int num, const int global )
 
 /**
  * This function sets the favourite bit on titles found in the given list
- * a literal comparison is used to identify true favourites
  */
 int applyFavourites( struct entry_t *root, struct marklist_t *favourites ) {
 	struct marklist_t *ptr = NULL;
@@ -847,6 +855,10 @@ int applyFavourites( struct entry_t *root, struct marklist_t *favourites ) {
 	return cnt;
 }
 
+/**
+ * marks the current title as favourite and uses range to check
+ * if more favourites need to be included
+ */
 int markFavourite( struct entry_t *title, int range ) {
 	struct marklist_t buff;
 	buff.next=NULL;
@@ -943,7 +955,11 @@ void dumpTitles( struct entry_t *root, const int pl ) {
 	// fail( F_WARN, "END DUMP" );
 }
 
-void dumpInfo( struct entry_t *root, int db ) {
+/**
+ * does a database scan and dumps information about playrate
+ * favourites and DNPs
+ */
+void dumpInfo( struct entry_t *root, int global ) {
 	struct entry_t *current=root;
 	unsigned int maxplayed=0;
 	unsigned int minplayed=-1; // UINT_MAX;
@@ -962,7 +978,7 @@ void dumpInfo( struct entry_t *root, int db ) {
 			if( current->played > maxplayed ) maxplayed=current->played;
 			if( current->skipped > 0 ) skipped++;
 		}
-		if( db ) current=current->dbnext;
+		if( global ) current=current->dbnext;
 		else current=current->plnext;
 	} while( current != root );
 
@@ -970,7 +986,7 @@ void dumpInfo( struct entry_t *root, int db ) {
 		unsigned int pcount=0;
 		do {
 			if( !( current->flags & MP_DNP ) && ( current->played == pl ) ) pcount++;
-			if( db ) current=current->dbnext;
+			if( global ) current=current->dbnext;
 			else current=current->plnext;
 		} while( current != root );
 		switch( pl ) {
@@ -988,6 +1004,6 @@ void dumpInfo( struct entry_t *root, int db ) {
 		}
 	}
 	printver( 0, "%i\tfavourites\n", fav );
-	if( db ) printver( 0, "%i\tdo not plays\n", dnp );
+	if( global ) printver( 0, "%i\tdo not plays\n", dnp );
 	printver( 0, "%i\t skipped\n", skipped );
 }
