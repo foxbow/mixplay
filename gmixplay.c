@@ -4,7 +4,7 @@
 #include "gladeutils.h"
 #include "player.h"
 #include "gmixplay_app.h"
-#include "gmixplay_fs.h"
+// #include "gmixplay_fs.h"
 
 #include <stdio.h>
 #include <errno.h>
@@ -14,7 +14,10 @@
 
 struct mpcontrol_t *mpcontrol;
 
-
+/**
+ * load configuration file
+ * if the file does not exist, create new configuration
+ */
 static void loadConfig( struct mpcontrol_t *config ) {
 	GKeyFile	*keyfile;
 	GError		*error=NULL;
@@ -97,11 +100,9 @@ static void loadConfig( struct mpcontrol_t *config ) {
 
 /**
  * the control thread to communicate with the mpg123 processes
- */
-/**
  * should be triggered after the app window is realized
  */
-int initAll( void *data ) {
+static int initAll( void *data ) {
 	struct mpcontrol_t *control;
 	control=(struct mpcontrol_t*)data;
 	loadConfig( control );
@@ -120,8 +121,59 @@ int initAll( void *data ) {
 	return 0;
 }
 
-int main( int argc, char **argv ) {
+#if 1
+/**
+ * sets up the UI by glade definitions
+ */
+static void buildUI( struct mpcontrol_t * control ) {
     GtkBuilder *builder;
+
+//    if( control->fullscreen ) {
+//    	builder=gtk_builder_new_from_string( (const char *)gmixplay_fs_glade, gmixplay_fs_glade_len );
+//    }
+//    else {
+    	builder=gtk_builder_new_from_string( (const char *)gmixplay_app_glade, gmixplay_app_glade_len );
+//    }
+
+
+    /* Allocate data structure */
+    control->widgets = g_slice_new( MpData );
+
+    /* Get objects from UI */
+#define GW( name ) MP_GET_WIDGET( builder, name, control->widgets )
+	GW( mixplay_main );
+	GW( button_prev );
+	GW( button_next );
+	GW( button_replay );
+	GW( image_current );
+	GW( title_current );
+	GW( artist_current );
+	GW( album_current );
+	GW( genre_current );
+	GW( button_dnp );
+	GW( button_play );
+	GW( button_fav );
+	GW( played );
+	GW( remain );
+	GW( progress );
+#undef GW
+	control->widgets->mp_popup = NULL;
+
+    /* Connect signals */
+    gtk_builder_connect_signals( builder, control->widgets );
+
+    /* Destroy builder, since we don't need it anymore */
+    g_object_unref( G_OBJECT( builder ) );
+
+	/* Show window. All other widgets are automatically shown by GtkBuilder */
+    gtk_widget_show( control->widgets->mixplay_main );
+
+    if( control->fullscreen ) {
+    	gtk_window_fullscreen( GTK_WINDOW( control->widgets->mixplay_main) );
+    }
+}
+
+int main( int argc, char **argv ) {
     unsigned char	c;
     struct 		mpcontrol_t control;
 
@@ -130,16 +182,7 @@ int main( int argc, char **argv ) {
 	pid_t		pid[2];
 
 	mpcontrol=&control;
-
-	char basedir[MAXPATHLEN]; // = ".";
-	// if no basedir has been set, use the current directory as default
-	if( 0 == strlen(basedir) && ( NULL == getcwd( basedir, MAXPATHLEN ) ) ) {
-		fail( errno, "Could not get current directory!" );
-	}
-
 	muteVerbosity();
-
-	memset( basedir, 0, MAXPATHLEN );
 
     /* Init GTK+ */
     gtk_init( &argc, &argv );
@@ -164,60 +207,7 @@ int main( int argc, char **argv ) {
 		}
 	}
 
-    if( control.fullscreen ) {
-    	builder=gtk_builder_new_from_string( (const char *)gmixplay_fs_glade, gmixplay_fs_glade_len );
-    }
-    else {
-    	builder=gtk_builder_new_from_string( (const char *)gmixplay_app_glade, gmixplay_app_glade_len );
-    }
-
-
-    /* Allocate data structure */
-    control.widgets = g_slice_new( MpData );
-
-    /* Get objects from UI */
-#define GW( name ) MP_GET_WIDGET( builder, name, control.widgets )
-	GW( mixplay_main );
-	GW( button_prev );
-	GW( button_next );
-	GW( button_replay );
-	GW( image_current );
-	GW( title_current );
-	GW( artist_current );
-	GW( album_current );
-	GW( genre_current );
-	GW( displayname_prev );
-	GW( displayname_next );
-	GW( button_dnp );
-	GW( button_play );
-	GW( button_fav );
-	GW( played );
-	GW( remain );
-	GW( progress );
-	GW( pause );
-	GW( play );
-	GW( down );
-	GW( skip );
-	GW( noentry );
-#undef GW
-	control.widgets->mp_popup = NULL;
-
-	g_object_ref(control.widgets->play );
-	g_object_ref(control.widgets->pause );
-	g_object_ref(control.widgets->down );
-	g_object_ref(control.widgets->noentry );
-
-    /* Connect signals */
-    gtk_builder_connect_signals( builder, control.widgets );
-
-    /* Destroy builder, since we don't need it anymore */
-    g_object_unref( G_OBJECT( builder ) );
-
-	/* Show window. All other widgets are automatically shown by GtkBuilder */
-    gtk_widget_show( control.widgets->mixplay_main );
-    if( control.fullscreen ) {
-    	gtk_window_fullscreen( GTK_WINDOW( control.widgets->mixplay_main) );
-    }
+	buildUI( &control );
 
     if( control.debug ) {
     	progressLog("Debug");
@@ -274,3 +264,110 @@ int main( int argc, char **argv ) {
 
 	return( 0 );
 }
+#else
+/**
+ * sets up the UI from scratch
+ */
+static void buildUI( struct mpcontrol_t * control ) {
+    /* Allocate data structure */
+    control->widgets = g_slice_new( MpData );
+
+	control->widgets->mp_popup = NULL;
+
+    // first thing to be called after the GUI is enabled
+    // g_idle_add( initAll, &control );
+    if( control->fullscreen ) {
+    	gtk_window_fullscreen( GTK_WINDOW( control->widgets->mixplay_main) );
+    }
+}
+
+
+int main( int argc, char **argv ) {
+    unsigned char	c;
+    struct 		mpcontrol_t control;
+    GtkApplication *app;
+
+    int			i;
+    int 		db=0;
+	pid_t		pid[2];
+
+	mpcontrol=&control;
+	muteVerbosity();
+
+    control.fullscreen=0;
+    control.debug=0;
+
+	// parse command line options
+    // using unsigned char *c to work around getopt bug on ARM
+	while ((c = getopt(argc, argv, "vfd")) != 255 ) {
+		switch (c) {
+		case 'v': // pretty useless in normal use
+			control.debug=1;
+			incVerbosity();
+		break;
+		case 'f':
+			control.fullscreen=1;
+		break;
+		case 'd':
+			control.debug=1;
+		break;
+		}
+	}
+
+	app = gtk_application_new ("com.foxbow.gmixplay", G_APPLICATION_FLAGS_NONE);
+	g_signal_connect (app, "activate", G_CALLBACK( buildUI ), &control);
+
+    if( control.debug ) {
+    	progressLog("Debug");
+    }
+
+	// start the player processes
+	// these may wait in the background until
+	// something needs to be played at all
+	for( i=0; i <= 1; i++ ) {
+		// create communication pipes
+		pipe(control.p_status[i]);
+		pipe(control.p_command[i]);
+		pid[i] = fork();
+		if (0 > pid[i]) {
+			fail( errno, "could not fork" );
+		}
+		// child process
+		if (0 == pid[i]) {
+			if (dup2(control.p_command[i][0], STDIN_FILENO) != STDIN_FILENO) {
+				fail( errno, "Could not dup stdin for player %i", i+1 );
+			}
+			if (dup2(control.p_status[i][1], STDOUT_FILENO) != STDOUT_FILENO) {
+				fail( errno, "Could not dup stdout for player %i", i+1 );
+			}
+			// this process needs no pipes
+			close(control.p_command[i][0]);
+			close(control.p_command[i][1]);
+			close(control.p_status[i][0]);
+			close(control.p_status[i][1]);
+			// Start mpg123 in Remote mode
+			execlp("mpg123", "mpg123", "-R", "2>/dev/null", NULL);
+			// execlp("mpg123", "mpg123", "-R", "--remote-err", NULL); // breaks the reply parsing!
+			fail( errno, "Could not exec mpg123" );
+		}
+		close(control.p_command[i][0]);
+		close(control.p_status[i][1]);
+	}
+
+    /* run application */
+    g_application_run( G_APPLICATION( app ), argc, argv );
+
+    control.status=mpc_quit;
+
+    pthread_join( control.rtid, NULL );
+	kill( pid[0], SIGTERM);
+	kill( pid[1], SIGTERM );
+
+    /* Free any allocated data */
+    g_slice_free( MpData, control.widgets );
+    cleanTitles( control.root );
+	dbClose( db );
+
+	return( 0 );
+}
+#endif

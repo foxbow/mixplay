@@ -28,27 +28,14 @@ struct _MpData
 	GtkWidget *artist_current;
 	GtkWidget *album_current;
 	GtkWidget *genre_current;
-	GtkWidget *displayname_prev;
-	GtkWidget *displayname_next;
 	GtkWidget *button_dnp;
 	GtkWidget *button_play;
 	GtkWidget *button_fav;
 	GtkWidget *played;
 	GtkWidget *remain;
 	GtkWidget *progress;
-	// images
-//	GtkWidget *checkmark;
-	GtkWidget *pause;
-	GtkWidget *play;
-	GtkWidget *down;
-	GtkWidget *skip;
-	GtkWidget *noentry;
 	// popup elements
 	GtkWidget *mp_popup;
-
-	GtkWidget *menu_profiles;
-	GtkWidget *menu_streams;
-	GtkWidget *menu_profile[5];
 };
 
 

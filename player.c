@@ -228,7 +228,8 @@ void *reader( void *cont ) {
 		// Interpret mpg123 output and ignore invalid lines
 		if( FD_ISSET( control->p_status[fdset][0], &fds ) &&
 				( 3 < readline(line, 512, control->p_status[fdset][0]) ) ) {
-			if( '@' == line[0] ) {
+			// the players may run even if there is no playlist yet
+			if( (NULL != control->current ) && ( '@' == line[0] ) ) {
 				switch (line[1]) {
 				int cmd=0, rem=0;
 				case 'R': // startup
@@ -297,7 +298,9 @@ void *reader( void *cont ) {
 							if( !( control->current->flags & MP_CNTD ) ) {
 								control->current->flags |= MP_CNTD; // make sure a title is only counted once per session
 								control->current->played++;
-								control->current->skipped--;
+								if( control->current->skipped > 0 ) {
+									control->current->skipped--;
+								}
 								dbPutTitle( db, control->current );
 							}
 							next=control->current->plnext;

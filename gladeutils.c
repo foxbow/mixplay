@@ -61,24 +61,29 @@ void printver( int vl, const char *msg, ... ) {
 
 	if( vl <= getVerbosity() ) {
 		pthread_mutex_lock( &msglock );
-		va_start( args, msg );
-		vsnprintf( line, 512, msg, args );
-		va_end(args);
+		if( vl < 2 ) {
+			va_start( args, msg );
+			vsnprintf( line, 512, msg, args );
+			va_end(args);
 
-		if( NULL == mpcontrol->widgets->mp_popup ) {
-			fail(F_FAIL, "No log widget open!");
+			if( NULL == mpcontrol->widgets->mp_popup ) {
+				fail(F_FAIL, "No log widget open!");
+			}
+
+			strncat( mpcontrol->log, line, 1024 );
+			gtk_message_dialog_format_secondary_text( GTK_MESSAGE_DIALOG( mpcontrol->widgets->mp_popup ),
+					"%s", mpcontrol->log );
+
+			gtk_widget_queue_draw( mpcontrol->widgets->mp_popup );
+			while (gtk_events_pending ()) gtk_main_iteration ();
+			if( mpcontrol->debug ) {
+				fprintf( stderr, "%i: %s", vl, line );
+			}
 		}
-
-		strncat( mpcontrol->log, line, 1024 );
-		gtk_message_dialog_format_secondary_text( GTK_MESSAGE_DIALOG( mpcontrol->widgets->mp_popup ),
-				"%s", mpcontrol->log );
-
-		gtk_widget_queue_draw( mpcontrol->widgets->mp_popup );
-		while (gtk_events_pending ()) gtk_main_iteration ();
-
+		else {
+			vfprintf( stderr, msg, args );
+		}
 		pthread_mutex_unlock( &msglock );
-
-		if( mpcontrol->debug ) printf("VER: %s", line );
 	}
 
 }
@@ -153,10 +158,17 @@ int updateUI( void *data ) {
 				control->current->album );
 		gtk_label_set_text( GTK_LABEL( control->widgets->genre_current ),
 				control->current->genre );
+/*
 		gtk_label_set_text( GTK_LABEL( control->widgets->displayname_prev ),
 				control->current->plprev->display );
 		gtk_label_set_text( GTK_LABEL( control->widgets->displayname_next ),
 				control->current->plnext->display );
+*/
+		gtk_button_set_label( GTK_BUTTON( control->widgets->button_prev ),
+				control->current->plprev->display );
+		gtk_button_set_label( GTK_BUTTON( control->widgets->button_next ),
+				control->current->plnext->display );
+
 		if( mpcontrol->debug ) {
 			snprintf( buff, MAXPATHLEN, "[%i]", control->current->played );
 			gtk_button_set_label( GTK_BUTTON( control->widgets->button_play ),
@@ -165,7 +177,7 @@ int updateUI( void *data ) {
 			gtk_button_set_label( GTK_BUTTON( control->widgets->button_next ),
 					buff );
 		}
-
+/*
 		if( control->current->skipped > 2 ) {
 			gtk_button_set_image( GTK_BUTTON( control->widgets->button_next ),
 					control->widgets->noentry );
@@ -174,6 +186,7 @@ int updateUI( void *data ) {
 			gtk_button_set_image( GTK_BUTTON( control->widgets->button_next ),
 					control->widgets->down );
 		}
+*/
 		gtk_widget_set_sensitive( control->widgets->button_fav, ( !(control->current->flags & MP_FAV) ) );
 
 		gtk_window_set_title ( GTK_WINDOW( control->widgets->mixplay_main ),
@@ -181,12 +194,10 @@ int updateUI( void *data ) {
 	}
 
 	if( mpc_play == control->status ) {
-		gtk_button_set_image( GTK_BUTTON( control->widgets->button_play ),
-				control->widgets->pause );
+		gtk_button_set_label( GTK_BUTTON( control->widgets->button_play ), "pause" );
 	}
 	else {
-		gtk_button_set_image( GTK_BUTTON( control->widgets->button_play ),
-				control->widgets->play );
+		gtk_button_set_label( GTK_BUTTON( control->widgets->button_play ), "play" );
 	}
 
 

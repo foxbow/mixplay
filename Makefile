@@ -2,7 +2,7 @@ CC=/usr/bin/gcc
 VERSION:=$(shell git describe --tags --abbrev=1 --dirty=-dev --always)
 CCFLAGS=-DVERSION=\"${VERSION}\"
 CCFLAGS+=-Wall -g
-HDRS=utils.h musicmgr.h database.h mpgutils.h gladeutils.h player.h gmixplay_app.h gmixplay_fs.h
+HDRS=utils.h musicmgr.h database.h mpgutils.h gladeutils.h player.h gmixplay_app.h # gmixplay_fs.h
 OBJS=utils.o musicmgr.o database.o mpgutils.o
 NCOBJS=ncbox.o mixplay.o
 GLOBJS=gladeutils.o callbacks.o gmixplay.o player.o
@@ -43,8 +43,8 @@ install: all
 gmixplay_app.h: gmixplay_app.glade
 	xxd -i gmixplay_app.glade > gmixplay_app.h
 	
-gmixplay_fs.h: gmixplay_fs.glade
-	xxd -i gmixplay_fs.glade > gmixplay_fs.h
+# gmixplay_fs.h: gmixplay_fs.glade
+#	xxd -i gmixplay_fs.glade > gmixplay_fs.h
 	
 prepare:
 	apt-get install ncurses-dev mpg123 libmpg123-dev libgtk-3-dev

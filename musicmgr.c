@@ -619,8 +619,9 @@ int DNPSkip( struct entry_t *base, const unsigned int level ) {
 	unsigned int skipskip=0;
 // Sort out skipped titles
 	do {
+		if( -1 == runner->skipped ) runner->skipped = 0;
 		activity( "DNPSkipping" );
-		if( runner->skipped >= level ){
+		if( runner->skipped > level ){
 			runner->flags |= MP_DNP;
 			printver( 2, "Marked %s as DNP after %i skips\n", runner->display, runner->skipped );
 			skipskip++;
@@ -757,8 +758,9 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 				pcount++;   // allow replays
 				printver( 2, "Increasing maxplaycount to %li\n", pcount );
 			}
-		}
+		} // while( skipguard && ( valid != 3 ) )
 
+		// title passed all tests
 		if( valid == 3 ) {
 			printver( 3, "[+] (%i/%li/%3s) %s\n", runner->played, pcount, ONOFF(runner->flags&MP_FAV), runner->display );
 			strlncpy(lastname, runner->artist, NAMELEN );
@@ -766,6 +768,7 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 			added++;
 		}
 
+		// title can't pass tests
 		if( !skipguard ) {
 			// find a random position
 			activity("Stuffing");
