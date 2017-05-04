@@ -121,20 +121,13 @@ static int initAll( void *data ) {
 	return 0;
 }
 
-#if 1
 /**
  * sets up the UI by glade definitions
  */
 static void buildUI( struct mpcontrol_t * control ) {
     GtkBuilder *builder;
 
-//    if( control->fullscreen ) {
-//    	builder=gtk_builder_new_from_string( (const char *)gmixplay_fs_glade, gmixplay_fs_glade_len );
-//    }
-//    else {
-    	builder=gtk_builder_new_from_string( (const char *)gmixplay_app_glade, gmixplay_app_glade_len );
-//    }
-
+   	builder=gtk_builder_new_from_string( (const char *)gmixplay_app_glade, gmixplay_app_glade_len );
 
     /* Allocate data structure */
     control->widgets = g_slice_new( MpData );
@@ -238,8 +231,9 @@ int main( int argc, char **argv ) {
 			close(control.p_status[i][0]);
 			close(control.p_status[i][1]);
 			// Start mpg123 in Remote mode
-			execlp("mpg123", "mpg123", "-R", "2>/dev/null", NULL);
+			// execlp("mpg123", "mpg123", "-R", "2>/dev/null", NULL);
 			// execlp("mpg123", "mpg123", "-R", "--remote-err", NULL); // breaks the reply parsing!
+			execlp("mpg123", "mpg123", "-R", "2> &1", NULL);
 			fail( errno, "Could not exec mpg123" );
 		}
 		close(control.p_command[i][0]);
@@ -264,110 +258,3 @@ int main( int argc, char **argv ) {
 
 	return( 0 );
 }
-#else
-/**
- * sets up the UI from scratch
- */
-static void buildUI( struct mpcontrol_t * control ) {
-    /* Allocate data structure */
-    control->widgets = g_slice_new( MpData );
-
-	control->widgets->mp_popup = NULL;
-
-    // first thing to be called after the GUI is enabled
-    // g_idle_add( initAll, &control );
-    if( control->fullscreen ) {
-    	gtk_window_fullscreen( GTK_WINDOW( control->widgets->mixplay_main) );
-    }
-}
-
-
-int main( int argc, char **argv ) {
-    unsigned char	c;
-    struct 		mpcontrol_t control;
-    GtkApplication *app;
-
-    int			i;
-    int 		db=0;
-	pid_t		pid[2];
-
-	mpcontrol=&control;
-	muteVerbosity();
-
-    control.fullscreen=0;
-    control.debug=0;
-
-	// parse command line options
-    // using unsigned char *c to work around getopt bug on ARM
-	while ((c = getopt(argc, argv, "vfd")) != 255 ) {
-		switch (c) {
-		case 'v': // pretty useless in normal use
-			control.debug=1;
-			incVerbosity();
-		break;
-		case 'f':
-			control.fullscreen=1;
-		break;
-		case 'd':
-			control.debug=1;
-		break;
-		}
-	}
-
-	app = gtk_application_new ("com.foxbow.gmixplay", G_APPLICATION_FLAGS_NONE);
-	g_signal_connect (app, "activate", G_CALLBACK( buildUI ), &control);
-
-    if( control.debug ) {
-    	progressLog("Debug");
-    }
-
-	// start the player processes
-	// these may wait in the background until
-	// something needs to be played at all
-	for( i=0; i <= 1; i++ ) {
-		// create communication pipes
-		pipe(control.p_status[i]);
-		pipe(control.p_command[i]);
-		pid[i] = fork();
-		if (0 > pid[i]) {
-			fail( errno, "could not fork" );
-		}
-		// child process
-		if (0 == pid[i]) {
-			if (dup2(control.p_command[i][0], STDIN_FILENO) != STDIN_FILENO) {
-				fail( errno, "Could not dup stdin for player %i", i+1 );
-			}
-			if (dup2(control.p_status[i][1], STDOUT_FILENO) != STDOUT_FILENO) {
-				fail( errno, "Could not dup stdout for player %i", i+1 );
-			}
-			// this process needs no pipes
-			close(control.p_command[i][0]);
-			close(control.p_command[i][1]);
-			close(control.p_status[i][0]);
-			close(control.p_status[i][1]);
-			// Start mpg123 in Remote mode
-			execlp("mpg123", "mpg123", "-R", "2>/dev/null", NULL);
-			// execlp("mpg123", "mpg123", "-R", "--remote-err", NULL); // breaks the reply parsing!
-			fail( errno, "Could not exec mpg123" );
-		}
-		close(control.p_command[i][0]);
-		close(control.p_status[i][1]);
-	}
-
-    /* run application */
-    g_application_run( G_APPLICATION( app ), argc, argv );
-
-    control.status=mpc_quit;
-
-    pthread_join( control.rtid, NULL );
-	kill( pid[0], SIGTERM);
-	kill( pid[1], SIGTERM );
-
-    /* Free any allocated data */
-    g_slice_free( MpData, control.widgets );
-    cleanTitles( control.root );
-	dbClose( db );
-
-	return( 0 );
-}
-#endif

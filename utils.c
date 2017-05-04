@@ -41,7 +41,6 @@ void muteVerbosity() {
  */
 char *abspath( char *path, const char *basedir, int len ){
 	char *buff;
-
 	if( path[0] != '/' ) {
 		buff=calloc(sizeof(char),len);
 		if( NULL == buff ) {

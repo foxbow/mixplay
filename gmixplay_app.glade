@@ -10,11 +10,11 @@
     <property name="vexpand">False</property>
     <property name="title" translatable="yes">mixplay</property>
     <property name="default_width">480</property>
-    <property name="default_height">260</property>
-    <property name="destroy_with_parent">True</property>
+    <property name="default_height">320</property>
     <property name="hide_titlebar_when_maximized">True</property>
     <property name="icon">mixplay.svg</property>
     <property name="has_resize_grip">True</property>
+    <property name="startup_id">gmixplay</property>
     <property name="show_menubar">False</property>
     <signal name="delete-event" handler="destroy" swapped="no"/>
     <child>
@@ -31,10 +31,9 @@
               <object class="GtkButton" id="button_prev">
                 <property name="label" translatable="yes">prev</property>
                 <property name="visible">True</property>
-                <property name="can_focus">True</property>
+                <property name="can_focus">False</property>
                 <property name="receives_default">True</property>
                 <property name="focus_on_click">False</property>
-                <property name="yalign">0.43999999761581421</property>
                 <property name="image_position">top</property>
                 <property name="always_show_image">True</property>
                 <signal name="clicked" handler="playprev" swapped="no"/>
@@ -84,13 +83,14 @@
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkButton" id="button_replay">
+                  <object class="GtkButton" id="button_info">
                     <property name="name">button_replay</property>
                     <property name="visible">True</property>
-                    <property name="can_focus">True</property>
+                    <property name="can_focus">False</property>
                     <property name="receives_default">True</property>
                     <property name="relief">none</property>
-                    <signal name="clicked" handler="replay" swapped="no"/>
+                    <property name="focus_on_click">False</property>
+                    <signal name="clicked" handler="infoStart" swapped="no"/>
                     <child>
                       <object class="GtkLabel" id="title_current">
                         <property name="visible">True</property>
@@ -98,7 +98,7 @@
                         <property name="label" translatable="yes">Title</property>
                         <property name="justify">center</property>
                         <property name="wrap">True</property>
-                        <property name="max_width_chars">60</property>
+                        <property name="ellipsize">end</property>
                         <property name="lines">2</property>
                         <attributes>
                           <attribute name="scale" value="3"/>
@@ -121,7 +121,6 @@
                     <property name="justify">center</property>
                     <property name="ellipsize">end</property>
                     <property name="single_line_mode">True</property>
-                    <property name="max_width_chars">40</property>
                     <property name="track_visited_links">False</property>
                     <property name="lines">1</property>
                     <attributes>
@@ -142,6 +141,7 @@
                     <property name="label" translatable="yes">genre</property>
                     <property name="justify">center</property>
                     <property name="ellipsize">end</property>
+                    <property name="single_line_mode">True</property>
                     <property name="track_visited_links">False</property>
                     <property name="lines">1</property>
                     <attributes>
@@ -178,8 +178,8 @@
                 <property name="label" translatable="yes">next</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
+                <property name="is_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="focus_on_click">False</property>
                 <property name="image_position">bottom</property>
                 <property name="always_show_image">True</property>
                 <signal name="clicked" handler="playnext" swapped="no"/>
@@ -187,8 +187,8 @@
                 <accelerator key="Down" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
               </object>
               <packing>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
                 <property name="pack_type">end</property>
                 <property name="position">4</property>
               </packing>
@@ -270,8 +270,8 @@
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="button_info">
-                <property name="label" translatable="yes">info</property>
+              <object class="GtkButton" id="button_replay">
+                <property name="label" translatable="yes">replay</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
@@ -341,6 +341,7 @@
                 <property name="name">progress</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <property name="valign">center</property>
                 <property name="pulse_step">0.050000000000000003</property>
               </object>
               <packing>

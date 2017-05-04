@@ -1,0 +1,14 @@
+[Desktop Entry]
+Encoding=UTF-8
+Version=1.0
+Name=GMixplay
+Comment=Play directories m3u playlists and single mp3 files
+Exec=/usr/bin/gmixplay %u
+Type=Application
+Icon=/usr/share/pixmaps/mixplay.svg
+Categories=Player;
+MimeType=application/vnd.apple.mpegurl;audio/mp3;audio/mpeg;audio/mpegurl;audio/x-mp3;audio/x-mpeg;audio/x-mpegurl;inode/directory;
+StartupWMClass=gmixplay
+StartupNotify=true
+OnlyShowIn=GNOME;Unity;
+

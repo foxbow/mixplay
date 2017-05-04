@@ -176,25 +176,36 @@ G_MODULE_EXPORT void info_title( GtkWidget *menu, gpointer data ) {
 G_MODULE_EXPORT void infoStart( GtkButton *button, gpointer data ) {
 	GtkWidget *dialog;
 	int reply;
-	dialog = gtk_message_dialog_new(
-			GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
-			GTK_DIALOG_DESTROY_WITH_PARENT,
-	        GTK_MESSAGE_INFO,
-	        GTK_BUTTONS_NONE,
-	        "Info/Settings" );
+	if( 0 != mpcontrol->current->key ) {
+		dialog = gtk_message_dialog_new(
+				GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+				GTK_DIALOG_DESTROY_WITH_PARENT,
+				GTK_MESSAGE_INFO,
+				GTK_BUTTONS_NONE,
+				"%s\nGenre: %s\nKey: %04i\nplaycount: %i\nskipcount: %i\nCount: %s - Skip: %s\n",
+				mpcontrol->current->path , mpcontrol->current->genre,
+				mpcontrol->current->key, mpcontrol->current->played,
+				mpcontrol->current->skipped, ONOFF(~(mpcontrol->current->flags)&MP_CNTD),
+				ONOFF(~(mpcontrol->current->flags)&MP_SKPD));
+	}
+	else {
+		dialog = gtk_message_dialog_new(
+				GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+				GTK_DIALOG_DESTROY_WITH_PARENT,
+				GTK_MESSAGE_INFO,
+				GTK_BUTTONS_NONE,
+				"%s", mpcontrol->current->path );
+	}
+
 	gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
-            "Title Info",  1,
-            "App Info",  2,
-            "Quit",  3,
-            "Cancel", GTK_RESPONSE_CANCEL,
+            "App Info",  1,
+            "Quit",  2,
+            "OK", GTK_RESPONSE_OK,
             NULL );
 	reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
 	gtk_widget_destroy( dialog );
 	switch( reply ) {
 	case 1:
-		info_title( NULL, NULL );
-		break;
-	case 2:
 		gtk_show_about_dialog ( GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
 				"program-name", "gmixplay",
 				"copyright", "2017 B.Weber",
@@ -206,7 +217,7 @@ G_MODULE_EXPORT void infoStart( GtkButton *button, gpointer data ) {
 				"website", "https://github.com/foxbow/mixplay",
 		        NULL, NULL);
 		break;
-	case 3:
+	case 2:
 		setCommand( mpcontrol, mpc_quit );
 	    gtk_main_quit ();
 		break;
