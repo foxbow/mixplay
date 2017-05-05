@@ -196,7 +196,7 @@ int main( int argc, char **argv ) {
 			control.fullscreen=1;
 		break;
 		case 'd':
-			control.debug=1;
+			control.debug++;
 		break;
 		}
 	}

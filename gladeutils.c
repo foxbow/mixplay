@@ -22,11 +22,13 @@ void fail( int error, const char* msg, ... ){
 	if( F_WARN == error ) {
 		type=GTK_MESSAGE_WARNING;
 	}
+	else {
+		fprintf( stderr, "FAIL: %s\n", line );
+	}
 
 	va_start( args, msg );
 	vsnprintf( line, 1024, msg, args );
 	va_end(args);
-	if( mpcontrol->debug ) printf( "FAIL: %s\n", line );
 
 	if(error > 0 ) {
 		dialog = gtk_message_dialog_new (GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
@@ -155,6 +157,14 @@ void progressDone() {
 	while (gtk_events_pending ()) gtk_main_iteration ();
 }
 
+static void setButtonLabel( GtkWidget *button, const char *text ) {
+	char *label;
+	label=calloc( 60, sizeof( char ) );
+	strip( label, text, 60 );
+	gtk_button_set_label( GTK_BUTTON( button ), label );
+}
+
+
 int updateUI( void *data ) {
 	struct mpcontrol_t *control;
 	char buff[MAXPATHLEN];
@@ -170,7 +180,6 @@ int updateUI( void *data ) {
 		return 0;
 	}
 
-	pthread_mutex_lock( &msglock );
 	if( ( NULL != control->current ) && ( 0 != strlen( control->current->path ) ) ) {
 		gtk_label_set_text( GTK_LABEL( control->widgets->title_current ),
 				control->current->title );
@@ -180,67 +189,38 @@ int updateUI( void *data ) {
 				control->current->album );
 		gtk_label_set_text( GTK_LABEL( control->widgets->genre_current ),
 				control->current->genre );
-/*
-		gtk_label_set_text( GTK_LABEL( control->widgets->displayname_prev ),
-				control->current->plprev->display );
-		gtk_label_set_text( GTK_LABEL( control->widgets->displayname_next ),
-				control->current->plnext->display );
-*/
-		gtk_button_set_label( GTK_BUTTON( control->widgets->button_prev ),
-				control->current->plprev->display );
-		gtk_button_set_label( GTK_BUTTON( control->widgets->button_next ),
-				control->current->plnext->display );
-
-		if( mpcontrol->debug ) {
-			snprintf( buff, MAXPATHLEN, "[%i]", control->current->played );
-			gtk_button_set_label( GTK_BUTTON( control->widgets->button_play ),
-					buff );
-			sprintf( buff, "%2i", control->current->skipped );
-			gtk_button_set_label( GTK_BUTTON( control->widgets->button_next ),
-					buff );
-		}
-/*
-		if( control->current->skipped > 2 ) {
-			gtk_button_set_image( GTK_BUTTON( control->widgets->button_next ),
-					control->widgets->noentry );
+		setButtonLabel( control->widgets->button_prev, control->current->plprev->display );
+		if( mpcontrol->debug > 1 ) {
+			sprintf( buff, "%2i %s", control->current->skipped, control->current->plnext->display );
+			setButtonLabel( control->widgets->button_next, buff );
 		}
 		else {
-			gtk_button_set_image( GTK_BUTTON( control->widgets->button_next ),
-					control->widgets->down );
+			setButtonLabel( control->widgets->button_next, control->current->plnext->display );
 		}
-*/
 		gtk_widget_set_sensitive( control->widgets->button_fav, ( !(control->current->flags & MP_FAV) ) );
 
 		gtk_window_set_title ( GTK_WINDOW( control->widgets->mixplay_main ),
 							  control->current->display );
 	}
 
-	if( mpc_play == control->status ) {
-		gtk_button_set_label( GTK_BUTTON( control->widgets->button_play ), "pause" );
+
+	if( (control->current != NULL ) && ( mpcontrol->debug > 1) ) {
+		snprintf( buff, MAXPATHLEN, "[%i] %s", control->current->played,
+				( mpc_play == control->status )?"pause":"play" );
+		gtk_button_set_label( GTK_BUTTON( control->widgets->button_play ),
+				buff );
 	}
 	else {
-		gtk_button_set_label( GTK_BUTTON( control->widgets->button_play ), "play" );
+		gtk_button_set_label( GTK_BUTTON( control->widgets->button_play ),
+				( mpc_play == control->status )?"pause":"play" );
 	}
 
-
-/** skipcontrol is off
-	if( control->percent < 5 ) {
-		gtk_button_set_image( GTK_BUTTON( control->widgets->button_next ),
-				control->widgets->skip );
-	}
-	else {
-		gtk_button_set_image( GTK_BUTTON( control->widgets->button_next ),
-				control->widgets->down );
-	}
-**/
-	// other settings
 	gtk_label_set_text( GTK_LABEL( control->widgets->played ),
 			control->playtime );
 	gtk_label_set_text( GTK_LABEL( control->widgets->remain ),
 			control->remtime );
 	gtk_progress_bar_set_fraction( GTK_PROGRESS_BAR( control->widgets->progress),
 			control->percent/100.0 );
-	pthread_mutex_unlock( &msglock );
 
 	return 0;
 }
