@@ -11,6 +11,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <X11/Xlib.h>
 
 struct mpcontrol_t *mpcontrol;
 
@@ -178,6 +179,7 @@ int main( int argc, char **argv ) {
 	muteVerbosity();
 
     /* Init GTK+ */
+	XInitThreads();
     gtk_init( &argc, &argv );
 
     control.fullscreen=0;
@@ -188,7 +190,6 @@ int main( int argc, char **argv ) {
 	while ((c = getopt(argc, argv, "vfd")) != 255 ) {
 		switch (c) {
 		case 'v': // pretty useless in normal use
-			control.debug=1;
 			incVerbosity();
 		break;
 		case 'f':
@@ -219,6 +220,7 @@ int main( int argc, char **argv ) {
 		}
 		// child process
 		if (0 == pid[i]) {
+			printver( 2, "Starting player %i\n", i+1 );
 			if (dup2(control.p_command[i][0], STDIN_FILENO) != STDIN_FILENO) {
 				fail( errno, "Could not dup stdin for player %i", i+1 );
 			}
@@ -241,7 +243,7 @@ int main( int argc, char **argv ) {
 	}
 
     // first thing to be called after the GUI is enabled
-    g_idle_add( initAll, &control );
+    gdk_threads_add_idle( initAll, &control );
 
     /* Start main loop */
     gtk_main();

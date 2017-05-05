@@ -95,6 +95,8 @@ void *reader( void *cont ) {
 	int intime=0;
 	int fade=3;
 
+	printver( 2, "Reader running\n");
+
 	control=(struct mpcontrol_t *)cont;
 	db=dbOpen( control->dbname );
 
@@ -105,114 +107,7 @@ void *reader( void *cont ) {
 		to.tv_sec=0;
 		to.tv_usec=100000; // 1/10 second
 		i=select( FD_SETSIZE, &fds, NULL, NULL, &to );
-		switch( control->command ) {
-		case mpc_start:
-			control->current = control->root;
-			control->status=mpc_play;
-			sendplay( control->p_command[fdset][1], control->current);
-			break;
-		case mpc_play:
-			write( control->p_command[fdset][1], "PAUSE\n", 7 );
-			control->status=(mpc_play == control->status)?mpc_idle:mpc_play;
-			break;
-		case mpc_prev:
-			order=-1;
-			write( control->p_command[fdset][1], "STOP\n", 6 );
-			break;
-		case mpc_next:
-			order=1;
-			if( !(control->current->flags & MP_SKPD  ) ) {
-				control->current->skipped++;
-				control->current->flags |= MP_SKPD;
-				dbPutTitle( db, control->current );
-			}
-			write( control->p_command[fdset][1], "STOP\n", 6 );
-			break;
-		case mpc_dbscan:
-			order=0;
-			write( control->p_command[fdset][1], "STOP\n", 6 );
-			progressLog( "Add new titles" );
-			i=dbAddTitles( control->dbname, control->musicdir );
-			if( i > 0 ) {
-				progressDone("Added %i titles\nRestarting player", i );
-				setProfile( control );
-				control->current = control->root;
-			}
-			else {
-				progressDone("No titles to be added");
-			}
-			sendplay( control->p_command[fdset][1], control->current);
-			break;
-		case mpc_dbclean:
-			order=0;
-			write( control->p_command[fdset][1], "STOP\n", 6 );
-			progressLog( "Clean database" );
-			i=dbCheckExist( control->dbname );
-			if( i > 0 ) {
-				progressDone( "Removed $i titles\nRestarting player", i );
-				setProfile( control );
-				control->current = control->root;
-			}
-			else {
-				progressDone( "No titles removed" );
-			}
-			sendplay( control->p_command[fdset][1], control->current);
-			break;
-		case mpc_stop:
-			order=0;
-			write( control->p_command[fdset][1], "STOP\n", 6 );
-			control->status=mpc_idle;
-			break;
-		case mpc_dnptitle:
-//			addToFile( control->dnpname, control->current->title, "t=" );
-//			control->current=removeFromPL( control->current, SL_TITLE );
-			addToFile( control->dnpname, control->current->title, "d=" );
-			control->current=removeFromPL( control->current, SL_DISPLAY );
-			order=1;
-			write( control->p_command[fdset][1], "STOP\n", 6 );
-			break;
-		case mpc_dnpalbum:
-			addToFile( control->dnpname, control->current->album, "l=" );
-			control->current=removeFromPL( control->current, SL_ALBUM );
-			order=1;
-			write( control->p_command[fdset][1], "STOP\n", 6 );
-			break;
-		case mpc_dnpartist:
-			addToFile( control->dnpname, control->current->artist, "a=" );
-			control->current=removeFromPL( control->current, SL_ARTIST );
-			order=1;
-			write( control->p_command[fdset][1], "STOP\n", 6 );
-			break;
-		case mpc_favtitle:
-//			addToFile( control->favname, control->current->title, "t=" );
-			addToFile( control->favname, control->current->display, "d=" );
-			control->current->flags|=MP_FAV;
-			break;
-		case mpc_favalbum:
-			addToFile( control->favname, control->current->album, "l=" );
-			markFavourite( control->current, SL_ALBUM );
-			break;
-		case mpc_favartist:
-			addToFile( control->favname, control->current->artist, "a=" );
-			markFavourite( control->current, SL_ARTIST );
-			break;
-		case mpc_repl:
-			write( control->p_command[fdset][1], "JUMP 0\n", 8 );
-			break;
-		case mpc_quit:
-			control->status=mpc_quit;
-			break;
-		case mpc_profile:
-			// @todo - change profile - probably done in callback itself
-			break;
-		case mpc_idle:
-			// do null
-			break;
-		}
 
-		pthread_mutex_trylock( &cmdlock );
-		control->command=mpc_idle;
-		pthread_mutex_unlock(&cmdlock);
 
 		if( i>0 ) redraw=1;
 		// drain inactive player
@@ -381,8 +276,123 @@ void *reader( void *cont ) {
 		} // fgets() > 0
 		if( redraw ) {
 			gdk_threads_add_idle( updateUI, control );
+			while (gtk_events_pending ()) gtk_main_iteration ();
+			// updateUI( (void*)control );
 		}
+
+		pthread_mutex_trylock( &cmdlock );
+		switch( control->command ) {
+		case mpc_start:
+			control->current = control->root;
+			control->status=mpc_play;
+			sendplay( control->p_command[fdset][1], control->current);
+			break;
+		case mpc_play:
+			write( control->p_command[fdset][1], "PAUSE\n", 7 );
+			control->status=(mpc_play == control->status)?mpc_idle:mpc_play;
+			break;
+		case mpc_prev:
+			order=-1;
+			write( control->p_command[fdset][1], "STOP\n", 6 );
+			break;
+		case mpc_next:
+			order=1;
+			if( !(control->current->flags & MP_SKPD  ) ) {
+				control->current->skipped++;
+				control->current->flags |= MP_SKPD;
+				dbPutTitle( db, control->current );
+			}
+			write( control->p_command[fdset][1], "STOP\n", 6 );
+			break;
+		case mpc_dbscan:
+			order=0;
+			write( control->p_command[fdset][1], "STOP\n", 6 );
+			progressLog( "Add new titles" );
+			i=dbAddTitles( control->dbname, control->musicdir );
+			if( i > 0 ) {
+				progressDone("Added %i titles\nRestarting player", i );
+				setProfile( control );
+				control->current = control->root;
+			}
+			else {
+				progressDone("No titles to be added");
+			}
+			sendplay( control->p_command[fdset][1], control->current);
+			break;
+		case mpc_dbclean:
+			order=0;
+			if( control->status != mpc_idle ) {
+				write( control->p_command[fdset][1], "STOP\n", 6 );
+			}
+			progressLog( "Clean database" );
+			i=dbCheckExist( control->dbname );
+			if( i > 0 ) {
+				progressDone( "Removed $i titles\nRestarting player", i );
+				setProfile( control );
+				control->current = control->root;
+			}
+			else {
+				progressDone( "No titles removed" );
+			}
+			sendplay( control->p_command[fdset][1], control->current);
+			break;
+		case mpc_stop:
+			order=0;
+			write( control->p_command[fdset][1], "STOP\n", 6 );
+			control->status=mpc_idle;
+			break;
+		case mpc_dnptitle:
+//			addToFile( control->dnpname, control->current->title, "t=" );
+//			control->current=removeFromPL( control->current, SL_TITLE );
+			addToFile( control->dnpname, control->current->title, "d=" );
+			control->current=removeFromPL( control->current, SL_DISPLAY );
+			order=1;
+			write( control->p_command[fdset][1], "STOP\n", 6 );
+			break;
+		case mpc_dnpalbum:
+			addToFile( control->dnpname, control->current->album, "l=" );
+			control->current=removeFromPL( control->current, SL_ALBUM );
+			order=1;
+			write( control->p_command[fdset][1], "STOP\n", 6 );
+			break;
+		case mpc_dnpartist:
+			addToFile( control->dnpname, control->current->artist, "a=" );
+			control->current=removeFromPL( control->current, SL_ARTIST );
+			order=1;
+			write( control->p_command[fdset][1], "STOP\n", 6 );
+			break;
+		case mpc_favtitle:
+//			addToFile( control->favname, control->current->title, "t=" );
+			addToFile( control->favname, control->current->display, "d=" );
+			control->current->flags|=MP_FAV;
+			break;
+		case mpc_favalbum:
+			addToFile( control->favname, control->current->album, "l=" );
+			markFavourite( control->current, SL_ALBUM );
+			break;
+		case mpc_favartist:
+			addToFile( control->favname, control->current->artist, "a=" );
+			markFavourite( control->current, SL_ARTIST );
+			break;
+		case mpc_repl:
+			write( control->p_command[fdset][1], "JUMP 0\n", 8 );
+			break;
+		case mpc_quit:
+			control->status=mpc_quit;
+			break;
+		case mpc_profile:
+			// @todo - change profile - probably done in callback itself
+			break;
+		case mpc_idle:
+			// do null
+			break;
+		}
+		control->command=mpc_idle;
+		pthread_mutex_unlock(&cmdlock);
+
 	} // while(running)
+
+	printver( 2, "Reader stopped\n");
 
 	return NULL;
 }

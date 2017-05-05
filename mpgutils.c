@@ -311,11 +311,11 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, struct entry_t *ti
 			strncpy( title->genre, getGenre( v1->genre ), NAMELEN );
 		}
 		else {
-			printf("\nID3 OK but no tags in %s\n", title->path );
+			printver( 0, "ID3 OK but no tags in %s\n", title->path );
 		}
 	}
 	else {
-		printf("\nTag parse error in %s\n", title->path );
+		printver( 0, "Tag parse error in %s\n", title->path );
 	}
 	snprintf( title->display, MAXPATHLEN, "%s - %s", title->artist, title->title );
 	mpg123_close(mh);

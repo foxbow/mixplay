@@ -618,6 +618,7 @@ int DNPSkip( struct entry_t *base, const unsigned int level ) {
 	struct entry_t *runner=base;
 	unsigned int skipskip=0;
 	int skipmark=0;
+
 // Sort out skipped titles
 	do {
 		if( -1 == runner->skipped ){
@@ -632,11 +633,8 @@ int DNPSkip( struct entry_t *base, const unsigned int level ) {
 		}
 		runner=runner->dbnext;
 	} while( base != runner );
-	if( 0 == skipmark ) {
-		fail( F_WARN, "No more negative skips!" );
-	}
-	else {
-		fail( F_WARN, "Still %i negative skips...", skipmark );
+	if( 0 != skipmark ) {
+		fail( F_WARN, "Found %i negative skips!", skipmark );
 	}
 	printver( 1, "Marked %i titles as DNP for being skipped\n", skipskip );
 	return skipskip;
@@ -1018,5 +1016,5 @@ void dumpInfo( struct entry_t *root, int global ) {
 	}
 	printver( 0, "%i\tfavourites\n", fav );
 	if( global ) printver( 0, "%i\tdo not plays\n", dnp );
-	printver( 0, "%i\t skipped\n", skipped );
+	printver( 0, "%i\tskipped\n", skipped );
 }

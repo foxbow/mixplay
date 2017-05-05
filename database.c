@@ -248,6 +248,7 @@ int dbCheckExist( const char *dbname ) {
 	int num=0;
 
 	root=dbGetMusic( dbname );
+	runner=root;
 	printver( 1, "Cleaning database...\n" );
 	do {
 		activity( "Cleaning" );

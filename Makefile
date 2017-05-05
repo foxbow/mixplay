@@ -6,7 +6,7 @@ OBJS=utils.o musicmgr.o database.o mpgutils.o
 NCOBJS=ncbox.o mixplay.o
 GLOBJS=gladeutils.o callbacks.o gmixplay.o player.o
 GLSRC=gmixplay.c gladeutils.c callbacks.c player.c
-LDFLAGS_GLADE=`pkg-config --libs gtk+-3.0 gmodule-2.0`
+LDFLAGS_GLADE=`pkg-config --libs gtk+-3.0 gmodule-2.0` `pkg-config --cflags --libs x11`
 CCFLAGS_GLADE=$(CCFLAGS) `pkg-config --cflags gtk+-3.0 gmodule-2.0`
 EXES=bin/mixplay bin/gmixplay
 
@@ -34,9 +34,12 @@ bin/gmixplay: $(OBJS) $(GLOBJS)
 	$(CC) $(CCFLAGS_GLADE) -c $<
 	
 install: all	
+	install -d ~/bin/
 	install -s -m 0755 bin/mixplay ~/bin/
 	install -s -m 0755 bin/gmixplay ~/bin/
+	install -d ~/.local/share/icons/
 	install -m 0644 mixplay.svg ~/.local/share/icons/
+	install -d ~/.local/share/applications/
 	desktop-file-install --dir=$(HOME)/.local/share/applications -m 0755 --set-key=Exec --set-value="$(HOME)/bin/gmixplay %u" --set-icon=$(HOME)/.local/share/icons/mixplay.svg --rebuild-mime-info-cache gmixplay.desktop 
 	
 install-global: all
