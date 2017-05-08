@@ -23,7 +23,6 @@ struct _MpData
 	GtkWidget *button_prev;
 	GtkWidget *button_next;
 	GtkWidget *button_replay;
-	GtkWidget *image_current;
 	GtkWidget *title_current;
 	GtkWidget *artist_current;
 	GtkWidget *album_current;
@@ -31,6 +30,7 @@ struct _MpData
 	GtkWidget *button_dnp;
 	GtkWidget *button_play;
 	GtkWidget *button_fav;
+	GtkWidget *button_database;
 	GtkWidget *played;
 	GtkWidget *remain;
 	GtkWidget *progress;

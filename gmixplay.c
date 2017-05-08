@@ -108,7 +108,6 @@ static int initAll( void *data ) {
 	control=(struct mpcontrol_t*)data;
 	loadConfig( control );
 
-	control->root=NULL;
 	control->current=NULL;
 	control->log[0]='\0';
 	control->stream=0;
@@ -117,7 +116,13 @@ static int initAll( void *data ) {
 	control->percent=0;
 	control->status=mpc_idle;
 	pthread_create( &control->rtid, NULL, reader, control );
-	setProfile( control );
+	if( NULL == control->root ) {
+		setProfile( control );
+	}
+	else {
+		control->dbname[0]=0;
+	}
+	setCommand( control, mpc_start );
 	if( control->debug ) progressDone();
 	return 0;
 }
@@ -139,7 +144,6 @@ static void buildUI( struct mpcontrol_t * control ) {
 	GW( button_prev );
 	GW( button_next );
 	GW( button_replay );
-	GW( image_current );
 	GW( title_current );
 	GW( artist_current );
 	GW( album_current );
@@ -147,6 +151,7 @@ static void buildUI( struct mpcontrol_t * control ) {
 	GW( button_dnp );
 	GW( button_play );
 	GW( button_fav );
+	GW( button_database );
 	GW( played );
 	GW( remain );
 	GW( progress );
@@ -170,6 +175,7 @@ static void buildUI( struct mpcontrol_t * control ) {
 int main( int argc, char **argv ) {
     unsigned char	c;
     struct 		mpcontrol_t control;
+    char		line [MAXPATHLEN];
 
     int			i;
     int 		db=0;
@@ -202,6 +208,46 @@ int main( int argc, char **argv ) {
 	}
 
 	buildUI( &control );
+
+	control.root=NULL;
+
+	if (optind < argc) {
+		if( isURL( argv[optind] ) ) {
+			control.playstream=1;
+			line[0]=0;
+			if( endsWith( argv[optind], ".m3u" ) ||
+					endsWith( argv[optind], ".pls" ) ) {
+				strcpy( line, "@" );
+			}
+			strncat( line, argv[optind], MAXPATHLEN );
+			control.root=insertTitle( NULL, line );
+			strncpy( control.root->title, "Waiting for stream info...", NAMELEN );
+		}
+		else if( endsWith( argv[optind], ".mp3" ) ) {
+			// play single song...
+			control.root=insertTitle( NULL, argv[optind] );
+		}
+		else if( isDir( argv[optind]) ) { // @todo: playlist linking
+			control.root=recurse(argv[optind], NULL, argv[optind]);
+			control.root=control.root->dbnext;
+		}
+		else if ( endsWith( argv[optind], ".m3u" ) ||
+				endsWith( argv[optind], ".pls" ) ) {
+			if( NULL != strrchr( argv[optind], '/' ) ) {
+				strcpy(line, argv[optind]);
+				i=strlen(line);
+				while( line[i] != '/' ) i--;
+				line[i]=0;
+				chdir(line);
+			}
+			control.root=loadPlaylist( argv[optind] );
+		}
+		else {
+			fail(F_FAIL, "Unknown argument!\n", argv[optind] );
+			return -1;
+		}
+	}
+
 
     if( control.debug ) {
     	progressLog("Debug");

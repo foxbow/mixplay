@@ -19,16 +19,16 @@ void fail( int error, const char* msg, ... ){
 	GtkWidget *dialog;
 	GtkMessageType type = GTK_MESSAGE_ERROR;
 
+	va_start( args, msg );
+	vsnprintf( line, 1024, msg, args );
+	va_end(args);
+
 	if( F_WARN == error ) {
 		type=GTK_MESSAGE_WARNING;
 	}
 	else {
 		fprintf( stderr, "FAIL: %s\n", line );
 	}
-
-	va_start( args, msg );
-	vsnprintf( line, 1024, msg, args );
-	va_end(args);
 
 	if(error > 0 ) {
 		dialog = gtk_message_dialog_new (GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
@@ -166,9 +166,12 @@ static void setButtonLabel( GtkWidget *button, const char *text ) {
 
 
 int updateUI( void *data ) {
-	struct mpcontrol_t *control;
-	char buff[MAXPATHLEN];
+	struct	mpcontrol_t *control;
+	char	buff[MAXPATHLEN];
+	gboolean	usedb;
 	control=(struct mpcontrol_t*)data;
+
+	usedb=(0 == strlen( control->dbname ) )?TRUE:FALSE;
 
 	if( mpc_quit == control->command ) {
 		printver(2, "Already closing..\n");
@@ -179,6 +182,19 @@ int updateUI( void *data ) {
 		printver(2, "No title yet..\n");
 		return 0;
 	}
+
+	// These depend on a database
+	gtk_widget_set_visible( control->widgets->button_fav, usedb );
+	gtk_widget_set_visible( control->widgets->button_dnp, usedb );
+	gtk_widget_set_visible( control->widgets->button_replay, usedb );
+	gtk_widget_set_visible( control->widgets->button_database, usedb );
+
+	// these don't make sense when a stream is played
+	gtk_widget_set_visible( control->widgets->button_next, !(control->playstream) );
+	gtk_widget_set_sensitive( control->widgets->button_prev, !(control->playstream) );
+	gtk_widget_set_visible( control->widgets->progress, !(control->playstream) );
+	gtk_widget_set_visible( control->widgets->played, !(control->playstream) );
+	gtk_widget_set_visible( control->widgets->remain, !(control->playstream) );
 
 	if( ( NULL != control->current ) && ( 0 != strlen( control->current->path ) ) ) {
 		gtk_label_set_text( GTK_LABEL( control->widgets->title_current ),
@@ -199,8 +215,8 @@ int updateUI( void *data ) {
 		}
 		gtk_widget_set_sensitive( control->widgets->button_fav, ( !(control->current->flags & MP_FAV) ) );
 
-		gtk_window_set_title ( GTK_WINDOW( control->widgets->mixplay_main ),
-							  control->current->display );
+//		gtk_window_set_title ( GTK_WINDOW( control->widgets->mixplay_main ),
+//							  control->current->display );
 	}
 
 

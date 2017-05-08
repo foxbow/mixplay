@@ -71,7 +71,6 @@ void setProfile( struct mpcontrol_t *ctrl ) {
 	applyFavourites( ctrl->root, favourites );
 	ctrl->root=shuffleTitles(ctrl->root);
 	// ctrl->command=mpc_start;
-	setCommand( ctrl, mpc_start ); // @todo: is this deadlock prone during init?
 	cleanList( dnplist );
 	cleanList( favourites );
 }
@@ -87,7 +86,6 @@ void *reader( void *cont ) {
 	int redraw=0;
 	int fdset=0;
 	char line[MAXPATHLEN];
-	char tbuf[MAXPATHLEN];
 	char status[MAXPATHLEN];
 	char *b;
 	int db;
@@ -134,18 +132,18 @@ void *reader( void *cont ) {
 					// ICY stream info
 					if( NULL != strstr( line, "ICY-" ) ) {
 						if( NULL != strstr( line, "ICY-NAME: " ) ) {
-							strip( control->current->album, line+13, NAMELEN );
+							strip( control->current->artist, line+13, NAMELEN );
 						}
 						if( NULL != ( b = strstr( line, "StreamTitle") ) ) {
 							b = b + 13;
 							*strchr(b, '\'') = '\0';
-							if( strlen(control->current->display) != 0 ) {
-								strcpy(tbuf, control->current->display);
-								next=insertTitle( control->current, tbuf );
-								// fix genpathname() from insertTitle
-								strip(next->display, tbuf, MAXPATHLEN );
+							if( control->current->plnext != control->current ) {
+								next=insertTitle( control->current, control->current->title );
 							}
-							strip(control->current->display, b, MAXPATHLEN );
+							else {
+								strncpy( control->current->plnext->display, control->current->title, NAMELEN );
+							}
+							strip(control->current->title, b, NAMELEN );
 						}
 					}
 					// standard mpg123 info
@@ -175,7 +173,7 @@ void *reader( void *cont ) {
 					b=strrchr( line, ' ' );
 					intime=atoi(b);
 					// stream play
-					if( control->stream ){
+					if( control->playstream ){
 						if( intime/60 < 60 ) {
 							sprintf(status, "%i:%02i PLAYING", intime/60, intime%60 );
 						}
