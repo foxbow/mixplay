@@ -88,7 +88,7 @@ void *reader( void *cont ) {
 	char line[MAXPATHLEN];
 	char status[MAXPATHLEN];
 	char *b;
-	int db;
+	int db=0;
 	int order=1;
 	int intime=0;
 	int fade=3;
@@ -96,8 +96,13 @@ void *reader( void *cont ) {
 	printver( 2, "Reader running\n");
 
 	control=(struct mpcontrol_t *)cont;
-	db=dbOpen( control->dbname );
-
+	if( strlen( control->dbname ) > 0 ) {
+		db=dbOpen( control->dbname );
+	}
+	else {
+		printver(1, "No database in player\n" );
+	}
+	
 	while ( control->status != mpc_quit ) {
 		FD_ZERO( &fds );
 		FD_SET( control->p_status[0][0], &fds );
@@ -138,7 +143,7 @@ void *reader( void *cont ) {
 							b = b + 13;
 							*strchr(b, '\'') = '\0';
 							if( control->current->plnext != control->current ) {
-								next=insertTitle( control->current, control->current->title );
+								insertTitle( control->current, control->current->title );
 							}
 							else {
 								strncpy( control->current->plnext->display, control->current->title, NAMELEN );
@@ -391,6 +396,7 @@ void *reader( void *cont ) {
 	} // while(running)
 
 	printver( 2, "Reader stopped\n");
+	if( db ) dbClose( db );
 
 	return NULL;
 }

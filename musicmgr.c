@@ -781,13 +781,15 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 			// find a random position
 			activity("Stuffing");
 			guard=skipTitles( end, RANDOM(num), 0 );
-			while( ( guard->plnext != guard )
-				&& !checkMatch( guard->artist, runner->artist )
-				&& !checkMatch( guard->plnext->artist, runner->artist ) ) {
-				guard=guard->plnext;
-			}
+			// @todo: where is the logic error here?
+//			while( ( guard->plnext != guard )
+//				&& !checkMatch( guard->artist, runner->artist )
+//				&& !checkMatch( guard->plnext->artist, runner->artist ) ) {
+//				guard=guard->plnext;
+//				activity("badend");
+//			}
 			insskip++;
-			printver( 3, "[*] (%i/%li) %s\n", runner->played, pcount, runner->display );
+			printver( 3, "[*] (%i/%li) %s [%s]\n", runner->played, pcount, runner->display, guard->display );
 			guard=addToPL( runner, guard );
 			added++;
 		}

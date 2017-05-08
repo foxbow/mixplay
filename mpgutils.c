@@ -306,11 +306,13 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, struct entry_t *ti
 			tagCopy( title->title, v2->title );
 			tagCopy( title->artist, v2->artist );
 			tagCopy( title->album, v2->album );
-			if( '(' == v2->genre->p[0] ) {
-				strncpy( title->genre, getGenre( atoi( &v2->genre->p[1] ) ), NAMELEN );
-			}
-			else {
-				tagCopy( title->genre, v2->genre );
+			if( v2->genre ) {
+				if( '(' == v2->genre->p[0] ) {
+					strncpy( title->genre, getGenre( atoi( &v2->genre->p[1] ) ), NAMELEN );
+				}
+				else {
+					tagCopy( title->genre, v2->genre );
+				}
 			}
 		}
 		else if( v1 != NULL ) {

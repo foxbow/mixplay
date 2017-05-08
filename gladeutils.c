@@ -171,7 +171,7 @@ int updateUI( void *data ) {
 	gboolean	usedb;
 	control=(struct mpcontrol_t*)data;
 
-	usedb=(0 == strlen( control->dbname ) )?TRUE:FALSE;
+	usedb=(0 == strlen( control->dbname ) )?FALSE:TRUE;
 
 	if( mpc_quit == control->command ) {
 		printver(2, "Already closing..\n");

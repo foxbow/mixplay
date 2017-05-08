@@ -210,6 +210,7 @@ int main( int argc, char **argv ) {
 	buildUI( &control );
 
 	control.root=NULL;
+	control.playstream=0;
 
 	if (optind < argc) {
 		if( isURL( argv[optind] ) ) {
@@ -217,9 +218,11 @@ int main( int argc, char **argv ) {
 			line[0]=0;
 			if( endsWith( argv[optind], ".m3u" ) ||
 					endsWith( argv[optind], ".pls" ) ) {
+				fail( F_FAIL, "Only direct stream support" );
 				strcpy( line, "@" );
 			}
 			strncat( line, argv[optind], MAXPATHLEN );
+			printver(1, "Stream address: %s\n", line );
 			control.root=insertTitle( NULL, line );
 			strncpy( control.root->title, "Waiting for stream info...", NAMELEN );
 		}
@@ -247,7 +250,6 @@ int main( int argc, char **argv ) {
 			return -1;
 		}
 	}
-
 
     if( control.debug ) {
     	progressLog("Debug");
