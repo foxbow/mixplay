@@ -287,7 +287,7 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, struct entry_t *ti
 	mpg123_id3v2 *v2;
 	int meta;
 
-	if( ( '@' == title->path[0] ) || isURL( title->path ) ) {
+	if( strlen( title->path ) ) {
 		return;
 	}
 

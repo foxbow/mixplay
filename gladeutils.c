@@ -31,6 +31,8 @@ void fail( int error, const char* msg, ... ){
 	}
 
 	if(error > 0 ) {
+		// Keep UI from updating
+		mpcontrol->current=NULL;
 		dialog = gtk_message_dialog_new (GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
 				GTK_DIALOG_DESTROY_WITH_PARENT, type, GTK_BUTTONS_CLOSE,
 				"%s\nERROR: %i - %s", line, abs(error), strerror( abs(error) ));
@@ -45,7 +47,6 @@ void fail( int error, const char* msg, ... ){
 	if( error != F_WARN ) {
 		mpcontrol->command=mpc_quit;
 		gtk_main_quit();
-		exit(-1);
 	}
 
 	return;

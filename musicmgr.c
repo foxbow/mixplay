@@ -92,7 +92,7 @@ void addToFile( const char *path, const char *line, const char* prefix ) {
  * inserts a title into the playlist chain. Creates a new playlist
  * startpoint if no target is set.
  */
-static struct entry_t *addToPL( struct entry_t *title, struct entry_t *target ) {
+struct entry_t *addToPL( struct entry_t *title, struct entry_t *target ) {
 	if( title->flags & MP_MARK ) {
 		fail( F_FAIL, "Trying to add %s twice! (%i)", title->display, title->flags );
 	}
@@ -106,6 +106,7 @@ static struct entry_t *addToPL( struct entry_t *title, struct entry_t *target ) 
 		title->plprev=target;
 		target->plnext->plprev=title;
 		target->plnext=title;
+		target->flags |= MP_MARK;
 	}
 	title->flags |= MP_MARK;
 	return title;

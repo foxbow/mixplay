@@ -87,7 +87,7 @@ void *reader( void *cont ) {
 	int fdset=0;
 	char line[MAXPATHLEN];
 	char status[MAXPATHLEN];
-	char *b;
+	char *a, *t;
 	int db=0;
 	int order=1;
 	int intime=0;
@@ -137,18 +137,25 @@ void *reader( void *cont ) {
 					// ICY stream info
 					if( NULL != strstr( line, "ICY-" ) ) {
 						if( NULL != strstr( line, "ICY-NAME: " ) ) {
-							strip( control->current->artist, line+13, NAMELEN );
+							strip( control->current->album, line+13, NAMELEN );
 						}
-						if( NULL != ( b = strstr( line, "StreamTitle") ) ) {
-							b = b + 13;
-							*strchr(b, '\'') = '\0';
-							if( control->current->plnext != control->current ) {
-								insertTitle( control->current, control->current->title );
+						if( NULL != ( a = strstr( line, "StreamTitle") ) ) {
+							if( control->current->plnext == control->current )
+								fail( F_FAIL, "Messed up playlist!" );
+							printver( 3, "%s\n", a );
+							a = a + 13;
+							*strchr(a, '\'') = '\0';
+							strncpy( control->current->plnext->display, control->current->display, MAXPATHLEN );
+							strip(control->current->display, a, MAXPATHLEN );
+							if( NULL != ( t = strstr( a, " - " ) ) ) {
+								*t=0;
+								t=t+3;
+								strncpy( control->current->artist, a, NAMELEN );
+								strncpy( control->current->title, t, NAMELEN );
 							}
 							else {
-								strncpy( control->current->plnext->display, control->current->title, NAMELEN );
+								strip(control->current->title, a, NAMELEN );
 							}
-							strip(control->current->title, b, NAMELEN );
 						}
 					}
 					// standard mpg123 info
@@ -172,11 +179,11 @@ void *reader( void *cont ) {
 					 * in  = seconds (float)
 					 * rem = seconds left (float)
 					 */
-					b=strrchr( line, ' ' );
-					rem=atoi(b);
-					*b=0;
-					b=strrchr( line, ' ' );
-					intime=atoi(b);
+					a=strrchr( line, ' ' );
+					rem=atoi(a);
+					*a=0;
+					a=strrchr( line, ' ' );
+					intime=atoi(a);
 					// stream play
 					if( control->playstream ){
 						if( intime/60 < 60 ) {

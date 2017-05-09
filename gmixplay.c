@@ -225,6 +225,9 @@ int main( int argc, char **argv ) {
 			printver(1, "Stream address: %s\n", line );
 			control.root=insertTitle( NULL, line );
 			strncpy( control.root->title, "Waiting for stream info...", NAMELEN );
+			insertTitle( control.root, control.root->title );
+			insertTitle( control.root, control.root->title );
+			addToPL( control.root->dbnext, control.root );
 		}
 		else if( endsWith( argv[optind], ".mp3" ) ) {
 			// play single song...
