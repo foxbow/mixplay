@@ -618,14 +618,9 @@ static struct entry_t *skipOver( struct entry_t *current ) {
 int DNPSkip( struct entry_t *base, const unsigned int level ) {
 	struct entry_t *runner=base;
 	unsigned int skipskip=0;
-	int skipmark=0;
 
 // Sort out skipped titles
 	do {
-		if( -1 == runner->skipped ){
-			runner->skipped = 0;
-			skipmark++;
-		}
 		activity( "DNPSkipping" );
 		if( runner->skipped > level ){
 			runner->flags |= MP_DNP;
@@ -634,9 +629,7 @@ int DNPSkip( struct entry_t *base, const unsigned int level ) {
 		}
 		runner=runner->dbnext;
 	} while( base != runner );
-	if( 0 != skipmark ) {
-		fail( F_WARN, "Found %i negative skips!", skipmark );
-	}
+
 	printver( 1, "Marked %i titles as DNP for being skipped\n", skipskip );
 	return skipskip;
 }

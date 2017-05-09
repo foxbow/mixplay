@@ -107,6 +107,8 @@ static int initAll( void *data ) {
 	struct mpcontrol_t *control;
 	control=(struct mpcontrol_t*)data;
 	loadConfig( control );
+	pthread_t *tid;
+
 
 	control->current=NULL;
 	control->log[0]='\0';
@@ -117,13 +119,14 @@ static int initAll( void *data ) {
 	control->status=mpc_idle;
 	pthread_create( &control->rtid, NULL, reader, control );
 	if( NULL == control->root ) {
-		setProfile( control );
+		pthread_create( &tid, NULL, setProfile, (void *)control );
+//		setProfile( control );
 	}
 	else {
 		control->dbname[0]=0;
+		setCommand( control, mpc_start );
+		if( control->debug ) progressDone();
 	}
-	setCommand( control, mpc_start );
-	if( control->debug ) progressDone();
 	return 0;
 }
 

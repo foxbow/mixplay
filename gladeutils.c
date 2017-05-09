@@ -75,10 +75,10 @@ void printver( int vl, const char *msg, ... ) {
 
 	if( ( mpcontrol->debug || mpcontrol->widgets->mp_popup ) && ( vl < 2 ) ) {
 		pthread_mutex_lock( &msglock );
-		strncat( mpcontrol->log, line, 1024 );
+		strncat( mpcontrol->log, line, 2047-strlen( mpcontrol->log) );
 		gdk_threads_add_idle( g_progressAdd, mpcontrol->log );
-		pthread_mutex_unlock( &msglock );
 		while (gtk_events_pending ()) gtk_main_iteration ();
+		pthread_mutex_unlock( &msglock );
 	}
 
 	if( ( vl > 0 ) && ( vl <= getVerbosity() ) ) {
@@ -106,18 +106,20 @@ static int g_progressLog( void *line ) {
 	if( !mpcontrol->debug && ( getVerbosity() > 0 ) ) printf("LOG: %s\n", (char *)line);
 
 	if( NULL != mpcontrol->widgets->mp_popup ) {
-		fail( F_WARN, "Log widget is already open!" );
-		return -1;
+		g_progressAdd( line );
 	}
-	mpcontrol->widgets->mp_popup = gtk_message_dialog_new (GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
-			GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_INFO, GTK_BUTTONS_NONE,
-			"%s", (char *)line );
-	gtk_dialog_add_button( GTK_DIALOG( mpcontrol->widgets->mp_popup ), "OK", 1 );
-	g_signal_connect_swapped (mpcontrol->widgets->mp_popup, "response",
-	                          G_CALLBACK( progressClose ),
-	                          mpcontrol->widgets->mp_popup );
-	gtk_widget_set_sensitive( mpcontrol->widgets->mp_popup, FALSE );
-	gtk_widget_show_all( mpcontrol->widgets->mp_popup );
+	else {
+		mpcontrol->widgets->mp_popup = gtk_message_dialog_new (GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+				GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_INFO, GTK_BUTTONS_NONE,
+				"%s", (char *)line );
+		gtk_dialog_add_button( GTK_DIALOG( mpcontrol->widgets->mp_popup ), "OK", 1 );
+		g_signal_connect_swapped (mpcontrol->widgets->mp_popup, "response",
+								  G_CALLBACK( progressClose ),
+								  mpcontrol->widgets->mp_popup );
+		gtk_widget_set_sensitive( mpcontrol->widgets->mp_popup, FALSE );
+		gtk_widget_show_all( mpcontrol->widgets->mp_popup );
+	}
+	free( line );
 	return 0;
 }
 
@@ -126,7 +128,8 @@ static int g_progressLog( void *line ) {
  */
 void progressLog( const char *msg, ... ) {
 	va_list args;
-	char line[512];
+	char *line;
+	line=calloc( 512, sizeof( char ) );
 
 	pthread_mutex_lock( &msglock );
 	va_start( args, msg );
@@ -152,7 +155,7 @@ void progressDone() {
 		fail( F_FAIL, "No progress request open!" );
 	}
 	pthread_mutex_lock( &msglock );
-	strncat( mpcontrol->log, "Done.", 1024 );
+	strncat( mpcontrol->log, "DONE\n", 2047-strlen( mpcontrol->log) );
 	gdk_threads_add_idle( g_progressDone, mpcontrol->log );
 	pthread_mutex_unlock( &msglock );
 	while (gtk_events_pending ()) gtk_main_iteration ();

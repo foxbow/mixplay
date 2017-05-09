@@ -287,13 +287,10 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, struct entry_t *ti
 	mpg123_id3v2 *v2;
 	int meta;
 
-	if( strlen( title->path ) ) {
-		return;
-	}
-
 	genPathName( basedir, title ); // Set some default values as tag info may be incomplete
 	if(mpg123_open(mh, title->path ) != MPG123_OK) {
-		fail( F_FAIL, "fillInfo(): Cannot open %s: %s\n", title->path, mpg123_strerror(mh) );
+		printver( 1, "Could not open %s as MP3 file\n", title->path );
+		return;
 	}
 
 	while( mpg123_framebyframe_next( mh ) == MPG123_OK ) {
@@ -309,6 +306,9 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, struct entry_t *ti
 			if( v2->genre ) {
 				if( '(' == v2->genre->p[0] ) {
 					strncpy( title->genre, getGenre( atoi( &v2->genre->p[1] ) ), NAMELEN );
+				}
+				else if( atoi( v2->genre->p ) > 0 ) {
+					strncpy( title->genre, getGenre( atoi( v2->genre->p ) ), NAMELEN );
 				}
 				else {
 					tagCopy( title->genre, v2->genre );

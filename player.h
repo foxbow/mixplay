@@ -64,6 +64,6 @@ struct mpcontrol_t {
 
 void setCommand( struct mpcontrol_t *control, mpcmd cmd );
 void *reader( void *cont );
-void setProfile( struct mpcontrol_t *ctrl );
+void *setProfile( void *data );
 
 #endif /* PLAYER_H_ */

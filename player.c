@@ -32,12 +32,16 @@ static void sendplay( int fd, struct entry_t *song ) {
 	}
 }
 
-void setProfile( struct mpcontrol_t *ctrl ) {
+void *setProfile( void *data ) {
 	char		confdir[MAXPATHLEN]; // = "~/.mixplay";
 	char 		*profile;
 	struct marklist_t *dnplist=NULL;
 	struct marklist_t *favourites=NULL;
 	int num;
+	struct mpcontrol_t *ctrl;
+	int lastver;
+
+	ctrl=(struct mpcontrol_t *)data;
 
 	profile=ctrl->profile[ctrl->active];
 	snprintf( confdir, MAXPATHLEN, "%s/.mixplay", getenv("HOME") );
@@ -54,7 +58,9 @@ void setProfile( struct mpcontrol_t *ctrl ) {
 
 	ctrl->root=dbGetMusic( ctrl->dbname );
 	if( NULL == ctrl->root ) {
-		progressLog("Adding titles");
+		progressLog("Scanning musicdir");
+		lastver=getVerbosity();
+		if( lastver < 1 ) setVerbosity(1);
 		num = dbAddTitles( ctrl->dbname, ctrl->musicdir );
 		if( 0 == num ){
 			fail( F_FAIL, "No music found at %s!", ctrl->musicdir );
@@ -65,6 +71,7 @@ void setProfile( struct mpcontrol_t *ctrl ) {
 			fail( F_FAIL, "No music found at %s for database %s!\nThis should never happen!",
 					ctrl->musicdir,  ctrl->dbname );
 		}
+		setVerbosity(lastver);
 	}
 	DNPSkip( ctrl->root, 3 );
 	applyDNPlist( ctrl->root, dnplist );
@@ -73,6 +80,10 @@ void setProfile( struct mpcontrol_t *ctrl ) {
 	// ctrl->command=mpc_start;
 	cleanList( dnplist );
 	cleanList( favourites );
+
+	setCommand( ctrl, mpc_start );
+	if( ctrl->debug ) progressDone();
+	return NULL;
 }
 
 void *reader( void *cont ) {
