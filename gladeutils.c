@@ -166,6 +166,7 @@ static void setButtonLabel( GtkWidget *button, const char *text ) {
 	label=calloc( 60, sizeof( char ) );
 	strip( label, text, 60 );
 	gtk_button_set_label( GTK_BUTTON( button ), label );
+	free(label);
 }
 
 

@@ -332,7 +332,7 @@ struct marklist_t *loadList( const char *path ){
 	if( !file ) return NULL;
 
 	while( !feof( file ) ){
-		buff=fgets( buff, MAXPATHLEN, file );
+		fgets( buff, MAXPATHLEN, file );
 		if( buff && strlen( buff ) > 1 ){
 			if( !bwlist ){
 				bwlist=calloc( 1, sizeof( struct marklist_t ) );

@@ -97,6 +97,7 @@ static void loadConfig( struct mpcontrol_t *config ) {
 			fail( F_FAIL, "Streams set but no names!\n%s", error->message );
 		}
 	}
+	g_key_file_free( keyfile );
 }
 
 /**
@@ -107,7 +108,7 @@ static int initAll( void *data ) {
 	struct mpcontrol_t *control;
 	control=(struct mpcontrol_t*)data;
 	loadConfig( control );
-	pthread_t *tid;
+	pthread_t tid;
 
 
 	control->current=NULL;
@@ -117,6 +118,7 @@ static int initAll( void *data ) {
 	strcpy( control->remtime, "00:00" );
 	control->percent=0;
 	control->status=mpc_idle;
+	control->command=mpc_idle;
 	pthread_create( &control->rtid, NULL, reader, control );
 	if( NULL == control->root ) {
 		pthread_create( &tid, NULL, setProfile, (void *)control );
@@ -308,6 +310,12 @@ int main( int argc, char **argv ) {
 	kill( pid[1], SIGTERM );
 
     /* Free any allocated data */
+	free( control.dbname );
+	free( control.dnpname );
+	free( control.favname );
+	free( control.musicdir );
+	g_strfreev( control.profile );
+	g_strfreev( control.stream );
     g_slice_free( MpData, control.widgets );
     cleanTitles( control.root );
 	dbClose( db );
