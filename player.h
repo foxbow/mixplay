@@ -22,7 +22,6 @@ enum mpcmd_t {
 	mpc_repl,
 	mpc_profile,
 	mpc_quit,
-	mpc_dbscan,
 	mpc_dbclean,
 	mpc_dnptitle,
 	mpc_dnpartist,

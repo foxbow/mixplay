@@ -19,20 +19,22 @@ void fail( int error, const char* msg, ... ){
 	GtkWidget *dialog;
 	GtkMessageType type = GTK_MESSAGE_ERROR;
 
+	// fail calls are considered mutex and should never ever stack!
+	pthread_mutex_lock( &msglock );
+
 	va_start( args, msg );
 	vsnprintf( line, 1024, msg, args );
 	va_end(args);
 
 	if( F_WARN == error ) {
 		type=GTK_MESSAGE_WARNING;
+		fprintf( stderr, "WARN: %s\n", line );
 	}
 	else {
 		fprintf( stderr, "FAIL: %s\n", line );
 	}
 
 	if(error > 0 ) {
-		// Keep UI from updating
-		mpcontrol->current=NULL;
 		dialog = gtk_message_dialog_new (GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
 				GTK_DIALOG_DESTROY_WITH_PARENT, type, GTK_BUTTONS_CLOSE,
 				"%s\nERROR: %i - %s", line, abs(error), strerror( abs(error) ));
@@ -48,6 +50,7 @@ void fail( int error, const char* msg, ... ){
 		mpcontrol->command=mpc_quit;
 		gtk_main_quit();
 	}
+	pthread_mutex_unlock( &msglock );
 
 	return;
 }

@@ -325,36 +325,39 @@ void *reader( void *cont ) {
 			}
 			write( control->p_command[fdset][1], "STOP\n", 6 );
 			break;
-		case mpc_dbscan:
-			order=0;
-			write( control->p_command[fdset][1], "STOP\n", 6 );
-			progressLog( "Add new titles" );
-			i=dbAddTitles( control->dbname, control->musicdir );
-			if( i > 0 ) {
-				progressDone("Added %i titles\nRestarting player", i );
-				setProfile( control );
-				control->current = control->root;
-			}
-			else {
-				progressDone("No titles to be added");
-			}
-			sendplay( control->p_command[fdset][1], control->current);
-			break;
 		case mpc_dbclean:
 			order=0;
-			if( control->status != mpc_idle ) {
-				write( control->p_command[fdset][1], "STOP\n", 6 );
+			write( control->p_command[fdset][1], "STOP\n", 6 );
+			progressLog( "Database Cleanup" );
+			progress( "Checking for new titles..\n" );
+			i=dbAddTitles( control->dbname, control->musicdir );
+			if( i > 0 ) {
+				progress("Added %i new titles\n", i );
+				order=1;
 			}
-			progressLog( "Clean database" );
+			else {
+				progress("No titles to be added\n");
+			}
+			progress( "Checking for deleted titles..\n" );
 			i=dbCheckExist( control->dbname );
 			if( i > 0 ) {
-				progressDone( "Removed $i titles\nRestarting player", i );
+				progress( "Removed $i titles\n", i );
+				order=1;
+			}
+			else {
+				progress( "No titles removed" );
+			}
+			if( 1 == order ) {
+				progress( "Restarting player.." );
 				setProfile( control );
 				control->current = control->root;
 			}
-			else {
-				progressDone( "No titles removed" );
-			}
+			progressDone();
+			order=0;
+			sendplay( control->p_command[fdset][1], control->current);
+			break;
+
+
 			sendplay( control->p_command[fdset][1], control->current);
 			break;
 		case mpc_stop:
