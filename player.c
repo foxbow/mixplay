@@ -86,6 +86,16 @@ void *setProfile( void *data ) {
 	return NULL;
 }
 
+/**
+ * writes the current title info to the database file
+ */
+static void updateCurrent( struct mpcontrol_t *control ) {
+	int db;
+	db=dbOpen( control->dbname );
+	dbPutTitle( db, control->current );
+	dbClose( db );
+}
+
 void *reader( void *cont ) {
 	struct mpcontrol_t *control;
 	struct entry_t *next;
@@ -99,7 +109,6 @@ void *reader( void *cont ) {
 	char line[MAXPATHLEN];
 	char status[MAXPATHLEN];
 	char *a, *t;
-	int db=0;
 	int order=1;
 	int intime=0;
 	int fade=3;
@@ -107,14 +116,8 @@ void *reader( void *cont ) {
 	printver( 2, "Reader running\n");
 
 	control=(struct mpcontrol_t *)cont;
-	if( strlen( control->dbname ) > 0 ) {
-		db=dbOpen( control->dbname );
-	}
-	else {
-		printver(1, "No database in player\n" );
-	}
 	
-	while ( control->status != mpc_quit ) {
+	do {
 		FD_ZERO( &fds );
 		FD_SET( control->p_status[0][0], &fds );
 		FD_SET( control->p_status[1][0], &fds );
@@ -211,13 +214,13 @@ void *reader( void *cont ) {
 						sprintf( control->remtime, "%02i:%02i", rem/60, rem%60 );
 						if( rem <= fade ) {
 							// should the playcount be increased?
-							if( !( control->current->flags & MP_CNTD ) ) {
+							if( ( control->current->key != 0 ) && !( control->current->flags & MP_CNTD ) ) {
 								control->current->flags |= MP_CNTD; // make sure a title is only counted once per session
 								control->current->played++;
 								if( control->current->skipped > 0 ) {
 									control->current->skipped--;
 								}
-								dbPutTitle( db, control->current );
+								updateCurrent( control );
 							}
 							next=control->current->plnext;
 							if( next == control->current ) {
@@ -247,12 +250,12 @@ void *reader( void *cont ) {
 					switch (cmd) {
 					case 0: // STOP
 						// should the playcount be increased?
-						if( !( control->current->flags & ( MP_CNTD | MP_SKPD ) ) ) {
+						if( ( control->current->key != 0 ) && !( control->current->flags & ( MP_CNTD | MP_SKPD ) ) ) {
 							control->current->flags |= MP_CNTD;
 							control->current->played++;
 							if( !(control->current->flags & MP_SKPD ) && ( control->current->skipped > 0 ) )
 								control->current->skipped--;
-							dbPutTitle( db, control->current );
+							updateCurrent( control );
 						}
 						next = skipTitles( control->current, order, 0 );
 						if ( ( next == control->current ) ||
@@ -318,10 +321,10 @@ void *reader( void *cont ) {
 			break;
 		case mpc_next:
 			order=1;
-			if( !(control->current->flags & MP_SKPD  ) ) {
+			if( ( control->current->key != 0 ) && !(control->current->flags & MP_SKPD  ) ) {
 				control->current->skipped++;
 				control->current->flags |= MP_SKPD;
-				dbPutTitle( db, control->current );
+				updateCurrent( control );
 			}
 			write( control->p_command[fdset][1], "STOP\n", 6 );
 			break;
@@ -406,6 +409,7 @@ void *reader( void *cont ) {
 			break;
 		case mpc_profile:
 			// @todo - change profile - probably done in callback itself
+			//         not in the Callback! This will disallow updates in the requester!
 			break;
 		case mpc_idle:
 			// do null
@@ -414,10 +418,9 @@ void *reader( void *cont ) {
 		control->command=mpc_idle;
 		pthread_mutex_unlock(&cmdlock);
 
-	} // while(running)
+	} while ( control->status != mpc_quit );
 
 	printver( 2, "Reader stopped\n");
-	if( db ) dbClose( db );
 
 	return NULL;
 }

@@ -37,8 +37,8 @@
                 <property name="image_position">top</property>
                 <property name="always_show_image">True</property>
                 <signal name="clicked" handler="playprev" swapped="no"/>
-                <accelerator key="Up" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
                 <accelerator key="p" signal="clicked"/>
+                <accelerator key="Up" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -90,7 +90,7 @@
                     <property name="receives_default">True</property>
                     <property name="relief">none</property>
                     <property name="focus_on_click">False</property>
-                    <signal name="clicked" handler="infoStart" swapped="no"/>
+                    <signal name="clicked" handler="playPause" swapped="no"/>
                     <child>
                       <object class="GtkLabel" id="title_current">
                         <property name="visible">True</property>
@@ -183,8 +183,8 @@
                 <property name="image_position">bottom</property>
                 <property name="always_show_image">True</property>
                 <signal name="clicked" handler="playnext" swapped="no"/>
-                <accelerator key="n" signal="clicked"/>
                 <accelerator key="Down" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
+                <accelerator key="n" signal="clicked"/>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -236,16 +236,16 @@
             </child>
             <child>
               <object class="GtkButton" id="button_play">
-                <property name="label" translatable="yes">play</property>
+                <property name="label" translatable="yes">info</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="focus_on_click">False</property>
                 <property name="image_position">top</property>
                 <property name="always_show_image">True</property>
-                <signal name="clicked" handler="playpause" swapped="no"/>
-                <accelerator key="AudioPlay" signal="clicked"/>
+                <signal name="clicked" handler="infoStart" swapped="no"/>
                 <accelerator key="space" signal="clicked"/>
+                <accelerator key="AudioPlay" signal="clicked"/>
               </object>
               <packing>
                 <property name="left_attach">1</property>

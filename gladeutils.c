@@ -179,23 +179,15 @@ int updateUI( void *data ) {
 	gboolean	usedb;
 	control=(struct mpcontrol_t*)data;
 
-	usedb=(0 == strlen( control->dbname ) )?FALSE:TRUE;
-
 	if( mpc_quit == control->command ) {
 		printver(2, "Already closing..\n");
 		return 0;
 	}
 
 	if( control->widgets->title_current == NULL ) {
-		printver(2, "No title yet..\n");
+		printver(2, "No title widget yet..\n");
 		return 0;
 	}
-
-	// These depend on a database
-	gtk_widget_set_visible( control->widgets->button_fav, usedb );
-	gtk_widget_set_visible( control->widgets->button_dnp, usedb );
-	gtk_widget_set_visible( control->widgets->button_replay, usedb );
-	gtk_widget_set_visible( control->widgets->button_database, usedb );
 
 	// these don't make sense when a stream is played
 	gtk_widget_set_visible( control->widgets->button_next, !(control->playstream) );
@@ -205,6 +197,13 @@ int updateUI( void *data ) {
 	gtk_widget_set_visible( control->widgets->remain, !(control->playstream) );
 
 	if( ( NULL != control->current ) && ( 0 != strlen( control->current->path ) ) ) {
+		usedb=( control->root->key )?TRUE:FALSE;
+		// These depend on a database
+		gtk_widget_set_visible( control->widgets->button_fav, usedb );
+		gtk_widget_set_visible( control->widgets->button_dnp, usedb );
+		gtk_widget_set_visible( control->widgets->button_replay, usedb );
+		gtk_widget_set_visible( control->widgets->button_database, usedb );
+
 		gtk_label_set_text( GTK_LABEL( control->widgets->title_current ),
 				control->current->title );
 		gtk_label_set_text( GTK_LABEL( control->widgets->artist_current ),
@@ -228,16 +227,16 @@ int updateUI( void *data ) {
 	}
 
 
-	if( (control->current != NULL ) && ( mpcontrol->debug > 1) ) {
-		snprintf( buff, MAXPATHLEN, "[%i] %s", control->current->played,
-				( mpc_play == control->status )?"pause":"play" );
-		gtk_button_set_label( GTK_BUTTON( control->widgets->button_play ),
-				buff );
-	}
-	else {
-		gtk_button_set_label( GTK_BUTTON( control->widgets->button_play ),
-				( mpc_play == control->status )?"pause":"play" );
-	}
+//	if( (control->current != NULL ) && ( mpcontrol->debug > 1) ) {
+//		snprintf( buff, MAXPATHLEN, "[%i] %s", control->current->played,
+//				( mpc_play == control->status )?"pause":"play" );
+//		gtk_button_set_label( GTK_BUTTON( control->widgets->button_play ),
+//				buff );
+//	}
+//	else {
+//		gtk_button_set_label( GTK_BUTTON( control->widgets->button_play ),
+//				( mpc_play == control->status )?"pause":"play" );
+//	}
 
 	gtk_label_set_text( GTK_LABEL( control->widgets->played ),
 			control->playtime );

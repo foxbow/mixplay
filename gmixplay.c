@@ -41,7 +41,7 @@ static void loadConfig( struct mpcontrol_t *config ) {
 	}
 
 	keyfile=g_key_file_new();
-	g_key_file_load_from_file( keyfile, conffile, G_KEY_FILE_NONE, &error );
+	g_key_file_load_from_file( keyfile, conffile, G_KEY_FILE_KEEP_COMMENTS, &error );
 	if( NULL != error ) {
 
 		if( config->debug ) fail( F_WARN, "Could not load config from %s\n%s", conffile, error->message );
@@ -83,6 +83,12 @@ static void loadConfig( struct mpcontrol_t *config ) {
 		config->profile[0]=calloc( 8, sizeof( char ) );
 		strcpy( config->profile[0], "mixplay" );
 		config->active=0;
+		g_key_file_set_string_list( keyfile, "mixplay", "profiles", (const char* const*)config->profile, 1 );
+		g_key_file_set_uint64( keyfile, "mixplay", "active", 0 );
+	    g_key_file_save_to_file( keyfile, conffile, &error );
+	    if( NULL != error ) {
+	    	fail( F_FAIL, "Could not write configuration!\n%s", error->message );
+	    }
 	}
 	else {
 		config->active  =g_key_file_get_uint64( keyfile, "mixplay", "active", &error );

@@ -68,11 +68,13 @@ G_MODULE_EXPORT void markdnp( GtkButton *button, gpointer data ) {
 	}
 }
 
+// @TODO: consider pulling the 'simple' button callbacks into one
+
 /**
  * called by the play/pause button
  * just sets the mpcontrol command
  */
-G_MODULE_EXPORT void playpause( GtkButton *button, gpointer data ) {
+G_MODULE_EXPORT void playPause( GtkButton *button, gpointer data ) {
 	setCommand( mpcontrol, mpc_play );
 }
 
@@ -116,7 +118,7 @@ G_MODULE_EXPORT void destroy( GtkWidget *widget, gpointer   data ) {
 G_MODULE_EXPORT void infoStart( GtkButton *button, gpointer data ) {
 	GtkWidget *dialog;
 	int reply;
-	if( strlen( mpcontrol->dbname ) > 0 ) {
+	if( mpcontrol->root->key != 0  ) {
 		dialog = gtk_message_dialog_new(
 				GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
 				GTK_DIALOG_DESTROY_WITH_PARENT,
@@ -200,5 +202,30 @@ G_MODULE_EXPORT void databaseStart( GtkButton *button, gpointer data ) {
  * invoked by the 'profile' button
  */
 G_MODULE_EXPORT void profileStart( GtkButton *button, gpointer data ) {
-	fail( F_WARN, "Not yet supported" );
+	GtkWidget *dialog;
+//	GtkWidget *msgArea;
+
+	int reply;
+	dialog = gtk_message_dialog_new(
+			GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+			GTK_DIALOG_DESTROY_WITH_PARENT,
+	        GTK_MESSAGE_INFO,
+	        GTK_BUTTONS_NONE,
+	        "Profiles/Channels" );
+	gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
+            "Okay", GTK_RESPONSE_OK,
+            "Cancel", GTK_RESPONSE_CANCEL,
+            NULL );
+
+//	msgArea=gtk_message_dialog_get_message_area( GTK_MESSAGE_DIALOG( dialog ) );
+
+
+	reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
+	gtk_widget_destroy( dialog );
+	switch( reply ) {
+	case GTK_RESPONSE_OK:
+		fail( F_WARN, "%s\nNot yet supported", mpcontrol->profile[ mpcontrol->active ] );
+	break;
+	}
+
 }
