@@ -21,11 +21,13 @@ enum mpcmd_t {
 	mpc_favalbum,
 	mpc_repl,
 	mpc_profile,
+	mpc_stream,
 	mpc_quit,
 	mpc_dbclean,
 	mpc_dnptitle,
 	mpc_dnpartist,
-	mpc_dnpalbum
+	mpc_dnpalbum,
+	mpc_dnpgenre
 };
 
 typedef enum mpcmd_t mpcmd;

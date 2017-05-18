@@ -3,8 +3,14 @@
 #include <string.h>
 #include <stdlib.h>
 
+/*
+ * mutex to block simultaneous access to dialog functions
+ */
 pthread_mutex_t msglock=PTHREAD_MUTEX_INITIALIZER;
 
+/*
+ * Global mixplay control and data structure.
+ */
 extern struct mpcontrol_t *mpcontrol;
 
 /*
@@ -55,6 +61,10 @@ void fail( int error, const char* msg, ... ){
 	return;
 }
 
+/**
+ * actual gtk code for progressAdd
+ * is added as an idle thread to the main thread
+ */
 static int g_progressAdd( void *line ) {
 	gtk_message_dialog_format_secondary_text( GTK_MESSAGE_DIALOG( mpcontrol->widgets->mp_popup ),
 			"%s", (char *)line );
@@ -66,7 +76,7 @@ static int g_progressAdd( void *line ) {
  * print the given message when the verbosity is at
  * least vl
  *
- * kind of threadsafe...
+ * kind of threadsafe to keep messages in order and to avoid messing up the log buffer
  */
 void printver( int vl, const char *msg, ... ) {
 	va_list args;
@@ -96,15 +106,18 @@ void printver( int vl, const char *msg, ... ) {
  */
 static void progressClose( GtkDialog *dialog, gint res, gpointer data )
 {
-//	if( strlen( mpcontrol->log ) == 0 ){
-//		pthread_mutex_lock( &msglock );
-		gtk_widget_destroy( GTK_WIDGET( dialog ) );
-		mpcontrol->widgets->mp_popup=NULL;
-		mpcontrol->log[0]='\0';
-//		pthread_mutex_unlock( &msglock );
-//	}
+	// make sure that nothing is added while we close the dialog
+	pthread_mutex_lock( &msglock );
+	gtk_widget_destroy( GTK_WIDGET( dialog ) );
+	mpcontrol->widgets->mp_popup=NULL;
+	mpcontrol->log[0]='\0';
+	pthread_mutex_unlock( &msglock );
 }
 
+/**
+ * actual gtk code for prgressLog
+ * is added as an idle thread to the main thread
+ */
 static int g_progressLog( void *line ) {
 	if( !mpcontrol->debug && ( getVerbosity() > 0 ) ) printf("LOG: %s\n", (char *)line);
 
@@ -144,6 +157,10 @@ void progressLog( const char *msg, ... ) {
 
 }
 
+/**
+ * actual gtk code for prgressDone
+ * is added as an idle thread to the main thread
+ */
 static int g_progressDone( void *line ) {
 	gtk_widget_set_sensitive( mpcontrol->widgets->mp_popup, TRUE );
 	return g_progressAdd( line );
@@ -164,6 +181,9 @@ void progressDone() {
 	while (gtk_events_pending ()) gtk_main_iteration ();
 }
 
+/**
+ * wrapper to cut off text before setting the label
+ */
 static void setButtonLabel( GtkWidget *button, const char *text ) {
 	char *label;
 	label=calloc( 60, sizeof( char ) );
@@ -172,7 +192,12 @@ static void setButtonLabel( GtkWidget *button, const char *text ) {
 	free(label);
 }
 
-
+/**
+ * fill the widgets with current information in the control data
+ *
+ * This function is supposed to be called with gtk_add_thread_idle() to make update
+ * work in multithreaded environments.
+ */
 int updateUI( void *data ) {
 	struct	mpcontrol_t *control;
 	char	buff[MAXPATHLEN];
@@ -206,6 +231,7 @@ int updateUI( void *data ) {
 
 		gtk_label_set_text( GTK_LABEL( control->widgets->title_current ),
 				control->current->title );
+		gtk_widget_set_sensitive( control->widgets->title_current, ( control->status == mpc_play ) );
 		gtk_label_set_text( GTK_LABEL( control->widgets->artist_current ),
 				control->current->artist );
 		gtk_label_set_text( GTK_LABEL( control->widgets->album_current ),
@@ -222,21 +248,10 @@ int updateUI( void *data ) {
 		}
 		gtk_widget_set_sensitive( control->widgets->button_fav, ( !(control->current->flags & MP_FAV) ) );
 
-//		gtk_window_set_title ( GTK_WINDOW( control->widgets->mixplay_main ),
-//							  control->current->display );
+		gtk_window_set_title ( GTK_WINDOW( control->widgets->mixplay_main ),
+							  control->current->display );
 	}
 
-
-//	if( (control->current != NULL ) && ( mpcontrol->debug > 1) ) {
-//		snprintf( buff, MAXPATHLEN, "[%i] %s", control->current->played,
-//				( mpc_play == control->status )?"pause":"play" );
-//		gtk_button_set_label( GTK_BUTTON( control->widgets->button_play ),
-//				buff );
-//	}
-//	else {
-//		gtk_button_set_label( GTK_BUTTON( control->widgets->button_play ),
-//				( mpc_play == control->status )?"pause":"play" );
-//	}
 
 	gtk_label_set_text( GTK_LABEL( control->widgets->played ),
 			control->playtime );

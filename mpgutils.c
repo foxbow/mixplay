@@ -310,9 +310,15 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, struct entry_t *ti
 				else if( atoi( v2->genre->p ) > 0 ) {
 					strncpy( title->genre, getGenre( atoi( v2->genre->p ) ), NAMELEN );
 				}
-				else {
+				else if( strlen( v2->genre->p ) > 0 ){
 					tagCopy( title->genre, v2->genre );
 				}
+				else {
+					strncpy( title->genre, "unset", 6 );
+				}
+			}
+			else {
+				strncpy( title->genre, "unset", 6 );
 			}
 		}
 		else if( v1 != NULL ) {

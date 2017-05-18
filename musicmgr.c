@@ -299,6 +299,7 @@ int applyDNPlist( struct entry_t *base, struct marklist_t *list ) {
 		ptr=list;
 		while( ptr ){
 			if( matchTitle( pos, ptr->dir ) ) {
+				printver( 3, "[D] %s: %s\n", ptr->dir, pos->display );
 				pos->flags |= MP_DNP;
 				cnt++;
 				break;
@@ -848,6 +849,7 @@ int applyFavourites( struct entry_t *root, struct marklist_t *favourites ) {
 		ptr=favourites;
 		while( ptr ){
 			if( matchTitle( runner, ptr->dir ) ){
+				printver( 3, "[F] %s: %s\n", ptr->dir, runner->display );
 				runner->flags|=MP_FAV;
 				cnt++;
 				break;

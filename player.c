@@ -369,9 +369,7 @@ void *reader( void *cont ) {
 			control->status=mpc_idle;
 			break;
 		case mpc_dnptitle:
-//			addToFile( control->dnpname, control->current->title, "t=" );
-//			control->current=removeFromPL( control->current, SL_TITLE );
-			addToFile( control->dnpname, control->current->title, "d=" );
+			addToFile( control->dnpname, control->current->display, "d=" );
 			control->current=removeFromPL( control->current, SL_DISPLAY );
 			order=1;
 			write( control->p_command[fdset][1], "STOP\n", 6 );
@@ -388,8 +386,13 @@ void *reader( void *cont ) {
 			order=1;
 			write( control->p_command[fdset][1], "STOP\n", 6 );
 			break;
+		case mpc_dnpgenre:
+			addToFile( control->dnpname, control->current->genre, "g*" );
+			control->current=removeFromPL( control->current, SL_GENRE );
+			order=1;
+			write( control->p_command[fdset][1], "STOP\n", 6 );
+			break;
 		case mpc_favtitle:
-//			addToFile( control->favname, control->current->title, "t=" );
 			addToFile( control->favname, control->current->display, "d=" );
 			control->current->flags|=MP_FAV;
 			break;
@@ -410,6 +413,9 @@ void *reader( void *cont ) {
 		case mpc_profile:
 			// @todo - change profile - probably done in callback itself
 			//         not in the Callback! This will disallow updates in the requester!
+			break;
+		case mpc_stream:
+			// @todo - play stream
 			break;
 		case mpc_idle:
 			// do null

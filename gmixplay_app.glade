@@ -37,8 +37,8 @@
                 <property name="image_position">top</property>
                 <property name="always_show_image">True</property>
                 <signal name="clicked" handler="playprev" swapped="no"/>
-                <accelerator key="p" signal="clicked"/>
                 <accelerator key="Up" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
+                <accelerator key="p" signal="clicked"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -66,7 +66,7 @@
                   <object class="GtkLabel" id="artist_current">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">artist</property>
+                    <property name="label" translatable="yes">..Initializing..</property>
                     <property name="justify">center</property>
                     <property name="ellipsize">end</property>
                     <property name="single_line_mode">True</property>
@@ -95,7 +95,7 @@
                       <object class="GtkLabel" id="title_current">
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">Title</property>
+                        <property name="label" translatable="yes">Play/Pause</property>
                         <property name="justify">center</property>
                         <property name="wrap">True</property>
                         <property name="ellipsize">end</property>
@@ -117,7 +117,6 @@
                     <property name="name">album_current</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">album</property>
                     <property name="justify">center</property>
                     <property name="ellipsize">end</property>
                     <property name="single_line_mode">True</property>
@@ -138,7 +137,6 @@
                     <property name="name">genre_current</property>
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">genre</property>
                     <property name="justify">center</property>
                     <property name="ellipsize">end</property>
                     <property name="single_line_mode">True</property>
@@ -183,8 +181,8 @@
                 <property name="image_position">bottom</property>
                 <property name="always_show_image">True</property>
                 <signal name="clicked" handler="playnext" swapped="no"/>
-                <accelerator key="Down" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
                 <accelerator key="n" signal="clicked"/>
+                <accelerator key="Down" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -244,8 +242,8 @@
                 <property name="image_position">top</property>
                 <property name="always_show_image">True</property>
                 <signal name="clicked" handler="infoStart" swapped="no"/>
-                <accelerator key="space" signal="clicked"/>
                 <accelerator key="AudioPlay" signal="clicked"/>
+                <accelerator key="space" signal="clicked"/>
               </object>
               <packing>
                 <property name="left_attach">1</property>

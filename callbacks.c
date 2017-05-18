@@ -52,13 +52,15 @@ G_MODULE_EXPORT void markdnp( GtkButton *button, gpointer data ) {
 			GTK_DIALOG_DESTROY_WITH_PARENT,
 	        GTK_MESSAGE_QUESTION,
 	        GTK_BUTTONS_NONE,
-	        "Do not play\n%s\nAlbum: %s",
+	        "Do not play\n%s\nAlbum: %s\nGenre: %s",
 	        mpcontrol->current->display,
-	        mpcontrol->current->album );
+	        mpcontrol->current->album,
+	        mpcontrol->current->genre );
 	gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
             "T_itle",  mpc_dnptitle,
             "A_lbum",  mpc_dnpalbum,
             "_Artist", mpc_dnpartist,
+            "_Genre", mpc_dnpgenre,
             "_Cancel", GTK_RESPONSE_CANCEL,
             NULL );
 	reply=gtk_dialog_run( GTK_DIALOG( dialog ) );

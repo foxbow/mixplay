@@ -10,9 +10,6 @@ LDFLAGS_GLADE=`pkg-config --libs gtk+-3.0 gmodule-2.0` `pkg-config --cflags --li
 CCFLAGS_GLADE=$(CCFLAGS) `pkg-config --cflags gtk+-3.0 gmodule-2.0`
 EXES=bin/mixplay bin/gmixplay
 
-# Keep object files
-.PRECIOUS: %.o
-
 all: $(EXES)
 
 clean:
@@ -21,8 +18,8 @@ clean:
 	
 distclean: clean	
 	rm -f gmixplay_app.h
-	rm -f gmixplay_fs.h
 	rm -f *~
+	rm -f core
 
 bin/mixplay: $(OBJS) $(NCOBJS) 
 	$(CC) $(CCFLAGS_NCURSES) $^ -o $@ -lncurses -lmpg123
