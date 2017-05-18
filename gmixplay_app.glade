@@ -37,8 +37,8 @@
                 <property name="image_position">top</property>
                 <property name="always_show_image">True</property>
                 <signal name="clicked" handler="playprev" swapped="no"/>
-                <accelerator key="Up" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
                 <accelerator key="p" signal="clicked"/>
+                <accelerator key="Up" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -105,6 +105,8 @@
                         </attributes>
                       </object>
                     </child>
+                    <accelerator key="AudioPlay" signal="clicked"/>
+                    <accelerator key="space" signal="clicked"/>
                   </object>
                   <packing>
                     <property name="expand">True</property>
@@ -181,8 +183,8 @@
                 <property name="image_position">bottom</property>
                 <property name="always_show_image">True</property>
                 <signal name="clicked" handler="playnext" swapped="no"/>
-                <accelerator key="n" signal="clicked"/>
                 <accelerator key="Down" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
+                <accelerator key="n" signal="clicked"/>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -242,8 +244,7 @@
                 <property name="image_position">top</property>
                 <property name="always_show_image">True</property>
                 <signal name="clicked" handler="infoStart" swapped="no"/>
-                <accelerator key="AudioPlay" signal="clicked"/>
-                <accelerator key="space" signal="clicked"/>
+                <accelerator key="i" signal="clicked"/>
               </object>
               <packing>
                 <property name="left_attach">1</property>

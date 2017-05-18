@@ -18,6 +18,9 @@ extern struct mpcontrol_t *mpcontrol;
 G_MODULE_EXPORT void markfav( GtkButton *button, gpointer data ) {
 	GtkWidget *dialog;
 	int reply;
+	if( mpcontrol->status == mpc_play ) {
+		setCommand( mpcontrol, mpc_play );
+	}
 	dialog = gtk_message_dialog_new(
 			GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
 			GTK_DIALOG_DESTROY_WITH_PARENT,
@@ -37,6 +40,7 @@ G_MODULE_EXPORT void markfav( GtkButton *button, gpointer data ) {
 	if( reply > 0 ) {
 		setCommand( mpcontrol, reply );
 	}
+	setCommand( mpcontrol, mpc_play );
 }
 
 /**
@@ -47,6 +51,9 @@ G_MODULE_EXPORT void markfav( GtkButton *button, gpointer data ) {
 G_MODULE_EXPORT void markdnp( GtkButton *button, gpointer data ) {
 	GtkWidget *dialog;
 	int reply;
+	if( mpcontrol->status == mpc_play ) {
+		setCommand( mpcontrol, mpc_play );
+	}
 	dialog = gtk_message_dialog_new(
 			GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
 			GTK_DIALOG_DESTROY_WITH_PARENT,
@@ -68,6 +75,7 @@ G_MODULE_EXPORT void markdnp( GtkButton *button, gpointer data ) {
 	if( reply > 0 ) {
 		setCommand( mpcontrol, reply );
 	}
+	setCommand( mpcontrol, mpc_play );
 }
 
 // @TODO: consider pulling the 'simple' button callbacks into one
