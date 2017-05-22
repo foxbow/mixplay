@@ -12,7 +12,6 @@
 #include <ncurses.h>
 #include <sys/stat.h>
 
-static int _ftrpos=0;
 static int _ftverbosity=1;
 
 int setVerbosity(int v) {
@@ -200,29 +199,6 @@ int isURL( const char *uri ){
 	}
 	return 0;
 }
-
-
-/**
- * show activity roller on console
- * this will only show when the global verbosity is larger than 0
- * spins faster with increased verbosity
- */
-void activity( const char *msg, ... ){
-	char roller[5]="|/-\\";
-	char text[256]="";
-	int pos;
-	if( _ftverbosity && ( _ftrpos%(100/_ftverbosity) == 0 )) {
-		pos=(_ftrpos/(100/_ftverbosity))%4;
-
-		va_list args;
-		va_start( args, msg );
-		vsprintf( text, msg, args );
-		printf( "%s %c          \r", text, roller[pos] );
-		fflush( stdout );
-		va_end( args );
-	}
-	if( _ftverbosity > 0 ) _ftrpos=(_ftrpos+1)%(400/_ftverbosity);
-}	
 
 /*
  * Inplace conversion of a string to lowercase

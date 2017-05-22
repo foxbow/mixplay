@@ -328,7 +328,7 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, struct entry_t *ti
 			strncpy( title->genre, getGenre( v1->genre ), NAMELEN );
 		}
 		else {
-			printver( 0, "ID3 OK but no tags in %s\n", title->path );
+			printver( 1, "ID3 OK but no tags in %s\n", title->path );
 		}
 	}
 	else {

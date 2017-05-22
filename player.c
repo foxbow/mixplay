@@ -87,13 +87,23 @@ void *setProfile( void *data ) {
 }
 
 /**
- * writes the current title info to the database file
+ * checks if the playcount needs to be increased and if the skipcound
+ * needs to be decreased. In both cases the updated infomation is written
+ * back into the db.
  */
-static void updateCurrent( struct mpcontrol_t *control ) {
+static void playCount( struct mpcontrol_t *control ) {
 	int db;
-	db=dbOpen( control->dbname );
-	dbPutTitle( db, control->current );
-	dbClose( db );
+
+	if( ( control->current->key != 0 ) && !( control->current->flags & MP_CNTD ) ) {
+		control->current->flags |= MP_CNTD; // make sure a title is only counted once per session
+		control->current->played++;
+		if( !( control->current->flags & MP_SKPD ) && ( control->current->skipped > 0 ) ) {
+			control->current->skipped--;
+		}
+		db=dbOpen( control->dbname );
+		dbPutTitle( db, control->current );
+		dbClose( db );
+	}
 }
 
 void *reader( void *cont ) {
@@ -214,14 +224,7 @@ void *reader( void *cont ) {
 						sprintf( control->remtime, "%02i:%02i", rem/60, rem%60 );
 						if( rem <= fade ) {
 							// should the playcount be increased?
-							if( ( control->current->key != 0 ) && !( control->current->flags & MP_CNTD ) ) {
-								control->current->flags |= MP_CNTD; // make sure a title is only counted once per session
-								control->current->played++;
-								if( control->current->skipped > 0 ) {
-									control->current->skipped--;
-								}
-								updateCurrent( control );
-							}
+							playCount( control );
 							next=control->current->plnext;
 							if( next == control->current ) {
 								strcpy( status, "STOP" );
@@ -250,13 +253,7 @@ void *reader( void *cont ) {
 					switch (cmd) {
 					case 0: // STOP
 						// should the playcount be increased?
-						if( ( control->current->key != 0 ) && !( control->current->flags & ( MP_CNTD | MP_SKPD ) ) ) {
-							control->current->flags |= MP_CNTD;
-							control->current->played++;
-							if( !(control->current->flags & MP_SKPD ) && ( control->current->skipped > 0 ) )
-								control->current->skipped--;
-							updateCurrent( control );
-						}
+						playCount( control );
 						next = skipTitles( control->current, order, 0 );
 						if ( ( next == control->current ) ||
 								( ( ( order == 1  ) && ( next == control->root ) ) ||
@@ -321,10 +318,10 @@ void *reader( void *cont ) {
 			break;
 		case mpc_next:
 			order=1;
-			if( ( control->current->key != 0 ) && !(control->current->flags & MP_SKPD  ) ) {
+			if( ( control->current->key != 0 ) && !(control->current->flags & ( MP_SKPD|MP_CNTD ) ) ) {
 				control->current->skipped++;
 				control->current->flags |= MP_SKPD;
-				updateCurrent( control );
+				// updateCurrent( control ); - done in STOP handling
 			}
 			write( control->p_command[fdset][1], "STOP\n", 6 );
 			break;

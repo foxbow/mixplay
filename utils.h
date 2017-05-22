@@ -29,13 +29,18 @@ int setVerbosity(int);
 int incVerbosity();
 void muteVerbosity();
 
+/*
+ * These functions need to be implemented in the UI
+ * See: ncbox.c, gladeutils.c
+ */
 void printver( int vl, const char *msg, ... );
+void fail( int error, const char* msg, ... );
+void activity( const char *msg, ... );
 
 /**
  * General utility functions
  */
 void setTitle(const char* title);
-void fail( int error, const char* msg, ... );
 int strlncpy( char *dest, const char *src, const size_t len );
 int strlncat( char *dest, const char *src, const size_t len );
 char *strip( char *buff, const char *text, const size_t maxlen );
@@ -44,7 +49,6 @@ int startsWith( const char *text, const char *prefix );
 int isURL( const char *uri );
 int isDir( const char *path );
 int readline( char *line, size_t len, int fd );
-void activity( const char *msg, ... );
 char *abspath( char *path, const char *basedir, int len );
 int checkMatch( const char* name, const char* pat );
 

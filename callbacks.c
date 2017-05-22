@@ -18,9 +18,17 @@ extern struct mpcontrol_t *mpcontrol;
 G_MODULE_EXPORT void markfav( GtkButton *button, gpointer data ) {
 	GtkWidget *dialog;
 	int reply;
+/*
+ * Do not pause. This may mess up things, if the current title
+ * changes while the requester is still open. Then the next title
+ * will be marked. This is not ideal but better than having a pause
+ * during play.
+ * @todo: make sure the correct title is marked.
+ *
 	if( mpcontrol->status == mpc_play ) {
 		setCommand( mpcontrol, mpc_play );
 	}
+ */
 	dialog = gtk_message_dialog_new(
 			GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
 			GTK_DIALOG_DESTROY_WITH_PARENT,
@@ -40,7 +48,7 @@ G_MODULE_EXPORT void markfav( GtkButton *button, gpointer data ) {
 	if( reply > 0 ) {
 		setCommand( mpcontrol, reply );
 	}
-	setCommand( mpcontrol, mpc_play );
+//	setCommand( mpcontrol, mpc_play );
 }
 
 /**

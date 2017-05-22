@@ -6,12 +6,41 @@
 /*
  * mutex to block simultaneous access to dialog functions
  */
-pthread_mutex_t msglock=PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t msglock=PTHREAD_MUTEX_INITIALIZER;
+static unsigned int _ftrpos=0;
 
 /*
  * Global mixplay control and data structure.
  */
 extern struct mpcontrol_t *mpcontrol;
+
+static int g_activity( void *text ) {
+	gtk_window_set_title( GTK_WINDOW( mpcontrol->widgets->mp_popup ), (char *)text );
+	gtk_widget_queue_draw( mpcontrol->widgets->mp_popup );
+	return 0;
+}
+
+/**
+ * activity indication
+ */
+void activity( const char *msg, ... ){
+	char roller[5]="|/-\\";
+	char text[256]="";
+	char line[NAMELEN];
+	int pos;
+
+	if( ( mpcontrol->widgets->mp_popup != NULL ) && ( _ftrpos%(100/getVerbosity()) == 0 )) {
+		pos=(_ftrpos/(100/getVerbosity()))%4;
+
+		va_list args;
+		va_start( args, msg );
+		vsprintf( text, msg, args );
+		va_end( args );
+		snprintf( line, NAMELEN, "%s %c", text, roller[pos] );
+		gdk_threads_add_idle( g_activity, line );
+	}
+	if( getVerbosity() > 0 ) _ftrpos=(_ftrpos+1)%(400/getVerbosity());
+}
 
 /*
  * Show errormessage quit
