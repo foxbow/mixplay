@@ -7,7 +7,6 @@
  * mutex to block simultaneous access to dialog functions
  */
 static pthread_mutex_t msglock=PTHREAD_MUTEX_INITIALIZER;
-static unsigned int _ftrpos=0;
 
 /*
  * Global mixplay control and data structure.
@@ -17,20 +16,23 @@ extern struct mpcontrol_t *mpcontrol;
 static int g_activity( void *text ) {
 	gtk_window_set_title( GTK_WINDOW( mpcontrol->widgets->mp_popup ), (char *)text );
 	gtk_widget_queue_draw( mpcontrol->widgets->mp_popup );
+	free(text);
 	return 0;
 }
 
 /**
  * activity indication
  */
+static unsigned int _ftrpos=0;
 void activity( const char *msg, ... ){
 	char roller[5]="|/-\\";
 	char text[256]="";
-	char line[NAMELEN];
+	char *line;
 	int pos;
 
-	if( ( mpcontrol->widgets->mp_popup != NULL ) && ( _ftrpos%(100/getVerbosity()) == 0 )) {
-		pos=(_ftrpos/(100/getVerbosity()))%4;
+	if( ( mpcontrol->widgets->mp_popup != NULL ) && ( (_ftrpos%100) == 0 ) ) {
+		line=falloc( NAMELEN, sizeof(char) );
+		pos=(_ftrpos/100)%4;
 
 		va_list args;
 		va_start( args, msg );
@@ -39,7 +41,7 @@ void activity( const char *msg, ... ){
 		snprintf( line, NAMELEN, "%s %c", text, roller[pos] );
 		gdk_threads_add_idle( g_activity, line );
 	}
-	if( getVerbosity() > 0 ) _ftrpos=(_ftrpos+1)%(400/getVerbosity());
+	_ftrpos=(_ftrpos+1)%400;
 }
 
 /*
@@ -174,7 +176,7 @@ static int g_progressLog( void *line ) {
 void progressLog( const char *msg, ... ) {
 	va_list args;
 	char *line;
-	line=calloc( 512, sizeof( char ) );
+	line=falloc( 512, sizeof( char ) );
 
 	pthread_mutex_lock( &msglock );
 	va_start( args, msg );
@@ -215,8 +217,8 @@ void progressDone() {
  */
 static void setButtonLabel( GtkWidget *button, const char *text ) {
 	char *label;
-	label=calloc( 60, sizeof( char ) );
-	strip( label, text, 60 );
+	label=falloc( NAMELEN, sizeof( char ) );
+	strip( label, text, NAMELEN );
 	gtk_button_set_label( GTK_BUTTON( button ), label );
 	free(label);
 }

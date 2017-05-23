@@ -121,7 +121,7 @@ void popUp( int time, const char *text, ... ) {
 		p=strchr(p,'\n')+1;
 	}
 
-	lines=calloc( numlines, sizeof( char *) );
+	lines=falloc( numlines, sizeof( char *) );
 
 	lines[0]=buff;
 

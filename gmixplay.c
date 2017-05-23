@@ -31,7 +31,7 @@ static void loadConfig( struct mpcontrol_t *config ) {
 	// load default configuration
 	snprintf( confdir, MAXPATHLEN, "%s/.mixplay", getenv("HOME") );
 	snprintf( conffile, MAXPATHLEN, "%s/mixplay.conf", confdir );
-	config->dbname=calloc( MAXPATHLEN, sizeof( char ) );
+	config->dbname=falloc( MAXPATHLEN, sizeof( char ) );
 	snprintf( config->dbname, MAXPATHLEN, "%s/mixplay.db", confdir );
 
 	if( !isDir( confdir ) ) {
@@ -79,8 +79,8 @@ static void loadConfig( struct mpcontrol_t *config ) {
 	config->profile =g_key_file_get_string_list( keyfile, "mixplay", "profiles", &config->profiles, &error );
 	if( NULL != error ) {
 		error=NULL;
-		config->profile=calloc(1, sizeof( char * ) );
-		config->profile[0]=calloc( 8, sizeof( char ) );
+		config->profile=falloc(1, sizeof( char * ) );
+		config->profile[0]=falloc( 8, sizeof( char ) );
 		strcpy( config->profile[0], "mixplay" );
 		config->active=0;
 		g_key_file_set_string_list( keyfile, "mixplay", "profiles", (const char* const*)config->profile, 1 );

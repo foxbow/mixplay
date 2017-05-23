@@ -326,7 +326,7 @@ struct marklist_t *loadList( const char *path ){
 	char *buff;
 	int cnt=0;
 
-	buff=calloc( MAXPATHLEN, sizeof(char) );
+	buff=falloc( MAXPATHLEN, sizeof(char) );
 	if( !buff ) fail( errno, "%s: can't alloc buffer", __func__ );
 
 	file=fopen( path, "r" );
@@ -336,10 +336,10 @@ struct marklist_t *loadList( const char *path ){
 		fgets( buff, MAXPATHLEN, file );
 		if( buff && strlen( buff ) > 1 ){
 			if( !bwlist ){
-				bwlist=calloc( 1, sizeof( struct marklist_t ) );
+				bwlist=falloc( 1, sizeof( struct marklist_t ) );
 				ptr=bwlist;
 			}else{
-				ptr->next=calloc( 1, sizeof( struct marklist_t ) );
+				ptr->next=falloc( 1, sizeof( struct marklist_t ) );
 				ptr=ptr->next;
 			}
 			if( !ptr ) fail( errno, "Could not add %s", buff );
@@ -389,7 +389,7 @@ void moveEntry( struct entry_t *entry, struct entry_t *pos ) {
  */
 struct marklist_t *addToList( const char *line, struct marklist_t **list ) {
 	struct marklist_t *entry, *runner;
-	entry=calloc( 1, sizeof( struct marklist_t ) );
+	entry=falloc( 1, sizeof( struct marklist_t ) );
 	if( NULL == entry ) {
 		fail( errno, "Could not add searchterm %s", line );
 	}
@@ -418,7 +418,7 @@ struct entry_t *loadPlaylist( const char *path ) {
 	char *buff;
 	char titlePath[MAXPATHLEN];
 
-	buff=calloc( MAXPATHLEN, sizeof(char) );
+	buff=falloc( MAXPATHLEN, sizeof(char) );
 	if( !buff ) fail( errno, "%s: can't alloc buffer", __func__ );
 
 	fp=fopen( path, "r" );
@@ -525,7 +525,7 @@ struct entry_t *removeFromPL( struct entry_t *entry, const unsigned int range ) 
 struct entry_t *insertTitle( struct entry_t *base, const char *path ){
 	struct entry_t *root;
 
-	root = (struct entry_t*) calloc(1, sizeof(struct entry_t));
+	root = (struct entry_t*) falloc(1, sizeof(struct entry_t));
 	if (NULL == root) {
 		fail( errno, "%s: Could not alloc root", __func__);
 	}
@@ -902,7 +902,6 @@ int markFavourite( struct entry_t *title, int range ) {
  * returns the LAST entry of the list. So the next item is the first in the list
  */
 struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedir ) {
-	struct entry_t *buff=NULL;
 	char dirbuff[MAXPATHLEN];
 	struct dirent **entry;
 	int num, i;
@@ -921,15 +920,7 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 
 	for( i=0; i<num; i++ ) {
 		activity("Scanning");
-		strncpy( dirbuff, curdir, MAXPATHLEN );
-		if( '/' != dirbuff[strlen(dirbuff)-1] ) {
-			strncat( dirbuff, "/", MAXPATHLEN );
-		}
-		strncat( dirbuff, entry[i]->d_name, MAXPATHLEN );
-
-		buff=(struct entry_t *)calloc(1, sizeof(struct entry_t));
-		if(buff == NULL) fail( errno, "%s: Could not alloc buffer", __func__ );
-
+		snprintf( dirbuff, MAXPATHLEN, "%s/%s", curdir, entry[i]->d_name );
 		files=insertTitle( files, dirbuff );
 		free(entry[i]);
 	}

@@ -51,5 +51,6 @@ int isDir( const char *path );
 int readline( char *line, size_t len, int fd );
 char *abspath( char *path, const char *basedir, int len );
 int checkMatch( const char* name, const char* pat );
+void *falloc( size_t num, size_t size );
 
 #endif

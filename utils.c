@@ -41,11 +41,7 @@ void muteVerbosity() {
 char *abspath( char *path, const char *basedir, int len ){
 	char *buff;
 	if( path[0] != '/' ) {
-		buff=calloc(sizeof(char),len);
-		if( NULL == buff ) {
-			fail( errno, "Can't fix path %s to %s", path, basedir );
-		}
-
+		buff=falloc(sizeof(char),len);
 		snprintf( buff, len, "%s/%s", basedir, path );
 		strncpy( path, buff, len );
 		free(buff);
@@ -301,8 +297,8 @@ static int fncmp( const char* str1, const char* str2 ){
 	long result;
 	float step;
 
-	str1val=calloc( CMP_ARRAYLEN, sizeof( char ) );
-	str2val=calloc( CMP_ARRAYLEN, sizeof( char ) );
+	str1val=falloc( CMP_ARRAYLEN, sizeof( char ) );
+	str2val=falloc( CMP_ARRAYLEN, sizeof( char ) );
 
 	max1=computestrval( str1, str1val );
 	max2=computestrval( str2, str2val );
@@ -353,4 +349,16 @@ int isDir( const char *path ) {
 		return -1;
 	}
 	return 0;
+}
+
+/**
+ * wrapper around calloc that fails in-place with an error
+ */
+void *falloc( size_t num, size_t size ) {
+	void *result=NULL;
+	result=calloc( num, size );
+	if( NULL == result ) {
+		fail( errno, "Sorry.." );
+	}
+	return result;
 }

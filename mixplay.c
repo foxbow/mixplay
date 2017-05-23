@@ -85,10 +85,7 @@ static void copyTitle( struct entry_t *title, const char* target, const unsigned
 	unsigned char *buffer;
 	int size;
 
-	buffer=malloc( CP_BUFFSIZE );
-	if( NULL == buffer ) {
-		FAIL( errno, "Out of memory!" );
-	}
+	buffer=falloc( CP_BUFFSIZE, sizeof( char ) );
 
 	snprintf( filename, MAXPATHLEN, "%strack%03i.mp3", target, index );
 

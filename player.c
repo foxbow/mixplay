@@ -46,10 +46,10 @@ void *setProfile( void *data ) {
 	profile=ctrl->profile[ctrl->active];
 	snprintf( confdir, MAXPATHLEN, "%s/.mixplay", getenv("HOME") );
 
-	ctrl->dnpname=calloc( MAXPATHLEN, sizeof(char) );
+	ctrl->dnpname=falloc( MAXPATHLEN, sizeof(char) );
 	snprintf( ctrl->dnpname, MAXPATHLEN, "%s/%s.dnp", confdir, profile );
 
-	ctrl->favname=calloc( MAXPATHLEN, sizeof(char) );
+	ctrl->favname=falloc( MAXPATHLEN, sizeof(char) );
 	snprintf( ctrl->favname, MAXPATHLEN, "%s/%s.fav", confdir, profile );
 	dnplist=loadList( ctrl->dnpname );
 	favourites=loadList( ctrl->favname );
