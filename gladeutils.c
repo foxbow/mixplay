@@ -14,8 +14,15 @@ static pthread_mutex_t msglock=PTHREAD_MUTEX_INITIALIZER;
 extern struct mpcontrol_t *mpcontrol;
 
 static int g_activity( void *text ) {
-	gtk_window_set_title( GTK_WINDOW( mpcontrol->widgets->mp_popup ), (char *)text );
-	gtk_widget_queue_draw( mpcontrol->widgets->mp_popup );
+	if ( mpcontrol->widgets->mp_popup != NULL ) {
+		gtk_window_set_title( GTK_WINDOW( mpcontrol->widgets->mp_popup ), (char *)text );
+		gtk_widget_queue_draw( mpcontrol->widgets->mp_popup );
+	}
+	else if( mpcontrol->widgets->album_current != NULL ) {
+		gtk_label_set_text( GTK_LABEL( mpcontrol->widgets->album_current ),
+				text );
+		gtk_widget_queue_draw( mpcontrol->widgets->mixplay_main );
+	}
 	free(text);
 	return 0;
 }
@@ -30,7 +37,7 @@ void activity( const char *msg, ... ){
 	char *line;
 	int pos;
 
-	if( ( mpcontrol->widgets->mp_popup != NULL ) && ( (_ftrpos%100) == 0 ) ) {
+	if( (_ftrpos%100) == 0 ) {
 		line=falloc( NAMELEN, sizeof(char) );
 		pos=(_ftrpos/100)%4;
 
