@@ -9,6 +9,8 @@
 #define PLAYER_H_
 #include "gladeutils.h"
 
+#define MP_LOGLEN 1024
+
 enum mpcmd_t {
 	mpc_idle,
 	mpc_play,
@@ -58,7 +60,7 @@ struct mpcontrol_t {
 	mpcmd command;				// command to the player
 	int status;					// status of the player/system
 	pthread_t rtid;				// thread ID of the reader
-	char log[2048];
+	char log[MP_LOGLEN];
 	int fullscreen;
 	int debug;
 };

@@ -100,7 +100,7 @@ void fail( int error, const char* msg, ... ){
 }
 
 /**
- * actual gtk code for progressAdd
+ * actual gtk code for printver
  * is added as an idle thread to the main thread
  */
 static int g_progressAdd( void *line ) {
@@ -126,7 +126,7 @@ void printver( int vl, const char *msg, ... ) {
 
 	if( ( mpcontrol->debug || mpcontrol->widgets->mp_popup ) && ( vl < 2 ) ) {
 		pthread_mutex_lock( &msglock );
-		strncat( mpcontrol->log, line, 2047-strlen( mpcontrol->log) );
+		scrollAdd( mpcontrol->log, line, MP_LOGLEN );
 		gdk_threads_add_idle( g_progressAdd, mpcontrol->log );
 		while (gtk_events_pending ()) gtk_main_iteration ();
 		pthread_mutex_unlock( &msglock );
@@ -213,7 +213,7 @@ void progressDone() {
 		fail( F_FAIL, "No progress request open!" );
 	}
 	pthread_mutex_lock( &msglock );
-	strncat( mpcontrol->log, "DONE\n", 2047-strlen( mpcontrol->log) );
+	scrollAdd( mpcontrol->log, "DONE\n", MP_LOGLEN );
 	gdk_threads_add_idle( g_progressDone, mpcontrol->log );
 	pthread_mutex_unlock( &msglock );
 	while (gtk_events_pending ()) gtk_main_iteration ();
@@ -231,12 +231,10 @@ static void setButtonLabel( GtkWidget *button, const char *text ) {
 }
 
 /**
- * fill the widgets with current information in the control data
- *
  * This function is supposed to be called with gtk_add_thread_idle() to make update
  * work in multithreaded environments.
  */
-int updateUI( void *data ) {
+static int g_updateUI( void *data ) {
 	struct	mpcontrol_t *control;
 	char	buff[MAXPATHLEN];
 	gboolean	usedb;
@@ -299,4 +297,15 @@ int updateUI( void *data ) {
 			control->percent/100.0 );
 
 	return 0;
+}
+
+/**
+ * gtk implementation of updateUI
+ * fill the widgets with current information in the control data
+ *
+ * needed to keep updateUI() GUI independent
+ */
+void updateUI( void *control ) {
+	gdk_threads_add_idle( g_updateUI, control );
+	while (gtk_events_pending ()) gtk_main_iteration ();
 }

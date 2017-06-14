@@ -362,3 +362,32 @@ void *falloc( size_t num, size_t size ) {
 	}
 	return result;
 }
+
+/**
+ * add a line to a list of lines
+ * if the result is longer than the length of the buffer,
+ * remove lines from the start until it fits again
+ */
+int scrollAdd( char *scroll, const char* line, const size_t len ) {
+	void *pos;
+
+	if( strlen( line ) > len ) {
+		fail( F_FAIL, "Adding too much text to scroll!" );
+	}
+
+	if( ( strlen( scroll ) + strlen( line ) ) < len ) {
+		strncat( scroll, line, len );
+		return 0;
+	}
+
+	while( ( strlen( scroll ) + strlen( line ) ) >= len ) {
+		pos=strchr( scroll, '\n' );
+		if( NULL==pos ) {
+			fail( F_FAIL, "Scroll has one line with the length of %i?", len );
+		}
+		pos++;
+		memmove( scroll, pos, strlen( pos ) );
+	}
+	strncat( scroll, line, len );
+	return 1;
+}

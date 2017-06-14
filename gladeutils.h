@@ -42,7 +42,7 @@ struct _MpData
 #define progress( ... ) printver( 0, __VA_ARGS__ )
 void progressLog( const char *msg, ... );
 void progressDone( );
-int updateUI( void *data );
+void updateUI( void *data );
 /** defined in utils.h **/
 // void fail( int error, const char* msg, ... );
 // void popUp( int level, const char *text, ... );

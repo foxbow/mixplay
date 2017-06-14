@@ -87,8 +87,8 @@ void *setProfile( void *data ) {
 }
 
 /**
- * checks if the playcount needs to be increased and if the skipcound
- * needs to be decreased. In both cases the updated infomation is written
+ * checks if the playcount needs to be increased and if the skipcount
+ * needs to be decreased. In both cases the updated information is written
  * back into the db.
  */
 static void playCount( struct mpcontrol_t *control ) {
@@ -106,6 +106,14 @@ static void playCount( struct mpcontrol_t *control ) {
 	}
 }
 
+/**
+ * the main control thread function that acts as an interface between the
+ * player processes and the UI. It checks the control->command value for
+ * commands from the UI and the status messages from the players.
+ *
+ * The original plan was to keep this UI independent so it could be used
+ * in mixplay, gmixplay and probably other GUI variants (ie: web)
+ */
 void *reader( void *cont ) {
 	struct mpcontrol_t *control;
 	struct entry_t *next;
@@ -135,12 +143,11 @@ void *reader( void *cont ) {
 		to.tv_usec=100000; // 1/10 second
 		i=select( FD_SETSIZE, &fds, NULL, NULL, &to );
 
-
 		if( i>0 ) redraw=1;
 		// drain inactive player
 		if( FD_ISSET( control->p_status[fdset?0:1][0], &fds ) ) {
 			key=readline(line, 512, control->p_status[fdset?0:1][0]);
-			if( ( key > 0 ) && ( outvol > 0 ) && ( line[1] == 'F' ) ){
+			if( ( key > 1 ) && ( outvol > 0 ) && ( line[1] == 'F' ) ){
 				outvol--;
 				snprintf( line, MAXPATHLEN, "volume %i\n", outvol );
 				write( control->p_command[fdset?0:1][1], line, strlen(line) );
@@ -274,7 +281,7 @@ void *reader( void *cont ) {
 						strcpy( status, "PLAYING" );
 						break;
 					default:
-						fail( F_WARN, "Unknown status!\n %i", cmd );
+						fail( F_WARN, "Unknown status %i!\n%s", cmd, line );
 						break;
 					}
 					redraw=1;
@@ -296,9 +303,7 @@ void *reader( void *cont ) {
 			// Ignore other mpg123 output
 		} // fgets() > 0
 		if( redraw ) {
-			gdk_threads_add_idle( updateUI, control );
-			while (gtk_events_pending ()) gtk_main_iteration ();
-			// updateUI( (void*)control );
+			updateUI( control );
 		}
 
 		pthread_mutex_trylock( &cmdlock );
