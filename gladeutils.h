@@ -39,9 +39,9 @@ struct _MpData
 };
 
 
-#define progress( ... ) printver( 0, __VA_ARGS__ )
+#define progressAdd( ... ) printver( 0, __VA_ARGS__ )
 void progressLog( const char *msg, ... );
-void progressDone( );
+void progressDone( const char *msg );
 void updateUI( void *data );
 /** defined in utils.h **/
 // void fail( int error, const char* msg, ... );

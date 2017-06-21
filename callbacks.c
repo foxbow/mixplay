@@ -83,7 +83,9 @@ G_MODULE_EXPORT void markdnp( GtkButton *button, gpointer data ) {
 	if( reply > 0 ) {
 		setCommand( mpcontrol, reply );
 	}
-	setCommand( mpcontrol, mpc_play );
+	if( mpcontrol->status == mpc_idle ) {
+		setCommand( mpcontrol, mpc_play );
+	}
 }
 
 // @TODO: consider pulling the 'simple' button callbacks into one
@@ -206,9 +208,9 @@ G_MODULE_EXPORT void databaseStart( GtkButton *button, gpointer data ) {
 	switch( reply ) {
 	case 1:
 		progressLog( "Database Info" );
-		progress( "Music dir: %s\n", mpcontrol->musicdir );
+		progressAdd( "Music dir: %s\n", mpcontrol->musicdir );
 		dumpInfo( mpcontrol->root, -1 );
-		progressDone();
+		progressDone( "End Database info.");
 	break;
 	case 2:
 		setCommand( mpcontrol, mpc_dbclean);

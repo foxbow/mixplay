@@ -65,7 +65,8 @@ void *setProfile( void *data ) {
 		if( 0 == num ){
 			fail( F_FAIL, "No music found at %s!", ctrl->musicdir );
 		}
-		progressDone("Added %i titles", num );
+		progressAdd("Added %i titles.", num );
+		progressDone( NULL );
 		ctrl->root=dbGetMusic( ctrl->dbname );
 		if( NULL == ctrl->root ) {
 			fail( F_FAIL, "No music found at %s for database %s!\nThis should never happen!",
@@ -82,7 +83,7 @@ void *setProfile( void *data ) {
 	cleanList( favourites );
 
 	setCommand( ctrl, mpc_start );
-	if( ctrl->debug ) progressDone();
+	if( ctrl->debug ) progressDone( "Profile set." );
 	return NULL;
 }
 
@@ -334,30 +335,30 @@ void *reader( void *cont ) {
 			order=0;
 			write( control->p_command[fdset][1], "STOP\n", 6 );
 			progressLog( "Database Cleanup" );
-			progress( "Checking for new titles..\n" );
+			progressAdd( "Checking for new titles..\n" );
 			i=dbAddTitles( control->dbname, control->musicdir );
 			if( i > 0 ) {
-				progress("Added %i new titles\n", i );
+				progressAdd("Added %i new titles\n", i );
 				order=1;
 			}
 			else {
-				progress("No titles to be added\n");
+				progressAdd("No titles to be added\n");
 			}
-			progress( "Checking for deleted titles..\n" );
+			progressAdd( "Checking for deleted titles..\n" );
 			i=dbCheckExist( control->dbname );
 			if( i > 0 ) {
-				progress( "Removed $i titles\n", i );
+				progressAdd( "Removed $i titles\n", i );
 				order=1;
 			}
 			else {
-				progress( "No titles removed" );
+				progressAdd( "No titles removed" );
 			}
 			if( 1 == order ) {
-				progress( "Restarting player.." );
+				progressAdd( "Restarting player.." );
 				setProfile( control );
 				control->current = control->root;
 			}
-			progressDone();
+			progressDone( "Finished Cleanup.");
 			order=0;
 			sendplay( control->p_command[fdset][1], control->current);
 			break;

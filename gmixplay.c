@@ -133,7 +133,7 @@ static int initAll( void *data ) {
 	else {
 		control->dbname[0]=0;
 		setCommand( control, mpc_start );
-		if( control->debug ) progressDone();
+		if( control->debug ) progressDone( "Initialization done.");
 	}
 	return 0;
 }

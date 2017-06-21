@@ -207,12 +207,16 @@ static int g_progressDone( void *line ) {
 /**
  * enables closing of the info requester
  */
-void progressDone() {
+void progressDone( const char *msg ) {
 	if( !mpcontrol->debug && ( getVerbosity() > 0 ) ) printf("DONE\n");
 	if( NULL == mpcontrol->widgets->mp_popup ){
 		fail( F_FAIL, "No progress request open!" );
 	}
 	pthread_mutex_lock( &msglock );
+	if( NULL != msg ) {
+		scrollAdd( mpcontrol->log, msg, MP_LOGLEN );
+		scrollAdd( mpcontrol->log, "\n", MP_LOGLEN );
+	}
 	scrollAdd( mpcontrol->log, "DONE\n", MP_LOGLEN );
 	gdk_threads_add_idle( g_progressDone, mpcontrol->log );
 	pthread_mutex_unlock( &msglock );
