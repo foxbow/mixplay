@@ -83,16 +83,11 @@ void playPause( GtkButton *button, gpointer data ) {
 				"Play",  mpc_play,
 				"Replay",  mpc_repl,
 				"DNP",  mpc_dnptitle,
-				"Quit!", mpc_quit,
 				NULL );
 		reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
 		gtk_widget_destroy( dialog );
 
 		switch( reply ) {
-		case mpc_quit:
-			setCommand( mpcontrol, mpc_quit );
-			gtk_main_quit();
-		break;
 		case mpc_dnptitle:
 			if( mpcontrol->status == mpc_play ) {
 				setCommand( mpcontrol, mpc_play );
@@ -160,7 +155,7 @@ void infoStart( GtkButton *button, gpointer data ) {
 	gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
 			"Application",  1,
 			"Database",  2,
-			"Cancel", GTK_RESPONSE_CANCEL,
+			"Quit!", 3,
 			NULL );
 
 	reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
@@ -203,6 +198,10 @@ void infoStart( GtkButton *button, gpointer data ) {
 			setCommand( mpcontrol, mpc_dbclean);
 		break;
 		}
+	break;
+	case 3:
+		setCommand( mpcontrol, mpc_quit );
+		gtk_main_quit();
 	break;
 	}
 }
