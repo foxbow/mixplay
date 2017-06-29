@@ -37,8 +37,8 @@
                 <property name="image_position">top</property>
                 <property name="always_show_image">True</property>
                 <signal name="clicked" handler="playprev" swapped="no"/>
-                <accelerator key="p" signal="clicked"/>
                 <accelerator key="Up" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
+                <accelerator key="p" signal="clicked"/>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -105,8 +105,8 @@
                         </attributes>
                       </object>
                     </child>
-                    <accelerator key="AudioPlay" signal="clicked"/>
                     <accelerator key="space" signal="clicked"/>
+                    <accelerator key="AudioPlay" signal="clicked"/>
                   </object>
                   <packing>
                     <property name="expand">True</property>
@@ -183,8 +183,8 @@
                 <property name="image_position">bottom</property>
                 <property name="always_show_image">True</property>
                 <signal name="clicked" handler="playnext" swapped="no"/>
-                <accelerator key="Down" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
                 <accelerator key="n" signal="clicked"/>
+                <accelerator key="Down" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -218,20 +218,20 @@
             <property name="can_focus">False</property>
             <property name="column_homogeneous">True</property>
             <child>
-              <object class="GtkButton" id="button_dnp">
-                <property name="label">DNP</property>
+              <object class="GtkButton" id="button_fav">
+                <property name="label">FAV</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
                 <property name="focus_on_click">False</property>
                 <property name="image_position">top</property>
                 <property name="always_show_image">True</property>
-                <signal name="clicked" handler="markdnp" swapped="no"/>
-                <accelerator key="d" signal="clicked"/>
+                <signal name="clicked" handler="markfav" swapped="no"/>
+                <accelerator key="f" signal="clicked"/>
               </object>
               <packing>
-                <property name="left_attach">0</property>
-                <property name="top_attach">1</property>
+                <property name="left_attach">2</property>
+                <property name="top_attach">0</property>
               </packing>
             </child>
             <child>
@@ -252,36 +252,6 @@
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="button_fav">
-                <property name="label">FAV</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="focus_on_click">False</property>
-                <property name="image_position">top</property>
-                <property name="always_show_image">True</property>
-                <signal name="clicked" handler="markfav" swapped="no"/>
-                <accelerator key="f" signal="clicked"/>
-              </object>
-              <packing>
-                <property name="left_attach">2</property>
-                <property name="top_attach">1</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkButton" id="button_replay">
-                <property name="label" translatable="yes">replay</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <signal name="clicked" handler="replay" swapped="no"/>
-              </object>
-              <packing>
-                <property name="left_attach">1</property>
-                <property name="top_attach">1</property>
-              </packing>
-            </child>
-            <child>
               <object class="GtkButton" id="button_profile">
                 <property name="label" translatable="yes">profile</property>
                 <property name="visible">True</property>
@@ -291,19 +261,6 @@
               </object>
               <packing>
                 <property name="left_attach">0</property>
-                <property name="top_attach">0</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkButton" id="button_database">
-                <property name="label" translatable="yes">database</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <signal name="clicked" handler="databaseStart" swapped="no"/>
-              </object>
-              <packing>
-                <property name="left_attach">2</property>
                 <property name="top_attach">0</property>
               </packing>
             </child>

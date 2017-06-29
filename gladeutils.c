@@ -265,12 +265,22 @@ static int g_updateUI( void *data ) {
 		usedb=( control->root->key )?TRUE:FALSE;
 		// These depend on a database
 		gtk_widget_set_visible( control->widgets->button_fav, usedb );
-		gtk_widget_set_visible( control->widgets->button_dnp, usedb );
-		gtk_widget_set_visible( control->widgets->button_replay, usedb );
-		gtk_widget_set_visible( control->widgets->button_database, usedb );
 
 		gtk_label_set_text( GTK_LABEL( control->widgets->title_current ),
 				control->current->title );
+
+		if( mpcontrol->root->key != 0  ) {
+			snprintf( buff, MAXPATHLEN, "%s\nKey: %04i\nplaycount: %i\nskipcount: %i\nCount: %s - Skip: %s\n",
+			mpcontrol->current->path,
+			mpcontrol->current->key, mpcontrol->current->played,
+			mpcontrol->current->skipped, ONOFF(~(mpcontrol->current->flags)&MP_CNTD),
+			ONOFF(~(mpcontrol->current->flags)&MP_SKPD));
+			gtk_widget_set_tooltip_text( mpcontrol->widgets->title_current, buff );
+		}
+		else {
+			gtk_widget_set_tooltip_text( mpcontrol->widgets->title_current, mpcontrol->current->path );
+		}
+
 		gtk_widget_set_sensitive( control->widgets->title_current, ( control->status == mpc_play ) );
 		gtk_label_set_text( GTK_LABEL( control->widgets->artist_current ),
 				control->current->artist );

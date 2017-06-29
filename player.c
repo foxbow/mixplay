@@ -17,73 +17,100 @@ pthread_mutex_t cmdlock=PTHREAD_MUTEX_INITIALIZER;
 void setCommand( struct mpcontrol_t *control, mpcmd cmd ) {
 	pthread_mutex_lock( &cmdlock );
 	control->command=cmd;
+	// lock stays on until the command has been handles in reader()
 //	pthread_mutex_unlock( &cmdlock );
 }
 
 /**
  * make mpeg123 play the given title
  */
-static void sendplay( int fd, struct entry_t *song ) {
+static void sendplay( int fdset, struct mpcontrol_t *control ) {
 	char line[MAXPATHLEN]="load ";
-	strncat( line, song->path, MAXPATHLEN );
+	strncat( line, control->current->path, MAXPATHLEN );
 	strncat( line, "\n", MAXPATHLEN );
-	if ( write( fd, line, MAXPATHLEN ) < strlen(line) ) {
+	if ( write( control->p_command[fdset][1], line, MAXPATHLEN ) < strlen(line) ) {
 		fail( F_FAIL, "Could not write\n%s", line );
 	}
+	control->status = mpc_play;
 }
 
+/**
+ * sets the current profile
+ * This is thread-able to have progress information on startup!
+ */
 void *setProfile( void *data ) {
 	char		confdir[MAXPATHLEN]; // = "~/.mixplay";
 	char 		*profile;
 	struct marklist_t *dnplist=NULL;
 	struct marklist_t *favourites=NULL;
 	int num;
-	struct mpcontrol_t *ctrl;
 	int lastver;
+	struct mpcontrol_t *control=(struct mpcontrol_t *)data ;
 
-	ctrl=(struct mpcontrol_t *)data;
-
-	profile=ctrl->profile[ctrl->active];
-	snprintf( confdir, MAXPATHLEN, "%s/.mixplay", getenv("HOME") );
-
-	ctrl->dnpname=falloc( MAXPATHLEN, sizeof(char) );
-	snprintf( ctrl->dnpname, MAXPATHLEN, "%s/%s.dnp", confdir, profile );
-
-	ctrl->favname=falloc( MAXPATHLEN, sizeof(char) );
-	snprintf( ctrl->favname, MAXPATHLEN, "%s/%s.fav", confdir, profile );
-	dnplist=loadList( ctrl->dnpname );
-	favourites=loadList( ctrl->favname );
-
-	cleanTitles( ctrl->root );
-
-	ctrl->root=dbGetMusic( ctrl->dbname );
-	if( NULL == ctrl->root ) {
-		progressLog("Scanning musicdir");
-		lastver=getVerbosity();
-		if( lastver < 1 ) setVerbosity(1);
-		num = dbAddTitles( ctrl->dbname, ctrl->musicdir );
-		if( 0 == num ){
-			fail( F_FAIL, "No music found at %s!", ctrl->musicdir );
+	if( control->playstream ) {
+		cleanTitles( control->root );
+		if( control->active > control->streams ) {
+			fail( F_FAIL, "Stream #%i does no exist!", control->active );
 		}
-		progressAdd("Added %i titles.", num );
-		progressDone( NULL );
-		ctrl->root=dbGetMusic( ctrl->dbname );
-		if( NULL == ctrl->root ) {
-			fail( F_FAIL, "No music found at %s for database %s!\nThis should never happen!",
-					ctrl->musicdir,  ctrl->dbname );
+		if( NULL == control->stream[control->active] ) {
+			fail( F_FAIL, "Stream #i is not set!", control->active );
 		}
-		setVerbosity(lastver);
+		control->root=insertTitle( NULL, control->stream[control->active] );
+		strncpy( control->root->title, control->sname[control->active], NAMELEN );
+		insertTitle( control->root, control->root->title );
+		insertTitle( control->root, control->root->title );
+		addToPL( control->root->dbnext, control->root );
+		if( control->debug ) progressLog( "Play Stream %s\n%s", control->sname[control->active], control->stream[control->active] );
 	}
-	DNPSkip( ctrl->root, 3 );
-	applyDNPlist( ctrl->root, dnplist );
-	applyFavourites( ctrl->root, favourites );
-	ctrl->root=shuffleTitles(ctrl->root);
-	// ctrl->command=mpc_start;
-	cleanList( dnplist );
-	cleanList( favourites );
+	else {
+		if( control->active > control->profiles ) {
+			fail( F_FAIL, "Profile #%i does no exist!", control->active );
+		}
+		if( NULL == control->profile[control->active] ) {
+			fail( F_FAIL, "Profile #%i is not set!", control->active );
+		}
 
-	setCommand( ctrl, mpc_start );
-	if( ctrl->debug ) progressDone( "Profile set." );
+			profile=control->profile[control->active];
+		snprintf( confdir, MAXPATHLEN, "%s/.mixplay", getenv("HOME") );
+
+		control->dnpname=falloc( MAXPATHLEN, sizeof(char) );
+		snprintf( control->dnpname, MAXPATHLEN, "%s/%s.dnp", confdir, profile );
+
+		control->favname=falloc( MAXPATHLEN, sizeof(char) );
+		snprintf( control->favname, MAXPATHLEN, "%s/%s.fav", confdir, profile );
+		dnplist=loadList( control->dnpname );
+		favourites=loadList( control->favname );
+
+		cleanTitles( control->root );
+
+		control->root=dbGetMusic( control->dbname );
+		if( NULL == control->root ) {
+			progressLog("Scanning musicdir");
+			lastver=getVerbosity();
+			if( lastver < 1 ) setVerbosity(1);
+			num = dbAddTitles( control->dbname, control->musicdir );
+			if( 0 == num ){
+				fail( F_FAIL, "No music found at %s!", control->musicdir );
+			}
+			progressAdd("Added %i titles.", num );
+			progressDone( NULL );
+			control->root=dbGetMusic( control->dbname );
+			if( NULL == control->root ) {
+				fail( F_FAIL, "No music found at %s for database %s!\nThis should never happen!",
+						control->musicdir,  control->dbname );
+			}
+			setVerbosity(lastver);
+		}
+		DNPSkip( control->root, 3 );
+		applyDNPlist( control->root, dnplist );
+		applyFavourites( control->root, favourites );
+		control->root=shuffleTitles(control->root);
+		cleanList( dnplist );
+		cleanList( favourites );
+		setCommand( control, mpc_start );
+
+		if( control->debug ) progressLog( "Profile set to %s.", profile );
+	}
 	return NULL;
 }
 
@@ -244,7 +271,7 @@ void *reader( void *cont ) {
 								invol=0;
 								outvol=100;
 								write( control->p_command[fdset][1], "volume 0\n", 9 );
-								sendplay( control->p_command[fdset][1], control->current);
+								sendplay( fdset, control );
 							}
 						}
 						if( invol < 100 ) {
@@ -271,7 +298,7 @@ void *reader( void *cont ) {
 						else {
 							if( (order==1) && (next == control->root) ) newCount( control->root );
 							control->current=next;
-							sendplay( control->p_command[fdset][1], control->current);
+							sendplay( fdset, control );
 						}
 						order=1;
 						break;
@@ -312,7 +339,7 @@ void *reader( void *cont ) {
 		case mpc_start:
 			control->current = control->root;
 			control->status=mpc_play;
-			sendplay( control->p_command[fdset][1], control->current);
+			sendplay( fdset, control );
 			break;
 		case mpc_play:
 			write( control->p_command[fdset][1], "PAUSE\n", 7 );
@@ -360,11 +387,11 @@ void *reader( void *cont ) {
 			}
 			progressDone( "Finished Cleanup.");
 			order=0;
-			sendplay( control->p_command[fdset][1], control->current);
+			sendplay( fdset, control );
 			break;
 
 
-			sendplay( control->p_command[fdset][1], control->current);
+			sendplay( fdset, control );
 			break;
 		case mpc_stop:
 			order=0;
@@ -414,11 +441,9 @@ void *reader( void *cont ) {
 			control->status=mpc_quit;
 			break;
 		case mpc_profile:
-			// @todo - change profile - probably done in callback itself
-			//         not in the Callback! This will disallow updates in the requester!
-			break;
-		case mpc_stream:
-			// @todo - play stream
+			order=0;
+			write( control->p_command[fdset][1], "STOP\n", 6 );
+			setProfile( control );
 			break;
 		case mpc_idle:
 			// do null

@@ -4,7 +4,6 @@
 #include "gladeutils.h"
 #include "player.h"
 #include "gmixplay_app.h"
-// #include "gmixplay_fs.h"
 
 #include <stdio.h>
 #include <errno.h>
@@ -13,6 +12,7 @@
 #include <sys/stat.h>
 #include <X11/Xlib.h>
 
+// global control structure
 struct mpcontrol_t *mpcontrol;
 
 /**
@@ -116,7 +116,6 @@ static int initAll( void *data ) {
 	loadConfig( control );
 	pthread_t tid;
 
-
 	control->current=NULL;
 	control->log[0]='\0';
 	control->stream=0;
@@ -127,14 +126,13 @@ static int initAll( void *data ) {
 	control->command=mpc_idle;
 	pthread_create( &control->rtid, NULL, reader, control );
 	if( NULL == control->root ) {
+		// Runs as thread to have updates in the UI
 		pthread_create( &tid, NULL, setProfile, (void *)control );
-//		setProfile( control );
 	}
 	else {
 		control->dbname[0]=0;
-		setCommand( control, mpc_start );
-		if( control->debug ) progressDone( "Initialization done.");
 	}
+	if( control->debug ) progressDone( "Initialization done.");
 	return 0;
 }
 
@@ -154,15 +152,12 @@ static void buildUI( struct mpcontrol_t * control ) {
 	GW( mixplay_main );
 	GW( button_prev );
 	GW( button_next );
-	GW( button_replay );
 	GW( title_current );
 	GW( artist_current );
 	GW( album_current );
 	GW( genre_current );
-	GW( button_dnp );
 	GW( button_play );
 	GW( button_fav );
-	GW( button_database );
 	GW( played );
 	GW( remain );
 	GW( progress );
