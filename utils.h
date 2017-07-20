@@ -25,7 +25,7 @@ typedef unsigned char* strval_t;
  * Verbosity handling of the utils functions
  */
 int getVerbosity( void );
-int setVerbosity(int);
+int setVerbosity( int );
 int incVerbosity();
 void muteVerbosity();
 
@@ -40,7 +40,7 @@ void activity( const char *msg, ... );
 /**
  * General utility functions
  */
-void setTitle(const char* title);
+void setTitle( const char* title );
 int strlncpy( char *dest, const char *src, const size_t len );
 int strlncat( char *dest, const char *src, const size_t len );
 char *strip( char *buff, const char *text, const size_t maxlen );

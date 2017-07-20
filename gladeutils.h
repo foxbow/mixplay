@@ -16,31 +16,35 @@
 
 /* Main data structure definition */
 typedef struct _MpData MpData;
-struct _MpData
-{
-	/* Widgets */
-	GtkWidget *mixplay_main;
-	GtkWidget *button_prev;
-	GtkWidget *button_next;
-	GtkWidget *title_current;
-	GtkWidget *artist_current;
-	GtkWidget *album_current;
-	GtkWidget *genre_current;
-	GtkWidget *button_play;
-	GtkWidget *button_fav;
-	GtkWidget *played;
-	GtkWidget *remain;
-	GtkWidget *progress;
-	// popup elements
-	GtkWidget *mp_popup;
+struct _MpData {
+    /* Widgets */
+    GtkWidget *mixplay_main;
+    GtkWidget *button_prev;
+    GtkWidget *button_next;
+    GtkWidget *title_current;
+    GtkWidget *artist_current;
+    GtkWidget *album_current;
+    GtkWidget *genre_current;
+    GtkWidget *button_play;
+    GtkWidget *button_fav;
+    GtkWidget *played;
+    GtkWidget *remain;
+    GtkWidget *progress;
+    // popup elements
+    GtkWidget *mp_popup;
 };
 
-
-#define progressAdd( ... ) printver( 0, __VA_ARGS__ )
-void progressLog( const char *msg, ... );
-void progressDone( const char *msg );
+void progressStart( const char *msg, ... );
+#define progressLog( ... ) printver( 0, __VA_ARGS__ )
+// void progressLog( const char *msg, ... );
+void progressEnd( const char *msg );
 void updateUI( void *data );
+
 /** defined in utils.h **/
+// void printver( int vl, const char *msg, ... );
+// void activity( const char *msg, ... );
 // void fail( int error, const char* msg, ... );
+/** Not implemented / needed **/
+
 // void popUp( int level, const char *text, ... );
 #endif /* __GLADEUTILS_H__ */

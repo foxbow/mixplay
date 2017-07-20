@@ -27,25 +27,25 @@
 #define SL_DISPLAY 32
 
 struct entry_t {
-	char path[MAXPATHLEN];		// path on the filesystem to the file
-	char artist[NAMELEN];		// Artist info
-	char title[NAMELEN];		// Title info (from mp3)
-	char album[NAMELEN];		// Album info (from mp3)
-	unsigned int played;		// play counter
-	unsigned int skipped;		// skip counter
-	char genre[NAMELEN];
-	struct entry_t *plprev;		// playlist pointer
-	unsigned int key;			// DB key/index  - internal
-	char display[MAXPATHLEN];	// Title display - internal
-	unsigned int flags;			// 1=favourite   - internal
-	struct entry_t *plnext;
-	struct entry_t *dbprev;		// database pointer
-	struct entry_t *dbnext;
+    char path[MAXPATHLEN];		// path on the filesystem to the file
+    char artist[NAMELEN];		// Artist info
+    char title[NAMELEN];		// Title info (from mp3)
+    char album[NAMELEN];		// Album info (from mp3)
+    unsigned int playcount;		// play counter
+    unsigned int skipcount;		// skip counter
+    char genre[NAMELEN];
+    struct entry_t *plprev;		// playlist pointer
+    unsigned int key;			// DB key/index  - internal
+    char display[MAXPATHLEN];	// Title display - internal
+    unsigned int flags;			// 1=favourite   - internal
+    struct entry_t *plnext;
+    struct entry_t *dbprev;		// database pointer
+    struct entry_t *dbnext;
 };
 
 struct marklist_t {
-	char dir[MAXPATHLEN];
-	struct marklist_t *next;
+    char dir[MAXPATHLEN];
+    struct marklist_t *next;
 };
 
 /**
@@ -71,7 +71,7 @@ struct entry_t *cleanTitles( struct entry_t *root );
 struct marklist_t *cleanList( struct marklist_t *root );
 
 void moveEntry( struct entry_t *entry, struct entry_t *pos );
-void newCount( struct entry_t * root);
+void newCount( struct entry_t * root );
 unsigned int getLowestPlaycount( struct entry_t *base, const int global );
 struct marklist_t *loadList( const char *path );
 int isMusic( const char *name );

@@ -1,4 +1,4 @@
-CC=/usr/bin/gcc
+# CC=/usr/bin/gcc
 VERSION:=$(shell git describe --tags --abbrev=1 --dirty=-dev --always)
 CCFLAGS=-DVERSION=\"${VERSION}\"
 CCFLAGS+=-Wall -g

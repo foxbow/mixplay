@@ -10,13 +10,13 @@
 #include "musicmgr.h"
 
 struct dbentry_t {
-	char path[MAXPATHLEN];		// path on the filesystem to the file
-	char artist[NAMELEN];		// Artist info
-	char title[NAMELEN];		// Title info (from mp3)
-	char album[NAMELEN];		// Album info (from mp3)
-	char genre[NAMELEN];		// Album info (from mp3)
-	unsigned int played;		// play counter
-	unsigned int skipped;		// skip counter
+    char path[MAXPATHLEN];		// path on the filesystem to the file
+    char artist[NAMELEN];		// Artist info
+    char title[NAMELEN];		// Title info (from mp3)
+    char album[NAMELEN];		// Album info (from mp3)
+    char genre[NAMELEN];		// Album info (from mp3)
+    unsigned int playcount;		// play counter
+    unsigned int skipcount;		// skip counter
 };
 
 #define DBESIZE sizeof(struct dbentry_t)

@@ -14,22 +14,22 @@
 
 static int _ftverbosity=1;
 
-int setVerbosity(int v) {
-	_ftverbosity=v;
-	return _ftverbosity;
+int setVerbosity( int v ) {
+    _ftverbosity=v;
+    return _ftverbosity;
 }
 
 int getVerbosity( void ) {
-	return _ftverbosity;
+    return _ftverbosity;
 }
 
 int incVerbosity() {
-	_ftverbosity++;
-	return _ftverbosity;
+    _ftverbosity++;
+    return _ftverbosity;
 }
 
 void muteVerbosity() {
-	_ftverbosity=0;
+    _ftverbosity=0;
 }
 
 /**
@@ -38,27 +38,29 @@ void muteVerbosity() {
  * be the real current directory and may be used to maintain config and data
  * directory structures
  */
-char *abspath( char *path, const char *basedir, int len ){
-	char *buff;
-	if( path[0] != '/' ) {
-		buff=falloc(sizeof(char),len);
-		snprintf( buff, len, "%s/%s", basedir, path );
-		strncpy( path, buff, len );
-		free(buff);
-	}
-	return path;
+char *abspath( char *path, const char *basedir, int len ) {
+    char *buff;
+
+    if( path[0] != '/' ) {
+        buff=falloc( sizeof( char ),len );
+        snprintf( buff, len, "%s/%s", basedir, path );
+        strncpy( path, buff, len );
+        free( buff );
+    }
+
+    return path;
 }
 
 /**
  * Some ANSI code magic to set the terminal title
  **/
-void setTitle(const char* title) {
-	char buff[128];
-	strncpy(buff, "\033]2;", 128 );
-	strncat(buff, title, 128 );
-	strncat(buff, "\007\000", 128 );
-	fputs(buff, stdout);
-	fflush(stdout);
+void setTitle( const char* title ) {
+    char buff[128];
+    strncpy( buff, "\033]2;", 128 );
+    strncat( buff, title, 128 );
+    strncat( buff, "\007\000", 128 );
+    fputs( buff, stdout );
+    fflush( stdout );
 }
 
 
@@ -72,35 +74,38 @@ void setTitle(const char* title) {
  *        encodings WILL cause problems in any case.
 **/
 char *strip( char *buff, const char *text, const size_t maxlen ) {
-	int len=strlen( text );
-	int bpos=0, tpos=0;
-	// clear target buffer
-	memset( buff, 0, maxlen );
+    int len=strlen( text );
+    int bpos=0, tpos=0;
+    // clear target buffer
+    memset( buff, 0, maxlen );
 
-	// Cut off leading spaces and special chars
-	while( ( tpos < len ) && ( isspace( text[tpos] ) ) ) tpos++;
+    // Cut off leading spaces and special chars
+    while( ( tpos < len ) && ( isspace( text[tpos] ) ) ) {
+        tpos++;
+    }
 
-	// Filter out all extended characters
-	while( ( 0 != text[tpos] )  && ( bpos < ( maxlen-1) ) ) {
+    // Filter out all extended characters
+    while( ( 0 != text[tpos] )  && ( bpos < ( maxlen-1 ) ) ) {
 //		if( isascii( text[tpos]) ) {
-		if( isprint( text[tpos]) ) {
-			buff[bpos]=text[tpos];
-			bpos++;
-		}
-		tpos++;
-	}
+        if( isprint( text[tpos] ) ) {
+            buff[bpos]=text[tpos];
+            bpos++;
+        }
 
-	// Make sure string ends with a 0
-	buff[bpos]=0;
-	bpos--;
+        tpos++;
+    }
 
-	// Cut off trailing spaces and special chars
-	while( ( bpos > 0 ) && ( iscntrl(buff[bpos]) || isspace(buff[bpos] )) ) {
-		buff[bpos]=0;
-		bpos --;
-	}
+    // Make sure string ends with a 0
+    buff[bpos]=0;
+    bpos--;
 
-	return buff;
+    // Cut off trailing spaces and special chars
+    while( ( bpos > 0 ) && ( iscntrl( buff[bpos] ) || isspace( buff[bpos] ) ) ) {
+        buff[bpos]=0;
+        bpos --;
+    }
+
+    return buff;
 }
 
 /**
@@ -108,80 +113,90 @@ char *strip( char *buff, const char *text, const size_t maxlen ) {
  * comes or the fd stops sending characters.
  * returns number of read bytes or -1 on overflow.
  */
-int readline( char *line, size_t len, int fd ){
-	int cnt=0;
-	char c;
+int readline( char *line, size_t len, int fd ) {
+    int cnt=0;
+    char c;
 
-	while ( 0 != read(fd, &c, 1 ) ) {
-		if( cnt < len ) {
-			if( '\n' == c ) c=0;
-			line[cnt]=c;
-			cnt++;
-			if( 0 == c ) {
-				return cnt;
-			}
-		} else {
-			return -1;
-		}
-	}
+    while ( 0 != read( fd, &c, 1 ) ) {
+        if( cnt < len ) {
+            if( '\n' == c ) {
+                c=0;
+            }
 
-	// avoid returning unterminated strings.
-	// this code should never be reached but maybe there is
-	// a read() somewhere that timeouts..
-	line[cnt]=0;
-	cnt++;
+            line[cnt]=c;
+            cnt++;
 
-	return cnt;
+            if( 0 == c ) {
+                return cnt;
+            }
+        }
+        else {
+            return -1;
+        }
+    }
+
+    // avoid returning unterminated strings.
+    // this code should never be reached but maybe there is
+    // a read() somewhere that timeouts..
+    line[cnt]=0;
+    cnt++;
+
+    return cnt;
 }
 
 /**
  * checks if text ends with suffix
  * this function is case insensitive
  */
-int endsWith( const char *text, const char *suffix ){
-	int i, tlen, slen;
-	tlen=strlen(text);
-	slen=strlen(suffix);
-	if( tlen < slen ) {
-		return 0;
-	}
-	for( i=slen; i>0; i-- ) {
-		if( tolower(text[tlen-i]) != tolower(suffix[slen-i]) ) {
-			return 0;
-		}
-	}
-	return -1;
+int endsWith( const char *text, const char *suffix ) {
+    int i, tlen, slen;
+    tlen=strlen( text );
+    slen=strlen( suffix );
+
+    if( tlen < slen ) {
+        return 0;
+    }
+
+    for( i=slen; i>0; i-- ) {
+        if( tolower( text[tlen-i] ) != tolower( suffix[slen-i] ) ) {
+            return 0;
+        }
+    }
+
+    return -1;
 }
 
 /**
  * checks if text starts with prefix
  * this function is case insensitive
  */
-int startsWith( const char *text, const char *prefix ){
-	int i, tlen, plen;
-	tlen=strlen(text);
-	plen=strlen(prefix);
-	if( tlen < plen ) {
-		return 0;
-	}
-	for( i=0; i<plen; i++ ) {
-		if( tolower(text[i]) != tolower(prefix[i]) ) {
-			return 0;
-		}
-	}
+int startsWith( const char *text, const char *prefix ) {
+    int i, tlen, plen;
+    tlen=strlen( text );
+    plen=strlen( prefix );
 
-	return -1;
+    if( tlen < plen ) {
+        return 0;
+    }
+
+    for( i=0; i<plen; i++ ) {
+        if( tolower( text[i] ) != tolower( prefix[i] ) ) {
+            return 0;
+        }
+    }
+
+    return -1;
 }
 
 /**
  * Check if a file is a music file
  */
-int isMusic( const char *name ){
-	return endsWith( name, ".mp3" );
-	/*
-	if( endsWith( name, ".mp3" ) || endsWith( name, ".ogg" ) ) return -1;
-	return 0;
-	*/
+int isMusic( const char *name ) {
+    return endsWith( name, ".mp3" );
+    /*
+    if( endsWith( name, ".mp3" ) || endsWith( name, ".ogg" ) ) return -1;
+    return 0;
+    */
 }
 
 
@@ -189,59 +204,70 @@ int isMusic( const char *name ){
  * Check if the given string is an URL
  * We just allow http/s
  */
-int isURL( const char *uri ){
-	if( startsWith( uri, "http://" ) || startsWith( uri, "https://" ) ) {
-		return -1;
-	}
-	return 0;
+int isURL( const char *uri ) {
+    if( startsWith( uri, "http://" ) || startsWith( uri, "https://" ) ) {
+        return -1;
+    }
+
+    return 0;
 }
 
 /*
  * Inplace conversion of a string to lowercase
  */
-static char *toLower( char *text ){
-	int i;
-	for(i=0;i<strlen(text);i++) text[i]=tolower(text[i]);
-	return text;
+static char *toLower( char *text ) {
+    int i;
+
+    for( i=0; i<strlen( text ); i++ ) {
+        text[i]=tolower( text[i] );
+    }
+
+    return text;
 }
 
 /**
  * works like strncpy but turns every character to lowercase
  */
 int strlncpy( char *dest, const char *src, const size_t len ) {
-	strncpy( dest, src, len );
-	dest=toLower(dest);
-	return strlen(dest);
+    strncpy( dest, src, len );
+    dest=toLower( dest );
+    return strlen( dest );
 }
 
 /**
  * works like strncat but turns every character to lowercase
  */
 int strlncat( char *dest, const char *src, const size_t len ) {
-	strncat( dest, src, len );
-	dest=toLower(dest);
-	return strlen(dest);
+    strncat( dest, src, len );
+    dest=toLower( dest );
+    return strlen( dest );
 }
 
 /*
  * internally used to set a bit in a long bitlist
  */
-static int setBit( unsigned long pos, strval_t val ){
-	int bytepos;
-	unsigned char set=0;
+static int setBit( unsigned long pos, strval_t val ) {
+    int bytepos;
+    unsigned char set=0;
 
-	// avoid under/overflow
-	if( pos < 0 ) pos=0;
-	if( pos > CMP_BITS ) pos=CMP_BITS;
+    // avoid under/overflow
+    if( pos < 0 ) {
+        pos=0;
+    }
 
-	bytepos=pos/8;
-	set = 1<<(pos%8);
-	if( 0 == ( val[bytepos] & set ) ) { 
-		val[bytepos]|=set;
-		return 1;
-	}
+    if( pos > CMP_BITS ) {
+        pos=CMP_BITS;
+    }
 
-	return 0;
+    bytepos=pos/8;
+    set = 1<<( pos%8 );
+
+    if( 0 == ( val[bytepos] & set ) ) {
+        val[bytepos]|=set;
+        return 1;
+    }
+
+    return 0;
 }
 
 /**
@@ -252,69 +278,79 @@ static int setBit( unsigned long pos, strval_t val ){
  * If CMP_CHARS is 255 even unicode sequences will be taken into account.
  * This will NOT work across encodings (of course)
  */
-static int computestrval( const char* str, strval_t strval ){
-	unsigned char c1, c2;
-	int cnt, max=0;
+static int computestrval( const char* str, strval_t strval ) {
+    unsigned char c1, c2;
+    int cnt, max=0;
 
-	// needs at least two characters!
-	if( 2 > strlen( str) ) return 0;
+    // needs at least two characters!
+    if( 2 > strlen( str ) ) {
+        return 0;
+    }
 
-	for( cnt=0; cnt < strlen( str )-1; cnt++ ){
-		c1=str[cnt]%CMP_CHARS;
-		c2=str[cnt+1]%CMP_CHARS;
-		max=max+setBit( c1*CMP_CHARS+c2, strval );
-	}
-	return max;
+    for( cnt=0; cnt < strlen( str )-1; cnt++ ) {
+        c1=str[cnt]%CMP_CHARS;
+        c2=str[cnt+1]%CMP_CHARS;
+        max=max+setBit( c1*CMP_CHARS+c2, strval );
+    }
+
+    return max;
 }
 
 /**
  * internally used to multiplicate two vectors. This is the actual
  * comparison.
  */
-static unsigned int vecmult( strval_t val1, strval_t val2 ){
-	unsigned int result=0;
-	int cnt;
-	unsigned char c;
+static unsigned int vecmult( strval_t val1, strval_t val2 ) {
+    unsigned int result=0;
+    int cnt;
+    unsigned char c;
 
-	for( cnt=0; cnt<CMP_ARRAYLEN; cnt++ ){
-		c=val1[cnt] & val2[cnt];
-		while( c != 0 ){
-			if( c &  1 ) result++;
-			c=c>>1;
-		}
-	}
+    for( cnt=0; cnt<CMP_ARRAYLEN; cnt++ ) {
+        c=val1[cnt] & val2[cnt];
 
-	return result;
+        while( c != 0 ) {
+            if( c &  1 ) {
+                result++;
+            }
+
+            c=c>>1;
+        }
+    }
+
+    return result;
 }
 
 /**
  * Compares two strings and returns the similarity index
  * 100 == most equal
  **/
-static int fncmp( const char* str1, const char* str2 ){
-	strval_t str1val, str2val;
-	unsigned int maxval, max1, max2;
-	long result;
-	float step;
+static int fncmp( const char* str1, const char* str2 ) {
+    strval_t str1val, str2val;
+    unsigned int maxval, max1, max2;
+    long result;
+    float step;
 
-	str1val=falloc( CMP_ARRAYLEN, sizeof( char ) );
-	str2val=falloc( CMP_ARRAYLEN, sizeof( char ) );
+    str1val=falloc( CMP_ARRAYLEN, sizeof( char ) );
+    str2val=falloc( CMP_ARRAYLEN, sizeof( char ) );
 
-	max1=computestrval( str1, str1val );
-	max2=computestrval( str2, str2val );
+    max1=computestrval( str1, str1val );
+    max2=computestrval( str2, str2val );
 
-	// the max possible matches are defined by the min number of bits set!
-	maxval=(max1 < max2) ? max1 : max2;
-	if( 0 == maxval ) return -1;
+    // the max possible matches are defined by the min number of bits set!
+    maxval=( max1 < max2 ) ? max1 : max2;
 
-	step=100.0/maxval;
+    if( 0 == maxval ) {
+        return -1;
+    }
 
-	result=vecmult(  str1val, str2val );
+    step=100.0/maxval;
 
-	free( str1val );
-	free( str2val );
+    result=vecmult(  str1val, str2val );
 
-	return step*result;
+    free( str1val );
+    free( str2val );
+
+    return step*result;
 }
 
 /**
@@ -323,44 +359,59 @@ static int fncmp( const char* str1, const char* str2 ){
  * returns -1 (true) on match and 0 on mismatch
  */
 int checkMatch( const char* name, const char* pat ) {
-	int len;
-	char loname[1024];
-	int trigger;
+    int len;
+    char loname[1024];
+    int trigger;
 
-	strlncpy( loname, name, 1024 );
+    strlncpy( loname, name, 1024 );
 
-	len=MIN(strlen(loname), strlen(pat) );
-	trigger=70;
-	if( len <= 20 ) trigger=80;
-	if( len <= 10 ) trigger=88;
-	if( len <= 5 ) trigger=100;
-	if( trigger <= fncmp( loname, pat ) ){
-		return -1;
-	}
-	return 0;
+    len=MIN( strlen( loname ), strlen( pat ) );
+    trigger=70;
+
+    if( len <= 20 ) {
+        trigger=80;
+    }
+
+    if( len <= 10 ) {
+        trigger=88;
+    }
+
+    if( len <= 5 ) {
+        trigger=100;
+    }
+
+    if( trigger <= fncmp( loname, pat ) ) {
+        return -1;
+    }
+
+    return 0;
 }
 
 /**
  * checks if the given path is an accessible directory
  */
 int isDir( const char *path ) {
-	struct stat st;
-	if( !stat( path, &st ) && S_ISDIR( st.st_mode ) ){
-		return -1;
-	}
-	return 0;
+    struct stat st;
+
+    if( !stat( path, &st ) && S_ISDIR( st.st_mode ) ) {
+        return -1;
+    }
+
+    return 0;
 }
 
 /**
  * wrapper around calloc that fails in-place with an error
  */
 void *falloc( size_t num, size_t size ) {
-	void *result=NULL;
-	result=calloc( num, size );
-	if( NULL == result ) {
-		fail( errno, "Sorry.." );
-	}
-	return result;
+    void *result=NULL;
+    result=calloc( num, size );
+
+    if( NULL == result ) {
+        fail( errno, "Sorry.." );
+    }
+
+    return result;
 }
 
 /**
@@ -369,25 +420,28 @@ void *falloc( size_t num, size_t size ) {
  * remove lines from the start until it fits again
  */
 int scrollAdd( char *scroll, const char* line, const size_t len ) {
-	void *pos;
+    void *pos;
 
-	if( strlen( line ) > len ) {
-		fail( F_FAIL, "Adding too much text to scroll!" );
-	}
+    if( strlen( line ) > len ) {
+        fail( F_FAIL, "Adding too much text to scroll!" );
+    }
 
-	if( ( strlen( scroll ) + strlen( line ) ) < len ) {
-		strncat( scroll, line, len );
-		return 0;
-	}
+    if( ( strlen( scroll ) + strlen( line ) ) < len ) {
+        strncat( scroll, line, len );
+        return 0;
+    }
 
-	while( ( strlen( scroll ) + strlen( line ) ) >= len ) {
-		pos=strchr( scroll, '\n' );
-		if( NULL==pos ) {
-			fail( F_FAIL, "Scroll has one line with the length of %i?", len );
-		}
-		pos++;
-		memmove( scroll, pos, strlen( pos ) );
-	}
-	strncat( scroll, line, len );
-	return 1;
+    while( ( strlen( scroll ) + strlen( line ) ) >= len ) {
+        pos=strchr( scroll, '\n' );
+
+        if( NULL==pos ) {
+            fail( F_FAIL, "Scroll has one line with the length of %i?", len );
+        }
+
+        pos++;
+        memmove( scroll, pos, strlen( pos ) );
+    }
+
+    strncat( scroll, line, len );
+    return 1;
 }
