@@ -445,11 +445,11 @@ void *reader( void *cont ) {
                 order=1;
             }
             else {
-                progressLog( "No titles removed" );
+                progressLog( "No titles removed\n" );
             }
 
             if( 1 == order ) {
-                progressLog( "Restarting player.." );
+                progressLog( "Restarting player..\n" );
                 setProfile( control );
                 control->current = control->root;
             }

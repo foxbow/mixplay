@@ -54,6 +54,7 @@ struct entry_t *cleanTitles( struct entry_t *root ) {
         root->dbprev->dbnext=NULL;
 
         while( runner != NULL ) {
+        	activity("Cleaning");
             root=runner->dbnext;
             free( runner );
             runner=root;

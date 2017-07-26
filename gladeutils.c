@@ -256,6 +256,20 @@ static void setButtonLabel( GtkWidget *button, const char *text ) {
 }
 
 /**
+ * gather interesting stuff about a title, kind of a title.toString()
+ */
+static int infoLine( char *line, const struct entry_t *title, const int len ) {
+	return snprintf( line, len, "%s\nKey: %04i - Fav: %s\nplaycount: %i (%s)\nskipcount: %i (%s)\n",
+          title->path,
+          title->key,
+		  ONOFF( title->flags & MP_FAV ),
+		  title->playcount,
+		  ONOFF( ~( title->flags )&MP_CNTD ),
+          title->skipcount,
+          ONOFF( ~( title->flags )&MP_SKPD ) );
+}
+
+/**
  * This function is supposed to be called with gtk_add_thread_idle() to make update
  * work in multithreaded environments.
  */
@@ -291,25 +305,11 @@ static int g_updateUI( void *data ) {
                             control->current->title );
 
         if( mpcontrol->root->key != 0  ) {
-            snprintf( buff, MAXPATHLEN, "%s\nKey: %04i\nplaycount: %i\nskipcount: %i\nCount: %s - Skip: %s\n",
-                      mpcontrol->current->plprev->path,
-                      mpcontrol->current->plprev->key, mpcontrol->current->plprev->playcount,
-                      mpcontrol->current->plprev->skipcount, ONOFF( ~( mpcontrol->current->plprev->flags )&MP_CNTD ),
-                      ONOFF( ~( mpcontrol->current->plprev->flags )&MP_SKPD ) );
+        	infoLine( buff, mpcontrol->current->plprev, MAXPATHLEN );
             gtk_widget_set_tooltip_text( mpcontrol->widgets->button_prev, buff );
-
-            snprintf( buff, MAXPATHLEN, "%s\nKey: %04i\nplaycount: %i\nskipcount: %i\nCount: %s - Skip: %s\n",
-                      mpcontrol->current->path,
-                      mpcontrol->current->key, mpcontrol->current->playcount,
-                      mpcontrol->current->skipcount, ONOFF( ~( mpcontrol->current->flags )&MP_CNTD ),
-                      ONOFF( ~( mpcontrol->current->flags )&MP_SKPD ) );
+        	infoLine( buff, mpcontrol->current, MAXPATHLEN );
             gtk_widget_set_tooltip_text( mpcontrol->widgets->title_current, buff );
-
-            snprintf( buff, MAXPATHLEN, "%s\nKey: %04i\nplaycount: %i\nskipcount: %i\nCount: %s - Skip: %s\n",
-                      mpcontrol->current->plnext->path,
-                      mpcontrol->current->plnext->key, mpcontrol->current->plnext->playcount,
-                      mpcontrol->current->plnext->skipcount, ONOFF( ~( mpcontrol->current->plnext->flags )&MP_CNTD ),
-                      ONOFF( ~( mpcontrol->current->plnext->flags )&MP_SKPD ) );
+        	infoLine( buff, mpcontrol->current->plnext, MAXPATHLEN );
             gtk_widget_set_tooltip_text( mpcontrol->widgets->button_next, buff );
         }
         else {
