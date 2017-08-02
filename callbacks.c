@@ -33,13 +33,13 @@ void playnext( GtkButton *button, gpointer data ) {
  */
 void markfav( GtkButton *button, gpointer data ) {
     GtkWidget *dialog;
+    struct entry_t *title = mpcontrol->current;
     int reply;
     /*
      * Do not pause. This may mess up things, if the current title
      * changes while the requester is still open. Then the next title
      * will be marked. This is not ideal but better than having a pause
      * during play.
-     * @todo: make sure the correct title is marked.
      */
     dialog = gtk_message_dialog_new(
                  GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
@@ -47,8 +47,8 @@ void markfav( GtkButton *button, gpointer data ) {
                  GTK_MESSAGE_QUESTION,
                  GTK_BUTTONS_NONE,
                  "Mark as favourite\n%s\nAlbum: %s",
-                 mpcontrol->current->display,
-                 mpcontrol->current->album );
+                 title->display,
+                 title->album );
     gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
                             "T_itle",  mpc_favtitle,
                             "A_lbum",  mpc_favalbum,
@@ -58,8 +58,21 @@ void markfav( GtkButton *button, gpointer data ) {
     reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
     gtk_widget_destroy( dialog );
 
-    if( reply > 0 ) {
-        setCommand( mpcontrol, reply );
+    switch( reply ) {
+    case mpc_favtitle:
+        addToFile( mpcontrol->favname, title->display, "d=" );
+        title->flags|=MP_FAV;
+        break;
+
+    case mpc_favalbum:
+        addToFile( mpcontrol->favname, title->album, "l=" );
+        markFavourite( title, SL_ALBUM );
+        break;
+
+    case mpc_favartist:
+        addToFile( mpcontrol->favname, title->artist, "a=" );
+        markFavourite( title, SL_ARTIST );
+        break;
     }
 }
 
