@@ -47,37 +47,43 @@ void *setProfile( void *data ) {
     struct marklist_t *favourites=NULL;
     int num;
     int lastver;
+    int64_t active;
     struct mpcontrol_t *control=( struct mpcontrol_t * )data ;
 
-    if( control->playstream ) {
+    active=control->active;
+
+    if( active < 0 ) {
+    	active = -(active+1);
         cleanTitles( control->root );
 
-        if( control->active > control->streams ) {
-            fail( F_FAIL, "Stream #%i does no exist!", control->active );
+        if( active > control->streams ) {
+            fail( F_FAIL, "Stream #%i does no exist!", active );
         }
 
-        if( NULL == control->stream[control->active] ) {
-            fail( F_FAIL, "Stream #i is not set!", control->active );
+        if( NULL == control->stream[active] ) {
+            fail( F_FAIL, "Stream #i is not set!", active );
         }
 
-        control->root=insertTitle( NULL, control->stream[control->active] );
-        strncpy( control->root->title, control->sname[control->active], NAMELEN );
+        control->root=insertTitle( NULL, control->stream[active] );
+        strncpy( control->root->title, control->sname[active], NAMELEN );
         insertTitle( control->root, control->root->title );
         insertTitle( control->root, control->root->title );
         addToPL( control->root->dbnext, control->root );
 
-        printver( 1, "Play Stream %s\n%s", control->sname[control->active], control->stream[control->active] );
+        printver( 1, "Play Stream %s\n%s", control->sname[active], control->stream[active] );
     }
-    else {
-        if( control->active > control->profiles ) {
-            fail( F_FAIL, "Profile #%i does no exist!", control->active );
+    else if( active > 0 ){
+    	active=active-1;
+
+        if( active > control->profiles ) {
+            fail( F_FAIL, "Profile #%i does no exist!", active );
         }
 
-        if( NULL == control->profile[control->active] ) {
-            fail( F_FAIL, "Profile #%i is not set!", control->active );
+        if( NULL == control->profile[active] ) {
+            fail( F_FAIL, "Profile #%i is not set!", active );
         }
 
-        profile=control->profile[control->active];
+        profile=control->profile[active];
         snprintf( confdir, MAXPATHLEN, "%s/.mixplay", getenv( "HOME" ) );
 
         control->dnpname=falloc( MAXPATHLEN, sizeof( char ) );
@@ -127,6 +133,9 @@ void *setProfile( void *data ) {
         setCommand( control, mpc_start );
 
         printver( 1, "Profile set to %s.\n", profile );
+    }
+    else {
+    	fail( F_FAIL, "Neither profile nor stream set!" );
     }
 
     return NULL;
@@ -179,7 +188,7 @@ void *reader( void *cont ) {
     int intime=0;
     int fade=3;
 
-    printver( 2, "Reader running\n" );
+    printver( 2, "Reader started\n" );
 
     control=( struct mpcontrol_t * )cont;
 
@@ -518,6 +527,7 @@ void *reader( void *cont ) {
 
         case mpc_quit:
             control->status=mpc_quit;
+            gtk_main_quit();
             break;
 
         case mpc_profile:

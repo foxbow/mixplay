@@ -65,7 +65,7 @@ void fail( int error, const char* msg, ... ) {
     GtkWidget *dialog;
     GtkMessageType type = GTK_MESSAGE_ERROR;
 
-    // fail calls are considered mutex and should never ever stack!
+    // fail calls are considered mutex
     pthread_mutex_lock( &msglock );
 
     va_start( args, msg );
@@ -92,14 +92,15 @@ void fail( int error, const char* msg, ... ) {
     }
 
     gtk_dialog_run ( GTK_DIALOG ( dialog ) );
-    gtk_widget_destroy ( dialog );
-
+//    gtk_widget_destroy ( dialog );
+    // keep the mutex locked on FAIL so that no other requester will be opened while the app exits
     if( error != F_WARN ) {
-        mpcontrol->command=mpc_quit;
-        gtk_main_quit();
+        setCommand(mpcontrol, mpc_quit );
+//        gtk_main_quit();
     }
-
-    pthread_mutex_unlock( &msglock );
+    else {
+    	pthread_mutex_unlock( &msglock );
+    }
 
     return;
 }

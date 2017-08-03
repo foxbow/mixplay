@@ -50,7 +50,7 @@ void markfav( GtkButton *button, gpointer data ) {
                  title->display,
                  title->album );
     gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
-                            "T_itle",  mpc_favtitle,
+                            "_Title",  mpc_favtitle,
                             "A_lbum",  mpc_favalbum,
                             "_Artist", mpc_favartist,
                             "_Cancel", GTK_RESPONSE_CANCEL,
@@ -154,7 +154,7 @@ void playPause( GtkButton *button, gpointer data ) {
  */
 void destroy( GtkWidget *widget, gpointer   data ) {
     setCommand( mpcontrol, mpc_quit );
-    gtk_main_quit ();
+//    gtk_main_quit ();
 }
 
 /**
@@ -226,7 +226,7 @@ void infoStart( GtkButton *button, gpointer data ) {
 
     case 3:
         setCommand( mpcontrol, mpc_quit );
-        gtk_main_quit();
+//        gtk_main_quit();
         break;
     }
 }
@@ -294,7 +294,13 @@ void profileStart( GtkButton *button, gpointer data ) {
 
     switch( reply ) {
     case GTK_RESPONSE_OK:
-        fail( F_WARN, "Selected: %s\nNot yet supported", "somethugs" );
+    	if( mpcontrol->active == 0 ) {
+    		fail( F_WARN, "No profile active" );
+    	}
+    	else {
+    		fail( F_WARN, "Current profile: %s\nNot yet supported",
+    				mpcontrol->active < 0?mpcontrol->sname[-(mpcontrol->active+1)]:mpcontrol->profile[mpcontrol->active-1] );
+    	}
         break;
     }
 

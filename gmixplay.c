@@ -16,6 +16,27 @@
 struct mpcontrol_t *mpcontrol;
 
 /**
+ * writes the current configuration
+ */
+void writeConfig( struct mpcontrol_t *config ) {
+    char		conffile[MAXPATHLEN]; //  = "mixplay.conf";
+    GKeyFile	*keyfile;
+    GError		*error=NULL;
+
+    snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", getenv( "HOME" ) );
+    keyfile=g_key_file_new();
+
+    g_key_file_set_string( keyfile, "mixplay", "musicdir", config->musicdir );
+    g_key_file_set_string_list( keyfile, "mixplay", "profiles", ( const char* const* )config->profile, 1 );
+    g_key_file_set_int64( keyfile, "mixplay", "active", 1 );
+    g_key_file_save_to_file( keyfile, conffile, &error );
+
+    if( NULL != error ) {
+        fail( F_FAIL, "Could not write configuration!\n%s", error->message );
+    }
+}
+
+/**
  * load configuration file
  * if the file does not exist, create new configuration
  */
@@ -44,7 +65,6 @@ static void loadConfig( struct mpcontrol_t *config ) {
     g_key_file_load_from_file( keyfile, conffile, G_KEY_FILE_KEEP_COMMENTS, &error );
 
     if( NULL != error ) {
-
         if( config->debug ) {
             fail( F_WARN, "Could not load config from %s\n%s", conffile, error->message );
         }
@@ -66,56 +86,44 @@ static void loadConfig( struct mpcontrol_t *config ) {
         res = gtk_dialog_run( GTK_DIALOG ( dialog ) );
 
         if ( res == GTK_RESPONSE_ACCEPT ) {
-            config->musicdir = gtk_file_chooser_get_filename( GTK_FILE_CHOOSER( dialog ) );
-            g_key_file_set_string( keyfile, "mixplay", "musicdir", config->musicdir );
-            g_key_file_save_to_file( keyfile, conffile, &error );
-
-            if( NULL != error ) {
-                fail( F_FAIL, "Could not write configuration!\n%s", error->message );
-            }
-
+        	// Set minimum defaults to let mixplay work
+        	config->musicdir=falloc( MAXPATHLEN, sizeof( char ) );
+            strncpy( config->musicdir, gtk_file_chooser_get_filename( GTK_FILE_CHOOSER( dialog ) ), MAXPATHLEN );
             gtk_widget_destroy ( dialog );
+            config->profile=falloc( 1, sizeof( char * ) );
+            config->profile[0]=falloc( 8, sizeof( char ) );
+            strcpy( config->profile[0], "mixplay" );
+            config->active=1;
+            writeConfig( config );
+            return;
         }
         else {
             fail( F_FAIL, "No Music directory chosen!" );
         }
     }
 
+    // get music dir
     config->musicdir=g_key_file_get_string( keyfile, "mixplay", "musicdir", &error );
-
     if( NULL != error ) {
         fail( F_FAIL, "No music dir set in configuration!\n%s", error->message );
     }
 
+    // read list of profiles
     config->profile =g_key_file_get_string_list( keyfile, "mixplay", "profiles", &config->profiles, &error );
-
     if( NULL != error ) {
-        error=NULL;
-        config->profile=falloc( 1, sizeof( char * ) );
-        config->profile[0]=falloc( 8, sizeof( char ) );
-        strcpy( config->profile[0], "mixplay" );
-        config->active=0;
-        g_key_file_set_string_list( keyfile, "mixplay", "profiles", ( const char* const* )config->profile, 1 );
-        g_key_file_set_uint64( keyfile, "mixplay", "active", 0 );
-        g_key_file_save_to_file( keyfile, conffile, &error );
-
-        if( NULL != error ) {
-            fail( F_FAIL, "Could not write configuration!\n%s", error->message );
-        }
-    }
-    else {
-        config->active  =g_key_file_get_uint64( keyfile, "mixplay", "active", &error );
-
-        if( NULL != error ) {
-            fail( F_FAIL, "No active profile set!" );
-        }
+    	fail( F_FAIL, "No profiles set in config file!\n%s", error->message );
     }
 
+    // get active configuration
+	config->active  =g_key_file_get_uint64( keyfile, "mixplay", "active", &error );
+	if( NULL != error ) {
+		fail( F_FAIL, "No active profile set!\n%s", error->message );
+	}
+
+	// read streams if any are there
     config->stream=g_key_file_get_string_list( keyfile, "mixplay", "streams", &config->streams, &error );
-
     if( NULL == error ) {
         config->sname =g_key_file_get_string_list( keyfile, "mixplay", "snames", &config->streams, &error );
-
         if( NULL != error ) {
             fail( F_FAIL, "Streams set but no names!\n%s", error->message );
         }
@@ -211,6 +219,9 @@ int main( int argc, char **argv ) {
     pid_t		pid[2];
 
     mpcontrol=&control;
+
+    memset( mpcontrol, 0, sizeof( struct mpcontrol_t ) );
+
     muteVerbosity();
 
     /* Init GTK+ */

@@ -40,7 +40,7 @@ struct mpcontrol_t {
     MpData *widgets;			// all (accessible) widgets
     char *musicdir;				// path to the music
     gsize profiles;				// number of profiles
-    unsigned long active;		// active profile/stream
+    int64_t   active;		        // active >0 = profile / 0=none / <0 = stream
     char **profile;				// profile names
     gsize streams;				// number of streams
     char **stream;				// stream URLs
@@ -59,9 +59,9 @@ struct mpcontrol_t {
     mpcmd command;				// command to the player
     int status;					// status of the player/system
     pthread_t rtid;				// thread ID of the reader
-    char log[MP_LOGLEN];
-    int fullscreen;
-    int debug;
+    char log[MP_LOGLEN];		// debug log buffer
+    int fullscreen;				// run in fullscreen mode
+    int debug;					// debug level (like verbose but print in requester)
 };
 
 void setCommand( struct mpcontrol_t *control, mpcmd cmd );
