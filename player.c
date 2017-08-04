@@ -12,6 +12,32 @@
 pthread_mutex_t cmdlock=PTHREAD_MUTEX_INITIALIZER;
 
 /**
+ * writes the current configuration
+ */
+void writeConfig( struct mpcontrol_t *config ) {
+    char		conffile[MAXPATHLEN]; //  = "mixplay.conf";
+    GKeyFile	*keyfile;
+    GError		*error=NULL;
+
+    snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", getenv( "HOME" ) );
+    keyfile=g_key_file_new();
+
+    g_key_file_set_string( keyfile, "mixplay", "musicdir", config->musicdir );
+    g_key_file_set_string_list( keyfile, "mixplay", "profiles", ( const char* const* )config->profile, config->profiles );
+    if( config->streams > 0 ) {
+        g_key_file_set_string_list( keyfile, "mixplay", "streams", ( const char* const* )config->stream, config->streams );
+        g_key_file_set_string_list( keyfile, "mixplay", "snames", ( const char* const* )config->sname, config->streams );
+
+    }
+    g_key_file_set_int64( keyfile, "mixplay", "active", config->active );
+    g_key_file_save_to_file( keyfile, conffile, &error );
+
+    if( NULL != error ) {
+        fail( F_FAIL, "Could not write configuration!\n%s", error->message );
+    }
+}
+
+/**
  * implements command queue
  */
 void setCommand( struct mpcontrol_t *control, mpcmd cmd ) {

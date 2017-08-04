@@ -153,6 +153,7 @@ void playPause( GtkButton *button, gpointer data ) {
  * just sets the mpcontrol command
  */
 void destroy( GtkWidget *widget, gpointer   data ) {
+	writeConfig( mpcontrol );
     setCommand( mpcontrol, mpc_quit );
 }
 
@@ -232,6 +233,7 @@ void infoStart( GtkButton *button, gpointer data ) {
         break;
 
     case 3:
+    	writeConfig( mpcontrol );
         setCommand( mpcontrol, mpc_quit );
 //        gtk_main_quit();
         break;

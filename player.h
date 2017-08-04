@@ -64,6 +64,7 @@ struct mpcontrol_t {
     int debug;					// debug level (like verbose but print in requester)
 };
 
+void writeConfig( struct mpcontrol_t *config );
 void setCommand( struct mpcontrol_t *control, mpcmd cmd );
 void *reader( void *cont );
 void *setProfile( void *data );
