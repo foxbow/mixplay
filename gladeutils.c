@@ -92,13 +92,12 @@ void fail( int error, const char* msg, ... ) {
     }
 
     gtk_dialog_run ( GTK_DIALOG ( dialog ) );
-//    gtk_widget_destroy ( dialog );
     // keep the mutex locked on FAIL so that no other requester will be opened while the app exits
     if( error != F_WARN ) {
         setCommand(mpcontrol, mpc_quit );
-//        gtk_main_quit();
     }
     else {
+    	gtk_widget_destroy ( dialog );
     	pthread_mutex_unlock( &msglock );
     }
 
@@ -315,6 +314,7 @@ static int g_updateUI( void *data ) {
         }
         else {
             gtk_widget_set_tooltip_text( mpcontrol->widgets->title_current, mpcontrol->current->path );
+            gtk_widget_set_tooltip_text( mpcontrol->widgets->button_prev, NULL );
         }
 
         gtk_widget_set_sensitive( control->widgets->title_current, ( control->status == mpc_play ) );

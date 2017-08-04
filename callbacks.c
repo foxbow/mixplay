@@ -154,7 +154,6 @@ void playPause( GtkButton *button, gpointer data ) {
  */
 void destroy( GtkWidget *widget, gpointer   data ) {
     setCommand( mpcontrol, mpc_quit );
-//    gtk_main_quit ();
 }
 
 /**
@@ -171,11 +170,19 @@ void infoStart( GtkButton *button, gpointer data ) {
                  GTK_BUTTONS_NONE,
                  "Information" );
 
-    gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
-                            "Application",  1,
-                            "Database",  2,
-                            "Quit!", 3,
-                            NULL );
+    if( mpcontrol->playstream == 0 ) {
+		gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
+								"Application",  1,
+								"Database",  2,
+								"Quit!", 3,
+								NULL );
+    }
+    else {
+		gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
+								"Application",  1,
+								"Quit!", 3,
+								NULL );
+    }
 
     reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
     gtk_widget_destroy( dialog );
@@ -232,12 +239,37 @@ void infoStart( GtkButton *button, gpointer data ) {
 }
 
 /**
+ * set the active profile/stream when a list item is selected
+ * This does *not* change the current state but will prepare any calls to
+ * setProfile()
+ */
+static void activeSelect_cb(GtkTreeSelection *selection, gpointer data ) {
+    GtkTreeIter iter;
+    GtkTreeModel *model;
+    int active;
+
+    if (gtk_tree_selection_get_selected (selection, &model, &iter))
+    {
+            gtk_tree_model_get( model, &iter, 2, &active, -1);
+            mpcontrol->active=active;
+    }
+}
+
+/**
  * invoked by the 'profile' button
  */
 void profileStart( GtkButton *button, gpointer data ) {
     GtkWidget *dialog;
     GtkWidget *msgArea;
-    int reply;
+    GtkWidget *list;
+    GtkListStore *store;
+    GtkTreeIter  iter;
+    GtkCellRenderer *renderer;
+    GtkTreeViewColumn *column;
+    GtkTreeSelection *tselect;
+
+    int i, reply, profile;
+    profile=mpcontrol->active;
 
     dialog = gtk_message_dialog_new(
                  GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
@@ -252,42 +284,30 @@ void profileStart( GtkButton *button, gpointer data ) {
 
     msgArea=gtk_message_dialog_get_message_area( GTK_MESSAGE_DIALOG( dialog ) );
 
-    /**
-      	GtkTreeIter iter0, iter1;
-    	GtkTreeStore *store;
-    	GtkCellRenderer *renderer;
-    	GtkTreeViewColumn *column;
-    	GtkWidget *tree;
-    	int i;
+    store = gtk_list_store_new( 3, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT );
 
-    	store = gtk_tree_store_new ( 1, G_TYPE_STRING );
-    	gtk_tree_store_append (store, &iter0, NULL);
+	for( i=0; i < mpcontrol->profiles; i++ ) {
+		gtk_list_store_insert_with_values (store, &iter, -1, 0, "P", 1, mpcontrol->profile[i], 2, i+1, -1 );
+	}
+	for( i=0; i < mpcontrol->streams; i++ ) {
+		gtk_list_store_insert_with_values (store, &iter, -1, 0, "C", 1, mpcontrol->sname[i], 2, -(i+1), -1 );
+	}
 
-    	gtk_tree_store_set (store, &iter0, 0, "Profile", -1 );
-    	gtk_tree_store_append ( store, &iter1, &iter0 );
-    	for( i=0; i < mpcontrol->profiles; i++ ) {
-    		gtk_tree_store_set (store, &iter1, 0, mpcontrol->profile[i], -1 );
-    	}
+	list=gtk_tree_view_new_with_model( GTK_TREE_MODEL( store ) );
+	g_object_unref( G_OBJECT(store));
 
-    	gtk_tree_store_set (store, &iter0, 0, "Channels", -1 );
-    	gtk_tree_store_append ( store, &iter1, &iter0 );
-    	for( i=0; i < mpcontrol->streams; i++ ) {
-    		gtk_tree_store_set (store, &iter1, 0, mpcontrol->sname[i], -1 );
-    	}
+	tselect = gtk_tree_view_get_selection( GTK_TREE_VIEW( list ) );
+	gtk_tree_selection_set_mode( tselect, GTK_SELECTION_BROWSE );
+	g_signal_connect( G_OBJECT( tselect ), "changed", G_CALLBACK( activeSelect_cb), NULL );
 
-    	tree=gtk_tree_view_new_with_model (GTK_TREE_MODEL (store));
-    	g_object_unref (G_OBJECT (store));
+	renderer = gtk_cell_renderer_text_new ();
+	column = gtk_tree_view_column_new_with_attributes ("Type", renderer, "text", 0, NULL);
+	gtk_tree_view_append_column (GTK_TREE_VIEW (list), column);
+	column = gtk_tree_view_column_new_with_attributes ("Name", renderer, "text", 1, NULL);
+	gtk_tree_view_append_column (GTK_TREE_VIEW (list), column);
 
-    	renderer = gtk_cell_renderer_text_new ();
-    	column = gtk_tree_view_column_new_with_attributes ("Name",
-    	                                                   renderer,
-    	                                                   "text", 0,
-    	                                                   NULL);
-    	gtk_tree_view_append_column (GTK_TREE_VIEW (tree), column);
-
-    	gtk_container_add( GTK_CONTAINER(msgArea), tree );
-    	gtk_widget_show_all(  dialog );
-    **/
+	gtk_container_add( GTK_CONTAINER(msgArea), list );
+	gtk_widget_show_all(  dialog );
 
     reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
     gtk_widget_destroy( dialog );
@@ -297,9 +317,8 @@ void profileStart( GtkButton *button, gpointer data ) {
     	if( mpcontrol->active == 0 ) {
     		fail( F_WARN, "No profile active" );
     	}
-    	else {
-    		fail( F_WARN, "Current profile: %s\nNot yet supported",
-    				mpcontrol->active < 0?mpcontrol->sname[-(mpcontrol->active+1)]:mpcontrol->profile[mpcontrol->active-1] );
+    	else if( mpcontrol->active != profile ){
+    		setCommand( mpcontrol, mpc_profile );
     	}
         break;
     }

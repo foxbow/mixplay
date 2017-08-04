@@ -610,10 +610,6 @@ struct entry_t *insertTitle( struct entry_t *base, const char *path ) {
 
     root = ( struct entry_t* ) falloc( 1, sizeof( struct entry_t ) );
 
-    if ( NULL == root ) {
-        fail( errno, "%s: Could not alloc root", __func__ );
-    }
-
     if( NULL == base ) {
         base=root;
         base->dbnext=base;

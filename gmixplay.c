@@ -48,6 +48,7 @@ static void loadConfig( struct mpcontrol_t *config ) {
     GtkWidget 	*dialog;
     GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER;
     gint 		res;
+    gsize		snum;
 
     // load default configuration
     snprintf( confdir, MAXPATHLEN, "%s/.mixplay", getenv( "HOME" ) );
@@ -123,9 +124,13 @@ static void loadConfig( struct mpcontrol_t *config ) {
 	// read streams if any are there
     config->stream=g_key_file_get_string_list( keyfile, "mixplay", "streams", &config->streams, &error );
     if( NULL == error ) {
+    	snum=config->streams;
         config->sname =g_key_file_get_string_list( keyfile, "mixplay", "snames", &config->streams, &error );
         if( NULL != error ) {
             fail( F_FAIL, "Streams set but no names!\n%s", error->message );
+        }
+        if( snum != config->streams ) {
+        	fail( F_FAIL, "Read %i streams but %i names!", snum, config->streams );
         }
     }
 
@@ -144,7 +149,6 @@ static int initAll( void *data ) {
 
     control->current=NULL;
     control->log[0]='\0';
-    control->stream=0;
     strcpy( control->playtime, "00:00" );
     strcpy( control->remtime, "00:00" );
     control->percent=0;
@@ -163,7 +167,6 @@ static int initAll( void *data ) {
     if( control->debug ) {
         progressEnd( "Initialization done." );
     }
-    control->log[0]=0;
     return 0;
 }
 
