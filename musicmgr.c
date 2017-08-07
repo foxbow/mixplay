@@ -524,10 +524,11 @@ static struct entry_t *plRemove( struct entry_t *entry ) {
         fail( F_FAIL, "plRemove() called with NULL!" );
     }
 
+    printver( 2, "Removed: %s\n", entry->display );
     entry->flags |= MP_DNP;
 
     if( entry->plnext != entry ) {
-        next=entry->plprev;
+        next=entry->plnext;
         entry->plprev->plnext=entry->plnext;
         entry->plnext->plprev=entry->plprev;
         entry->plprev=entry;
@@ -535,6 +536,23 @@ static struct entry_t *plRemove( struct entry_t *entry ) {
     }
 
     return next;
+}
+
+static struct entry_t *removeByPatLine( struct entry_t *base, const char *pattern ) {
+    struct entry_t *runner=base;
+    runner=base->plnext;
+
+    printver( 1, "Rule: %s\n", pattern );
+    while( runner != base ) {
+        if( matchTitle( runner, pattern ) ) {
+            runner=plRemove( runner );
+        }
+        else {
+            runner=runner->plnext;
+        }
+    }
+
+    return plRemove( base );
 }
 
 /**
@@ -545,61 +563,40 @@ static struct entry_t *plRemove( struct entry_t *entry ) {
  * item will be returned. If entry was the last item in the list NULL will be
  * returned.
  */
-struct entry_t *removeFromPL( struct entry_t *entry, const unsigned int range ) {
-    struct entry_t *runner=entry;
-    struct entry_t *retval=entry;
-    char pattern[NAMELEN+2];
+struct entry_t *removeByPattern( struct entry_t *entry, const char *pat ) {
+	char pattern[NAMELEN+2];
+	strncpy( pattern, pat, 2 );
+	switch( pattern[0] ){
 
-    pattern[1]='*';
-
-    switch( range ) {
-    case SL_ALBUM:
-        pattern[0]='l';
+	case 'l':
         strlncpy( &pattern[2], entry->album, NAMELEN );
         break;
 
-    case SL_ARTIST:
-        pattern[0]='a';
+    case 'a':
         strlncpy( &pattern[2], entry->artist, NAMELEN );
         break;
 
-    case SL_GENRE:
-        pattern[0]='g';
+    case 'g':
         strlncpy( &pattern[2], entry->genre, NAMELEN );
         break;
 
-    case SL_TITLE:
-        pattern[0]='t';
+    case 't':
         strlncpy( &pattern[2], entry->title, NAMELEN );
         break;
 
-    case SL_PATH:
-        return plRemove( entry );
+    case 'p':
+        strlncpy( &pattern[2], entry->path, NAMELEN );
         break;
 
-    case SL_DISPLAY:
-        pattern[0]='d';
+    case 'd':
         strlncpy( &pattern[2], entry->display, NAMELEN );
         break;
 
     default:
-        fail( F_FAIL, "Unknown range ID: %i!", range );
-    }
+    	fail( F_FAIL, "Unknown pattern %s!", pat );
+	}
 
-    runner=entry->plnext;
-
-    while( runner != entry ) {
-        if( matchTitle( runner, pattern ) ) {
-            runner=plRemove( runner );
-        }
-        else {
-            runner=runner->plnext;
-        }
-    }
-
-    retval=plRemove( entry );
-
-    return retval;
+	return removeByPatLine( entry, pattern );
 }
 
 /**

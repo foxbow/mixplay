@@ -57,7 +57,7 @@ struct entry_t *addToPL( struct entry_t *title, struct entry_t *target );
 struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedir );
 struct entry_t *shuffleTitles( struct entry_t *base );
 struct entry_t *rewindTitles( struct entry_t *base );
-struct entry_t *removeFromPL( struct entry_t *current, const unsigned int range );
+struct entry_t *removeByPattern( struct entry_t *base, const char *pat );
 struct entry_t *loadPlaylist( const char *path );
 struct entry_t *insertTitle( struct entry_t *base, const char *path );
 struct entry_t *skipTitles( struct entry_t *current, int num, const int global );

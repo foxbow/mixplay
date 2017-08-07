@@ -174,6 +174,7 @@ static void buildUI( struct mpcontrol_t * control ) {
     GW( played );
     GW( remain );
     GW( progress );
+    GW( button_profile );
 #undef GW
     control->widgets->mp_popup = NULL;
 

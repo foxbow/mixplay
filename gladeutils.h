@@ -30,6 +30,7 @@ struct _MpData {
     GtkWidget *played;
     GtkWidget *remain;
     GtkWidget *progress;
+    GtkWidget *button_profile;
     // popup elements
     GtkWidget *mp_popup;
 };

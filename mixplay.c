@@ -783,7 +783,7 @@ int main( int argc, char **argv ) {
 
                         case 'b':
                             addToFile( dnpname, current->display, "d=" );
-                            current=removeFromPL( current, SL_TITLE );
+                            current=removeByPattern(current,  "d=");
                             order=1;
                             write( p_command[fdset][1], "STOP\n", 6 );
                             break;
@@ -791,7 +791,7 @@ int main( int argc, char **argv ) {
                         case 'B':
                             addToFile( dnpname, current->album, "l=" );
                             popUp( 2, "Added %s to the DNP list\n", current->album );
-                            current=removeFromPL( current, SL_ARTIST );
+                            current=removeByPattern(current, "l=" );
                             order=1;
                             write( p_command[fdset][1], "STOP\n", 6 );
                             break;

@@ -335,6 +335,7 @@ static int g_updateUI( void *data ) {
         }
 
         gtk_widget_set_sensitive( control->widgets->button_fav, ( !( control->current->flags & MP_FAV ) ) );
+        setButtonLabel( control->widgets->button_profile, (control->active < 0)?control->sname[-control->active-1]:control->profile[control->active-1] );
 
         gtk_window_set_title ( GTK_WINDOW( control->widgets->mixplay_main ),
                                control->current->display );
