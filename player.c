@@ -55,7 +55,7 @@ static void sendplay( int fdset, struct mpcontrol_t *control ) {
     strncat( line, control->current->path, MAXPATHLEN );
     strncat( line, "\n", MAXPATHLEN );
 
-    if ( write( control->p_command[fdset][1], line, MAXPATHLEN ) != strlen( line ) ) {
+    if ( write( control->p_command[fdset][1], line, MAXPATHLEN ) < strlen( line ) ) {
         fail( F_FAIL, "Could not write\n%s", line );
     }
 
