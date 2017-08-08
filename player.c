@@ -30,6 +30,7 @@ void writeConfig( struct mpcontrol_t *config ) {
 
     }
     g_key_file_set_int64( keyfile, "mixplay", "active", config->active );
+    g_key_file_set_int64( keyfile, "mixplay", "skipdnp", config->skipdnp );
     g_key_file_save_to_file( keyfile, conffile, &error );
 
     if( NULL != error ) {
@@ -148,7 +149,9 @@ void *setProfile( void *data ) {
             setVerbosity( lastver );
         }
 
-        DNPSkip( control->root, 3 );
+        if( control->skipdnp ) {
+        	DNPSkip( control->root, control->skipdnp );
+        }
         applyDNPlist( control->root, dnplist );
         applyFavourites( control->root, favourites );
         control->root=shuffleTitles( control->root );
@@ -484,6 +487,18 @@ void *reader( void *cont ) {
             order=0;
             write( control->p_command[fdset][1], "STOP\n", 6 );
             progressStart( "Database Cleanup" );
+
+            progressLog( "Checking for deleted titles..\n" );
+            i=dbCheckExist( control->dbname );
+
+            if( i > 0 ) {
+                progressLog( "Removed %i titles\n", i );
+                order=1;
+            }
+            else {
+                progressLog( "No titles removed\n" );
+            }
+
             progressLog( "Checking for new titles..\n" );
             i=dbAddTitles( control->dbname, control->musicdir );
 
@@ -493,17 +508,6 @@ void *reader( void *cont ) {
             }
             else {
                 progressLog( "No titles to be added\n" );
-            }
-
-            progressLog( "Checking for deleted titles..\n" );
-            i=dbCheckExist( control->dbname );
-
-            if( i > 0 ) {
-                progressLog( "Removed $i titles\n", i );
-                order=1;
-            }
-            else {
-                progressLog( "No titles removed\n" );
             }
 
             if( 1 == order ) {

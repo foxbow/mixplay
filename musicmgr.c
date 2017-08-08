@@ -528,7 +528,7 @@ static struct entry_t *plRemove( struct entry_t *entry ) {
     entry->flags |= MP_DNP;
 
     if( entry->plnext != entry ) {
-        next=entry->plnext;
+        next=entry->plprev;
         entry->plprev->plnext=entry->plnext;
         entry->plnext->plprev=entry->plprev;
         entry->plprev=entry;
@@ -540,7 +540,7 @@ static struct entry_t *plRemove( struct entry_t *entry ) {
 
 static struct entry_t *removeByPatLine( struct entry_t *base, const char *pattern ) {
     struct entry_t *runner=base;
-    runner=base->plnext;
+    runner=base->plprev;
 
     printver( 1, "Rule: %s\n", pattern );
     while( runner != base ) {
@@ -548,7 +548,7 @@ static struct entry_t *removeByPatLine( struct entry_t *base, const char *patter
             runner=plRemove( runner );
         }
         else {
-            runner=runner->plnext;
+            runner=runner->plprev;
         }
     }
 

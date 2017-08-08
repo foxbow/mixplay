@@ -74,6 +74,7 @@ static void loadConfig( struct mpcontrol_t *config ) {
             config->profile[0]=falloc( 8, sizeof( char ) );
             strcpy( config->profile[0], "mixplay" );
             config->active=1;
+            config->skipdnp=3;
             writeConfig( config );
             return;
         }
@@ -99,6 +100,8 @@ static void loadConfig( struct mpcontrol_t *config ) {
 	if( NULL != error ) {
 		fail( F_FAIL, "No active profile set!\n%s", error->message );
 	}
+
+	config->skipdnp  =g_key_file_get_uint64( keyfile, "mixplay", "skipdnp", &error );
 
 	// read streams if any are there
     config->stream=g_key_file_get_string_list( keyfile, "mixplay", "streams", &config->streams, &error );

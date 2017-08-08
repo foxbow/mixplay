@@ -97,6 +97,7 @@ void playPause( GtkButton *button, gpointer data ) {
                                 "Play",  mpc_play,
                                 "Replay",  mpc_repl,
                                 "DNP",  mpc_dnptitle,
+								"Quit", mpc_quit,
                                 NULL );
         reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
         gtk_widget_destroy( dialog );
@@ -134,6 +135,10 @@ void playPause( GtkButton *button, gpointer data ) {
             }
 
             break;
+
+        case mpc_quit:
+        	setCommand(mpcontrol, mpc_quit );
+        	break;
 
         case mpc_repl:
             setCommand( mpcontrol, mpc_repl );
@@ -179,10 +184,17 @@ void infoStart( GtkButton *button, gpointer data ) {
 								NULL );
     }
     else {
-		gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
-								"Application",  1,
-								"Quit!", 3,
-								NULL );
+        gtk_show_about_dialog ( GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+                                "program-name", "gmixplay",
+                                "copyright", "2017 B.Weber",
+                                "license-type", GTK_LICENSE_MIT_X11,
+                                "version", VERSION,
+                                "comments", "GTK based front-end to mpg123, planned to replace my old "
+                                "squeezebox/squeezeboxserver and act as a radio replacement to play "
+                                "background music but stay sleek enough to run on a mini ARM board.",
+                                "website", "https://github.com/foxbow/mixplay",
+                                NULL, NULL );
+        return;
     }
 
     reply=gtk_dialog_run( GTK_DIALOG( dialog ) );

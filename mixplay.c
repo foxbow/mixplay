@@ -148,7 +148,7 @@ int main( int argc, char **argv ) {
     char dbname[MAXPATHLEN]  = "mixplay.db";
     char dnpname[MAXPATHLEN] = "mixplay.dnp";
     char favname[MAXPATHLEN] = "mixplay.fav";
-    char config[MAXPATHLEN]  = "mixplay.cnf";
+    char config[MAXPATHLEN]  = "mixplay.conf";
     int key;
     char c;
     char *b;
@@ -194,28 +194,16 @@ int main( int argc, char **argv ) {
             i=0;
             fgets( line, MAXPATHLEN, fp );
 
-            if( strlen( line ) > 2 ) {
-                switch( line[0] ) {
-                case 'd':
-                    strip( dbname, line+1, MAXPATHLEN );
-                    break;
-
-                case 's':
-                    strip( basedir, line+1, MAXPATHLEN );
-                    break;
-
-                case '#':
-                    break;
-
-                default:
-                    FAIL( F_FAIL, "Config error: %s", line );
-                    break;
-                }
+            if( strstr( line, "musicdir=" ) == line ) {
+            	strip( basedir, line+9, MAXPATHLEN );
             }
         }
         while( !feof( fp ) );
 
         hascfg=1;
+    }
+    else {
+    	printver(1, "Could not open %s\n", config );
     }
 
     // if no basedir has been set, use the current directory as default
