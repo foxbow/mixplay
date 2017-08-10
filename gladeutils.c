@@ -53,6 +53,18 @@ void activity( const char *msg, ... ) {
     _ftrpos=( _ftrpos+1 )%400;
 }
 
+static int g_warn( void *line ) {
+    GtkWidget *dialog;
+
+    dialog = gtk_message_dialog_new ( GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+                                      GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_WARNING, GTK_BUTTONS_CLOSE,
+                                      "%s", (char *)line );
+    gtk_dialog_run ( GTK_DIALOG ( dialog ) );
+	gtk_widget_destroy ( dialog );
+	pthread_mutex_unlock( &msglock );
+	return 0;
+}
+
 /*
  * Show errormessage quit
  * msg - Message to print
@@ -63,7 +75,6 @@ void fail( int error, const char* msg, ... ) {
     char line[1024];
 
     GtkWidget *dialog;
-    GtkMessageType type = GTK_MESSAGE_ERROR;
 
     // fail calls are considered mutex
     pthread_mutex_lock( &msglock );
@@ -73,32 +84,19 @@ void fail( int error, const char* msg, ... ) {
     va_end( args );
 
     if( F_WARN == error ) {
-        type=GTK_MESSAGE_WARNING;
         fprintf( stderr, "WARN: %s\n", line );
+        gdk_threads_add_idle( g_warn, line );
+        return;
     }
     else {
         fprintf( stderr, "FAIL: %s\n", line );
-    }
-
-    if( error > 0 ) {
         dialog = gtk_message_dialog_new ( GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
-                                          GTK_DIALOG_DESTROY_WITH_PARENT, type, GTK_BUTTONS_CLOSE,
+                                          GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
                                           "%s\nERROR: %i - %s", line, abs( error ), strerror( abs( error ) ) );
-    }
-    else {
-        dialog = gtk_message_dialog_new ( GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
-                                          GTK_DIALOG_DESTROY_WITH_PARENT, type, GTK_BUTTONS_CLOSE,
-                                          "%s", line );
-    }
 
-    gtk_dialog_run ( GTK_DIALOG ( dialog ) );
-    // keep the mutex locked on FAIL so that no other requester will be opened while the app exits
-    if( error != F_WARN ) {
+        gtk_dialog_run ( GTK_DIALOG ( dialog ) );
+        // keep the mutex locked on FAIL so that no other requester will be opened while the app exits
         setCommand(mpcontrol, mpc_quit );
-    }
-    else {
-    	gtk_widget_destroy ( dialog );
-    	pthread_mutex_unlock( &msglock );
     }
 
     return;

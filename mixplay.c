@@ -40,7 +40,7 @@
 static void usage( char *progname ) {
     printf( "%s-%s - console frontend to mpg123\n", progname, VERSION );
     printf( "Usage: %s [-u <user>] [-s <key>|-S] [-p <file>] [-m] [-r] "
-            "[-v] [-V] [-h] [-C] [-A] [-D] [-T] [-F] [-X] "
+            "[-v] [-V] [-h] [-C] [-A] [-D] [-T] [-F] [-X] [-N]"
             "[-l <skip>] [path|URL]\n", progname );
     printf( "-u <user>  : user for DNP and favourites [mixplay]\n" );
     printf( "-s <term>  : add search term (can be used multiple times)\n" );
@@ -58,6 +58,7 @@ static void usage( char *progname ) {
     printf( "-C         : clear database and add titles anew *\n" );
     printf( "-A         : add new titles to the database *\n" );
     printf( "-D         : delete removed titles from the database *\n" );
+    printf( "-N         : run a namecheck on the database *\n" );
     printf( "-F         : disable crossfading between songs\n" );
     printf( "-X         : print some database statistics*\n" );
     printf( "[path|URL] : path to the music files [.]\n" );
@@ -212,7 +213,7 @@ int main( int argc, char **argv ) {
     }
 
     // parse command line options
-    while ( ( c = getopt( argc, argv, "ACDhl:mp:Pq:Qrs:Su:vFVX" ) ) != -1 ) {
+    while ( ( c = getopt( argc, argv, "ACDhl:mNp:Pq:Qrs:Su:vFVX" ) ) != -1 ) {
 
         switch ( c ) {
         case 'v': // pretty useless in normal use
@@ -295,6 +296,11 @@ int main( int argc, char **argv ) {
         case 'D':
             incVerbosity();
             scan|=4;
+            break;
+
+        case 'N':
+            incVerbosity();
+            scan|=8;
             break;
 
         case 'l':
@@ -457,6 +463,12 @@ int main( int argc, char **argv ) {
 
         if( scan & 2 ) {
             dbAddTitles( dbname, basedir );
+        }
+
+        if( scan & 8 ) {
+        	if( ( dbNameCheck( dbname ) > 0 ) && !(scan & 4) ) {
+        		fail( F_WARN, "Database needs to be cleaned (-D)!\n" );
+        	}
         }
 
         if( scan & 4 ) {

@@ -324,8 +324,6 @@ int main( int argc, char **argv ) {
             close( control.p_status[i][0] );
             close( control.p_status[i][1] );
             // Start mpg123 in Remote mode
-            // execlp("mpg123", "mpg123", "-R", "2>/dev/null", NULL);
-            // execlp("mpg123", "mpg123", "-R", "--remote-err", NULL); // breaks the reply parsing!
             execlp( "mpg123", "mpg123", "-R", "2> &1", NULL );
             fail( errno, "Could not exec mpg123" );
         }

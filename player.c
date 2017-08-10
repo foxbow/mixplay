@@ -27,7 +27,6 @@ void writeConfig( struct mpcontrol_t *config ) {
     if( config->streams > 0 ) {
         g_key_file_set_string_list( keyfile, "mixplay", "streams", ( const char* const* )config->stream, config->streams );
         g_key_file_set_string_list( keyfile, "mixplay", "snames", ( const char* const* )config->sname, config->streams );
-
     }
     g_key_file_set_int64( keyfile, "mixplay", "active", config->active );
     g_key_file_set_int64( keyfile, "mixplay", "skipdnp", config->skipdnp );
@@ -487,6 +486,17 @@ void *reader( void *cont ) {
             order=0;
             write( control->p_command[fdset][1], "STOP\n", 6 );
             progressStart( "Database Cleanup" );
+
+            progressLog( "Checking for doubles..\n" );
+            i=dbNameCheck( control->dbname );
+
+            if( i > 0 ) {
+            	progressLog( "Deleted %i titles\n", i );
+            	order=1;
+            }
+            else {
+            	progressLog( "No titles deleted\n" );
+            }
 
             progressLog( "Checking for deleted titles..\n" );
             i=dbCheckExist( control->dbname );

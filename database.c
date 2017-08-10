@@ -369,6 +369,137 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 }
 
 /**
+ * tests two strings on equality
+ */
+static int streql( const char *str1, const char *str2 ) {
+	if( strlen( str1 ) != strlen( str2 ) ) return 0;
+	if( NULL == strstr( str1, str2 ) ) return 0;
+	return -1;
+}
+
+static int checkPath( struct entry_t *entry, int range ) {
+	char	path[MAXPATHLEN];
+	char	check[NAMELEN];
+	char *pos;
+
+	strlncpy( path, entry->path, MAXPATHLEN );
+	pos=strrchr( path, '/' );
+	if( NULL != pos ) {
+		*pos=0;
+	}
+
+	switch( range ) {
+	case SL_ARTIST:
+		strlncpy( check,  entry->artist, NAMELEN );
+		break;
+	case SL_ALBUM:
+		strlncpy( check,  entry->artist, NAMELEN );
+		break;
+	default:
+		fail( F_FAIL, "checkPath() range %i not implemented!\n", range );
+	}
+	return( strstr( path, check ) != NULL );
+}
+
+
+int dbNameCheck( const char *dbname ) {
+	struct entry_t	*root;
+	struct entry_t	*currentEntry;
+	struct entry_t	*runner;
+	int				count=0;
+    FILE 			*fp;
+    int				match;
+
+    fp=fopen( "rmlist.sh", "w" );
+	fprintf( fp, "#!/bin/bash\n" );
+
+    if( NULL == fp ) {
+        fail( errno, "Could not open rmlist.txt for writing " );
+    }
+
+    root=dbGetMusic( dbname );
+
+	currentEntry=root;
+	while( currentEntry->dbnext != root ) {
+		activity("Namechecking - %i", count );
+		if( !(currentEntry->flags & MP_MARK) ) {
+			runner=currentEntry->dbnext;
+			do {
+				if( !(runner->flags & MP_MARK ) ) {
+					if( streql( runner->display, currentEntry->display ) ) {
+						match=0;
+						if( checkPath( runner, SL_ARTIST ) ) {
+							match|=1;
+						}
+						if ( checkPath( runner, SL_ALBUM ) ){
+							match|=2;
+						}
+						if( checkPath( currentEntry, SL_ARTIST ) ){
+							match|=4;
+						}
+						if( checkPath( currentEntry, SL_ALBUM ) ){
+							match|=8;
+						}
+
+						switch( match ) {
+						case  1: // 0001
+						case  2: // 0010
+						case  3: // 0011
+						case  7: // 0111
+						case 11: // 1011
+							unlink( currentEntry->path );
+							printver( 1, "removed %s\n", currentEntry->path );
+							runner->flags |= MP_MARK;
+							count++;
+							break;
+						case  4: // 0100
+						case  8: // 1000
+						case 12: // 1100
+						case 13: // 1101
+						case 14: // 1110
+							unlink( runner->path );
+							printver( 1, "removed %s\n", runner->path );
+							currentEntry->flags |= MP_MARK;
+							count++;
+							break;
+						case  0: // 0000
+						case  5: // 0101
+						case  6: // 0110
+						case  9: // 1001
+						case 10: // 1010
+							fprintf( fp, "## %i\n", match );
+							fprintf( fp, "#rm \"%s\"\n", currentEntry->path );
+							fprintf( fp, "#rm \"%s\"\n\n", runner->path );
+							runner->flags |= MP_MARK; // make sure only one of the doublets is used for future checkings
+							break;
+						case 15: // 1111
+							// both titles are fine!
+							break;
+						default:
+							fail( F_FAIL, "Incorrect match: %i\n", match );
+						}
+					}
+				}
+				if( currentEntry->flags & MP_MARK ) {
+					runner=root;
+				}
+				else {
+					runner=runner->dbnext;
+				}
+			} while( runner != root );
+		}
+		currentEntry=currentEntry->dbnext;
+	}
+	fprintf( fp, "\necho Remember to clean the database!\n\n" );
+
+    fclose( fp );
+
+    printver(1, "Marked %i titles as removable\n", count );
+
+	return count;
+}
+
+/**
  * closes the database file
  */
 void dbClose( int db ) {

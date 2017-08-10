@@ -30,6 +30,8 @@ int dbCheckExist( const char *dbname );
 int dbAddTitles( const char *dbname, char *basedir );
 void dbClose( int db );
 void dbBackup( const char *dbname );
+int dbNameCheck( const char *dbname );
+
 // void dbDump( const char *dbname, struct entry_t *root );
 
 #endif /* DATABASE_H_ */
