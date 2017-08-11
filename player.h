@@ -28,7 +28,8 @@ enum mpcmd_t {
     mpc_dnptitle,
     mpc_dnpartist,
     mpc_dnpalbum,
-    mpc_dnpgenre
+    mpc_dnpgenre,
+	mpc_doublets,
 };
 
 typedef enum mpcmd_t mpcmd;

@@ -180,25 +180,16 @@ void infoStart( GtkButton *button, gpointer data ) {
 		gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
 								"Application",  1,
 								"Database",  2,
-								"Quit!", 3,
+								"Clean up database", mpc_dbclean,
+								"Clean up filesystem", mpc_doublets,
+								"Quit!", mpc_quit,
 								NULL );
+	    reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
+	    gtk_widget_destroy( dialog );
     }
     else {
-        gtk_show_about_dialog ( GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
-                                "program-name", "gmixplay",
-                                "copyright", "2017 B.Weber",
-                                "license-type", GTK_LICENSE_MIT_X11,
-                                "version", VERSION,
-                                "comments", "GTK based front-end to mpg123, planned to replace my old "
-                                "squeezebox/squeezeboxserver and act as a radio replacement to play "
-                                "background music but stay sleek enough to run on a mini ARM board.",
-                                "website", "https://github.com/foxbow/mixplay",
-                                NULL, NULL );
-        return;
+    	reply=1;
     }
-
-    reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
-    gtk_widget_destroy( dialog );
 
     switch( reply ) {
     case 1:
@@ -215,40 +206,30 @@ void infoStart( GtkButton *button, gpointer data ) {
         break;
 
     case 2:
+    	progressStart( "Database Info" );
+    	progressLog( "Music dir: %s\n", mpcontrol->musicdir );
+    	dumpInfo( mpcontrol->root, -1 );
+    	progressEnd( "End Database info." );
+    	break;
+
+    case mpc_quit:
+    	writeConfig( mpcontrol );
+    case mpc_dbclean:
         dialog = gtk_message_dialog_new(
                      GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
                      GTK_DIALOG_DESTROY_WITH_PARENT,
-                     GTK_MESSAGE_INFO,
-                     GTK_BUTTONS_NONE,
-                     "Database" );
-        gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
-                                "Info", 1,
-                                "Cleanup", 2,
-                                "Okay", GTK_RESPONSE_OK,
-                                NULL );
-        reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
-        gtk_widget_destroy( dialog );
-
-        switch( reply ) {
-        case 1:
-            progressStart( "Database Info" );
-            progressLog( "Music dir: %s\n", mpcontrol->musicdir );
-            dumpInfo( mpcontrol->root, -1 );
-            progressEnd( "End Database info." );
-            break;
-
-        case 2:
-            setCommand( mpcontrol, mpc_dbclean );
-            break;
+                     GTK_MESSAGE_WARNING,
+                     GTK_BUTTONS_YES_NO,
+                     "This will delete files on your filesystem!\n"
+					 "No guarantees are given!");
+	    reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
+	    gtk_widget_destroy( dialog );
+        if( reply == GTK_RESPONSE_YES ) {
+        	break;
         }
-
-        break;
-
-    case 3:
-    	writeConfig( mpcontrol );
-        setCommand( mpcontrol, mpc_quit );
-//        gtk_main_quit();
-        break;
+    case mpc_doublets:
+            setCommand( mpcontrol, reply );
+            break;
     }
 }
 

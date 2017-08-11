@@ -482,21 +482,33 @@ void *reader( void *cont ) {
             write( control->p_command[fdset][1], "STOP\n", 6 );
             break;
 
+        case mpc_doublets:
+            order=0;
+            write( control->p_command[fdset][1], "STOP\n", 6 );
+            progressStart( "Filesystem Cleanup" );
+
+            progressLog( "Checking for doubles..\n" );
+            i=dbNameCheck( control->dbname );
+            if( i > 0 ) {
+            	progressLog( "Deleted %i titles\n", i );
+                progressLog( "Restarting player..\n" );
+                setProfile( control );
+                control->current = control->root;
+            }
+            else {
+            	progressLog( "No titles deleted\n" );
+            }
+            break;
+
+            progressEnd( "Finished Cleanup." );
+            order=0;
+            sendplay( fdset, control );
+
         case mpc_dbclean:
             order=0;
             write( control->p_command[fdset][1], "STOP\n", 6 );
             progressStart( "Database Cleanup" );
 
-            progressLog( "Checking for doubles..\n" );
-            i=dbNameCheck( control->dbname );
-
-            if( i > 0 ) {
-            	progressLog( "Deleted %i titles\n", i );
-            	order=1;
-            }
-            else {
-            	progressLog( "No titles deleted\n" );
-            }
 
             progressLog( "Checking for deleted titles..\n" );
             i=dbCheckExist( control->dbname );
