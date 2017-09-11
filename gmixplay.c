@@ -22,8 +22,8 @@ struct mpcontrol_t *mpcontrol;
 static void loadConfig( struct mpcontrol_t *config ) {
     GKeyFile	*keyfile;
     GError		*error=NULL;
-    char		confdir[MAXPATHLEN]; // = "~/.mixplay";
-    char		conffile[MAXPATHLEN]; //  = "mixplay.conf";
+    char		confdir[MAXPATHLEN];  // = "$HOME/.mixplay";
+    char		conffile[MAXPATHLEN]; // = "mixplay.conf";
     GtkWidget 	*dialog;
     GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER;
     gint 		res;
@@ -218,7 +218,7 @@ int main( int argc, char **argv ) {
     control.debug=0;
 
     // parse command line options
-    // using unsigned char *c to work around getopt bug on ARM
+    // using unsigned char c to work around getopt bug on ARM
     while ( ( c = getopt( argc, argv, "vfd" ) ) != 255 ) {
         switch ( c ) {
         case 'v': // increase debug message level to display in console output

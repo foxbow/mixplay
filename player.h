@@ -63,7 +63,7 @@ struct mpcontrol_t {
     char log[MP_LOGLEN];		// debug log buffer
     int fullscreen;				// run in fullscreen mode
     int debug;					// debug level (like verbose but print in requester)
-    int skipdnp;
+    int64_t skipdnp;			// how many skips mean dnp?
 };
 
 void writeConfig( struct mpcontrol_t *config );

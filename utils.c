@@ -420,7 +420,7 @@ void *falloc( size_t num, size_t size ) {
  * remove lines from the start until it fits again
  */
 int scrollAdd( char *scroll, const char* line, const size_t len ) {
-    void *pos;
+    char *pos;
 
     if( strlen( line ) > len ) {
         fail( F_FAIL, "Adding too much text to scroll!" );

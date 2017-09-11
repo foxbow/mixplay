@@ -94,6 +94,7 @@ void *setProfile( void *data ) {
         insertTitle( control->root, control->root->title );
         addToPL( control->root->dbnext, control->root );
         strncpy( control->root->dbnext->display, "---", 3 );
+        printver( 1, "Profile set to %s.\n", control->sname[active] );
         printver( 1, "Play Stream %s\n-> %s\n", control->sname[active], control->stream[active] );
     }
     else if( active > 0 ){
@@ -164,8 +165,9 @@ void *setProfile( void *data ) {
     	fail( F_FAIL, "Neither profile nor stream set!" );
     }
 
-    // if we're not inplayer context, start playing automatically
+    // if we're not in player context, start playing automatically
     if( pthread_mutex_trylock( &cmdlock ) == 0 ){
+    	printver( 2, "Autoplay\n" );
         control->command=mpc_start;
     }
 
@@ -222,6 +224,28 @@ void *reader( void *cont ) {
     int intime=0;
     int fade=3;
 
+    // Debug stuff
+    char *mpc_command[] = {
+    	    "mpc_idle",
+    	    "mpc_play",
+    	    "mpc_stop",
+    	    "mpc_prev",
+    	    "mpc_next",
+    	    "mpc_start",
+    	    "mpc_favtitle",
+    	    "mpc_favartist",
+    	    "mpc_favalbum",
+    	    "mpc_repl",
+    	    "mpc_profile",
+    	    "mpc_quit",
+    	    "mpc_dbclean",
+    	    "mpc_dnptitle",
+    	    "mpc_dnpartist",
+    	    "mpc_dnpalbum",
+    	    "mpc_dnpgenre",
+    		"mpc_doublets",
+    };
+
     printver( 2, "Reader started\n" );
 
     control=( struct mpcontrol_t * )cont;
@@ -274,6 +298,9 @@ void *reader( void *cont ) {
             // the players may run even if there is no playlist yet
         	//            if( ( NULL != control->current ) && ( '@' == line[0] ) ) {
         	if( '@' == line[0] ) {
+        		if( 'F' != line[1]) {
+        			printver( 2, "P%i %s\n", fdset, line );
+        		}
                 switch ( line[1] ) {
                     int cmd=0, rem=0;
 
@@ -336,20 +363,20 @@ void *reader( void *cont ) {
                      * in  = seconds (float)
                      * rem = seconds left (float)
                      */
-                    a=strrchr( line, ' ' );
+                	a=strrchr( line, ' ' );
                     rem=atoi( a );
                     *a=0;
                     a=strrchr( line, ' ' );
                     intime=atoi( a );
 
-                   if( intime/60 < 60 ) {
+                    if( intime/60 < 60 ) {
 						sprintf( control->playtime, "%02i:%02i", intime/60, intime%60 );
 					}
 					else {
 						sprintf( control->playtime, "%02i:%02i:%02i", intime/3600, ( intime%3600 )/60, intime%60 );
 					}
                     // file play
-                    if( !control->playstream ) {
+                    if( control->playstream == 0 ) {
                         control->percent=( 100*intime )/( rem+intime );
                         sprintf( control->remtime, "%02i:%02i", rem/60, rem%60 );
 
@@ -389,24 +416,37 @@ void *reader( void *cont ) {
                     switch ( cmd ) {
                     case 0: // STOP
                         // should the playcount be increased?
-                        playCount( control );
-                        next = skipTitles( control->current, order, 0 );
+                    	if( control->playstream == 0 ) {
+							playCount( control );
+							next = skipTitles( control->current, order, 0 );
 
-                        if ( ( next == control->current ) ||
-                                ( ( ( order == 1  ) && ( next == control->root ) ) ||
-                                  ( ( order == -1 ) && ( next == control->root->plprev ) ) ) ) {
-                        	control->status=mpc_idle; // stop
-                        }
-                        else {
-                            if( ( order==1 ) && ( next == control->root ) ) {
-                                newCount( control->root );
-                            }
+							if ( ( next == control->current ) ||
+									( ( ( order == 1  ) && ( next == control->root ) ) ||
+									  ( ( order == -1 ) && ( next == control->root->plprev ) ) ) ) {
+								control->status=mpc_idle; // stop
+							}
+							else {
+								if( ( order==1 ) && ( next == control->root ) ) {
+									newCount( control->root );
+								}
 
-                            control->current=next;
-                            sendplay( fdset, control );
-                        }
+								control->current=next;
+								sendplay( fdset, control );
+							}
 
-                        order=1;
+							order=1;
+                    	}
+                    	else {
+                    		// Streams don't always play at the first try..
+                    		if( control->playstream == 1 ) {
+                    			control->playstream++;
+                    			sendplay( fdset, control );
+                    		}
+                    		else {
+                    			fail( F_FAIL, "Can't play stream!" );
+                    			// control->status=mpc_idle; // stop
+                    		}
+                    	}
                         break;
 
                     case 1: // PAUSE
@@ -453,6 +493,9 @@ void *reader( void *cont ) {
 
         pthread_mutex_trylock( &cmdlock );
 
+        if( control->command != mpc_idle ) {
+        	printver( 2, "MPC %s\n", mpc_command[control->command] );
+        }
         switch( control->command ) {
         case mpc_start:
             control->current = control->root;
@@ -483,7 +526,6 @@ void *reader( void *cont ) {
             break;
 
         case mpc_doublets:
-            order=0;
             write( control->p_command[fdset][1], "STOP\n", 6 );
             progressStart( "Filesystem Cleanup" );
 
@@ -498,11 +540,11 @@ void *reader( void *cont ) {
             else {
             	progressLog( "No titles deleted\n" );
             }
-            break;
 
             progressEnd( "Finished Cleanup." );
-            order=0;
             sendplay( fdset, control );
+
+            break;
 
         case mpc_dbclean:
             order=0;
@@ -539,11 +581,6 @@ void *reader( void *cont ) {
             }
 
             progressEnd( "Finished Cleanup." );
-            order=0;
-            sendplay( fdset, control );
-            break;
-
-
             sendplay( fdset, control );
             break;
 
@@ -606,7 +643,6 @@ void *reader( void *cont ) {
             break;
 
         case mpc_profile:
-            order=0;
             write( control->p_command[fdset][1], "STOP\n", 6 );
             control->status=mpc_idle;
             setProfile( control );
