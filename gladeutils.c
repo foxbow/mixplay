@@ -282,6 +282,11 @@ static int g_updateUI( void *data ) {
         return 0;
     }
 
+    if( mpc_start == control->status ) {
+    	activity( "Connecting" );
+    	return 0;
+    }
+
     if( control->widgets->title_current == NULL ) {
         printver( 2, "No title widget yet..\n" );
         return 0;
@@ -333,7 +338,21 @@ static int g_updateUI( void *data ) {
         }
 
         gtk_widget_set_sensitive( control->widgets->button_fav, ( !( control->current->flags & MP_FAV ) ) );
-        setButtonLabel( control->widgets->button_profile, (control->active < 0)?control->sname[-control->active-1]:control->profile[control->active-1] );
+
+        if( 0 == control->active ) {
+           	if( control->playstream ) {
+           	    gtk_widget_set_visible( control->widgets->remain, 0 );
+        		setButtonLabel( control->widgets->button_profile, "Add Stream" );
+           	}
+           	else {
+           	    gtk_widget_set_visible( control->widgets->remain, -1 );
+        		setButtonLabel( control->widgets->button_profile, "Profile.." );
+           	}
+        }
+        else {
+    	    gtk_widget_set_visible( control->widgets->remain, -1 );
+        	setButtonLabel( control->widgets->button_profile, (control->active < 0)?control->sname[-control->active-1]:control->profile[control->active-1] );
+        }
 
         gtk_window_set_title ( GTK_WINDOW( control->widgets->mixplay_main ),
                                control->current->display );

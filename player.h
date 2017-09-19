@@ -70,5 +70,6 @@ void writeConfig( struct mpcontrol_t *config );
 void setCommand( struct mpcontrol_t *control, mpcmd cmd );
 void *reader( void *cont );
 void *setProfile( void *data );
+void setStream( struct mpcontrol_t *control, const char* stream, const char *name );
 
 #endif /* PLAYER_H_ */

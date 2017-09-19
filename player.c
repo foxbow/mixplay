@@ -60,7 +60,19 @@ static void sendplay( int fdset, struct mpcontrol_t *control ) {
     }
 
     printver( 2, "CMD: %s", line );
-    // control->status = mpc_play;
+}
+
+/**
+ * sets the given stream
+ */
+void setStream( struct mpcontrol_t *control, const char* stream, const char *name ) {
+    control->root=insertTitle( NULL, stream );
+    strncpy( control->root->title, name, NAMELEN );
+    insertTitle( control->root, control->root->title );
+    addToPL( control->root->dbnext, control->root );
+    strncpy( control->root->dbnext->display, "---", 3 );
+    printver( 1, "Profile set to %s.\n", name );
+    printver( 1, "Play Stream %s\n-> %s\n", name, stream );
 }
 
 /**
@@ -89,13 +101,7 @@ void *setProfile( void *data ) {
             fail( F_FAIL, "Stream #%i does no exist!", active );
         }
 
-        control->root=insertTitle( NULL, control->stream[active] );
-        strncpy( control->root->title, control->sname[active], NAMELEN );
-        insertTitle( control->root, control->root->title );
-        addToPL( control->root->dbnext, control->root );
-        strncpy( control->root->dbnext->display, "---", 3 );
-        printver( 1, "Profile set to %s.\n", control->sname[active] );
-        printver( 1, "Play Stream %s\n-> %s\n", control->sname[active], control->stream[active] );
+        setStream( control, control->stream[active], control->sname[active] );
     }
     else if( active > 0 ){
     	active=active-1;
@@ -147,6 +153,9 @@ void *setProfile( void *data ) {
             }
 
             setVerbosity( lastver );
+        }
+        else {
+        	fail( F_FAIL, "No active profile set!" );
         }
 
         if( control->skipdnp ) {
@@ -266,40 +275,44 @@ void *reader( void *cont ) {
         if( FD_ISSET( control->p_status[fdset?0:1][0], &fds ) ) {
             key=readline( line, 512, control->p_status[fdset?0:1][0] );
 
+            if( key > 2 ) {
+				if( '@' == line[0] ) {
+	        		if( ( 'F' != line[1] ) && ( 'V' != line[1] ) ) {
+	        			printver( 2, "P- %s\n", line );
+	        		}
 
-            if( '@' == line[0] ) {
-                switch ( line[1] ) {
-                case 'R': // startup
-                    printver( 1, "MPG123 background instance is up\n" );
-                    break;
-                case 'E':
-                    fail( F_FAIL, "ERROR: %s\nIndex: %i\nName: %s\nPath: %s", line,
-                          control->current->key,
-                          control->current->display,
-                          control->current->path );
-                    break;
-                case 'F':
-                	if( ( key > 1 ) && ( outvol > 0 ) ) {
-                		outvol--;
-                		snprintf( line, MAXPATHLEN, "volume %i\n", outvol );
-                		write( control->p_command[fdset?0:1][1], line, strlen( line ) );
-                	}
-                	break;
-                }
-            }
-            else {
-            	printver( 1, "OFF123: %s\n", line );
+					switch ( line[1] ) {
+					case 'R': // startup
+						printver( 1, "MPG123 background instance is up\n" );
+						break;
+					case 'E':
+						fail( F_FAIL, "ERROR: %s\nIndex: %i\nName: %s\nPath: %s", line,
+							  control->current->key,
+							  control->current->display,
+							  control->current->path );
+						break;
+					case 'F':
+						if( ( key > 1 ) && ( outvol > 0 ) ) {
+							outvol--;
+							snprintf( line, MAXPATHLEN, "volume %i\n", outvol );
+							write( control->p_command[fdset?0:1][1], line, strlen( line ) );
+						}
+						break;
+					}
+				}
+				else {
+					printver( 1, "OFF123: %s\n", line );
+				}
             }
         }
 
         // Interpret mpg123 output and ignore invalid lines
         if( FD_ISSET( control->p_status[fdset][0], &fds ) &&
                 ( 3 < readline( line, 512, control->p_status[fdset][0] ) ) ) {
-            // the players may run even if there is no playlist yet
-        	//            if( ( NULL != control->current ) && ( '@' == line[0] ) ) {
         	if( '@' == line[0] ) {
-        		if( 'F' != line[1]) {
-        			printver( 2, "P%i %s\n", fdset, line );
+        		// Don't print volume and progress messages
+        		if( ( 'F' != line[1] ) && ( 'V' != line[1] ) ) {
+        			printver( 2, "P+ %s\n", line );
         		}
                 switch ( line[1] ) {
                     int cmd=0, rem=0;
@@ -415,8 +428,12 @@ void *reader( void *cont ) {
 
                     switch ( cmd ) {
                     case 0: // STOP
+                    	// player was not yet fully initialized, start again
+                    	if( control->status != mpc_play ) {
+                			sendplay( fdset, control );
+                    	}
                         // should the playcount be increased?
-                    	if( control->playstream == 0 ) {
+                    	else if( control->playstream == 0 ) {
 							playCount( control );
 							next = skipTitles( control->current, order, 0 );
 
@@ -436,17 +453,7 @@ void *reader( void *cont ) {
 
 							order=1;
                     	}
-                    	else {
-                    		// Streams don't always play at the first try..
-                    		if( control->playstream == 1 ) {
-                    			control->playstream++;
-                    			sendplay( fdset, control );
-                    		}
-                    		else {
-                    			fail( F_FAIL, "Can't play stream!" );
-                    			// control->status=mpc_idle; // stop
-                    		}
-                    	}
+
                         break;
 
                     case 1: // PAUSE
@@ -455,6 +462,7 @@ void *reader( void *cont ) {
 
                     case 2:  // PLAY
                     	control->status=mpc_play;
+                    	printver( 2, "Playing profile #%i\n", control->active );
                         break;
 
                     default:
@@ -499,13 +507,15 @@ void *reader( void *cont ) {
         switch( control->command ) {
         case mpc_start:
             control->current = control->root;
-            control->status=mpc_play;
+            control->status=mpc_start;
             sendplay( fdset, control );
             break;
 
         case mpc_play:
-            write( control->p_command[fdset][1], "PAUSE\n", 7 );
-            control->status=( mpc_play == control->status )?mpc_idle:mpc_play;
+        	if( control->status != mpc_start ) {
+        		write( control->p_command[fdset][1], "PAUSE\n", 7 );
+        		control->status=( mpc_play == control->status )?mpc_idle:mpc_play;
+        	}
             break;
 
         case mpc_prev:
@@ -587,7 +597,7 @@ void *reader( void *cont ) {
         case mpc_stop:
             order=0;
             write( control->p_command[fdset][1], "STOP\n", 6 );
-            control->status=mpc_idle;
+            // control->status=mpc_idle;
             break;
 
         case mpc_dnptitle:
@@ -639,6 +649,9 @@ void *reader( void *cont ) {
 
         case mpc_quit:
             control->status=mpc_quit;
+        	if( control->active != 0 ) {
+        		writeConfig( control );
+        	}
             gtk_main_quit();
             break;
 

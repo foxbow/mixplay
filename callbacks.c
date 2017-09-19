@@ -93,12 +93,21 @@ void playPause( GtkButton *button, gpointer data ) {
                      GTK_MESSAGE_INFO,
                      GTK_BUTTONS_NONE,
                      "Pause" );
-        gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
-                                "Play",  mpc_play,
-                                "Replay",  mpc_repl,
-                                "DNP",  mpc_dnptitle,
-								"Quit", mpc_quit,
-                                NULL );
+        if( mpcontrol->current->key != 0 ) {
+			gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
+									"Play",   mpc_play,
+									"Replay", mpc_repl,
+									"DNP",    mpc_dnptitle,
+									"Quit",   mpc_quit,
+									NULL );
+        }
+        else {
+			gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
+									"Play",   mpc_play,
+									"Replay", mpc_repl,
+									"Quit",   mpc_quit,
+									NULL );
+        }
         reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
         gtk_widget_destroy( dialog );
 
@@ -118,10 +127,10 @@ void playPause( GtkButton *button, gpointer data ) {
                          mpcontrol->current->album,
                          mpcontrol->current->genre );
             gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
-                                    "T_itle",  mpc_dnptitle,
+                                    "_Title",  mpc_dnptitle,
                                     "A_lbum",  mpc_dnpalbum,
                                     "_Artist", mpc_dnpartist,
-                                    "_Genre", mpc_dnpgenre,
+                                    "_Genre",  mpc_dnpgenre,
                                     "_Cancel", GTK_RESPONSE_CANCEL,
                                     NULL );
             reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
@@ -169,14 +178,14 @@ void infoStart( GtkButton *button, gpointer data ) {
     GtkWidget *dialog;
     int reply;
 
-    dialog = gtk_message_dialog_new(
+	if( mpcontrol->current->key != 0 ) {
+		dialog = gtk_message_dialog_new(
                  GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
                  GTK_DIALOG_DESTROY_WITH_PARENT,
                  GTK_MESSAGE_QUESTION,
                  GTK_BUTTONS_NONE,
                  "Information" );
 
-    if( mpcontrol->playstream == 0 ) {
 		gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
 								"Application",  1,
 								"Database",  2,
@@ -213,7 +222,9 @@ void infoStart( GtkButton *button, gpointer data ) {
     	break;
 
     case mpc_quit:
-    	writeConfig( mpcontrol );
+        setCommand( mpcontrol, reply );
+    	break;
+
     case mpc_dbclean:
         dialog = gtk_message_dialog_new(
                      GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
@@ -227,6 +238,7 @@ void infoStart( GtkButton *button, gpointer data ) {
         if( reply == GTK_RESPONSE_YES ) {
         	break;
         }
+
     case mpc_doublets:
             setCommand( mpcontrol, reply );
             break;
@@ -307,15 +319,12 @@ void profileStart( GtkButton *button, gpointer data ) {
     reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
     gtk_widget_destroy( dialog );
 
-    switch( reply ) {
-    case GTK_RESPONSE_OK:
+    if( reply == GTK_RESPONSE_OK ) {
     	if( mpcontrol->active == 0 ) {
     		fail( F_WARN, "No profile active" );
     	}
-    	else if( mpcontrol->active != profile ){
+    	else if( mpcontrol->active != profile ) {
     		setCommand( mpcontrol, mpc_profile );
     	}
-        break;
     }
-
 }

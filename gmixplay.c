@@ -129,7 +129,7 @@ static int initAll( void *data ) {
     loadConfig( control );
     pthread_t tid;
 
-    control->current=NULL;
+    control->current=control->root;
     control->log[0]='\0';
     strcpy( control->playtime, "00:00" );
     strcpy( control->remtime, "00:00" );
@@ -143,7 +143,9 @@ static int initAll( void *data ) {
         pthread_create( &tid, NULL, setProfile, ( void * )control );
     }
     else {
+    	control->active=0;
         control->dbname[0]=0;
+        setCommand(control, mpc_play );
     }
 
     if( control->debug ) {
@@ -241,6 +243,7 @@ int main( int argc, char **argv ) {
     control.playstream=0;
 
     if ( optind < argc ) {
+    	control.active=0;
         if( isURL( argv[optind] ) ) {
             control.playstream=1;
             line[0]=0;
@@ -252,20 +255,22 @@ int main( int argc, char **argv ) {
             }
 
             strncat( line, argv[optind], MAXPATHLEN );
-            printver( 1, "Stream address: %s\n", line );
-            control.root=insertTitle( NULL, line );
-            strncpy( control.root->title, "Waiting for stream info...", NAMELEN );
-            insertTitle( control.root, control.root->title );
-            insertTitle( control.root, control.root->title );
-            addToPL( control.root->dbnext, control.root );
+            setStream( &control, line, "Waiting for stream info..." );
         }
         else if( endsWith( argv[optind], ".mp3" ) ) {
             // play single song...
             control.root=insertTitle( NULL, argv[optind] );
         }
-        else if( isDir( argv[optind] ) ) { // @todo: playlist linking
+        else if( isDir( argv[optind] ) ) {
             control.root=recurse( argv[optind], NULL, argv[optind] );
-            control.root=control.root->dbnext;
+            if( control.root != NULL ) {
+				control.current=control.root;
+				do {
+					control.current->plnext=control.current->dbnext;
+					control.current->plprev=control.current->dbprev;
+					control.current=control.current->dbnext;
+				} while( control.current != control.root );
+            }
         }
         else if ( endsWith( argv[optind], ".m3u" ) ||
                   endsWith( argv[optind], ".pls" ) ) {
