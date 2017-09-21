@@ -138,52 +138,7 @@ int main( int argc, char **argv ) {
     control.playstream=0;
 
     if ( optind < argc ) {
-    	control.active=0;
-        if( isURL( argv[optind] ) ) {
-            control.playstream=1;
-            line[0]=0;
-
-            if( endsWith( argv[optind], ".m3u" ) ||
-                    endsWith( argv[optind], ".pls" ) ) {
-                fail( F_FAIL, "Only direct stream support" );
-                strcpy( line, "@" );
-            }
-
-            strncat( line, argv[optind], MAXPATHLEN );
-            setStream( &control, line, "Waiting for stream info..." );
-        }
-        else if( endsWith( argv[optind], ".mp3" ) ) {
-            // play single song...
-            control.root=insertTitle( NULL, argv[optind] );
-        }
-        else if( isDir( argv[optind] ) ) {
-            control.root=recurse( argv[optind], NULL, argv[optind] );
-            if( control.root != NULL ) {
-				control.current=control.root;
-				do {
-					control.current->plnext=control.current->dbnext;
-					control.current->plprev=control.current->dbprev;
-					control.current=control.current->dbnext;
-				} while( control.current != control.root );
-            }
-        }
-        else if ( endsWith( argv[optind], ".m3u" ) ||
-                  endsWith( argv[optind], ".pls" ) ) {
-            if( NULL != strrchr( argv[optind], '/' ) ) {
-                strcpy( line, argv[optind] );
-                i=strlen( line );
-
-                while( line[i] != '/' ) {
-                    i--;
-                }
-
-                line[i]=0;
-                chdir( line );
-            }
-
-            control.root=loadPlaylist( argv[optind] );
-        }
-        else {
+    	if( 0 == setArgument( &control, argv[optind] ) ) {
             fail( F_FAIL, "Unknown argument!\n", argv[optind] );
             return -1;
         }

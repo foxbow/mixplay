@@ -167,7 +167,6 @@ void playPause( GtkButton *button, gpointer data ) {
  * just sets the mpcontrol command
  */
 void destroy( GtkWidget *widget, gpointer   data ) {
-	writeConfig( mpcontrol );
     setCommand( mpcontrol, mpc_quit );
 }
 
@@ -190,7 +189,7 @@ void infoStart( GtkButton *button, gpointer data ) {
 								"Application",  1,
 								"Database",  2,
 								"Clean up database", mpc_dbclean,
-								"Clean up filesystem", mpc_doublets,
+//								"Clean up filesystem", mpc_doublets,
 								"Quit!", mpc_quit,
 								NULL );
 	    reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
@@ -221,11 +220,7 @@ void infoStart( GtkButton *button, gpointer data ) {
     	progressEnd( "End Database info." );
     	break;
 
-    case mpc_quit:
-        setCommand( mpcontrol, reply );
-    	break;
-
-    case mpc_dbclean:
+    case mpc_doublets:
         dialog = gtk_message_dialog_new(
                      GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
                      GTK_DIALOG_DESTROY_WITH_PARENT,
@@ -235,11 +230,12 @@ void infoStart( GtkButton *button, gpointer data ) {
 					 "No guarantees are given!");
 	    reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
 	    gtk_widget_destroy( dialog );
-        if( reply == GTK_RESPONSE_YES ) {
-        	break;
+        if( reply != GTK_RESPONSE_YES ) {
+        	return;
         }
 
-    case mpc_doublets:
+    case mpc_quit:
+    case mpc_dbclean:
             setCommand( mpcontrol, reply );
             break;
     }
@@ -269,13 +265,15 @@ void profileStart( GtkButton *button, gpointer data ) {
     GtkWidget *dialog;
     GtkWidget *msgArea;
     GtkWidget *list;
+    GtkWidget *urlLine;
     GtkListStore *store;
     GtkTreeIter  iter;
     GtkCellRenderer *renderer;
     GtkTreeViewColumn *column;
     GtkTreeSelection *tselect;
+    char *path=NULL;
 
-    int i, reply, profile;
+    int i, reply, selected, profile;
     profile=mpcontrol->active;
 
     dialog = gtk_message_dialog_new(
@@ -286,6 +284,8 @@ void profileStart( GtkButton *button, gpointer data ) {
                  "Profiles/Channels" );
     gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
                             "Okay", GTK_RESPONSE_OK,
+							"Browse", 1,
+							"URL", 2,
                             "Cancel", GTK_RESPONSE_CANCEL,
                             NULL );
 
@@ -319,12 +319,66 @@ void profileStart( GtkButton *button, gpointer data ) {
     reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
     gtk_widget_destroy( dialog );
 
-    if( reply == GTK_RESPONSE_OK ) {
+    switch( reply ) {
+    case 1: // browse filesystem
+    	dialog = gtk_file_chooser_dialog_new ( "Select Music",
+                                               GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+											   GTK_FILE_CHOOSER_ACTION_OPEN,
+											   "_Cancel",
+                                               GTK_RESPONSE_CANCEL,
+                                               "Open",
+                                               GTK_RESPONSE_ACCEPT,
+                                               NULL );
+    	gtk_dialog_add_button(GTK_DIALOG(dialog), "Play", 1);
+
+        if( mpcontrol->fullscreen ) {
+            gtk_window_fullscreen( GTK_WINDOW( dialog ) );
+        }
+
+        selected=gtk_dialog_run( GTK_DIALOG ( dialog ) );
+        if ( ( selected == GTK_RESPONSE_ACCEPT ) || ( selected == 1 ) ){
+        	// Set minimum defaults to let mixplay work
+        	path=falloc( MAXPATHLEN, sizeof( char ) );
+            strncpy( path, gtk_file_chooser_get_filename( GTK_FILE_CHOOSER( dialog ) ), MAXPATHLEN );
+        }
+        gtk_widget_destroy ( dialog );
+    	break;
+    case 2: // Enter URL
+        dialog = gtk_message_dialog_new(
+                     GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+                     GTK_DIALOG_DESTROY_WITH_PARENT,
+                     GTK_MESSAGE_INFO,
+                     GTK_BUTTONS_NONE,
+                     "Open URL" );
+        gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
+                                "Open", GTK_RESPONSE_OK,
+                                "Cancel", GTK_RESPONSE_CANCEL,
+                                NULL );
+
+        msgArea=gtk_message_dialog_get_message_area( GTK_MESSAGE_DIALOG( dialog ) );
+        urlLine=gtk_entry_new();
+    	gtk_container_add( GTK_CONTAINER(msgArea), urlLine );
+    	gtk_widget_show_all(  dialog );
+        selected=gtk_dialog_run( GTK_DIALOG( dialog ) );
+        if( selected == GTK_RESPONSE_OK ) {
+        	path=falloc( MAXPATHLEN, sizeof( char ) );
+            strncpy( path, gtk_entry_get_text( GTK_ENTRY( urlLine ) ), MAXPATHLEN );
+        }
+        gtk_widget_destroy( dialog );
+    	break;
+    case GTK_RESPONSE_OK:
     	if( mpcontrol->active == 0 ) {
     		fail( F_WARN, "No profile active" );
     	}
     	else if( mpcontrol->active != profile ) {
     		setCommand( mpcontrol, mpc_profile );
     	}
+    	break;
+    }
+    if( path != NULL ) {
+    	if( setArgument( mpcontrol, path ) ){
+    		setCommand( mpcontrol, mpc_start );
+    	}
+    	free( path );
     }
 }

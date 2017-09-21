@@ -257,7 +257,7 @@ static void setButtonLabel( GtkWidget *button, const char *text ) {
  * gather interesting stuff about a title, kind of a title.toString()
  */
 static int infoLine( char *line, const struct entry_t *title, const int len ) {
-	return snprintf( line, len, "%s\nKey: %04i - Fav: %s\nplaycount: %i (%s)\nskipcount: %i (%s)\n",
+	return snprintf( line, len, "%s\nKey: %04i - Fav: %s\nplaycount: %i (%s)\nskipcount: %i (%s)",
           title->path,
           title->key,
 		  ONOFF( title->flags & MP_FAV ),
@@ -351,7 +351,8 @@ static int g_updateUI( void *data ) {
         }
         else {
     	    gtk_widget_set_visible( control->widgets->remain, -1 );
-        	setButtonLabel( control->widgets->button_profile, (control->active < 0)?control->sname[-control->active-1]:control->profile[control->active-1] );
+    	    snprintf( buff, MAXPATHLEN, "Playing \n%s", (control->active < 0)?control->sname[-control->active-1]:control->profile[control->active-1] );
+        	setButtonLabel( control->widgets->button_profile, buff );
         }
 
         gtk_window_set_title ( GTK_WINDOW( control->widgets->mixplay_main ),

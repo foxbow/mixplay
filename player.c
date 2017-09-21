@@ -153,8 +153,73 @@ void readConfig( struct mpcontrol_t *config ) {
 void setCommand( struct mpcontrol_t *control, mpcmd cmd ) {
     pthread_mutex_lock( &cmdlock );
     control->command=cmd;
-    // lock stays on until the command has been handles in reader()
-//	pthread_mutex_unlock( &cmdlock );
+}
+
+/**
+ * parse arguments given to the application
+ * also handles playing of a single file, a directory, a playlist or an URL
+ * returns 0 if nothing was recognized
+ */
+int setArgument( struct mpcontrol_t *control, const char *arg ) {
+    char line [MAXPATHLEN];
+    int  i;
+
+	control->active=0;
+    if( isURL( arg ) ) {
+        control->playstream=1;
+        line[0]=0;
+
+        if( endsWith( arg, ".m3u" ) ||
+                endsWith( arg, ".pls" ) ) {
+            fail( F_FAIL, "Only direct stream support" );
+            strcpy( line, "@" );
+        }
+
+        strncat( line, arg, MAXPATHLEN );
+        cleanTitles( control->root );
+        setStream( control, line, "Waiting for stream info..." );
+        return 1;
+    }
+    else if( endsWith( arg, ".mp3" ) ) {
+        // play single song...
+        cleanTitles( control->root );
+        control->root=insertTitle( NULL, arg );
+        return 2;
+    }
+    else if( isDir( arg ) ) {
+        cleanTitles( control->root );
+        strncpy( line, arg, MAXPATHLEN );
+        control->root=recurse( line, NULL, arg );
+        if( control->root != NULL ) {
+			control->current=control->root;
+			do {
+				control->current->plnext=control->current->dbnext;
+				control->current->plprev=control->current->dbprev;
+				control->current=control->current->dbnext;
+			} while( control->current != control->root );
+        }
+        return 3;
+    }
+    else if ( endsWith( arg, ".m3u" ) ||
+              endsWith( arg, ".pls" ) ) {
+        if( NULL != strrchr( arg, '/' ) ) {
+            strcpy( line, arg );
+            i=strlen( line );
+
+            while( line[i] != '/' ) {
+                i--;
+            }
+
+            line[i]=0;
+            chdir( line );
+        }
+
+        cleanTitles( control->root );
+        control->root=loadPlaylist( arg );
+        return 4;
+    }
+
+    return 0;
 }
 
 /**
@@ -176,12 +241,12 @@ static void sendplay( int fdset, struct mpcontrol_t *control ) {
  * sets the given stream
  */
 void setStream( struct mpcontrol_t *control, const char* stream, const char *name ) {
+	cleanTitles( control->root );
     control->root=insertTitle( NULL, stream );
     strncpy( control->root->title, name, NAMELEN );
     insertTitle( control->root, control->root->title );
     addToPL( control->root->dbnext, control->root );
     strncpy( control->root->dbnext->display, "---", 3 );
-    printver( 1, "Profile set to %s.\n", name );
     printver( 1, "Play Stream %s\n-> %s\n", name, stream );
 }
 
@@ -205,7 +270,6 @@ void *setProfile( void *data ) {
     if( active < 0 ) {
         control->playstream=1;
     	active = -(active+1);
-        cleanTitles( control->root );
 
         if( active >= control->streams ) {
             fail( F_FAIL, "Stream #%i does no exist!", active );
@@ -560,7 +624,9 @@ void *reader( void *cont ) {
 
 							order=1;
                     	}
-
+                    	else {
+                    		control->status=mpc_idle;
+                    	}
                         break;
 
                     case 1: // PAUSE
@@ -613,9 +679,14 @@ void *reader( void *cont ) {
         }
         switch( control->command ) {
         case mpc_start:
-            control->current = control->root;
-            control->status=mpc_start;
-            sendplay( fdset, control );
+			control->current = control->root;
+        	if( control->status == mpc_start ) {
+                write( control->p_command[fdset][1], "STOP\n", 6 );
+        	}
+        	else {
+				control->status=mpc_start;
+				sendplay( fdset, control );
+        	}
             break;
 
         case mpc_play:
