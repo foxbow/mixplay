@@ -61,6 +61,7 @@ static int g_warn( void *line ) {
                                       "%s", (char *)line );
     gtk_dialog_run ( GTK_DIALOG ( dialog ) );
 	gtk_widget_destroy ( dialog );
+	free(line);
 	pthread_mutex_unlock( &msglock );
 	return 0;
 }
@@ -72,10 +73,10 @@ static int g_warn( void *line ) {
  */
 void fail( int error, const char* msg, ... ) {
     va_list args;
-    char line[1024];
-
+    char *line;
     GtkWidget *dialog;
 
+    line=falloc( 1024, sizeof(char) );
     // fail calls are considered mutex
     pthread_mutex_lock( &msglock );
 

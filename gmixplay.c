@@ -95,8 +95,6 @@ static void buildUI( struct mpcontrol_t * control ) {
 int main( int argc, char **argv ) {
     unsigned char	c;
     struct 		mpcontrol_t control;
-    char		line [MAXPATHLEN];
-
     int			i;
     int 		db=0;
     pid_t		pid[2];

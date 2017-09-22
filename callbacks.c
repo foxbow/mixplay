@@ -98,6 +98,7 @@ void playPause( GtkButton *button, gpointer data ) {
 									"Play",   mpc_play,
 									"Replay", mpc_repl,
 									"DNP",    mpc_dnptitle,
+									"Shuffle",mpc_shuffle,
 									"Quit",   mpc_quit,
 									NULL );
         }
@@ -145,8 +146,9 @@ void playPause( GtkButton *button, gpointer data ) {
 
             break;
 
+        case mpc_shuffle:
         case mpc_quit:
-        	setCommand(mpcontrol, mpc_quit );
+        	setCommand(mpcontrol, reply );
         	break;
 
         case mpc_repl:
@@ -249,13 +251,17 @@ void infoStart( GtkButton *button, gpointer data ) {
 static void activeSelect_cb(GtkTreeSelection *selection, gpointer data ) {
     GtkTreeIter iter;
     GtkTreeModel *model;
-    int active;
+    int64_t active;
 
     if (gtk_tree_selection_get_selected (selection, &model, &iter))
     {
             gtk_tree_model_get( model, &iter, 2, &active, -1);
             mpcontrol->active=active;
     }
+}
+
+void startSearch() {
+
 }
 
 /**
@@ -273,8 +279,8 @@ void profileStart( GtkButton *button, gpointer data ) {
     GtkTreeSelection *tselect;
     char *path=NULL;
 
-    int i, reply, selected, profile;
-    profile=mpcontrol->active;
+    int i, reply, selected;
+    int64_t profile=mpcontrol->active;
 
     dialog = gtk_message_dialog_new(
                  GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
@@ -282,22 +288,32 @@ void profileStart( GtkButton *button, gpointer data ) {
                  GTK_MESSAGE_INFO,
                  GTK_BUTTONS_NONE,
                  "Profiles/Channels" );
-    gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
-                            "Okay", GTK_RESPONSE_OK,
-							"Browse", 1,
-							"URL", 2,
-                            "Cancel", GTK_RESPONSE_CANCEL,
-                            NULL );
-
+    if( profile > 0 ) {
+        gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
+                                "Okay", GTK_RESPONSE_OK,
+    							"Browse", 1,
+    							"URL", 2,
+								"Search", 3,
+                                "Cancel", GTK_RESPONSE_CANCEL,
+                                NULL );
+    }
+    else {
+		gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
+								"Okay", GTK_RESPONSE_OK,
+								"Browse", 1,
+								"URL", 2,
+								"Cancel", GTK_RESPONSE_CANCEL,
+								NULL );
+    }
     msgArea=gtk_message_dialog_get_message_area( GTK_MESSAGE_DIALOG( dialog ) );
 
     store = gtk_list_store_new( 3, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT );
 
 	for( i=0; i < mpcontrol->profiles; i++ ) {
-		gtk_list_store_insert_with_values (store, &iter, -1, 0, "P", 1, mpcontrol->profile[i], 2, i+1, -1 );
+		gtk_list_store_insert_with_values (store, &iter, -1, 0, "", 1, mpcontrol->profile[i], 2, i+1, -1 );
 	}
 	for( i=0; i < mpcontrol->streams; i++ ) {
-		gtk_list_store_insert_with_values (store, &iter, -1, 0, "C", 1, mpcontrol->sname[i], 2, -(i+1), -1 );
+		gtk_list_store_insert_with_values (store, &iter, -1, 0, ">", 1, mpcontrol->sname[i], 2, -(i+1), -1 );
 	}
 
 	list=gtk_tree_view_new_with_model( GTK_TREE_MODEL( store ) );
@@ -366,6 +382,55 @@ void profileStart( GtkButton *button, gpointer data ) {
         }
         gtk_widget_destroy( dialog );
     	break;
+    case 3: // search
+		mpcontrol->active = profile;
+		if( mpcontrol->status == mpc_play ) {
+			setCommand(mpcontrol, mpc_stop);
+		}
+        dialog = gtk_message_dialog_new(
+                     GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+                     GTK_DIALOG_DESTROY_WITH_PARENT,
+                     GTK_MESSAGE_INFO,
+                     GTK_BUTTONS_NONE,
+                     "Search" );
+        gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
+                				"Title", 't',
+								"Artist", 'a',
+								"Album", 'l',
+                                "Cancel", GTK_RESPONSE_CANCEL,
+                                NULL );
+
+        msgArea=gtk_message_dialog_get_message_area( GTK_MESSAGE_DIALOG( dialog ) );
+        urlLine=gtk_entry_new();
+    	gtk_container_add( GTK_CONTAINER(msgArea), urlLine );
+    	gtk_widget_show_all( dialog );
+        selected=gtk_dialog_run( GTK_DIALOG( dialog ) );
+        if( selected != GTK_RESPONSE_CANCEL ) {
+        	path=falloc( MAXPATHLEN, sizeof( char ) );
+        	snprintf( path, MAXPATHLEN, "%c=%s", selected, gtk_entry_get_text( GTK_ENTRY( urlLine ) ) );
+        	if( strlen( path ) < 5 ) {
+        		fail( F_WARN, "Need at least three characters!\nSucks to be you U2!" );
+        		setCommand( mpcontrol, mpc_start );
+        	}
+        	else {
+        		i=searchPlay( mpcontrol->current, path );
+        		printver(1, "Found %i titles\n", i );
+        		if( i > 0) {
+        			setCommand( mpcontrol, mpc_play );
+        		}
+        		else {
+        			setCommand( mpcontrol, mpc_start );
+        		}
+        	}
+        }
+        gtk_widget_destroy( dialog );
+
+        if( NULL != path ) {
+        	free(path);
+        	path=NULL;
+        }
+    	break;
+
     case GTK_RESPONSE_OK:
     	if( mpcontrol->active == 0 ) {
     		fail( F_WARN, "No profile active" );
@@ -373,10 +438,17 @@ void profileStart( GtkButton *button, gpointer data ) {
     	else if( mpcontrol->active != profile ) {
     		setCommand( mpcontrol, mpc_profile );
     	}
+    	else {
+    		mpcontrol->active = profile;
+    	}
     	break;
+
+    default:
+		mpcontrol->active = profile;
     }
     if( path != NULL ) {
     	if( setArgument( mpcontrol, path ) ){
+        	mpcontrol->active = 0;
     		setCommand( mpcontrol, mpc_start );
     	}
     	free( path );

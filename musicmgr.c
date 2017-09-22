@@ -17,7 +17,8 @@
 #include <errno.h>
 
 /**
- * resets the counted flag on all titles if at least 50% of the titles have been counted
+ * always resets the marked flag and
+ * resets the counted and skipped flag on all titles if at least 50% of the titles have been counted
  */
 void newCount( struct entry_t *root ) {
     unsigned int num=0, count=0;
@@ -34,13 +35,15 @@ void newCount( struct entry_t *root ) {
     }
     while( runner != root );
 
-    if( ( 100*count )/num > 50 ) {
-        do {
-            runner->flags &= ~MP_CNTD;
-            runner=runner->dbnext;
+    do {
+    	activity("Unmarking");
+    	runner-> flags &= ~MP_MARK;
+        if( ( 100*count )/num > 50 ) {
+        	runner->flags &= ~(MP_CNTD|MP_SKPD);
         }
-        while( runner != root );
+        runner=runner->dbnext;
     }
+    while( runner != root );
 }
 
 /**
@@ -239,6 +242,28 @@ static int matchTitle( struct entry_t *title, const char* pat ) {
 }
 
 /**
+ * play the search results next
+ */
+int searchPlay( struct entry_t *root, const char *pat ) {
+	struct entry_t *runner=root;
+	struct entry_t *pos=root;
+	struct entry_t *next=root->dbnext;
+	int cnt=0;
+
+	while( next != root ) {
+		if( ( runner->flags & MP_MARK ) && matchTitle( runner, pat) ) {
+			moveEntry( runner, pos );
+			pos=runner;
+			runner->flags|=(MP_CNTD|MP_SKPD);
+			cnt++;
+		}
+		runner=next;
+		next=next->dbnext;
+	}
+	return cnt;
+}
+
+/**
  * range is set via entry:
  * first char:  talgd[p] (Title, Artist, aLbum, Genre, Display[, Path] )
  * second char: =*
@@ -431,7 +456,7 @@ void moveEntry( struct entry_t *entry, struct entry_t *pos ) {
         entry->plprev->plnext=entry->plnext;
 
         // insert into new position
-        entry->plnext=pos->plnext->plnext;
+        entry->plnext=pos->plnext;
         entry->plprev=pos;
 
         // fix links
@@ -762,7 +787,8 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
     gettimeofday( &tv,NULL );
     srand( getpid()*tv.tv_sec );
 
-    num = countTitles( base, MP_ALL, MP_DNP|MP_MARK );
+	newCount( base );
+    num = countTitles( base, MP_ALL, MP_DNP ); // |MP_MARK );
     printver( 2, "Shuffling %i titles\n", num );
 
     for( i=0; i<num; i++ ) {

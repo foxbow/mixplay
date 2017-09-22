@@ -424,6 +424,7 @@ void *reader( void *cont ) {
     	    "mpc_dnpalbum",
     	    "mpc_dnpgenre",
     		"mpc_doublets",
+    		"mpc_shuffle",
     };
 
     printver( 2, "Reader started\n" );
@@ -615,7 +616,8 @@ void *reader( void *cont ) {
 							}
 							else {
 								if( ( order==1 ) && ( next == control->root ) ) {
-									newCount( control->root );
+									control->root=shuffleTitles( control->root );
+									next=control->root;
 								}
 
 								control->current=next;
@@ -845,6 +847,13 @@ void *reader( void *cont ) {
             control->current = control->root;
             sendplay( fdset, control );
             break;
+
+        case mpc_shuffle:
+            control->root=shuffleTitles(control->root);
+            control->current=control->root;
+			control->status=mpc_start;
+			sendplay( fdset, control );
+        	break;
 
         case mpc_idle:
             // do null

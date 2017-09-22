@@ -66,6 +66,7 @@ int DNPSkip( struct entry_t *base, const unsigned int level );
 int applyDNPlist( struct entry_t *base, struct marklist_t *list );
 int applyFavourites( struct entry_t *root, struct marklist_t *list );
 int markFavourite( struct entry_t *title, int range );
+int searchPlay( struct entry_t *root, const char *pat );
 
 struct entry_t *cleanTitles( struct entry_t *root );
 struct marklist_t *cleanList( struct marklist_t *root );

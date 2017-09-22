@@ -30,6 +30,7 @@ enum mpcmd_t {
     mpc_dnpalbum,
     mpc_dnpgenre,
 	mpc_doublets,
+	mpc_shuffle,
 };
 
 typedef enum mpcmd_t mpcmd;
@@ -41,7 +42,7 @@ struct mpcontrol_t {
     MpData *widgets;			// all (accessible) widgets
     char *musicdir;				// path to the music
     gsize profiles;				// number of profiles
-    int64_t   active;		        // active >0 = profile / 0=none / <0 = stream
+    int64_t active;		        // active >0 = profile / 0=none / <0 = stream
     char **profile;				// profile names
     gsize streams;				// number of streams
     char **stream;				// stream URLs
