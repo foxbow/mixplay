@@ -62,7 +62,6 @@ static int g_warn( void *line ) {
     gtk_dialog_run ( GTK_DIALOG ( dialog ) );
 	gtk_widget_destroy ( dialog );
 	free(line);
-	pthread_mutex_unlock( &msglock );
 	return 0;
 }
 
@@ -77,8 +76,6 @@ void fail( int error, const char* msg, ... ) {
     GtkWidget *dialog;
 
     line=falloc( 1024, sizeof(char) );
-    // fail calls are considered mutex
-    pthread_mutex_lock( &msglock );
 
     va_start( args, msg );
     vsnprintf( line, 1024, msg, args );
@@ -96,7 +93,6 @@ void fail( int error, const char* msg, ... ) {
                                           "%s\nERROR: %i - %s", line, abs( error ), strerror( abs( error ) ) );
 
         gtk_dialog_run ( GTK_DIALOG ( dialog ) );
-        // keep the mutex locked on FAIL so that no other requester will be opened while the app exits
         setCommand(mpcontrol, mpc_quit );
     }
 

@@ -260,10 +260,6 @@ static void activeSelect_cb(GtkTreeSelection *selection, gpointer data ) {
     }
 }
 
-void startSearch() {
-
-}
-
 /**
  * invoked by the 'profile' button
  */
@@ -407,14 +403,14 @@ void profileStart( GtkButton *button, gpointer data ) {
         selected=gtk_dialog_run( GTK_DIALOG( dialog ) );
         if( selected != GTK_RESPONSE_CANCEL ) {
         	path=falloc( MAXPATHLEN, sizeof( char ) );
-        	snprintf( path, MAXPATHLEN, "%c=%s", selected, gtk_entry_get_text( GTK_ENTRY( urlLine ) ) );
+        	snprintf( path, MAXPATHLEN, "%c*%s", selected, gtk_entry_get_text( GTK_ENTRY( urlLine ) ) );
         	if( strlen( path ) < 5 ) {
         		fail( F_WARN, "Need at least three characters!\nSucks to be you U2!" );
         		setCommand( mpcontrol, mpc_start );
         	}
         	else {
         		i=searchPlay( mpcontrol->current, path );
-        		printver(1, "Found %i titles\n", i );
+        		fail(F_WARN, "Found %i titles\n", i );
         		if( i > 0) {
         			setCommand( mpcontrol, mpc_play );
         		}
