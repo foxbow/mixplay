@@ -265,7 +265,6 @@ void *setProfile( void *data ) {
     struct mpcontrol_t *control=( struct mpcontrol_t * )data ;
 
     active=control->active;
-    control->current=NULL;
 
     if( active < 0 ) {
         control->playstream=1;

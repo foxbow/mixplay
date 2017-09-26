@@ -251,7 +251,7 @@ void infoStart( GtkButton *button, gpointer data ) {
 static void activeSelect_cb(GtkTreeSelection *selection, gpointer data ) {
     GtkTreeIter iter;
     GtkTreeModel *model;
-    int64_t active;
+    int32_t active;
 
     if (gtk_tree_selection_get_selected (selection, &model, &iter))
     {
@@ -393,6 +393,7 @@ void profileStart( GtkButton *button, gpointer data ) {
                 				"Title", 't',
 								"Artist", 'a',
 								"Album", 'l',
+								"Genre", 'g',
                                 "Cancel", GTK_RESPONSE_CANCEL,
                                 NULL );
 
