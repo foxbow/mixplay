@@ -244,7 +244,7 @@ static void genPathName( const char *basedir, struct entry_t *entry  ) {
 
     blen=strlen( basedir );
 
-    if( basedir[blen] != '/' ) {
+    if( basedir[blen] == '/' ) {
         blen=blen+1;
     }
 
@@ -308,8 +308,8 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, struct entry_t *ti
 
     while( mpg123_framebyframe_next( mh ) == MPG123_OK ) {
         meta = mpg123_meta_check( mh );
-
         if( meta & MPG123_ID3 ) {
+        	printver(3,"Found ID3 tag\n");
             break;
         }
     }
@@ -339,6 +339,7 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, struct entry_t *ti
             }
         }
         else if( v1 != NULL ) {
+        	printver( 3, "ID3v1 Tags found!\n" );
             strip( title->title, v1->title, 32 );
             strip( title->artist, v1->artist, 32 );
             strip( title->album, v1->album, 32 );

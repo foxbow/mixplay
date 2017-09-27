@@ -158,7 +158,7 @@ static int tsort( const struct dirent **d1, const struct dirent **d2 ) {
     v1= atoi( ( *d1 )->d_name );
     v2= atoi( ( *d2 )->d_name );
 
-    if( ( v1 > 0 ) && ( v2 > 0 ) ) {
+    if( ( v1 > 0 ) && ( v2 > 0 ) && ( v1 - v2 != 0 ) ) {
         return( v1-v2 );
     }
 

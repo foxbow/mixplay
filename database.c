@@ -314,7 +314,8 @@ int dbAddTitles( const char *dbname, char *basedir ) {
     struct entry_t *fsroot;
     struct entry_t *dbroot;
     struct entry_t *dbrunner;
-    unsigned int low=0;
+    unsigned int count=0, mean=0;
+
     int num=0;
     int db=0;
 
@@ -327,19 +328,15 @@ int dbAddTitles( const char *dbname, char *basedir ) {
         dbrunner=dbroot;
 
         do {
-            if( !( dbrunner->flags & MP_DNP ) && ( dbrunner->playcount > low ) ) {
-                low=dbrunner->playcount;
+            if( !( dbrunner->flags & MP_DNP ) ) {
+            	count++;
+                mean+=dbrunner->playcount;
             }
-
             dbrunner=dbrunner->dbnext;
         }
         while( dbrunner != dbroot );
 
-        /*
-         * this should probably be made dependent on the spread of
-         * playcount values
-         */
-        low=low/2;
+        mean=mean/count;
     }
 
     // scan directory
@@ -355,7 +352,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 
         if( NULL == dbrunner ) {
             fillTagInfo( basedir, fsroot );
-            fsroot->playcount=low;
+            fsroot->playcount=mean;
             dbPutTitle( db,fsroot );
             num++;
         }
@@ -363,7 +360,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
         fsroot=removeTitle( fsroot );
     }
 
-    printver( 1, "Added %i titles with playcount %i to %s\n", num, low, dbname );
+    printver( 1, "Added %i titles with playcount %i to %s\n", num, mean, dbname );
     dbClose( db );
     return num;
 }

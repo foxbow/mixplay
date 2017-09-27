@@ -635,8 +635,10 @@ void *reader( void *cont ) {
                         break;
 
                     case 2:  // PLAY
+                    	if( control->status == mpc_start ) {
+                        	printver( 2, "Playing profile #%i\n", control->active );
+                    	}
                     	control->status=mpc_play;
-                    	printver( 2, "Playing profile #%i\n", control->active );
                         break;
 
                     default:
