@@ -270,6 +270,8 @@ static int infoLine( char *line, const struct entry_t *title, const int len ) {
  */
 static int g_updateUI( void *data ) {
     struct	mpcontrol_t *control;
+    struct entry_t *runner;
+    int i=0;
     char	buff[MAXPATHLEN];
     gboolean	usedb;
     control=( struct mpcontrol_t* )data;
@@ -309,7 +311,20 @@ static int g_updateUI( void *data ) {
             gtk_widget_set_tooltip_text( mpcontrol->widgets->button_prev, buff );
         	infoLine( buff, mpcontrol->current, MAXPATHLEN );
             gtk_widget_set_tooltip_text( mpcontrol->widgets->title_current, buff );
-        	infoLine( buff, mpcontrol->current->plnext, MAXPATHLEN );
+
+            runner=mpcontrol->current->plnext->plnext;
+            while( ( runner != mpcontrol->current ) && i < 5 ) {
+            	if( i == 0 ) {
+            		buff[0]=0;
+            	}
+				else {
+					strcat( buff, "\n" );
+				}
+				strcat( buff, runner->display );
+				runner=runner->plnext;
+				i++;
+            }
+//        	infoLine( buff, mpcontrol->current->plnext, MAXPATHLEN );
             gtk_widget_set_tooltip_text( mpcontrol->widgets->button_next, buff );
         }
         else {

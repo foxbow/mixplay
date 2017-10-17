@@ -11,6 +11,11 @@
 
 #define MP_LOGLEN 1024
 
+/*
+ * commands and states
+ * changes here need to be reflected in the reader() code, namely in
+ * char *mpc_command[]
+ */
 enum mpcmd_t {
     mpc_idle,
     mpc_play,
@@ -36,7 +41,7 @@ enum mpcmd_t {
 typedef enum mpcmd_t mpcmd;
 
 /**
- * holds the widgets and pipesnoentry for communication
+ * holds the widgets and pipes for communication
  */
 struct mpcontrol_t {
     MpData *widgets;			// all (accessible) widgets

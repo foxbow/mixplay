@@ -238,8 +238,8 @@ void infoStart( GtkButton *button, gpointer data ) {
 
     case mpc_quit:
     case mpc_dbclean:
-            setCommand( mpcontrol, reply );
-            break;
+		setCommand( mpcontrol, reply );
+		break;
     }
 }
 

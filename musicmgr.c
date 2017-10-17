@@ -15,6 +15,9 @@
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
+#include <sys/stat.h>
+#include <sys/sendfile.h>
+#include <fcntl.h>
 
 /**
  * always resets the marked flag and
@@ -1216,4 +1219,68 @@ void dumpInfo( struct entry_t *root, int global ) {
     }
 
     printver( 0, "%i\tskipped\n", skipped );
+}
+
+/**
+ * Copies the given title to the target and turns the name into 'track###.mp3' with ### being the index.
+ * Returns -1 when the target runs out of space.
+ */
+static int copyTitle( struct entry_t *title, const char* target, const unsigned int index ) {
+	int in, out;
+	size_t len;
+	char filename[MAXPATHLEN];
+    struct stat st;
+
+    snprintf( filename, MAXPATHLEN, "%strack%03i.mp3", target, index );
+
+    in=open( title->path, O_RDONLY );
+
+    if( -1 == in ) {
+        fail( errno, "Couldn't open %s for reading", title->path );
+    }
+
+    if( -1 == fstat( in, &st ) ) {
+        fail( errno, "Couldn't stat %s", title->path );
+    }
+    len=st.st_size;
+
+    out=open( filename, O_CREAT|O_WRONLY|O_EXCL );
+
+    if( -1 == out ) {
+        fail( errno, "Couldn't open %s for writing", filename );
+    }
+
+    printver( 2, "Copy %s to %s\n", title->display, filename );
+
+    if( -1 == sendfile( out, in, NULL, len ) ) {
+    	if( errno == EOVERFLOW ) return -1;
+    	fail( errno, "Could not copy %s", title->path );
+    }
+
+    close( in );
+    close( out );
+
+    return 0;
+}
+
+/**
+ * copies the titles in the current playlist onto the target
+ */
+int fillstick( struct entry_t *root, const char *target ) {
+	unsigned int index=0;
+	struct entry_t *current;
+
+	current=root;
+
+	do {
+		activity( "Copy title #%03i", index );
+		if( copyTitle( current, target, index++ ) == -1 ) {
+			break;
+		}
+		current=current->plnext;
+	}
+	while( current != root );
+
+	printver( 1, "Copied %i titles to %s\n", index, target );
+	return index;
 }

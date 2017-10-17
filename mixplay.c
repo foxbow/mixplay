@@ -10,6 +10,7 @@
  * or even iTunes
  */
 
+#include <sys/stat.h>
 #include "utils.h"
 #include "musicmgr.h"
 #include "database.h"
@@ -27,7 +28,6 @@
 #include <unistd.h>
 #include <limits.h>
 #include <sys/types.h>
-#include <sys/stat.h>
 
 #ifndef VERSION
 #define VERSION "dev"
@@ -79,48 +79,7 @@ static void sendplay( int fd, struct entry_t *song ) {
     }
 }
 
-#define CP_BUFFSIZE 4096
 
-static void copyTitle( struct entry_t *title, const char* target, const unsigned int index ) {
-    FILE *in, *out;
-    char filename[MAXPATHLEN];
-    unsigned char *buffer;
-    int size;
-
-    buffer=falloc( CP_BUFFSIZE, sizeof( char ) );
-
-    snprintf( filename, MAXPATHLEN, "%strack%03i.mp3", target, index );
-
-    printver( 2, "Copy %s to %s\n", title->display, filename );
-
-    in=fopen( title->path, "rb" );
-
-    if( NULL == in ) {
-        FAIL( errno, "Couldn't open %s for reading", title->path );
-    }
-
-    out=fopen( filename, "wb" );
-
-    if( NULL == out ) {
-        FAIL( errno, "Couldn't open %s for writing", filename );
-    }
-
-    size = fread( buffer, sizeof( unsigned char ), CP_BUFFSIZE, in );
-
-    while( 0 != size ) {
-        activity( "Copying file %03i", index );
-
-        if( 0 == fwrite( buffer, sizeof( unsigned char ), size, out ) ) {
-            FAIL( errno, "Target is full!" );
-        }
-
-        size = fread( buffer, sizeof( unsigned char ), CP_BUFFSIZE, in );
-    }
-
-    fclose( in );
-    fclose( out );
-    free( buffer );
-}
 /*
  *
  */
@@ -549,16 +508,7 @@ int main( int argc, char **argv ) {
         }
 
         if( strlen( target ) > 0 ) {
-            unsigned int index=0;
-            current=root;
-
-            do {
-                copyTitle( current, target, index++ );
-                current=current->plnext;
-            }
-            while( current != root );
-
-            printver( 1, "Copied %i titles to %s\n", index, target );
+        	fillstick( root, target );
             return 0;
         }
 

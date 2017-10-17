@@ -1,5 +1,5 @@
 # CC=/usr/bin/gcc
-VERSION:=$(shell git describe --tags --abbrev=1 --dirty=-dev --always)
+VERSION=$(shell git describe --tags --abbrev=1 --dirty=-dev --always)
 CCFLAGS=-DVERSION=\"${VERSION}\"
 CCFLAGS+=-Wall -g -pedantic
 OBJS=utils.o musicmgr.o database.o mpgutils.o
