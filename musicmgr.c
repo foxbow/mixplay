@@ -594,6 +594,7 @@ static struct entry_t *removeByPatLine( struct entry_t *base, const char *patter
 struct entry_t *removeByPattern( struct entry_t *entry, const char *pat ) {
 	char pattern[NAMELEN+2];
 	strncpy( pattern, pat, 2 );
+
 	switch( pattern[0] ){
 
 	case 'l':
@@ -624,7 +625,9 @@ struct entry_t *removeByPattern( struct entry_t *entry, const char *pat ) {
     	fail( F_FAIL, "Unknown pattern %s!", pat );
 	}
 
-	return removeByPatLine( entry, pattern );
+	entry=removeByPatLine( entry, pattern );
+	if( entry != NULL ) entry=entry->plnext;
+	return entry;
 }
 
 /**
@@ -1265,8 +1268,9 @@ static int copyTitle( struct entry_t *title, const char* target, const unsigned 
 
 /**
  * copies the titles in the current playlist onto the target
+ * if fav is true, only favourites are copied
  */
-int fillstick( struct entry_t *root, const char *target ) {
+int fillstick( struct entry_t *root, const char *target, int fav ) {
 	unsigned int index=0;
 	struct entry_t *current;
 
@@ -1274,8 +1278,10 @@ int fillstick( struct entry_t *root, const char *target ) {
 
 	do {
 		activity( "Copy title #%03i", index );
-		if( copyTitle( current, target, index++ ) == -1 ) {
-			break;
+		if( fav && ( current->flags & MP_FAV ) ) {
+			if( copyTitle( current, target, index++ ) == -1 ) {
+				break;
+			}
 		}
 		current=current->plnext;
 	}

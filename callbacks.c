@@ -96,17 +96,17 @@ void playPause( GtkButton *button, gpointer data ) {
         if( mpcontrol->current->key != 0 ) {
 			gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
 									"Play",   mpc_play,
-									"Replay", mpc_repl,
-									"DNP",    mpc_dnptitle,
-									"Shuffle",mpc_shuffle,
-									"Quit",   mpc_quit,
+									"_Replay", mpc_repl,
+									"_DNP",    mpc_dnptitle,
+									"_Shuffle",mpc_shuffle,
+									"_Quit",   mpc_quit,
 									NULL );
         }
         else {
 			gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
 									"Play",   mpc_play,
-									"Replay", mpc_repl,
-									"Quit",   mpc_quit,
+									"_Replay", mpc_repl,
+									"_Quit",   mpc_quit,
 									NULL );
         }
         reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
@@ -188,11 +188,11 @@ void infoStart( GtkButton *button, gpointer data ) {
                  "Information" );
 
 		gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
-								"Application",  1,
-								"Database",  2,
-								"Clean up database", mpc_dbclean,
-//								"Clean up filesystem", mpc_doublets,
-								"Quit!", mpc_quit,
+								"_Application",  1,
+								"_Database",  2,
+								"_Clean up database", mpc_dbclean,
+//								"Clean up _filesystem", mpc_doublets,
+								"_Quit!", mpc_quit,
 								NULL );
 	    reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
 	    gtk_widget_destroy( dialog );
@@ -274,7 +274,6 @@ void profileStart( GtkButton *button, gpointer data ) {
     GtkTreeViewColumn *column;
     GtkTreeSelection *tselect;
     char *path=NULL;
-
     int i, reply, selected;
     int64_t profile=mpcontrol->active;
 
@@ -287,18 +286,19 @@ void profileStart( GtkButton *button, gpointer data ) {
     if( profile > 0 ) {
         gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
                                 "Okay", GTK_RESPONSE_OK,
-    							"Browse", 1,
-    							"URL", 2,
-								"Search", 3,
-                                "Cancel", GTK_RESPONSE_CANCEL,
+    							"_Browse", 1,
+    							"_URL", 2,
+								"_Search", 3,
+								"_Fillstick", 4,
+                                "_Cancel", GTK_RESPONSE_CANCEL,
                                 NULL );
     }
     else {
 		gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
 								"Okay", GTK_RESPONSE_OK,
-								"Browse", 1,
-								"URL", 2,
-								"Cancel", GTK_RESPONSE_CANCEL,
+								"_Browse", 1,
+								"_URL", 2,
+								"_Cancel", GTK_RESPONSE_CANCEL,
 								NULL );
     }
     msgArea=gtk_message_dialog_get_message_area( GTK_MESSAGE_DIALOG( dialog ) );
@@ -338,7 +338,7 @@ void profileStart( GtkButton *button, gpointer data ) {
 											   GTK_FILE_CHOOSER_ACTION_OPEN,
 											   "_Cancel",
                                                GTK_RESPONSE_CANCEL,
-                                               "Open",
+                                               "_Open",
                                                GTK_RESPONSE_ACCEPT,
                                                NULL );
     	gtk_dialog_add_button(GTK_DIALOG(dialog), "Play", 1);
@@ -363,8 +363,8 @@ void profileStart( GtkButton *button, gpointer data ) {
                      GTK_BUTTONS_NONE,
                      "Open URL" );
         gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
-                                "Open", GTK_RESPONSE_OK,
-                                "Cancel", GTK_RESPONSE_CANCEL,
+                                "_Open", GTK_RESPONSE_OK,
+                                "_Cancel", GTK_RESPONSE_CANCEL,
                                 NULL );
 
         msgArea=gtk_message_dialog_get_message_area( GTK_MESSAGE_DIALOG( dialog ) );
@@ -390,11 +390,11 @@ void profileStart( GtkButton *button, gpointer data ) {
                      GTK_BUTTONS_NONE,
                      "Search" );
         gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
-                				"Title", 't',
-								"Artist", 'a',
-								"Album", 'l',
-								"Genre", 'g',
-                                "Cancel", GTK_RESPONSE_CANCEL,
+                				"_Title", 't',
+								"_Artist", 'a',
+								"A_lbum", 'l',
+								"_Genre", 'g',
+                                "_Cancel", GTK_RESPONSE_CANCEL,
                                 NULL );
 
         msgArea=gtk_message_dialog_get_message_area( GTK_MESSAGE_DIALOG( dialog ) );
@@ -427,6 +427,38 @@ void profileStart( GtkButton *button, gpointer data ) {
         	path=NULL;
         }
     	break;
+    case 4: // Fillstick
+    	dialog = gtk_file_chooser_dialog_new ( "Select Target",
+                                               GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+											   GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
+											   "_Cancel",
+                                               GTK_RESPONSE_CANCEL,
+                                               "Favourites",
+                                               GTK_RESPONSE_ACCEPT,
+                                               NULL );
+    	gtk_dialog_add_button(GTK_DIALOG(dialog), "All", 1);
+
+        if( mpcontrol->fullscreen ) {
+            gtk_window_fullscreen( GTK_WINDOW( dialog ) );
+        }
+
+        selected=gtk_dialog_run( GTK_DIALOG ( dialog ) );
+        if ( ( selected == GTK_RESPONSE_ACCEPT ) || ( selected == 1 ) ){
+        	path=falloc( MAXPATHLEN, sizeof( char ) );
+            strncpy( path, gtk_file_chooser_get_filename( GTK_FILE_CHOOSER( dialog ) ), MAXPATHLEN );
+        }
+        gtk_widget_destroy ( dialog );
+
+    	progressStart( "Fillstick" );
+    	progressLog( "Copying to %s\n", path );
+        fillstick( mpcontrol->current, path, ( selected == GTK_RESPONSE_ACCEPT ) );
+    	progressEnd( "End Database info." );
+
+        if( NULL != path ) {
+        	free(path);
+        	path=NULL;
+        }
+    	break;
 
     case GTK_RESPONSE_OK:
     	if( mpcontrol->active == 0 ) {
@@ -443,6 +475,7 @@ void profileStart( GtkButton *button, gpointer data ) {
     default:
 		mpcontrol->active = profile;
     }
+
     if( path != NULL ) {
     	if( setArgument( mpcontrol, path ) ){
         	mpcontrol->active = 0;

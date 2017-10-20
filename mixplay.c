@@ -490,25 +490,12 @@ int main( int argc, char **argv ) {
     // prepare playing the titles
     if ( NULL != root ) {
 
-        if( strlen( target ) > 0 ) {
-            current=root;
-
-            do {
-                if( !( current->flags & MP_FAV ) ) {
-                    current->flags |= MP_MARK;
-                }
-
-                current=current->dbnext;
-            }
-            while( current != root );
-        }
-
         if ( mix ) {
             root=shuffleTitles( root );
         }
 
         if( strlen( target ) > 0 ) {
-        	fillstick( root, target );
+        	fillstick( root, target, -1 );
             return 0;
         }
 

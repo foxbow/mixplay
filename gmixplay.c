@@ -188,6 +188,10 @@ int main( int argc, char **argv ) {
     // first thing to be called after the GUI is enabled
     gdk_threads_add_idle( initAll, &control );
 
+    // Add keyboard handler // @TODO
+//    gtk_widget_add_events(control.widgets->mixplay_main, GDK_KEY_PRESS_MASK);
+//    g_signal_connect (G_OBJECT (window), "keyboard_press", G_CALLBACK (on_key_press), NULL);
+
     /* Start main loop */
     gtk_main();
     control.status=mpc_quit;
