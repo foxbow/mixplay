@@ -71,25 +71,6 @@ static int mp3Exists( const struct entry_t *title ) {
 }
 
 /**
- * clean up a list of entries
- */
-static void wipeTitles( struct entry_t *files ) {
-    struct entry_t *buff=files;
-
-    if( NULL == files ) {
-        return;
-    }
-
-    files->dbprev->dbnext=NULL;
-
-    while( buff != NULL ) {
-        files=buff;
-        buff=buff->dbnext;
-        free( files );
-    }
-}
-
-/**
  * deletes an entry from the database list
  * This should only be used on a database cleanup!
  */
@@ -301,7 +282,7 @@ int dbCheckExist( const char *dbname ) {
         printver( 1, "No titles to remove\n" );
     }
 
-    wipeTitles( root );
+    cleanTitles( root );
 
     return num;
 }

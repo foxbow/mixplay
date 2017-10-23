@@ -176,18 +176,18 @@ int setArgument( struct mpcontrol_t *control, const char *arg ) {
         }
 
         strncat( line, arg, MAXPATHLEN );
-        cleanTitles( control->root );
+        control->root=cleanTitles( control->root );
         setStream( control, line, "Waiting for stream info..." );
         return 1;
     }
     else if( endsWith( arg, ".mp3" ) ) {
         // play single song...
-        cleanTitles( control->root );
+    	control->root=cleanTitles( control->root );
         control->root=insertTitle( NULL, arg );
         return 2;
     }
     else if( isDir( arg ) ) {
-        cleanTitles( control->root );
+    	control->root=cleanTitles( control->root );
         strncpy( line, arg, MAXPATHLEN );
         control->root=recurse( line, NULL, arg );
         if( control->root != NULL ) {
@@ -241,7 +241,7 @@ static void sendplay( int fdset, struct mpcontrol_t *control ) {
  * sets the given stream
  */
 void setStream( struct mpcontrol_t *control, const char* stream, const char *name ) {
-	cleanTitles( control->root );
+	control->root=cleanTitles( control->root );
     control->root=insertTitle( NULL, stream );
     strncpy( control->root->title, name, NAMELEN );
     insertTitle( control->root, control->root->title );
@@ -298,7 +298,7 @@ void *setProfile( void *data ) {
         dnplist=loadList( control->dnpname );
         favourites=loadList( control->favname );
 
-        cleanTitles( control->root );
+        control->root=cleanTitles( control->root );
 
         control->root=dbGetMusic( control->dbname );
 

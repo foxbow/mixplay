@@ -208,7 +208,7 @@ int main( int argc, char **argv ) {
     g_strfreev( control.profile );
     g_strfreev( control.stream );
     g_slice_free( MpData, control.widgets );
-    cleanTitles( control.root );
+    control.root=cleanTitles( control.root );
     dbClose( db );
 
     return( 0 );

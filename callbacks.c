@@ -477,6 +477,9 @@ void profileStart( GtkButton *button, gpointer data ) {
     }
 
     if( path != NULL ) {
+    	if( mpcontrol->status == mpc_start ) {
+    		setCommand( mpcontrol, mpc_start );
+    	}
     	if( setArgument( mpcontrol, path ) ){
         	mpcontrol->active = 0;
     		setCommand( mpcontrol, mpc_start );
