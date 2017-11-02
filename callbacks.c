@@ -172,6 +172,12 @@ void destroy( GtkWidget *widget, gpointer   data ) {
     setCommand( mpcontrol, mpc_quit );
 }
 
+static char *itostr( int i ) {
+	static char retval[20];
+	snprintf( retval, 19, "%i", i );
+	return retval;
+}
+
 /**
  * settings/info route
  */
@@ -185,7 +191,9 @@ void infoStart( GtkButton *button, gpointer data ) {
                  GTK_DIALOG_DESTROY_WITH_PARENT,
                  GTK_MESSAGE_QUESTION,
                  GTK_BUTTONS_NONE,
-                 "Information" );
+				 "Musicdir: %s\nDNPSkip: %s\nRepeat: all\nShuffle: on",
+				 mpcontrol->musicdir,
+	     		( mpcontrol->skipdnp > 0 )?itostr( mpcontrol->skipdnp ):"off" );
 
 		gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
 								"_Application",  1,
@@ -218,7 +226,7 @@ void infoStart( GtkButton *button, gpointer data ) {
     case 2:
     	progressStart( "Database Info" );
     	progressLog( "Music dir: %s\n", mpcontrol->musicdir );
-    	dumpInfo( mpcontrol->root, -1 );
+    	dumpInfo( mpcontrol->root, -1, mpcontrol->skipdnp );
     	progressEnd( "End Database info." );
     	break;
 
@@ -378,11 +386,16 @@ void profileStart( GtkButton *button, gpointer data ) {
         }
         gtk_widget_destroy( dialog );
     	break;
+    	/*
+    	 * turn this into a general search. So a term will be entered and all searches
+    	 * will be run, adding results (if any) to a subentry.
+    	 * Finally show the results as a tree and allow selection by header, entry
+    	 * or maybe even entries.
+    	 *
+    	 * Genre remains a special case though
+    	 */
     case 3: // search
 		mpcontrol->active = profile;
-		if( mpcontrol->status == mpc_play ) {
-			setCommand(mpcontrol, mpc_stop);
-		}
         dialog = gtk_message_dialog_new(
                      GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
                      GTK_DIALOG_DESTROY_WITH_PARENT,
@@ -405,11 +418,23 @@ void profileStart( GtkButton *button, gpointer data ) {
         if( selected != GTK_RESPONSE_CANCEL ) {
         	path=falloc( MAXPATHLEN, sizeof( char ) );
         	snprintf( path, MAXPATHLEN, "%c*%s", selected, gtk_entry_get_text( GTK_ENTRY( urlLine ) ) );
+        	gtk_widget_destroy( dialog );
         	if( strlen( path ) < 5 ) {
         		fail( F_WARN, "Need at least three characters!\nSucks to be you U2!" );
-        		setCommand( mpcontrol, mpc_start );
         	}
         	else {
+        		// create selection requester
+        		// search for t, a, l and add the results to the tree headers
+        		// allow selection
+        		// if something was selected:
+        		// - stop player
+        		// - move titles after the current title
+        		// - start player
+        		//
+        		// close requester
+        		if( mpcontrol->status == mpc_play ) {
+        			setCommand(mpcontrol, mpc_stop);
+        		}
         		i=searchPlay( mpcontrol->current, path );
         		fail(F_WARN, "Found %i titles\n", i );
         		if( i > 0) {
@@ -420,7 +445,9 @@ void profileStart( GtkButton *button, gpointer data ) {
         		}
         	}
         }
-        gtk_widget_destroy( dialog );
+        else {
+        	gtk_widget_destroy( dialog );
+        }
 
         if( NULL != path ) {
         	free(path);

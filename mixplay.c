@@ -504,7 +504,7 @@ int main( int argc, char **argv ) {
                 dumpTitles( root,0 );
             }
 
-            dumpInfo( root, ~mix );
+            dumpInfo( root, ~mix, skiplevel );
             return 0;
         }
 

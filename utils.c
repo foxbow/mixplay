@@ -321,23 +321,20 @@ static unsigned int vecmult( strval_t val1, strval_t val2 ) {
 }
 
 /**
- * Compares two strings and returns the similarity index
- * 100 == most equal
+ * checks if str matches the pattern pat
+ * 100 == best match
  **/
-static int fncmp( const char* str1, const char* str2 ) {
-    strval_t str1val, str2val;
-    unsigned int maxval, max1, max2;
+static int fncmp( const char *str, const char *pat ) {
+    strval_t strval, patval;
+    unsigned int maxval;
     long result;
     float step;
 
-    str1val=falloc( CMP_ARRAYLEN, sizeof( char ) );
-    str2val=falloc( CMP_ARRAYLEN, sizeof( char ) );
+    strval=falloc( CMP_ARRAYLEN, sizeof( char ) );
+    patval=falloc( CMP_ARRAYLEN, sizeof( char ) );
 
-    max1=computestrval( str1, str1val );
-    max2=computestrval( str2, str2val );
-
-    // the max possible matches are defined by the min number of bits set!
-    maxval=( max1 < max2 ) ? max1 : max2;
+    maxval=computestrval( pat, patval );
+    computestrval( str, strval );
 
     if( 0 == maxval ) {
         return -1;
@@ -345,10 +342,10 @@ static int fncmp( const char* str1, const char* str2 ) {
 
     step=100.0/maxval;
 
-    result=vecmult(  str1val, str2val );
+    result=vecmult(  strval, patval );
 
-    free( str1val );
-    free( str2val );
+    free( strval );
+    free( patval );
 
     return step*result;
 }

@@ -5,6 +5,7 @@
 #include "musicmgr.h"
 #include "mpgutils.h"
 #include "utils.h"
+#include "player.h"
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -19,6 +20,7 @@
 #include <sys/sendfile.h>
 #include <fcntl.h>
 
+extern struct mpcontrol_t *mpcontrol;
 /**
  * always resets the marked flag and
  * resets the counted and skipped flag on all titles if at least 50% of the titles have been counted
@@ -1137,7 +1139,7 @@ void dumpTitles( struct entry_t *root, const int pl ) {
  * does a database scan and dumps information about playrate
  * favourites and DNPs
  */
-void dumpInfo( struct entry_t *root, int global ) {
+void dumpInfo( struct entry_t *root, int global, int skip ) {
     struct entry_t *current=root;
     unsigned int maxplayed=0;
     unsigned int minplayed=-1; // UINT_MAX;
@@ -1164,7 +1166,7 @@ void dumpInfo( struct entry_t *root, int global ) {
                 maxplayed=current->playcount;
             }
 
-            if( current->skipcount > 0 ) {
+            if( current->skipcount > skip ) {
                 skipped++;
             }
         }
@@ -1202,7 +1204,7 @@ void dumpInfo( struct entry_t *root, int global ) {
                 break;
 
             case 1:
-                printver( 0, "Once played:\t%i titles\n", pcount );
+                printver( 0, " Once played:\t%i titles\n", pcount );
                 break;
 
             case 2:
@@ -1210,18 +1212,18 @@ void dumpInfo( struct entry_t *root, int global ) {
                 break;
 
             default:
-                printver( 0, "%i times played:\t%i titles\n", pl, pcount );
+                printver( 0, "%5i\ttimes played:\t%i titles\n", pl, pcount );
             }
         }
     }
 
-    printver( 0, "%i\tfavourites\n", fav );
+    printver( 0, "%4i\tfavourites\n", fav );
 
     if( global ) {
-        printver( 0, "%i\tdo not plays\n", dnp );
+        printver( 0, "%4i\tdo not plays\n", dnp );
     }
 
-    printver( 0, "%i\tskipped\n", skipped );
+    printver( 0, "%4i\tskipped\n", skipped );
 }
 
 /**
