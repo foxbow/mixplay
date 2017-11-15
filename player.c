@@ -415,12 +415,6 @@ void *reader( void *cont ) {
     int intime=0;
     int fade=3;
 
-    assert( control->fade < 2 );
-
-    if( control->fade == 0 ) {
-    	fade=0;
-    }
-
     // Debug stuff
     char *mpc_command[] = {
     	    "mpc_idle",
@@ -444,9 +438,14 @@ void *reader( void *cont ) {
     		"mpc_shuffle",
     };
 
-    printver( 2, "Reader started\n" );
-
     control=( struct mpcontrol_t * )cont;
+    assert( control->fade < 2 );
+
+    if( control->fade == 0 ) {
+    	fade=0;
+    }
+
+    printver( 2, "Reader started\n" );
 
     do {
         FD_ZERO( &fds );

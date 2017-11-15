@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <ctype.h>
+#include <dirent.h>
 #include <strings.h>
 #include <sys/statvfs.h>
 #include <sys/time.h>
@@ -20,7 +21,6 @@
 #include <sys/sendfile.h>
 #include <fcntl.h>
 
-extern struct mpcontrol_t *mpcontrol;
 /**
  * always resets the marked flag and
  * resets the counted and skipped flag on all titles if at least 50% of the titles have been counted
