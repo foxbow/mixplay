@@ -101,6 +101,7 @@ void readConfig( struct mpcontrol_t *config ) {
             config->profile=falloc( 1, sizeof( char * ) );
             config->profile[0]=falloc( 8, sizeof( char ) );
             strcpy( config->profile[0], "mixplay" );
+            config->profiles=1;
             config->active=1;
             config->skipdnp=3;
             writeConfig( config );
@@ -317,7 +318,7 @@ void *setProfile( void *data ) {
             }
 
             printver( 1, "Added %i titles.", num );
-            progressEnd( NULL );
+//            progressEnd( NULL ); // @TODO - why is this here?
             control->root=dbGetMusic( control->dbname );
 
             if( NULL == control->root ) {

@@ -88,9 +88,16 @@ void fail( int error, const char* msg, ... ) {
     }
     else {
         fprintf( stderr, "FAIL: %s\n", line );
-        dialog = gtk_message_dialog_new ( GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+        if( F_FAIL == error ) {
+        	dialog = gtk_message_dialog_new ( GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+                                          GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
+                                          "FAIL: %s", line );
+        }
+        else {
+        	dialog = gtk_message_dialog_new ( GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
                                           GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
                                           "%s\nERROR: %i - %s", line, abs( error ), strerror( abs( error ) ) );
+        }
 
         gtk_dialog_run ( GTK_DIALOG ( dialog ) );
         setCommand(mpcontrol, mpc_quit );
@@ -220,7 +227,7 @@ void progressEnd( const char *msg ) {
 	char *line;
 
 	if( NULL == mpcontrol->widgets->mp_popup ) {
-        fail( F_FAIL, "No progress request open!" );
+        fail( F_WARN, "No progress request open!" );
     }
 
 	line=falloc( 512, sizeof( char ) );
@@ -311,26 +318,25 @@ static int g_updateUI( void *data ) {
             gtk_widget_set_tooltip_text( mpcontrol->widgets->button_prev, buff );
         	infoLine( buff, mpcontrol->current, MAXPATHLEN );
             gtk_widget_set_tooltip_text( mpcontrol->widgets->title_current, buff );
-
-            runner=mpcontrol->current->plnext->plnext;
-            while( ( runner != mpcontrol->current ) && i < 5 ) {
-            	if( i == 0 ) {
-            		buff[0]=0;
-            	}
-				else {
-					strcat( buff, "\n" );
-				}
-				strcat( buff, runner->display );
-				runner=runner->plnext;
-				i++;
-            }
-//        	infoLine( buff, mpcontrol->current->plnext, MAXPATHLEN );
-            gtk_widget_set_tooltip_text( mpcontrol->widgets->button_next, buff );
         }
         else {
             gtk_widget_set_tooltip_text( mpcontrol->widgets->title_current, mpcontrol->current->path );
             gtk_widget_set_tooltip_text( mpcontrol->widgets->button_prev, NULL );
         }
+
+        runner=mpcontrol->current->plnext->plnext;
+        while( ( runner != mpcontrol->current ) && i < 5 ) {
+        	if( i == 0 ) {
+        		buff[0]=0;
+        	}
+			else {
+				strcat( buff, "\n" );
+			}
+			strcat( buff, runner->display );
+			runner=runner->plnext;
+			i++;
+        }
+        gtk_widget_set_tooltip_text( mpcontrol->widgets->button_next, buff );
 
         gtk_widget_set_sensitive( control->widgets->title_current, ( control->status == mpc_play ) );
         gtk_label_set_text( GTK_LABEL( control->widgets->artist_current ),

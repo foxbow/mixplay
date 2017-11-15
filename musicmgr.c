@@ -883,7 +883,8 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
                         valid=0;
 
                         if( guard == runner ) {
-                            pcount++;   // allow replays
+                        	valid=1;    // we're back where we started and this one is valid by name
+                            pcount++;   // allow more replays
                             printver( 2, "Increasing maxplaycount to %li at %i\n", pcount, i );
                         }
                     }
