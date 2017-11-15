@@ -11,11 +11,11 @@
 #define RANDOM(x) (abs(rand()%x))
 
 
-#define MP_FAV  1	// Favourite
-#define MP_DNP  2   // do not play
-#define MP_CNTD 4	// has been counted
-#define MP_SKPD 8   // has been skipped
-#define MP_MARK 16	// has been marked
+#define MP_FAV  1	/* Favourite */
+#define MP_DNP  2   /* do not play */
+#define MP_CNTD 4	/* has been counted */
+#define MP_SKPD 8   /* has been skipped */
+#define MP_MARK 16	/* has been marked */
 #define MP_ALL  31
 
 #define SL_UNSET   0
@@ -27,19 +27,19 @@
 #define SL_DISPLAY 32
 
 struct entry_t {
-    char path[MAXPATHLEN];		// path on the filesystem to the file
-    char artist[NAMELEN];		// Artist info
-    char title[NAMELEN];		// Title info (from mp3)
-    char album[NAMELEN];		// Album info (from mp3)
-    unsigned int playcount;		// play counter
-    unsigned int skipcount;		// skip counter
+    char path[MAXPATHLEN];		/* path on the filesystem to the file */
+    char artist[NAMELEN];		/* Artist info */
+    char title[NAMELEN];		/* Title info (from mp3) */
+    char album[NAMELEN];		/* Album info (from mp3) */
+    unsigned int playcount;		/* play counter */
+    unsigned int skipcount;		/* skip counter */
     char genre[NAMELEN];
-    struct entry_t *plprev;		// playlist pointer
-    unsigned int key;			// DB key/index  - internal
-    char display[MAXPATHLEN];	// Title display - internal
-    unsigned int flags;			// 1=favourite   - internal
+    struct entry_t *plprev;		/* playlist pointer */
+    unsigned int key;			/* DB key/index  - internal */
+    char display[MAXPATHLEN];	/* Title display - internal */
+    unsigned int flags;			/* 1=favourite   - internal */
     struct entry_t *plnext;
-    struct entry_t *dbprev;		// database pointer
+    struct entry_t *dbprev;		/* database pointer */
     struct entry_t *dbnext;
 };
 

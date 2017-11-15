@@ -18,7 +18,7 @@
 #ifndef MIN
 #define MIN(x,y) ((x)<(y)?(x):(y))
 #endif
-// Represents a string as a bit array
+/* Represents a string as a bit array */
 typedef unsigned char* strval_t;
 
 /*

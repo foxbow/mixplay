@@ -31,21 +31,21 @@ struct _MpData {
     GtkWidget *remain;
     GtkWidget *progress;
     GtkWidget *button_profile;
-    // popup elements
+    /* popup elements */
     GtkWidget *mp_popup;
 };
 
 void progressStart( const char *msg, ... );
 #define progressLog( ... ) printver( 0, __VA_ARGS__ )
-// void progressLog( const char *msg, ... );
+/* void progressLog( const char *msg, ... ); */
 void progressEnd( const char *msg );
 void updateUI( void *data );
 
 /** defined in utils.h **/
-// void printver( int vl, const char *msg, ... );
-// void activity( const char *msg, ... );
-// void fail( int error, const char* msg, ... );
+/* void printver( int vl, const char *msg, ... ); */
+/* void activity( const char *msg, ... ); */
+/* void fail( int error, const char* msg, ... ); */
 /** Not implemented / needed **/
 
-// void popUp( int level, const char *text, ... );
+/* void popUp( int level, const char *text, ... ); */
 #endif /* __GLADEUTILS_H__ */

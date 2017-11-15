@@ -11,6 +11,6 @@
 #include "musicmgr.h"
 
 int fillTagInfo( const char *basedir, struct entry_t *title );
-// int tagRun( const char *basedir, struct entry_t *base );
+/* int tagRun( const char *basedir, struct entry_t *base ); */
 
 #endif /* MPGUTILS_H_ */
