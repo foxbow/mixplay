@@ -109,12 +109,13 @@ int main( int argc, char **argv ) {
     XInitThreads();
     gtk_init( &argc, &argv );
 
+    control.fade=1;
     control.fullscreen=0;
     control.debug=0;
 
     // parse command line options
     // using unsigned char c to work around getopt bug on ARM
-    while ( ( c = getopt( argc, argv, "vfd" ) ) != 255 ) {
+    while ( ( c = getopt( argc, argv, "vfds" ) ) != 255 ) {
         switch ( c ) {
         case 'v': // increase debug message level to display in console output
             incVerbosity();
@@ -127,6 +128,10 @@ int main( int argc, char **argv ) {
         case 'd': // increase debug message level to display in debug request
             control.debug++;
             break;
+
+        case 's': // single channel - disable fading
+        	control.fade=0;
+        	break;
         }
     }
 
@@ -149,7 +154,7 @@ int main( int argc, char **argv ) {
     // start the player processes
     // these may wait in the background until
     // something needs to be played at all
-    for( i=0; i <= 1; i++ ) {
+    for( i=0; i <= control.fade; i++ ) {
         // create communication pipes
         pipe( control.p_status[i] );
         pipe( control.p_command[i] );
@@ -197,8 +202,9 @@ int main( int argc, char **argv ) {
     control.status=mpc_quit;
 
     pthread_join( control.rtid, NULL );
-    kill( pid[0], SIGTERM );
-    kill( pid[1], SIGTERM );
+    for( i=0; i <= control.fade; i++ ) {
+    	kill( pid[i], SIGTERM );
+    }
 
     /* Free any allocated data */
     free( control.dbname );

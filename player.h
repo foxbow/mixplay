@@ -70,6 +70,7 @@ struct mpcontrol_t {
     int fullscreen;				// run in fullscreen mode
     int debug;					// debug level (like verbose but print in requester)
     int64_t skipdnp;			// how many skips mean dnp?
+    int64_t fade;				// controls fading between titles
 };
 
 void writeConfig( struct mpcontrol_t *config );

@@ -5,6 +5,8 @@
  *      Author: bweber
  */
 #include "player.h"
+
+#include <assert.h>
 #include "database.h"
 #include <string.h>
 #include <pthread.h>
@@ -34,6 +36,7 @@ void writeConfig( struct mpcontrol_t *config ) {
     }
     g_key_file_set_int64( keyfile, "mixplay", "active", config->active );
     g_key_file_set_int64( keyfile, "mixplay", "skipdnp", config->skipdnp );
+    g_key_file_set_int64( keyfile, "mixplay", "fade", config->fade );
     g_key_file_save_to_file( keyfile, conffile, &error );
 
     if( NULL != error ) {
@@ -131,6 +134,14 @@ void readConfig( struct mpcontrol_t *config ) {
 	}
 
 	config->skipdnp  =g_key_file_get_uint64( keyfile, "mixplay", "skipdnp", &error );
+
+	// Ignore fade setting if if has been overridden
+	if( config->fade == 1 ) {
+		config->fade  =g_key_file_get_uint64( keyfile, "mixplay", "fade", &error );
+		if( NULL != error ) {
+			config->fade=1;
+		}
+	}
 
 	// read streams if any are there
     config->stream=g_key_file_get_string_list( keyfile, "mixplay", "streams", &config->streams, &error );
@@ -404,6 +415,12 @@ void *reader( void *cont ) {
     int intime=0;
     int fade=3;
 
+    assert( control->fade < 2 );
+
+    if( control->fade == 0 ) {
+    	fade=0;
+    }
+
     // Debug stuff
     char *mpc_command[] = {
     	    "mpc_idle",
@@ -433,8 +450,9 @@ void *reader( void *cont ) {
 
     do {
         FD_ZERO( &fds );
-        FD_SET( control->p_status[0][0], &fds );
-        FD_SET( control->p_status[1][0], &fds );
+        for( i=0; i<=control->fade; i++ ) {
+        	FD_SET( control->p_status[i][0], &fds );
+        }
         to.tv_sec=0;
         to.tv_usec=100000; // 1/10 second
         i=select( FD_SETSIZE, &fds, NULL, NULL, &to );
@@ -444,7 +462,7 @@ void *reader( void *cont ) {
         }
 
         // drain inactive player
-        if( FD_ISSET( control->p_status[fdset?0:1][0], &fds ) ) {
+        if( control->fade && FD_ISSET( control->p_status[fdset?0:1][0], &fds ) ) {
             key=readline( line, 512, control->p_status[fdset?0:1][0] );
 
             if( key > 2 ) {
@@ -575,11 +593,13 @@ void *reader( void *cont ) {
                             }
                             else {
                                 control->current=next;
-                                // swap player
-                                fdset=fdset?0:1;
-                                invol=0;
-                                outvol=100;
-                                write( control->p_command[fdset][1], "volume 0\n", 9 );
+                                // swap player if we want to fade
+                                if( control->fade ) {
+                                	fdset=fdset?0:1;
+                                	invol=0;
+                                	outvol=100;
+                                	write( control->p_command[fdset][1], "volume 0\n", 9 );
+                                }
                                 sendplay( fdset, control );
                             }
                         }
