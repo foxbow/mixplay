@@ -76,17 +76,17 @@ void setTitle( const char* title ) {
 char *strip( char *buff, const char *text, const size_t maxlen ) {
     int len=strlen( text );
     int bpos=0, tpos=0;
-    // clear target buffer
+    /* clear target buffer */
     memset( buff, 0, maxlen );
 
-    // Cut off leading spaces and special chars
+    /* Cut off leading spaces and special chars */
     while( ( tpos < len ) && ( isspace( text[tpos] ) ) ) {
         tpos++;
     }
 
-    // Filter out all extended characters
+    /* Filter out all extended characters */
     while( ( 0 != text[tpos] )  && ( bpos < ( maxlen-1 ) ) ) {
-//		if( isascii( text[tpos]) ) {
+/*		if( isascii( text[tpos]) ) { */
         if( isprint( text[tpos] ) ) {
             buff[bpos]=text[tpos];
             bpos++;
@@ -95,11 +95,11 @@ char *strip( char *buff, const char *text, const size_t maxlen ) {
         tpos++;
     }
 
-    // Make sure string ends with a 0
+    /* Make sure string ends with a 0 */
     buff[bpos]=0;
     bpos--;
 
-    // Cut off trailing spaces and special chars
+    /* Cut off trailing spaces and special chars */
     while( ( bpos > 0 ) && ( iscntrl( buff[bpos] ) || isspace( buff[bpos] ) ) ) {
         buff[bpos]=0;
         bpos --;
@@ -135,9 +135,9 @@ int readline( char *line, size_t len, int fd ) {
         }
     }
 
-    // avoid returning unterminated strings.
-    // this code should never be reached but maybe there is
-    // a read() somewhere that timeouts..
+    /* avoid returning unterminated strings. */
+    /* this code should never be reached but maybe there is */
+    /* a read() somewhere that timeouts.. */
     line[cnt]=0;
     cnt++;
 
@@ -250,7 +250,7 @@ static int setBit( unsigned long pos, strval_t val ) {
     int bytepos;
     unsigned char set=0;
 
-    // avoid under/overflow
+    /* avoid under/overflow */
     if( pos < 0 ) {
         pos=0;
     }
@@ -282,7 +282,7 @@ static int computestrval( const char* str, strval_t strval ) {
     unsigned char c1, c2;
     int cnt, max=0;
 
-    // needs at least two characters!
+    /* needs at least two characters! */
     if( 2 > strlen( str ) ) {
         return 0;
     }
@@ -441,4 +441,38 @@ int scrollAdd( char *scroll, const char* line, const size_t len ) {
 
     strncat( scroll, line, len );
     return 1;
+}
+
+/**
+ * better strncat(), this takes the original string length into account and makes sure that
+ * the result is terminated properly.
+ * Returns the concatenated string on success and NULL on overflow
+ * On overflow line will be truncated to maxlen but still be usable.
+ */
+char *appendString( char *line, const char *val, const size_t maxlen ){
+	int i, j=0, l;
+	char *retval=line;
+
+	j=strlen(line);
+	l=j+strlen( val );
+	if( l > maxlen-1 ) {
+		l=maxlen-1;
+		retval=0;
+	}
+
+	for( i=0; i<l; i++ ) {
+		line[i]=val[j];
+		j++;
+	}
+
+	return retval;
+}
+
+/**
+ * line appendString() but for an integer value.
+ */
+char *appendInt( char *line, const char *fmt, const int val, size_t maxlen ) {
+	static char numbuff[256];
+	snprintf( numbuff, 255, fmt, val );
+	return appendString( line, numbuff, maxlen );
 }

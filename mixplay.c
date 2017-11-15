@@ -95,7 +95,7 @@ int main( int argc, char **argv ) {
     struct marklist_t *favourites=NULL;
     struct marklist_t *searchlist=NULL;
 
-    // pipes to communicate with mpg123
+    /* pipes to communicate with mpg123 */
     int p_status[2][2];
     int p_command[2][2];
 
@@ -118,11 +118,11 @@ int main( int argc, char **argv ) {
     struct timeval to;
     pid_t pid[2];
     int redraw;
-    // set when a stream is played
+    /* set when a stream is played */
     int stream=0;
-    // normal playing order
+    /* normal playing order */
     int order=1;
-    // mpg123 is up and running
+    /* mpg123 is up and running */
     int running;
     int usedb=1;
     int search=0;
@@ -144,7 +144,7 @@ int main( int argc, char **argv ) {
 
     memset( basedir, 0, MAXPATHLEN );
 
-    // load default configuration
+    /* load default configuration */
     sprintf( confdir, "%s/.mixplay", getenv( "HOME" ) );
     abspath( config, confdir, MAXPATHLEN );
     fp=fopen( config, "r" );
@@ -166,16 +166,16 @@ int main( int argc, char **argv ) {
     	printver(1, "Could not open %s\n", config );
     }
 
-    // if no basedir has been set, use the current directory as default
+    /* if no basedir has been set, use the current directory as default */
     if( 0 == strlen( basedir ) && ( NULL == getcwd( basedir, MAXPATHLEN ) ) ) {
         FAIL( errno, "Could not get current directory!" );
     }
 
-    // parse command line options
+    /* parse command line options */
     while ( ( c = getopt( argc, argv, "ACDhl:mNp:Pq:Qrs:Su:vFVX" ) ) != -1 ) {
 
         switch ( c ) {
-        case 'v': // pretty useless in normal use
+        case 'v': /* pretty useless in normal use */
             incVerbosity();
             break;
 
@@ -267,7 +267,7 @@ int main( int argc, char **argv ) {
             break;
 
         case 'F':
-            fade=0;// atoi(optarg);
+            fade=0;/* atoi(optarg); */
             break;
 
         case 'V':
@@ -299,14 +299,14 @@ int main( int argc, char **argv ) {
         }
     }
 
-    // parse additional argument and sanitize options
+    /* parse additional argument and sanitize options */
     if ( optind < argc ) {
         usedb=0;
 
         if( isURL( argv[optind] ) ) {
-            mix=0;		// mixing a stream is a bad idea
-            repeat=0;	// no repeat
-            fade=0;		// fading is really dumb
+            mix=0;		/* mixing a stream is a bad idea */
+            repeat=0;	/* no repeat */
+            fade=0;		/* fading is really dumb */
             stream=1;
             line[0]=0;
 
@@ -317,10 +317,10 @@ int main( int argc, char **argv ) {
 
             strncat( line, argv[optind], MAXPATHLEN );
             root=insertTitle( root, line );
-            root->display[0]=0; // hide URL from display
+            root->display[0]=0; /* hide URL from display */
         }
         else if( endsWith( argv[optind], ".mp3" ) ) {
-            // play single song...
+            /* play single song... */
             fade=0;
             mix=0;
             repeat=0;
@@ -388,7 +388,7 @@ int main( int argc, char **argv ) {
             fflush( stdout );
             memset( basedir, 0, MAXPATHLEN );
             fgets( basedir, MAXPATHLEN, stdin );
-            basedir[strlen( basedir )-1]=0; // cut off CR
+            basedir[strlen( basedir )-1]=0; /* cut off CR */
             abspath( basedir, getenv( "HOME" ), MAXPATHLEN );
 
             if( isDir( basedir ) ) {
@@ -414,7 +414,7 @@ int main( int argc, char **argv ) {
         }
     }
 
-    // scanformusic functionality
+    /* scanformusic functionality */
     if( scan ) {
         if ( scan & 1 ) {
             dbBackup( dbname );
@@ -443,14 +443,14 @@ int main( int argc, char **argv ) {
         dnplist=loadList( dnpname );
     }
 
-    // set default favourites name
+    /* set default favourites name */
     abspath( favname, confdir, MAXPATHLEN );
 
     if( usedb ) {
         favourites=loadList( favname );
     }
 
-    // load and prepare titles
+    /* load and prepare titles */
     if( NULL == root ) {
         if( usedb ) {
             root=dbGetMusic( dbname );
@@ -486,8 +486,8 @@ int main( int argc, char **argv ) {
         }
     }
 
-    // No else as the above calls may return with an empty playlist!
-    // prepare playing the titles
+    /* No else as the above calls may return with an empty playlist! */
+    /* prepare playing the titles */
     if ( NULL != root ) {
 
         if ( mix ) {
@@ -499,7 +499,7 @@ int main( int argc, char **argv ) {
             return 0;
         }
 
-        if( dump ) { // database statistics
+        if( dump ) { /* database statistics */
             if( -1 == dump ) {
                 dumpTitles( root,0 );
             }
@@ -508,9 +508,9 @@ int main( int argc, char **argv ) {
             return 0;
         }
 
-        // start the player processes
+        /* start the player processes */
         for( i=0; i <= ( fade?1:0 ); i++ ) {
-            // create communication pipes
+            /* create communication pipes */
             pipe( p_status[i] );
             pipe( p_command[i] );
 
@@ -520,7 +520,7 @@ int main( int argc, char **argv ) {
                 FAIL( errno, "could not fork" );
             }
 
-            // child process
+            /* child process */
             if ( 0 == pid[i] ) {
                 if ( dup2( p_command[i][0], STDIN_FILENO ) != STDIN_FILENO ) {
                     FAIL( errno, "Could not dup stdin for player %i", i+1 );
@@ -530,15 +530,15 @@ int main( int argc, char **argv ) {
                     FAIL( errno, "Could not dup stdout for player %i", i+1 );
                 }
 
-                // this process needs no pipes
+                /* this process needs no pipes */
                 close( p_command[i][0] );
                 close( p_command[i][1] );
                 close( p_status[i][0] );
                 close( p_status[i][1] );
 
-                // Start mpg123 in Remote mode
+                /* Start mpg123 in Remote mode */
                 execlp( "mpg123", "mpg123", "-R", "2>/dev/null", NULL );
-                // execlp("mpg123", "mpg123", "-R", "--remote-err", NULL); // breaks the reply parsing!
+                /* execlp("mpg123", "mpg123", "-R", "--remote-err", NULL); // breaks the reply parsing! */
                 FAIL( errno, "Could not exec mpg123" );
             }
 
@@ -552,7 +552,7 @@ int main( int argc, char **argv ) {
             db=dbOpen( dbname );
         }
 
-        // Start curses mode
+        /* Start curses mode */
         initscr();
         curs_set( 0 );
         cbreak();
@@ -578,14 +578,14 @@ int main( int argc, char **argv ) {
             }
 
             to.tv_sec=1;
-            to.tv_usec=0; // 1 second
+            to.tv_usec=0; /* 1 second */
             i=select( FD_SETSIZE, &fds, NULL, NULL, &to );
 
             if( i>0 ) {
                 redraw=1;
             }
 
-            // Interpret key
+            /* Interpret key */
             if( FD_ISSET( fileno( stdin ), &fds ) ) {
                 key=getch();
 
@@ -638,12 +638,12 @@ int main( int argc, char **argv ) {
                                         break;
                                     }
 
-                                    next=next->plnext; // @TODO: include DNPs?
+                                    next=next->plnext; /* @TODO: include DNPs? */
                                 }
                                 while( current != next );
 
                                 if( next != current ) {
-                                    next->flags|=MP_CNTD; // Don't count searched titles.
+                                    next->flags|=MP_CNTD; /* Don't count searched titles. */
                                     moveEntry( next, current );
                                     order=1;
                                     write( p_command[fdset][1], "STOP\n", 6 );
@@ -733,7 +733,7 @@ int main( int argc, char **argv ) {
                             write( p_command[fdset][1], "STOP\n", 6 );
                             break;
 
-                        case 'f': // toggles the favourite flag on a title
+                        case 'f': /* toggles the favourite flag on a title */
                             if( !( current->flags & MP_FAV ) ) {
                                 addToFile( favname, current->display, "d=" );
                                 current->flags|=MP_FAV;
@@ -745,7 +745,7 @@ int main( int argc, char **argv ) {
                 }
             }
 
-            // drain inactive player
+            /* drain inactive player */
             if( fade && FD_ISSET( p_status[fdset?0:1][0], &fds ) ) {
                 key=readline( line, 512, p_status[fdset?0:1][0] );
 
@@ -756,21 +756,21 @@ int main( int argc, char **argv ) {
                 }
             }
 
-            // Interpret mpg123 output and ignore invalid lines
+            /* Interpret mpg123 output and ignore invalid lines */
             if( FD_ISSET( p_status[fdset][0], &fds ) &&
                     ( 3 < readline( line, 512, p_status[fdset][0] ) ) ) {
                 if( '@' == line[0] ) {
                     switch ( line[1] ) {
                         int cmd=0, rem=0, q=0;
 
-                    case 'R': // startup
+                    case 'R': /* startup */
                         current = root;
                         sendplay( p_command[fdset][1], current );
                         break;
 
-                    case 'I': // ID3 info
+                    case 'I': /* ID3 info */
 
-                        // ICY stream info
+                        /* ICY stream info */
                         if( NULL != strstr( line, "ICY-" ) ) {
                             if( NULL != strstr( line, "ICY-NAME: " ) ) {
                                 strip( current->album, line+13, NAMELEN );
@@ -783,14 +783,14 @@ int main( int argc, char **argv ) {
                                 if( strlen( current->display ) != 0 ) {
                                     strcpy( tbuf, current->display );
                                     next=insertTitle( current, tbuf );
-                                    // fix genpathname() from insertTitle
+                                    /* fix genpathname() from insertTitle */
                                     strip( next->display, tbuf, MAXPATHLEN );
                                 }
 
                                 strip( current->display, b, MAXPATHLEN );
                             }
                         }
-                        // standard mpg123 info
+                        /* standard mpg123 info */
                         else if ( strstr( line, "ID3" ) != NULL ) {
                             if( !usedb ) {
                                 if ( NULL != ( b = strstr( line, "title:" ) ) ) {
@@ -798,13 +798,13 @@ int main( int argc, char **argv ) {
                                     snprintf( current->display, MAXPATHLEN, "%s - %s",
                                               current->artist, current->title );
                                 }
-                                // line starts with 'Artist:' this means we had a 'Title:' line before
+                                /* line starts with 'Artist:' this means we had a 'Title:' line before */
                                 else if ( NULL != ( b = strstr( line, "artist:" ) ) ) {
                                     strip( current->artist, b + 7, NAMELEN );
                                     snprintf( current->display, MAXPATHLEN, "%s - %s",
                                               current->artist, current->title );
                                 }
-                                // Album
+                                /* Album */
                                 else if ( NULL != ( b = strstr( line, "album:" ) ) ) {
                                     strip( current->album, b + 6, NAMELEN );
                                 }
@@ -822,20 +822,20 @@ int main( int argc, char **argv ) {
                         redraw=1;
                         break;
 
-                    case 'T': // TAG reply
+                    case 'T': /* TAG reply */
                         FAIL( F_FAIL, "Got TAG reply!" );
                         break;
                         break;
 
-                    case 'J': // JUMP reply
+                    case 'J': /* JUMP reply */
                         redraw=0;
                         break;
 
-                    case 'S': // Status message after loading a song (stream info)
+                    case 'S': /* Status message after loading a song (stream info) */
                         redraw=0;
                         break;
 
-                    case 'F': // Status message during playing (frame info)
+                    case 'F': /* Status message during playing (frame info) */
                         /* $1   = framecount (int)
                          * $2   = frames left this song (int)
                          * in  = seconds (float)
@@ -847,7 +847,7 @@ int main( int argc, char **argv ) {
                         b=strrchr( line, ' ' );
                         intime=atoi( b );
 
-                        // stream play
+                        /* stream play */
                         if( stream ) {
                             if( intime/60 < 60 ) {
                                 sprintf( status, "%i:%02i PLAYING", intime/60, intime%60 );
@@ -856,7 +856,7 @@ int main( int argc, char **argv ) {
                                 sprintf( status, "%i:%02i:%02i PLAYING", intime/3600, ( intime%3600 )/60, intime%60 );
                             }
                         }
-                        // file play
+                        /* file play */
                         else {
                             q=( 30*intime )/( rem+intime );
                             memset( tbuf, 0, MAXPATHLEN );
@@ -876,13 +876,13 @@ int main( int argc, char **argv ) {
                             sprintf( status, "%i:%02i [%s] %i:%02i", intime/60, intime%60, tbuf, rem/60, rem%60 );
 
                             if( ( fade != 0 ) && ( rem <= fade ) ) {
-                                // should the playcount be increased?
-                                // mix     - playcount relevant
-                                // usedb   - playcount is persistent
-                                // search  - partymode
-                                // !MP_CNTD - title has not been counted yet
+                                /* should the playcount be increased? */
+                                /* mix     - playcount relevant */
+                                /* usedb   - playcount is persistent */
+                                /* search  - partymode */
+                                /* !MP_CNTD - title has not been counted yet */
                                 if( mix && usedb && !search && !( current->flags & MP_CNTD ) ) {
-                                    current->flags |= MP_CNTD; // make sure a title is only counted once per session
+                                    current->flags |= MP_CNTD; /* make sure a title is only counted once per session */
                                     current->playcount++;
 
                                     if( current->skipcount > 0 ) {
@@ -900,7 +900,7 @@ int main( int argc, char **argv ) {
                                 }
                                 else {
                                     current=next;
-                                    // swap player
+                                    /* swap player */
                                     fdset=fdset?0:1;
                                     invol=0;
                                     outvol=100;
@@ -920,18 +920,18 @@ int main( int argc, char **argv ) {
                         redraw=1;
                         break;
 
-                    case 'P': // Player status
+                    case 'P': /* Player status */
                         cmd = atoi( &line[3] );
 
                         switch ( cmd ) {
                         case 0:
 
-                            // should the playcount be increased?
-                            // search  - partymode
-                            // mix     - playcount relevant
-                            // intime  - has been played for more than 2 secs
-                            // usedb   - playcount is persistent
-                            // !MP_CNTD - title has not been counted yet
+                            /* should the playcount be increased? */
+                            /* search  - partymode */
+                            /* mix     - playcount relevant */
+                            /* intime  - has been played for more than 2 secs */
+                            /* usedb   - playcount is persistent */
+                            /* !MP_CNTD - title has not been counted yet */
                             if ( !search && mix && ( intime > 2 ) && usedb && !( current->flags & MP_CNTD ) ) {
                                 current->flags |= MP_CNTD;
                                 current->playcount++;
@@ -979,7 +979,7 @@ int main( int argc, char **argv ) {
                         redraw=1;
                         break;
 
-                    case 'V': // volume reply
+                    case 'V': /* volume reply */
                         redraw=0;
                         break;
 
@@ -993,16 +993,16 @@ int main( int argc, char **argv ) {
                     default:
                         popUp( 0, "Warning!\n%s", line );
                         break;
-                    } // case line[1]
-                } // if line starts with '@'
+                    } /* case line[1] */
+                } /* if line starts with '@' */
 
-                // Ignore other mpg123 output
-            } // fgets() > 0
+                /* Ignore other mpg123 output */
+            } /* fgets() > 0 */
 
             if( redraw ) {
                 drawframe( current, status, stream );
             }
-        } // while(running)
+        } /* while(running) */
 
         if( usedb ) {
             dbClose( db );
@@ -1015,7 +1015,7 @@ int main( int argc, char **argv ) {
         }
 
         endwin();
-    } // root==NULL
+    } /* root==NULL */
     else {
         if( usedb ) {
             FAIL( F_WARN, "No matching music found in %s", dbname );

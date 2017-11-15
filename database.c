@@ -222,7 +222,7 @@ void dbBackup( const char *dbname ) {
  */
 struct entry_t *dbGetMusic( const char *dbname ) {
     struct dbentry_t dbentry;
-    unsigned int index = 1; // index 0 is reserved for titles not in the db!
+    unsigned int index = 1; /* index 0 is reserved for titles not in the db! */
     struct entry_t *dbroot=NULL;
     int db;
     size_t len;
@@ -320,7 +320,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
         mean=mean/count;
     }
 
-    // scan directory
+    /* scan directory */
     printver( 1, "Scanning...\n" );
     fsroot=recurse( basedir, NULL, basedir );
     fsroot=fsroot->dbnext;
@@ -420,38 +420,38 @@ int dbNameCheck( const char *dbname ) {
 						}
 
 						switch( match ) {
-						case  1: // 0001
-						case  2: // 0010
-						case  3: // 0011
-						case  7: // 0111
-						case 11: // 1011
+						case  1: /* 0001 */
+						case  2: /* 0010 */
+						case  3: /* 0011 */
+						case  7: /* 0111 */
+						case 11: /* 1011 */
 							unlink( currentEntry->path );
 							printver( 1, "removed %s\n", currentEntry->path );
 							runner->flags |= MP_MARK;
 							count++;
 							break;
-						case  4: // 0100
-						case  8: // 1000
-						case 12: // 1100
-						case 13: // 1101
-						case 14: // 1110
+						case  4: /* 0100 */
+						case  8: /* 1000 */
+						case 12: /* 1100 */
+						case 13: /* 1101 */
+						case 14: /* 1110 */
 							unlink( runner->path );
 							printver( 1, "removed %s\n", runner->path );
 							currentEntry->flags |= MP_MARK;
 							count++;
 							break;
-						case  0: // 0000
-						case  5: // 0101
-						case  6: // 0110
-						case  9: // 1001
-						case 10: // 1010
+						case  0: /* 0000 */
+						case  5: /* 0101 */
+						case  6: /* 0110 */
+						case  9: /* 1001 */
+						case 10: /* 1010 */
 							fprintf( fp, "## %i\n", match );
 							fprintf( fp, "#rm \"%s\"\n", currentEntry->path );
 							fprintf( fp, "#rm \"%s\"\n\n", runner->path );
-							runner->flags |= MP_MARK; // make sure only one of the doublets is used for future checkings
+							runner->flags |= MP_MARK; /* make sure only one of the doublets is used for future checkings */
 							break;
-						case 15: // 1111
-							// both titles are fine!
+						case 15: /* 1111 */
+							/* both titles are fine! */
 							break;
 						default:
 							fail( F_FAIL, "Incorrect match: %i\n", match );

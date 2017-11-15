@@ -224,7 +224,7 @@ static int matchTitle( struct entry_t *title, const char* pat ) {
             strlncpy( loname, title->display, 1024 );
             break;
 
-        case 'p': // @obsolete!
+        case 'p': /* @obsolete! */
             strlncpy( loname, title->path, 1024 );
             break;
 
@@ -295,9 +295,9 @@ static int matchList( struct entry_t **result, struct entry_t **base, struct mar
             }
 
             runner=runner->dbnext;
-        } //  while( runner->next != base );
+        } /*  while( runner->next != base ); */
 
-        runner=runner->dbnext; // start from the beginning
+        runner=runner->dbnext; /* start from the beginning */
         term=term->next;
     }
 
@@ -325,7 +325,7 @@ struct entry_t *searchList( struct entry_t *base, struct marklist_t *term ) {
 
     printver( 1, "Created playlist with %i titles\n", cnt );
 
-    // Mark every other title so they won't be shuffled.
+    /* Mark every other title so they won't be shuffled. */
     if( result != NULL ) {
         runner=result;
 
@@ -451,20 +451,20 @@ void moveEntry( struct entry_t *entry, struct entry_t *pos ) {
         return;
     }
 
-    // Move title that is not part of the current playlist?
+    /* Move title that is not part of the current playlist? */
     if( !( entry->flags & MP_MARK ) ) {
         pos=addToPL( entry, pos );
     }
     else {
-        // close gap in original position
+        /* close gap in original position */
         entry->plnext->plprev=entry->plprev;
         entry->plprev->plnext=entry->plnext;
 
-        // insert into new position
+        /* insert into new position */
         entry->plnext=pos->plnext;
         entry->plprev=pos;
 
-        // fix links
+        /* fix links */
         pos->plnext=entry;
         entry->plnext->plprev=entry;
     }
@@ -527,9 +527,9 @@ struct entry_t *loadPlaylist( const char *path ) {
         buff=fgets( buff, MAXPATHLEN, fp );
 
         if( buff && ( strlen( buff ) > 1 ) && ( buff[0] != '#' ) ) {
-            strip( titlePath, buff, MAXPATHLEN ); // remove control chars like CR/LF
+            strip( titlePath, buff, MAXPATHLEN ); /* remove control chars like CR/LF */
             current=insertTitle( current, titlePath );
-            // turn list into playlist too
+            /* turn list into playlist too */
             current->plprev=current->dbprev;
             current->plnext=current->dbnext;
         }
@@ -652,7 +652,7 @@ struct entry_t *insertTitle( struct entry_t *base, const char *path ) {
         root->dbnext->dbprev=root;
     }
 
-    // every title is it's own playlist
+    /* every title is it's own playlist */
     root->plnext = root;
     root->plprev = root;
 
@@ -743,7 +743,7 @@ int DNPSkip( struct entry_t *base, const unsigned int level ) {
     struct entry_t *runner=base;
     unsigned int skipskip=0;
 
-// Sort out skipped titles
+/* Sort out skipped titles */
     do {
         activity( "DNPSkipping" );
 
@@ -791,18 +791,18 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
        3 - all okay
     */
 
-    // improve 'randomization'
+    /* improve 'randomization' */
     gettimeofday( &tv,NULL );
     srand( getpid()*tv.tv_sec );
 
 	newCount( base );
-    num = countTitles( base, MP_ALL, MP_DNP ); // |MP_MARK );
+    num = countTitles( base, MP_ALL, MP_DNP ); /* |MP_MARK ); */
     printver( 2, "Shuffling %i titles\n", num );
 
     for( i=0; i<num; i++ ) {
         unsigned long skip;
         activity( "Shuffling " );
-        // select a random title from the database
+        /* select a random title from the database */
         skip=RANDOM( num-i );
         runner=skipTitles( runner, skip, -1 );
 
@@ -810,8 +810,8 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
             fail( F_FAIL, "%s is marked %i %i/%i!", runner->display, skip, i, num );
         }
 
-        // skip forward until a title is found the is neither DNP nor MARK
-        valid=0; // title has not passed any tests
+        /* skip forward until a title is found the is neither DNP nor MARK */
+        valid=0; /* title has not passed any tests */
 
         if( runner->flags & MP_MARK ) {
             fail( F_FAIL, "%s is marked!?", runner->display );
@@ -824,7 +824,7 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
         cycles=0;
 
         while( skipguard && ( valid != 3 ) ) {
-            // First title? That name is valid by default
+            /* First title? That name is valid by default */
             if( 0 == strlen( lastname ) ) {
                 valid=3;
             }
@@ -840,7 +840,7 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 
                     if( guard==runner ) {
                         printver( 2, "\nStopped nameskipping at %i/%i\n%s\n", i, num, runner->display );
-                        skipguard=0; // No more alternatives
+                        skipguard=0; /* No more alternatives */
                         break;
                     }
 
@@ -850,15 +850,15 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
                 if( skipguard ) {
                     if( guard != runner ) {
                         nameskip++;
-                        valid=1; // we skipped and need to check playcount
+                        valid=1; /* we skipped and need to check playcount */
                     }
                     else {
-                        valid |= 1; // we did not skip, so if playcount was fine it's still fine
+                        valid |= 1; /* we did not skip, so if playcount was fine it's still fine */
                     }
                 }
             }
 
-            // check for playcount
+            /* check for playcount */
             guard=runner;
 
             if( !( valid & 2 ) ) {
@@ -883,28 +883,28 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
                         valid=0;
 
                         if( guard == runner ) {
-                        	valid=1;    // we're back where we started and this one is valid by name
-                            pcount++;   // allow more replays
+                        	valid=1;    /* we're back where we started and this one is valid by name */
+                            pcount++;   /* allow more replays */
                             printver( 2, "Increasing maxplaycount to %li at %i\n", pcount, i );
                         }
                     }
                 }
 
                 if( runner != guard ) {
-                    playskip++;    // we needed to skip
+                    playskip++;    /* we needed to skip */
                 }
             }
 
             if( ++cycles > 10 ) {
                 printver( 2, "Looks like we ran into a loop in round %i/%i\n", i, num );
                 cycles=0;
-                // skipguard=0;
-                pcount++;   // allow replays
+                /* skipguard=0; */
+                pcount++;   /* allow replays */
                 printver( 2, "Increasing maxplaycount to %li\n", pcount );
             }
-        } // while( skipguard && ( valid != 3 ) )
+        } /* while( skipguard && ( valid != 3 ) ) */
 
-        // title passed all tests
+        /* title passed all tests */
         if( valid == 3 ) {
             printver( 3, "[+] (%i/%li/%3s) %s\n", runner->playcount, pcount, ONOFF( runner->flags&MP_FAV ), runner->display );
             strlncpy( lastname, runner->artist, NAMELEN );
@@ -912,18 +912,18 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
             added++;
         }
 
-        // title can't pass tests
+        /* title can't pass tests */
         if( !skipguard ) {
-            // find a random position
+            /* find a random position */
             activity( "Stuffing" );
             guard=skipTitles( end, RANDOM( num ), 0 );
-            // @todo: where is the logic error here?
-//			while( ( guard->plnext != guard )
-//				&& !checkMatch( guard->artist, runner->artist )
-//				&& !checkMatch( guard->plnext->artist, runner->artist ) ) {
-//				guard=guard->plnext;
-//				activity("badend");
-//			}
+            /* @todo: where is the logic error here? */
+/*			while( ( guard->plnext != guard ) */
+/*				&& !checkMatch( guard->artist, runner->artist ) */
+/*				&& !checkMatch( guard->plnext->artist, runner->artist ) ) { */
+/*				guard=guard->plnext; */
+/*				activity("badend"); */
+/*			} */
             insskip++;
             printver( 3, "[*] (%i/%li) %s [%s]\n", runner->playcount, pcount, runner->display, guard->display );
             guard=addToPL( runner, guard );
@@ -937,7 +937,7 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
     printver( 2, "Stuffed %i titles into playlist\n", insskip );
     printver( 2, "Had a maximum of %i cycles\n", maxcycles );
 
-    // Make sure something valid is returned
+    /* Make sure something valid is returned */
     if( NULL == end ) {
         fail( F_FAIL, "No titles were inserted!" );
     }
@@ -1077,7 +1077,7 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 
     printver( 3, "Checking %s\n", curdir );
 
-    // get all music files
+    /* get all music files */
     num = getMusic( curdir, &entry );
 
     if( num < 0 ) {
@@ -1093,7 +1093,7 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 
     free( entry );
 
-    // step down subdirectories
+    /* step down subdirectories */
     num=getDirs( curdir, &entry );
 
     if( num < 0 ) {
@@ -1133,7 +1133,7 @@ void dumpTitles( struct entry_t *root, const int pl ) {
     }
     while( ptr != root );
 
-    // fail( F_WARN, "END DUMP" );
+    /* fail( F_WARN, "END DUMP" ); */
 }
 
 /**
@@ -1143,7 +1143,7 @@ void dumpTitles( struct entry_t *root, const int pl ) {
 void dumpInfo( struct entry_t *root, int global, int skip ) {
     struct entry_t *current=root;
     unsigned int maxplayed=0;
-    unsigned int minplayed=-1; // UINT_MAX;
+    unsigned int minplayed=-1; /* UINT_MAX; */
     unsigned int pl=0;
     unsigned int skipped=0;
     unsigned int dnp=0;

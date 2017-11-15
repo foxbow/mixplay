@@ -13,7 +13,7 @@
 #include <string.h>
 #include <stdio.h>
 
-// default genres by number
+/* default genres by number */
 char *genres[192] = {
     "Blues"
     ,"Classic Rock"
@@ -248,10 +248,10 @@ static void genPathName( const char *basedir, struct entry_t *entry  ) {
         blen=blen+1;
     }
 
-    // Create working copy of the path and cut off trailing /
+    /* Create working copy of the path and cut off trailing / */
     strip( curdir, ( entry->path )+blen, MAXPATHLEN );
 
-    // cut off .mp3
+    /* cut off .mp3 */
     if( endsWith( curdir, ".mp3" ) ) {
         curdir[strlen( curdir ) - 4]=0;
     }
@@ -299,7 +299,7 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, struct entry_t *ti
     mpg123_id3v2 *v2;
     int meta;
 
-    genPathName( basedir, title ); // Set some default values as tag info may be incomplete
+    genPathName( basedir, title ); /* Set some default values as tag info may be incomplete */
 
     if( mpg123_open( mh, title->path ) != MPG123_OK ) {
         printver( 1, "Could not open %s as MP3 file\n", title->path );
@@ -315,7 +315,7 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, struct entry_t *ti
     }
 
     if( mpg123_id3( mh, &v1, &v2 ) == MPG123_OK ) {
-        if( v2 != NULL ) { // Prefer v2 tag data
+        if( v2 != NULL ) { /* Prefer v2 tag data */
             tagCopy( title->title, v2->title );
             tagCopy( title->artist, v2->artist );
             tagCopy( title->album, v2->album );
@@ -365,7 +365,7 @@ int fillTagInfo( const char *basedir, struct entry_t *title ) {
 
     mpg123_init();
     mh = mpg123_new( NULL, NULL );
-//	mpg123_param( mh, MPG123_VERBOSE, 0, 0.0 );
+/*	mpg123_param( mh, MPG123_VERBOSE, 0, 0.0 ); */
     mpg123_param( mh, MPG123_ADD_FLAGS, MPG123_QUIET, 0.0 );
     fillInfo( mh, basedir, title );
     mpg123_delete( mh );

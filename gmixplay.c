@@ -11,7 +11,7 @@
 #include <sys/types.h>
 #include <X11/Xlib.h>
 
-// global control structure
+/* global control structure */
 struct mpcontrol_t *mpcontrol;
 
 /**
@@ -34,7 +34,7 @@ static int initAll( void *data ) {
     pthread_create( &control->rtid, NULL, reader, control );
 
     if( NULL == control->root ) {
-        // Runs as thread to have updates in the UI
+        /* Runs as thread to have updates in the UI */
         pthread_create( &tid, NULL, setProfile, ( void * )control );
     }
     else {
@@ -113,11 +113,11 @@ int main( int argc, char **argv ) {
     control.fullscreen=0;
     control.debug=0;
 
-    // parse command line options
-    // using unsigned char c to work around getopt bug on ARM
+    /* parse command line options */
+    /* using unsigned char c to work around getopt bug on ARM */
     while ( ( c = getopt( argc, argv, "vfds" ) ) != 255 ) {
         switch ( c ) {
-        case 'v': // increase debug message level to display in console output
+        case 'v': /* increase debug message level to display in console output */
             incVerbosity();
             break;
 
@@ -125,11 +125,11 @@ int main( int argc, char **argv ) {
             control.fullscreen=1;
             break;
 
-        case 'd': // increase debug message level to display in debug request
+        case 'd': /* increase debug message level to display in debug request */
             control.debug++;
             break;
 
-        case 's': // single channel - disable fading
+        case 's': /* single channel - disable fading */
         	control.fade=0;
         	break;
         }
@@ -151,11 +151,11 @@ int main( int argc, char **argv ) {
         progressStart( "Debug" );
     }
 
-    // start the player processes
-    // these may wait in the background until
-    // something needs to be played at all
+    /* start the player processes */
+    /* these may wait in the background until */
+    /* something needs to be played at all */
     for( i=0; i <= control.fade; i++ ) {
-        // create communication pipes
+        /* create communication pipes */
         pipe( control.p_status[i] );
         pipe( control.p_command[i] );
         pid[i] = fork();
@@ -164,7 +164,7 @@ int main( int argc, char **argv ) {
             fail( errno, "could not fork" );
         }
 
-        // child process
+        /* child process */
         if ( 0 == pid[i] ) {
             printver( 2, "Starting player %i\n", i+1 );
 
@@ -176,12 +176,12 @@ int main( int argc, char **argv ) {
                 fail( errno, "Could not dup stdout for player %i", i+1 );
             }
 
-            // this process needs no pipes
+            /* this process needs no pipes */
             close( control.p_command[i][0] );
             close( control.p_command[i][1] );
             close( control.p_status[i][0] );
             close( control.p_status[i][1] );
-            // Start mpg123 in Remote mode
+            /* Start mpg123 in Remote mode */
             execlp( "mpg123", "mpg123", "-R", "2> &1", NULL );
             fail( errno, "Could not exec mpg123" );
         }
@@ -190,12 +190,12 @@ int main( int argc, char **argv ) {
         close( control.p_status[i][1] );
     }
 
-    // first thing to be called after the GUI is enabled
+    /* first thing to be called after the GUI is enabled */
     gdk_threads_add_idle( initAll, &control );
 
-    // Add keyboard handler // @TODO
-//    gtk_widget_add_events(control.widgets->mixplay_main, GDK_KEY_PRESS_MASK);
-//    g_signal_connect (G_OBJECT (window), "keyboard_press", G_CALLBACK (on_key_press), NULL);
+    /* Add keyboard handler // @TODO */
+/*    gtk_widget_add_events(control.widgets->mixplay_main, GDK_KEY_PRESS_MASK); */
+/*    g_signal_connect (G_OBJECT (window), "keyboard_press", G_CALLBACK (on_key_press), NULL); */
 
     /* Start main loop */
     gtk_main();

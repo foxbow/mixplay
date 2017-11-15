@@ -155,7 +155,7 @@ void printver( int vl, const char *msg, ... ) {
  * callback for the progress close button
  */
 static void cb_progressClose( GtkDialog *dialog, gint res, gpointer data ) {
-    // make sure that nothing is added while we close the dialog
+    /* make sure that nothing is added while we close the dialog */
     pthread_mutex_lock( &msglock );
     gtk_widget_destroy( GTK_WIDGET( dialog ) );
     mpcontrol->widgets->mp_popup=NULL;
@@ -209,7 +209,7 @@ void progressStart( const char *msg, ... ) {
  * this is just another name for printver() and defined in gladeutils.h
  * just mentioned here for clarity
  */
-// #define progressLog( ... ) printver( 0, __VA_ARGS__ )
+/* #define progressLog( ... ) printver( 0, __VA_ARGS__ ) */
 
 /**
  * actual gtk code for progressDone
@@ -298,7 +298,7 @@ static int g_updateUI( void *data ) {
         return 0;
     }
 
-    // these don't make sense when a stream is played
+    /* these don't make sense when a stream is played */
     gtk_widget_set_visible( control->widgets->button_next, !( control->playstream ) );
     gtk_widget_set_sensitive( control->widgets->button_prev, !( control->playstream ) );
     gtk_widget_set_visible( control->widgets->progress, !( control->playstream ) );
@@ -307,7 +307,7 @@ static int g_updateUI( void *data ) {
 
     if( ( NULL != control->current ) && ( 0 != strlen( control->current->path ) ) ) {
         usedb=( control->root->key )?TRUE:FALSE;
-        // These depend on a database
+        /* These depend on a database */
         gtk_widget_set_visible( control->widgets->button_fav, usedb );
 
         gtk_label_set_text( GTK_LABEL( control->widgets->title_current ),

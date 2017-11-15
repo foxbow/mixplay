@@ -150,7 +150,7 @@ void popUp( int time, const char *text, ... ) {
 
     if ( ( row > ( 2*numlines )+2 ) && ( col > 19 ) ) {
         middle=( ( row-1 )/2 )+1;
-//		mvhline( row-(numlines+3), 2, '=', col-4);
+/*		mvhline( row-(numlines+3), 2, '=', col-4); */
         mvhline( middle, 2, '=', col-4 );
         middle++;
 
@@ -163,8 +163,8 @@ void popUp( int time, const char *text, ... ) {
                 strcpy( buff, lines[line] );
             }
 
-//			mvhline( row-numlines+line-2, 2, ' ', col-4);
-//			mvprintw( row-numlines+line-2, 3, " %s ", buff);
+/*			mvhline( row-numlines+line-2, 2, ' ', col-4); */
+/*			mvprintw( row-numlines+line-2, 3, " %s ", buff); */
             mvhline( middle+line, 2, ' ', col-4 );
             mvprintw( middle+line, 3, " %s ", buff );
         }
@@ -248,9 +248,9 @@ void drawframe( struct entry_t *current, const char *status, int stream ) {
     refresh();
     getmaxyx( stdscr, row, col );
 
-    // Keep a minimum size to make sure
+    /* Keep a minimum size to make sure */
     if ( ( row > 6 ) && ( col > 19 ) ) {
-        // main frame
+        /* main frame */
         drawbox( 0, 1, row - 2, col - 2 );
 
         maxlen = col - 6;
@@ -262,7 +262,7 @@ void drawframe( struct entry_t *current, const char *status, int stream ) {
             middle=( row-1 )/2;
         }
 
-        // title
+        /* title */
         dhline( middle-1, 1, col-3 );
 
         if( NULL != current ) {
@@ -275,7 +275,7 @@ void drawframe( struct entry_t *current, const char *status, int stream ) {
         pos = ( col - ( strlen( buff ) + 2 ) ) / 2;
         mvprintw( middle-1, pos, " %s ", buff );
 
-        // Set the current playing title
+        /* Set the current playing title */
         if( NULL != current ) {
             strip( buff, current->display, maxlen );
 
@@ -297,14 +297,14 @@ void drawframe( struct entry_t *current, const char *status, int stream ) {
 
         dhline( middle+1, 1, col-3 );
 
-        // print the status
+        /* print the status */
         strip( buff, status, maxlen );
         pos = ( col - ( strlen( buff ) + 2 ) ) / 2;
         mvprintw( row - 2, pos, " %s ", buff );
 
-        // song list
+        /* song list */
         if( NULL != current ) {
-            // previous songs
+            /* previous songs */
             runner=current->plprev;
 
             for( i=middle-2; i>0; i-- ) {
@@ -326,7 +326,7 @@ void drawframe( struct entry_t *current, const char *status, int stream ) {
                 attroff( A_BOLD );
             }
 
-            // past songs
+            /* past songs */
             runner=current->plnext;
 
             for( i=middle+2; i<row-2; i++ ) {

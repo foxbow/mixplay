@@ -38,6 +38,13 @@ void fail( int error, const char* msg, ... );
 void activity( const char *msg, ... );
 
 /**
+ * String manipulation functions to get rid of warnings in strncat,
+ * snprintf etc
+ */
+char *appendString( char *line, const char *val, size_t maxlen );
+char *appendInt( char *line, const char *fmt, const int val, size_t maxlen );
+
+/**
  * General utility functions
  */
 void setTitle( const char* title );

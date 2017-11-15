@@ -199,7 +199,7 @@ void infoStart( GtkButton *button, gpointer data ) {
 								"_Application",  1,
 								"_Database",  2,
 								"_Clean up database", mpc_dbclean,
-//								"Clean up _filesystem", mpc_doublets,
+/*								"Clean up _filesystem", mpc_doublets, */
 								"_Quit!", mpc_quit,
 								NULL );
 	    reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
@@ -340,7 +340,7 @@ void profileStart( GtkButton *button, gpointer data ) {
     gtk_widget_destroy( dialog );
 
     switch( reply ) {
-    case 1: // browse filesystem
+    case 1: /* browse filesystem */
     	dialog = gtk_file_chooser_dialog_new ( "Select Music",
                                                GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
 											   GTK_FILE_CHOOSER_ACTION_OPEN,
@@ -357,13 +357,13 @@ void profileStart( GtkButton *button, gpointer data ) {
 
         selected=gtk_dialog_run( GTK_DIALOG ( dialog ) );
         if ( ( selected == GTK_RESPONSE_ACCEPT ) || ( selected == 1 ) ){
-        	// Set minimum defaults to let mixplay work
+        	/* Set minimum defaults to let mixplay work */
         	path=falloc( MAXPATHLEN, sizeof( char ) );
             strncpy( path, gtk_file_chooser_get_filename( GTK_FILE_CHOOSER( dialog ) ), MAXPATHLEN );
         }
         gtk_widget_destroy ( dialog );
     	break;
-    case 2: // Enter URL
+    case 2: /* Enter URL */
         dialog = gtk_message_dialog_new(
                      GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
                      GTK_DIALOG_DESTROY_WITH_PARENT,
@@ -394,7 +394,7 @@ void profileStart( GtkButton *button, gpointer data ) {
     	 *
     	 * Genre remains a special case though
     	 */
-    case 3: // search
+    case 3: /* search */
 		mpcontrol->active = profile;
         dialog = gtk_message_dialog_new(
                      GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
@@ -423,15 +423,15 @@ void profileStart( GtkButton *button, gpointer data ) {
         		fail( F_WARN, "Need at least three characters!\nSucks to be you U2!" );
         	}
         	else {
-        		// create selection requester
-        		// search for t, a, l and add the results to the tree headers
-        		// allow selection
-        		// if something was selected:
-        		// - stop player
-        		// - move titles after the current title
-        		// - start player
-        		//
-        		// close requester
+        		/* create selection requester */
+        		/* search for t, a, l and add the results to the tree headers */
+        		/* allow selection */
+        		/* if something was selected: */
+        		/* - stop player */
+        		/* - move titles after the current title */
+        		/* - start player */
+        		/* */
+        		/* close requester */
         		if( mpcontrol->status == mpc_play ) {
         			setCommand(mpcontrol, mpc_stop);
         		}
@@ -454,7 +454,7 @@ void profileStart( GtkButton *button, gpointer data ) {
         	path=NULL;
         }
     	break;
-    case 4: // Fillstick
+    case 4: /* Fillstick */
     	dialog = gtk_file_chooser_dialog_new ( "Select Target",
                                                GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
 											   GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,

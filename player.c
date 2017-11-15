@@ -19,7 +19,7 @@ pthread_mutex_t cmdlock=PTHREAD_MUTEX_INITIALIZER;
  * writes the current configuration
  */
 void writeConfig( struct mpcontrol_t *config ) {
-    char		conffile[MAXPATHLEN]; //  = "mixplay.conf";
+    char		conffile[MAXPATHLEN]; /*  = "mixplay.conf"; */
     GKeyFile	*keyfile;
     GError		*error=NULL;
 
@@ -51,8 +51,8 @@ void writeConfig( struct mpcontrol_t *config ) {
 void readConfig( struct mpcontrol_t *config ) {
     GKeyFile	*keyfile;
     GError		*error=NULL;
-    char		confdir[MAXPATHLEN];  // = "$HOME/.mixplay";
-    char		conffile[MAXPATHLEN]; // = "mixplay.conf";
+    char		confdir[MAXPATHLEN];  /* = "$HOME/.mixplay"; */
+    char		conffile[MAXPATHLEN]; /* = "mixplay.conf"; */
     GtkWidget 	*dialog;
     GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER;
     gint 		res;
@@ -60,7 +60,7 @@ void readConfig( struct mpcontrol_t *config ) {
 
     printver( 1, "Reading config\n" );
 
-    // load default configuration
+    /* load default configuration */
     snprintf( confdir, MAXPATHLEN, "%s/.mixplay", getenv( "HOME" ) );
     snprintf( conffile, MAXPATHLEN, "%s/mixplay.conf", confdir );
     config->dbname=falloc( MAXPATHLEN, sizeof( char ) );
@@ -97,7 +97,7 @@ void readConfig( struct mpcontrol_t *config ) {
         res = gtk_dialog_run( GTK_DIALOG ( dialog ) );
 
         if ( res == GTK_RESPONSE_ACCEPT ) {
-        	// Set minimum defaults to let mixplay work
+        	/* Set minimum defaults to let mixplay work */
         	config->musicdir=falloc( MAXPATHLEN, sizeof( char ) );
             strncpy( config->musicdir, gtk_file_chooser_get_filename( GTK_FILE_CHOOSER( dialog ) ), MAXPATHLEN );
             gtk_widget_destroy ( dialog );
@@ -115,19 +115,19 @@ void readConfig( struct mpcontrol_t *config ) {
         }
     }
 
-    // get music dir
+    /* get music dir */
     config->musicdir=g_key_file_get_string( keyfile, "mixplay", "musicdir", &error );
     if( NULL != error ) {
         fail( F_FAIL, "No music dir set in configuration!\n%s", error->message );
     }
 
-    // read list of profiles
+    /* read list of profiles */
     config->profile =g_key_file_get_string_list( keyfile, "mixplay", "profiles", &config->profiles, &error );
     if( NULL != error ) {
     	fail( F_FAIL, "No profiles set in config file!\n%s", error->message );
     }
 
-    // get active configuration
+    /* get active configuration */
 	config->active  =g_key_file_get_uint64( keyfile, "mixplay", "active", &error );
 	if( NULL != error ) {
 		fail( F_FAIL, "No active profile set in config!\n%s", error->message );
@@ -135,7 +135,7 @@ void readConfig( struct mpcontrol_t *config ) {
 
 	config->skipdnp  =g_key_file_get_uint64( keyfile, "mixplay", "skipdnp", &error );
 
-	// Ignore fade setting if if has been overridden
+	/* Ignore fade setting if if has been overridden */
 	if( config->fade == 1 ) {
 		config->fade  =g_key_file_get_uint64( keyfile, "mixplay", "fade", &error );
 		if( NULL != error ) {
@@ -143,7 +143,7 @@ void readConfig( struct mpcontrol_t *config ) {
 		}
 	}
 
-	// read streams if any are there
+	/* read streams if any are there */
     config->stream=g_key_file_get_string_list( keyfile, "mixplay", "streams", &config->streams, &error );
     if( NULL == error ) {
     	snum=config->streams;
@@ -193,7 +193,7 @@ int setArgument( struct mpcontrol_t *control, const char *arg ) {
         return 1;
     }
     else if( endsWith( arg, ".mp3" ) ) {
-        // play single song...
+        /* play single song... */
     	control->root=cleanTitles( control->root );
         control->root=insertTitle( NULL, arg );
         return 2;
@@ -267,7 +267,7 @@ void setStream( struct mpcontrol_t *control, const char* stream, const char *nam
  * This is thread-able to have progress information on startup!
  */
 void *setProfile( void *data ) {
-    char		confdir[MAXPATHLEN]; // = "~/.mixplay";
+    char		confdir[MAXPATHLEN]; /* = "~/.mixplay"; */
     char 		*profile;
     struct marklist_t *dnplist=NULL;
     struct marklist_t *favourites=NULL;
@@ -329,7 +329,7 @@ void *setProfile( void *data ) {
             }
 
             printver( 1, "Added %i titles.", num );
-//            progressEnd( NULL ); // @TODO - why is this here?
+/*            progressEnd( NULL ); // @TODO - why is this here? */
             control->root=dbGetMusic( control->dbname );
 
             if( NULL == control->root ) {
@@ -356,7 +356,7 @@ void *setProfile( void *data ) {
     	fail( F_FAIL, "Neither profile nor stream set!" );
     }
 
-    // if we're not in player context, start playing automatically
+    /* if we're not in player context, start playing automatically */
     if( pthread_mutex_trylock( &cmdlock ) == 0 ){
     	printver( 2, "Autoplay\n" );
         control->command=mpc_start;
@@ -378,7 +378,7 @@ static void playCount( struct mpcontrol_t *control ) {
     }
 
     if( ( control->current->key != 0 ) && !( control->current->flags & MP_CNTD ) ) {
-        control->current->flags |= MP_CNTD; // make sure a title is only counted once per session
+        control->current->flags |= MP_CNTD; /* make sure a title is only counted once per session */
         control->current->playcount++;
 
         if( !( control->current->flags & MP_SKPD ) && ( control->current->skipcount > 0 ) ) {
@@ -415,7 +415,7 @@ void *reader( void *cont ) {
     int intime=0;
     int fade=3;
 
-    // Debug stuff
+    /* Debug stuff */
     char *mpc_command[] = {
     	    "mpc_idle",
     	    "mpc_play",
@@ -453,14 +453,14 @@ void *reader( void *cont ) {
         	FD_SET( control->p_status[i][0], &fds );
         }
         to.tv_sec=0;
-        to.tv_usec=100000; // 1/10 second
+        to.tv_usec=100000; /* 1/10 second */
         i=select( FD_SETSIZE, &fds, NULL, NULL, &to );
 
         if( i>0 ) {
             redraw=1;
         }
 
-        // drain inactive player
+        /* drain inactive player */
         if( control->fade && FD_ISSET( control->p_status[fdset?0:1][0], &fds ) ) {
             key=readline( line, 512, control->p_status[fdset?0:1][0] );
 
@@ -471,7 +471,7 @@ void *reader( void *cont ) {
 	        		}
 
 					switch ( line[1] ) {
-					case 'R': // startup
+					case 'R': /* startup */
 						printver( 1, "MPG123 background instance is up\n" );
 						break;
 					case 'E':
@@ -495,24 +495,24 @@ void *reader( void *cont ) {
             }
         }
 
-        // Interpret mpg123 output and ignore invalid lines
+        /* Interpret mpg123 output and ignore invalid lines */
         if( FD_ISSET( control->p_status[fdset][0], &fds ) &&
                 ( 3 < readline( line, 512, control->p_status[fdset][0] ) ) ) {
         	if( '@' == line[0] ) {
-        		// Don't print volume and progress messages
+        		/* Don't print volume and progress messages */
         		if( ( 'F' != line[1] ) && ( 'V' != line[1] ) ) {
         			printver( 2, "P+ %s\n", line );
         		}
                 switch ( line[1] ) {
                     int cmd=0, rem=0;
 
-                case 'R': // startup
+                case 'R': /* startup */
                     printver( 1, "MPG123 foreground instance is up\n" );
                     break;
 
-                case 'I': // ID3 info
+                case 'I': /* ID3 info */
 
-                    // ICY stream info
+                    /* ICY stream info */
                     if( NULL != strstr( line, "ICY-" ) ) {
                         if( NULL != strstr( line, "ICY-NAME: " ) ) {
                             strip( control->current->album, line+13, NAMELEN );
@@ -540,26 +540,26 @@ void *reader( void *cont ) {
                             }
                         }
                     }
-                    // standard mpg123 info
+                    /* standard mpg123 info */
                     else if ( strstr( line, "ID3" ) != NULL ) {
-                        // ignored
+                        /* ignored */
                     }
 
                     break;
 
-                case 'T': // TAG reply
+                case 'T': /* TAG reply */
                     fail( F_FAIL, "Got TAG reply!" );
                     break;
 
-                case 'J': // JUMP reply
+                case 'J': /* JUMP reply */
                     redraw=0;
                     break;
 
-                case 'S': // Status message after loading a song (stream info)
+                case 'S': /* Status message after loading a song (stream info) */
                     redraw=0;
                     break;
 
-                case 'F': // Status message during playing (frame info)
+                case 'F': /* Status message during playing (frame info) */
                     /* $1   = framecount (int)
                      * $2   = frames left this song (int)
                      * in  = seconds (float)
@@ -577,22 +577,22 @@ void *reader( void *cont ) {
 					else {
 						sprintf( control->playtime, "%02i:%02i:%02i", intime/3600, ( intime%3600 )/60, intime%60 );
 					}
-                    // file play
+                    /* file play */
                     if( control->playstream == 0 ) {
                         control->percent=( 100*intime )/( rem+intime );
                         sprintf( control->remtime, "%02i:%02i", rem/60, rem%60 );
 
                         if( rem <= fade ) {
-                            // should the playcount be increased?
+                            /* should the playcount be increased? */
                             playCount( control );
                             next=control->current->plnext;
 
                             if( next == control->current ) {
-                            	control->status=mpc_idle; // STOP
+                            	control->status=mpc_idle; /* STOP */
                             }
                             else {
                                 control->current=next;
-                                // swap player if we want to fade
+                                /* swap player if we want to fade */
                                 if( control->fade ) {
                                 	fdset=fdset?0:1;
                                 	invol=0;
@@ -614,16 +614,16 @@ void *reader( void *cont ) {
                     redraw=1;
                     break;
 
-                case 'P': // Player status
+                case 'P': /* Player status */
                     cmd = atoi( &line[3] );
 
                     switch ( cmd ) {
-                    case 0: // STOP
-                    	// player was not yet fully initialized, start again
+                    case 0: /* STOP */
+                    	/* player was not yet fully initialized, start again */
                     	if( control->status != mpc_play ) {
                 			sendplay( fdset, control );
                     	}
-                        // should the playcount be increased?
+                        /* should the playcount be increased? */
                     	else if( control->playstream == 0 ) {
 							playCount( control );
 							next = skipTitles( control->current, order, 0 );
@@ -631,7 +631,7 @@ void *reader( void *cont ) {
 							if ( ( next == control->current ) ||
 									( ( ( order == 1  ) && ( next == control->root ) ) ||
 									  ( ( order == -1 ) && ( next == control->root->plprev ) ) ) ) {
-								control->status=mpc_idle; // stop
+								control->status=mpc_idle; /* stop */
 							}
 							else {
 								if( ( order==1 ) && ( next == control->root ) ) {
@@ -650,11 +650,11 @@ void *reader( void *cont ) {
                     	}
                         break;
 
-                    case 1: // PAUSE
+                    case 1: /* PAUSE */
                     	control->status=mpc_idle;
                         break;
 
-                    case 2:  // PLAY
+                    case 2:  /* PLAY */
                     	if( control->status == mpc_start ) {
                         	printver( 2, "Playing profile #%i\n", control->active );
                     	}
@@ -669,7 +669,7 @@ void *reader( void *cont ) {
                     redraw=1;
                     break;
 
-                case 'V': // volume reply
+                case 'V': /* volume reply */
                     redraw=0;
                     break;
 
@@ -683,13 +683,13 @@ void *reader( void *cont ) {
                 default:
                     fail( F_WARN, "Warning!\n%s", line );
                     break;
-                } // case line[1]
-            } // if line starts with '@'
+                } /* case line[1] */
+            } /* if line starts with '@' */
             else {
             	printver(1, "MPG123: %s\n", line );
-            	// Ignore other mpg123 output
+            	/* Ignore other mpg123 output */
             }
-        } // fgets() > 0
+        } /* fgets() > 0 */
 
         if( redraw ) {
             updateUI( control );
@@ -730,7 +730,7 @@ void *reader( void *cont ) {
             if( ( control->current->key != 0 ) && !( control->current->flags & ( MP_SKPD|MP_CNTD ) ) ) {
                 control->current->skipcount++;
                 control->current->flags |= MP_SKPD;
-                // updateCurrent( control ); - done in STOP handling
+                /* updateCurrent( control ); - done in STOP handling */
             }
 
             write( control->p_command[fdset][1], "STOP\n", 6 );
@@ -798,7 +798,7 @@ void *reader( void *cont ) {
         case mpc_stop:
             order=0;
             write( control->p_command[fdset][1], "STOP\n", 6 );
-            // control->status=mpc_idle;
+            /* control->status=mpc_idle; */
             break;
 
         case mpc_dnptitle:
@@ -877,7 +877,7 @@ void *reader( void *cont ) {
         	break;
 
         case mpc_idle:
-            // do null
+            /* do null */
             break;
         }
 
