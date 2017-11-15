@@ -5,7 +5,6 @@
 #include "musicmgr.h"
 #include "mpgutils.h"
 #include "utils.h"
-#include "player.h"
 
 #include <unistd.h>
 #include <sys/types.h>

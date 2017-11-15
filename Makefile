@@ -22,13 +22,25 @@ distclean: clean
 	rm -f core
 
 bin/mixplay: $(OBJS) $(NCOBJS) 
-	$(CC) $(CCFLAGS_NCURSES) $^ -o $@ -lncurses -lmpg123
+	$(CC) $^ -o $@ -lncurses -lmpg123
 
 bin/gmixplay: $(OBJS) $(GLOBJS)
 	$(CC) $(CCFLAGS_GLADE) $^ -o $@ $(LDFLAGS_GLADE) -lmpg123
 
-%.o: %.c
+gladeutils.o: gladeutils.c
 	$(CC) $(CCFLAGS_GLADE) -c $<
+
+callbacks.o: callbacks.c
+	$(CC) $(CCFLAGS_GLADE) -c $<
+
+gmixplay.o: gmixplay.c
+	$(CC) $(CCFLAGS_GLADE) -c $<
+
+player.o: player.c
+	$(CC) $(CCFLAGS_GLADE) -c $<
+
+%.o: %.c
+	$(CC) $(CCFLAGS) -c $<
 	
 install: all	
 	install -d ~/bin/
