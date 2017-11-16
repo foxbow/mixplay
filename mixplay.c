@@ -110,7 +110,7 @@ int main( int argc, char **argv ) {
     char favname[MAXPATHLEN] = "mixplay.fav";
     char config[MAXPATHLEN]  = "mixplay.conf";
     int key;
-    char c;
+    unsigned char c;
     char *b;
     int mix = -1;
     int i;
@@ -172,7 +172,7 @@ int main( int argc, char **argv ) {
     }
 
     /* parse command line options */
-    while ( ( c = getopt( argc, argv, "ACDhl:mNp:Pq:Qrs:Su:vFVX" ) ) != -1 ) {
+    while ( ( c = getopt( argc, argv, "ACDhl:mNp:Pq:Qrs:Su:vFVX" ) ) != 255 ) {
 
         switch ( c ) {
         case 'v': /* pretty useless in normal use */
@@ -380,7 +380,12 @@ int main( int argc, char **argv ) {
         printf( "It will be set up now\n" );
 
         if( mkdir( confdir, 0700 ) == -1 ) {
-            FAIL( errno, "Could not create config dir %s", confdir );
+        	if( errno == EEXIST ) {
+        		fprintf( stderr, "WARNING: %s already exists!\n", confdir );
+        	}
+        	else {
+        		FAIL( errno, "Could not create config dir %s", confdir );
+        	}
         }
 
         while( 1 ) {
@@ -407,7 +412,7 @@ int main( int argc, char **argv ) {
             fputs( basedir, fp );
             fputc( '\n', fp );
             fclose( fp );
-            FAIL( F_FAIL, "Done." );
+            scan=2;
         }
         else {
             FAIL( errno, "Could not open %s", line );
@@ -416,6 +421,9 @@ int main( int argc, char **argv ) {
 
     /* scanformusic functionality */
     if( scan ) {
+    	if( !getVerbosity() ) {
+    		setVerbosity(1);
+    	}
         if ( scan & 1 ) {
             dbBackup( dbname );
         }
@@ -469,6 +477,9 @@ int main( int argc, char **argv ) {
                     current=current->dbnext;
                 }
                 while( current != root );
+            }
+            else {
+            	FAIL( F_FAIL, "No Database, re-run with -A!\n");
             }
         }
 
