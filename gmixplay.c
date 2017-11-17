@@ -1,15 +1,16 @@
-#include "utils.h"
-#include "musicmgr.h"
-#include "database.h"
-#include "gladeutils.h"
-#include "player.h"
-#include "gmixplay_app.h"
-
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
 #include <X11/Xlib.h>
+
+#include "utils.h"
+#include "musicmgr.h"
+#include "database.h"
+#include "gladeutils.h"
+#include "gmixplay_app.h"
+#include "player.h"
+#include "config.h"
 
 /* global control structure */
 struct mpcontrol_t *mpcontrol;
@@ -25,7 +26,7 @@ static int initAll( void *data ) {
     pthread_t tid;
 
     control->current=control->root;
-    control->log[0]='\0';
+    gldata(control)->log[0]='\0';
     strcpy( control->playtime, "00:00" );
     strcpy( control->remtime, "00:00" );
     control->percent=0;
@@ -43,7 +44,7 @@ static int initAll( void *data ) {
         setCommand(control, mpc_play );
     }
 
-    if( control->debug ) {
+    if( gldata(control)->debug ) {
         progressEnd( "Initialization done." );
     }
     return 0;
@@ -58,10 +59,10 @@ static void buildUI( struct mpcontrol_t * control ) {
     builder=gtk_builder_new_from_string( ( const char * )gmixplay_app_glade, gmixplay_app_glade_len );
 
     /* Allocate data structure */
-    control->widgets = g_slice_new( MpData );
+    gldata(control)->widgets = g_slice_new( MpData );
 
     /* Get objects from UI */
-#define GW( name ) MP_GET_WIDGET( builder, name, control->widgets )
+#define GW( name ) MP_GET_WIDGET( builder, name, gldata(control)->widgets )
     GW( mixplay_main );
     GW( button_prev );
     GW( button_next );
@@ -76,25 +77,26 @@ static void buildUI( struct mpcontrol_t * control ) {
     GW( progress );
     GW( button_profile );
 #undef GW
-    control->widgets->mp_popup = NULL;
+    gldata(control)->widgets->mp_popup = NULL;
 
     /* Connect signals */
-    gtk_builder_connect_signals( builder, control->widgets );
+    gtk_builder_connect_signals( builder, gldata(control)->widgets );
 
     /* Destroy builder, since we don't need it anymore */
     g_object_unref( G_OBJECT( builder ) );
 
     /* Show window. All other widgets are automatically shown by GtkBuilder */
-    gtk_widget_show( control->widgets->mixplay_main );
+    gtk_widget_show( gldata(control)->widgets->mixplay_main );
 
-    if( control->fullscreen ) {
-        gtk_window_fullscreen( GTK_WINDOW( control->widgets->mixplay_main ) );
+    if( gldata(control)->fullscreen ) {
+        gtk_window_fullscreen( GTK_WINDOW( gldata(control)->widgets->mixplay_main ) );
     }
 }
 
 int main( int argc, char **argv ) {
     unsigned char	c;
     struct 		mpcontrol_t control;
+    struct		glcontrol_t glcontrol;
     int			i;
     int 		db=0;
     pid_t		pid[2];
@@ -102,6 +104,9 @@ int main( int argc, char **argv ) {
     mpcontrol=&control;
 
     memset( mpcontrol, 0, sizeof( struct mpcontrol_t ) );
+    memset( &glcontrol, 0, sizeof( struct glcontrol_t ) );
+
+    control.data=&glcontrol;
 
     muteVerbosity();
 
@@ -110,26 +115,26 @@ int main( int argc, char **argv ) {
     gtk_init( &argc, &argv );
 
     control.fade=1;
-    control.fullscreen=0;
-    control.debug=0;
+    glcontrol.fullscreen=0;
+    glcontrol.debug=0;
 
     /* parse command line options */
     /* using unsigned char c to work around getopt bug on ARM */
-    while ( ( c = getopt( argc, argv, "vfds" ) ) != 255 ) {
+    while ( ( c = getopt( argc, argv, "vfdF" ) ) != 255 ) {
         switch ( c ) {
         case 'v': /* increase debug message level to display in console output */
             incVerbosity();
             break;
 
         case 'f':
-            control.fullscreen=1;
+            glcontrol.fullscreen=1;
             break;
 
         case 'd': /* increase debug message level to display in debug request */
-            control.debug++;
+            glcontrol.debug++;
             break;
 
-        case 's': /* single channel - disable fading */
+        case 'F': /* single channel - disable fading */
         	control.fade=0;
         	break;
         }
@@ -145,10 +150,6 @@ int main( int argc, char **argv ) {
             fail( F_FAIL, "Unknown argument!\n", argv[optind] );
             return -1;
         }
-    }
-
-    if( control.debug ) {
-        progressStart( "Debug" );
     }
 
     /* start the player processes */
@@ -182,7 +183,7 @@ int main( int argc, char **argv ) {
             close( control.p_status[i][0] );
             close( control.p_status[i][1] );
             /* Start mpg123 in Remote mode */
-            execlp( "mpg123", "mpg123", "-R", "2> &1", NULL );
+            execlp( "mpg123", "mpg123", "-R", "--rva-mix", "2> &1", NULL );
             fail( errno, "Could not exec mpg123" );
         }
 
@@ -190,15 +191,11 @@ int main( int argc, char **argv ) {
         close( control.p_status[i][1] );
     }
 
-    /* first thing to be called after the GUI is enabled */
-    gdk_threads_add_idle( initAll, &control );
-
-    /* Add keyboard handler // @TODO */
-/*    gtk_widget_add_events(control.widgets->mixplay_main, GDK_KEY_PRESS_MASK); */
-/*    g_signal_connect (G_OBJECT (window), "keyboard_press", G_CALLBACK (on_key_press), NULL); */
+    initAll( &control );
 
     /* Start main loop */
     gtk_main();
+    printver( 2, "Dropped out of the gtk_main loop\n" );
     control.status=mpc_quit;
 
     pthread_join( control.rtid, NULL );
@@ -213,7 +210,7 @@ int main( int argc, char **argv ) {
     free( control.musicdir );
     g_strfreev( control.profile );
     g_strfreev( control.stream );
-    g_slice_free( MpData, control.widgets );
+    g_slice_free( MpData, glcontrol.widgets );
     control.root=cleanTitles( control.root );
     dbClose( db );
 

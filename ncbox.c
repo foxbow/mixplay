@@ -352,3 +352,15 @@ void drawframe( struct entry_t *current, const char *status, int stream ) {
 
     refresh();
 }
+
+/*
+ * dummy implementations
+ */
+void progressStart( const char *msg, ... ) {
+	printver( 0, msg );
+}
+#define progressLog( ... ) printver( 0, __VA_ARGS__ )
+/* void progressLog( const char *msg, ... ); */
+void progressEnd( const char *msg ) {
+	printver( 0, msg );
+}

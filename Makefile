@@ -1,46 +1,56 @@
 # CC=/usr/bin/gcc
 VERSION=$(shell git describe --tags --abbrev=1 --dirty=-dev --always)
+
 CCFLAGS=-DVERSION=\"${VERSION}\"
 CCFLAGS+=-Wall -g -pedantic
-OBJS=utils.o musicmgr.o database.o mpgutils.o
-NCOBJS=ncbox.o mixplay.o
-GLOBJS=gladeutils.o callbacks.o gmixplay.o player.o
-GLSRC=gmixplay.c gladeutils.c callbacks.c player.c
 LDFLAGS_GLADE=`pkg-config --libs gtk+-3.0 gmodule-2.0` `pkg-config --cflags --libs x11`
 CCFLAGS_GLADE=$(CCFLAGS) `pkg-config --cflags gtk+-3.0 gmodule-2.0`
-EXES=bin/mixplay bin/gmixplay
+DEPFLAGS = -MT $@ -MMD -MP -MF $*.Td
+
+POSTCOMPILE = @mv -f $*.Td $*.d && touch $@
+
+OBJS=utils.o musicmgr.o database.o mpgutils.o # config.o 
+DOBJS=mixplayd.o player.o
+NCOBJS=ncbox.o mixplay.o
+GLOBJS=gladeutils.o gcallbacks.o gmixplay.o player.o config.o # gconfig.o 
+EXES=bin/mixplay bin/gmixplay # bin/mixplayd
+
 
 all: $(EXES)
 
 clean:
 	rm -f *.o
+	rm -f *.gch
 	rm -f $(EXES)
 	
 distclean: clean	
 	rm -f gmixplay_app.h
 	rm -f *~
+	rm -f *.d
 	rm -f core
 
 bin/mixplay: $(OBJS) $(NCOBJS) 
 	$(CC) $^ -o $@ -lncurses -lmpg123
 
+#bin/mixplayd: $(OBJS) $(DOBJS) 
+#	$(CC) $^ -o $@ -lmpg123
+
+gmixplay.o: gmixplay_app.h
+
 bin/gmixplay: $(OBJS) $(GLOBJS)
 	$(CC) $(CCFLAGS_GLADE) $^ -o $@ $(LDFLAGS_GLADE) -lmpg123
 
-gladeutils.o: gladeutils.c
-	$(CC) $(CCFLAGS_GLADE) -c $<
+# rules for GTK/GLADE
+g%.o: g%.c
+g%.o: g%.c g%.d
+	$(CC) $(DEPFLAGS) $(CCFLAGS_GLADE) -c $<
+	$(POSTCOMPILE)
 
-callbacks.o: callbacks.c
-	$(CC) $(CCFLAGS_GLADE) -c $<
-
-gmixplay.o: gmixplay.c
-	$(CC) $(CCFLAGS_GLADE) -c $<
-
-player.o: player.c
-	$(CC) $(CCFLAGS_GLADE) -c $<
-
+# default
 %.o: %.c
-	$(CC) $(CCFLAGS) -c $<
+%.o: %.c %.d
+	$(CC) $(DEPFLAGS) $(CCFLAGS) -c $<
+	$(POSTCOMPILE)
 	
 install: all	
 	install -d ~/bin/
@@ -63,14 +73,7 @@ gmixplay_app.h: gmixplay_app.glade
 prepare:
 	apt-get install ncurses-dev mpg123 libmpg123-dev libgtk-3-dev
 
-# Header Dependencies
-callbacks.o: callbacks.c player.h gladeutils.h utils.h musicmgr.h
-database.o: database.c database.h musicmgr.h utils.h mpgutils.h
-gladeutils.o: gladeutils.c player.h gladeutils.h utils.h musicmgr.h
-gmixplay.o: gmixplay.c utils.h musicmgr.h database.h gladeutils.h gmixplay_app.h
-mixplay.o: mixplay.c utils.h musicmgr.h database.h mpgutils.h ncbox.h
-mpgutils.o: mpgutils.c mpgutils.h musicmgr.h utils.h
-musicmgr.o: musicmgr.c musicmgr.h mpgutils.h utils.h
-ncbox.o: ncbox.c ncbox.h utils.h musicmgr.h
-player.o: player.c player.h gladeutils.h utils.h musicmgr.h
-utils.o: utils.c utils.h
+%.d: ;
+.PRECIOUS: %.d
+
+include $(wildcard $(patsubst %,%.d,$(basename $(SRCS))))

@@ -5,11 +5,10 @@
  *      Author: bweber
  */
 
-#ifndef PLAYER_H_
-#define PLAYER_H_
-#include "gladeutils.h"
-
-#define MP_LOGLEN 1024
+#ifndef __PLAYER_H__
+#define __PLAYER_H__
+#include <pthread.h>
+#include <sys/types.h>
 
 /*
  * commands and states
@@ -44,12 +43,11 @@ typedef enum mpcmd_t mpcmd;
  * holds the widgets and pipes for communication
  */
 struct mpcontrol_t {
-    MpData *widgets;			/* all (accessible) widgets */
     char *musicdir;				/* path to the music */
-    gsize profiles;				/* number of profiles */
-    int64_t active;		        /* active >0 = profile / 0=none / <0 = stream */
+    int profiles;				/* number of profiles */
+    int active;		        /* active >0 = profile / 0=none / <0 = stream */
     char **profile;				/* profile names */
-    gsize streams;				/* number of streams */
+    int streams;				/* number of streams */
     char **stream;				/* stream URLs */
     char **sname;				/* stream names */
     int p_status[2][2];			/* status pipes to mpg123 */
@@ -66,19 +64,14 @@ struct mpcontrol_t {
     mpcmd command;				/* command to the player */
     int status;					/* status of the player/system */
     pthread_t rtid;				/* thread ID of the reader */
-    char log[MP_LOGLEN];		/* debug log buffer */
-    int fullscreen;				/* run in fullscreen mode */
-    int debug;					/* debug level (like verbose but print in requester) */
-    int64_t skipdnp;			/* how many skips mean dnp? */
-    int64_t fade;				/* controls fading between titles */
+    int skipdnp;			/* how many skips mean dnp? */
+    int fade;				/* controls fading between titles */
+    void *data;					/* extended data for gmixplay */
 };
 
-void writeConfig( struct mpcontrol_t *config );
-void readConfig( struct mpcontrol_t *config );
 void setCommand( struct mpcontrol_t *control, mpcmd cmd );
-void *reader( void *cont );
-void *setProfile( void *data );
-void setStream( struct mpcontrol_t *control, const char* stream, const char *name );
+void *reader( void *control );
+void *setProfile( void *control );
 int setArgument( struct mpcontrol_t *control, const char *arg );
 
-#endif /* PLAYER_H_ */
+#endif /* __PLAYER_H__ */

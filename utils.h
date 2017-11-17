@@ -36,6 +36,11 @@ void muteVerbosity();
 void printver( int vl, const char *msg, ... );
 void fail( int error, const char* msg, ... );
 void activity( const char *msg, ... );
+void progressStart( const char *msg, ... );
+#define progressLog( ... ) printver( 0, __VA_ARGS__ )
+/* void progressLog( const char *msg, ... ); */
+void progressEnd( const char *msg );
+void updateUI( void *data );
 
 /**
  * String manipulation functions to get rid of warnings in strncat,

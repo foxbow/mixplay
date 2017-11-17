@@ -1,18 +1,22 @@
 #ifndef __GLADEUTILS_H__
 #define __GLADEUTILS_H__
 
-#include "utils.h"
-#include "musicmgr.h"
-
 #include <glib.h>
 #include <gtk/gtk.h>
 #include <pthread.h>
+
+#include "utils.h"
+#include "musicmgr.h"
+
+#define MP_LOGLEN 1024
 
 /* Convenience macros for obtaining objects from UI file */
 #define MP_GET_OBJECT( builder, name, type, data ) \
     data->name = type( gtk_builder_get_object( builder, #name ) )
 #define MP_GET_WIDGET( builder, name, data ) \
     MP_GET_OBJECT( builder, name, GTK_WIDGET, data )
+
+#define gldata(control) ((struct glcontrol_t *)control->data)
 
 /* Main data structure definition */
 typedef struct _MpData MpData;
@@ -35,13 +39,22 @@ struct _MpData {
     GtkWidget *mp_popup;
 };
 
-void progressStart( const char *msg, ... );
-#define progressLog( ... ) printver( 0, __VA_ARGS__ )
-/* void progressLog( const char *msg, ... ); */
-void progressEnd( const char *msg );
-void updateUI( void *data );
+/**
+ * extension of mpcontrol->data
+ */
+struct glcontrol_t {
+	MpData *widgets;			/* all (accessible) widgets */
+    int fullscreen;				/* run in fullscreen mode */
+    int debug;					/* debug log level (like verbose but print in requester) */
+    char log[MP_LOGLEN];		/* debug log buffer */
+};
 
 /** defined in utils.h **/
+/* void progressStart( const char *msg, ... ); */
+/* #define progressLog( ... ) printver( 0, __VA_ARGS__ ) */
+/* void progressLog( const char *msg, ... ); */
+/* void progressEnd( const char *msg ); */
+/* void updateUI( void *data ); */
 /* void printver( int vl, const char *msg, ... ); */
 /* void activity( const char *msg, ... ); */
 /* void fail( int error, const char* msg, ... ); */

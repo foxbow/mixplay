@@ -1,12 +1,7 @@
-# mixplay
-console based front-end to mpg123, planned to replace my old squeezebox/squeezeboxserver and act as a radio 
-replacement to play background music but stay sleek enough to run on a mini ARM board.
+# mixplayd
+the new heartpiece of the mixplay family. This is the manager and player that can run headless and will just play the shuffled Music content. Different front-ends may connect to the mixplayd and control the actions.
 
-The featurelist will probably not grow that much further as I just want to play music without the bloat of
-a full featured management software.
-
-# gmixplay
-the glade/gtk front end to mixplay. This is stil in development and due to changes in layout and features but will finally replace the ncurses mixplay.
+This is destined to run on a headless box and supply the stereo with a constant stream of music.
 
 ### Features
 * Music database to avoid scanning on every start
@@ -20,6 +15,14 @@ the glade/gtk front end to mixplay. This is stil in development and due to chang
 * URL stream play
 * playlist support
 * Name/Artist guessing by path if no MP3 Tag info is available
+* MP3 tag suport with guessing mechanism on missing tags
+
+### Planned
+* native MP3 streaming (depends on more recent libmp3/libout)
+* serve stream (unlikely but desireable)
+
+## mixplay
+console based based player based on mixplayd but not a front-end.
 
 ### Parameters
 * -d <file>  : List of names to exclude [mixplay.dnp]
@@ -38,7 +41,7 @@ the glade/gtk front end to mixplay. This is stil in development and due to chang
 * -D         : delete removed titles from the database *
 * -F         : disable crossfading between songs
 * -X         : print some database statistics*
-* [path|URL] : path to the music files [.]
+* [path|URL] : path to the music files [play from db]
 *  * these functions will not start the player
 
 ### Control Keys
@@ -58,7 +61,13 @@ on playlists:
 * b - add to do-not-play list
 * f - add to favoutites
 
-### Planned
-* native MP3 streaming (depends on more recent libmp3/libout)
-* serve stream (unlikely but desireable)
+## gmixplay
+glade/gtk version of the player based on mixplayd but not a front-end, used as a lightweight desktop music player.
+
+### Parameters
+* -d         : raise debug level
+* -v         : increase verbosity
+* -h         : print this help*
+* -F         : disable crossfading between songs
+* [path|URL] : path to the music files [play from db]
 

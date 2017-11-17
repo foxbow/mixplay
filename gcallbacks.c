@@ -4,9 +4,9 @@
  *  Created on: 25.04.2017
  *      Author: bweber
  */
-#include "player.h"
-#include "gladeutils.h"
 #include <string.h>
+#include "gladeutils.h"
+#include "player.h"
 
 extern struct mpcontrol_t *mpcontrol;
 
@@ -42,7 +42,7 @@ void markfav( GtkButton *button, gpointer data ) {
      * during play.
      */
     dialog = gtk_message_dialog_new(
-                 GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+                 GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
                  GTK_DIALOG_DESTROY_WITH_PARENT,
                  GTK_MESSAGE_QUESTION,
                  GTK_BUTTONS_NONE,
@@ -88,7 +88,7 @@ void playPause( GtkButton *button, gpointer data ) {
         setCommand( mpcontrol, mpc_play );
 
         dialog = gtk_message_dialog_new(
-                     GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+                     GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
                      GTK_DIALOG_DESTROY_WITH_PARENT,
                      GTK_MESSAGE_INFO,
                      GTK_BUTTONS_NONE,
@@ -119,7 +119,7 @@ void playPause( GtkButton *button, gpointer data ) {
             }
 
             dialog = gtk_message_dialog_new(
-                         GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+                         GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
                          GTK_DIALOG_DESTROY_WITH_PARENT,
                          GTK_MESSAGE_QUESTION,
                          GTK_BUTTONS_NONE,
@@ -146,13 +146,17 @@ void playPause( GtkButton *button, gpointer data ) {
 
             break;
 
-        case mpc_shuffle:
         case mpc_quit:
+        	gtk_main_quit();
+        	break;
+
+        case mpc_shuffle:
         	setCommand(mpcontrol, reply );
         	break;
 
         case mpc_repl:
             setCommand( mpcontrol, mpc_repl );
+            /* no break */
 
         default:
             setCommand( mpcontrol, mpc_play );
@@ -169,7 +173,8 @@ void playPause( GtkButton *button, gpointer data ) {
  * just sets the mpcontrol command
  */
 void destroy( GtkWidget *widget, gpointer   data ) {
-    setCommand( mpcontrol, mpc_quit );
+	gtk_main_quit();
+    setCommand( mpcontrol, mpc_quit ); /* should be redundant.. */
 }
 
 static char *itostr( int i ) {
@@ -187,7 +192,7 @@ void infoStart( GtkButton *button, gpointer data ) {
 
 	if( mpcontrol->current->key != 0 ) {
 		dialog = gtk_message_dialog_new(
-                 GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+                 GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
                  GTK_DIALOG_DESTROY_WITH_PARENT,
                  GTK_MESSAGE_QUESTION,
                  GTK_BUTTONS_NONE,
@@ -211,7 +216,7 @@ void infoStart( GtkButton *button, gpointer data ) {
 
     switch( reply ) {
     case 1:
-        gtk_show_about_dialog ( GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+        gtk_show_about_dialog ( GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
                                 "program-name", "gmixplay",
                                 "copyright", "2017 B.Weber",
                                 "license-type", GTK_LICENSE_MIT_X11,
@@ -232,7 +237,7 @@ void infoStart( GtkButton *button, gpointer data ) {
 
     case mpc_doublets:
         dialog = gtk_message_dialog_new(
-                     GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+                     GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
                      GTK_DIALOG_DESTROY_WITH_PARENT,
                      GTK_MESSAGE_WARNING,
                      GTK_BUTTONS_YES_NO,
@@ -243,8 +248,12 @@ void infoStart( GtkButton *button, gpointer data ) {
         if( reply != GTK_RESPONSE_YES ) {
         	return;
         }
+        /* no break */
 
     case mpc_quit:
+    	gtk_main_quit();
+    	break;
+
     case mpc_dbclean:
 		setCommand( mpcontrol, reply );
 		break;
@@ -286,7 +295,7 @@ void profileStart( GtkButton *button, gpointer data ) {
     int64_t profile=mpcontrol->active;
 
     dialog = gtk_message_dialog_new(
-                 GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+                 GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
                  GTK_DIALOG_DESTROY_WITH_PARENT,
                  GTK_MESSAGE_INFO,
                  GTK_BUTTONS_NONE,
@@ -342,7 +351,7 @@ void profileStart( GtkButton *button, gpointer data ) {
     switch( reply ) {
     case 1: /* browse filesystem */
     	dialog = gtk_file_chooser_dialog_new ( "Select Music",
-                                               GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+                                               GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
 											   GTK_FILE_CHOOSER_ACTION_OPEN,
 											   "_Cancel",
                                                GTK_RESPONSE_CANCEL,
@@ -351,7 +360,7 @@ void profileStart( GtkButton *button, gpointer data ) {
                                                NULL );
     	gtk_dialog_add_button(GTK_DIALOG(dialog), "Play", 1);
 
-        if( mpcontrol->fullscreen ) {
+        if( gldata(mpcontrol)->fullscreen ) {
             gtk_window_fullscreen( GTK_WINDOW( dialog ) );
         }
 
@@ -365,7 +374,7 @@ void profileStart( GtkButton *button, gpointer data ) {
     	break;
     case 2: /* Enter URL */
         dialog = gtk_message_dialog_new(
-                     GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+                     GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
                      GTK_DIALOG_DESTROY_WITH_PARENT,
                      GTK_MESSAGE_INFO,
                      GTK_BUTTONS_NONE,
@@ -397,7 +406,7 @@ void profileStart( GtkButton *button, gpointer data ) {
     case 3: /* search */
 		mpcontrol->active = profile;
         dialog = gtk_message_dialog_new(
-                     GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+                     GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
                      GTK_DIALOG_DESTROY_WITH_PARENT,
                      GTK_MESSAGE_INFO,
                      GTK_BUTTONS_NONE,
@@ -456,7 +465,7 @@ void profileStart( GtkButton *button, gpointer data ) {
     	break;
     case 4: /* Fillstick */
     	dialog = gtk_file_chooser_dialog_new ( "Select Target",
-                                               GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+                                               GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
 											   GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
 											   "_Cancel",
                                                GTK_RESPONSE_CANCEL,
@@ -465,7 +474,7 @@ void profileStart( GtkButton *button, gpointer data ) {
                                                NULL );
     	gtk_dialog_add_button(GTK_DIALOG(dialog), "All", 1);
 
-        if( mpcontrol->fullscreen ) {
+        if( gldata(mpcontrol)->fullscreen ) {
             gtk_window_fullscreen( GTK_WINDOW( dialog ) );
         }
 
