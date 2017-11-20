@@ -6,15 +6,17 @@ CCFLAGS+=-Wall -g -pedantic
 LDFLAGS_GLADE=`pkg-config --libs gtk+-3.0 gmodule-2.0` `pkg-config --cflags --libs x11`
 CCFLAGS_GLADE=$(CCFLAGS) `pkg-config --cflags gtk+-3.0 gmodule-2.0`
 DEPFLAGS = -MT $@ -MMD -MP -MF $*.Td
+GDEPFLAGS = -MT $@ -MMD -MP -MF g$*.Td
 
 POSTCOMPILE = @mv -f $*.Td $*.d && touch $@
+GPOSTCOMPILE = @mv -f g$*.Td g$*.d && touch $@
 
-OBJS=utils.o musicmgr.o database.o mpgutils.o # config.o 
+OBJS=utils.o musicmgr.o database.o mpgutils.o player.o config.o 
 DOBJS=mixplayd.o player.o
-NCOBJS=ncbox.o mixplay.o
-GLOBJS=gladeutils.o gcallbacks.o gmixplay.o player.o config.o # gconfig.o 
-EXES=bin/mixplay bin/gmixplay # bin/mixplayd
-
+NCOBJS=ncbox.o # mixplay.o
+GLOBJS=gladeutils.o gcallbacks.o gmixplay.o player.o config.o  
+EXES=bin/mixplay bin/cmixplay bin/gmixplay # bin/mixplayd
+LIBS=-lmpg123 -lasound -lpthread
 
 all: $(EXES)
 
@@ -27,24 +29,26 @@ distclean: clean
 	rm -f gmixplay_app.h
 	rm -f *~
 	rm -f *.d
+	rm -f *.Td
 	rm -f core
 
-bin/mixplay: $(OBJS) $(NCOBJS) 
-	$(CC) $^ -o $@ -lncurses -lmpg123
+bin/mixplay: mixplay.o $(OBJS) $(NCOBJS) 
+	$(CC) $^ -o $@ -lncurses $(LIBS)
+
+bin/cmixplay: cmixplay.o player.o config.o $(OBJS) $(NCOBJS) 
+	$(CC) $^ -o $@ -lncurses $(LIBS)
 
 #bin/mixplayd: $(OBJS) $(DOBJS) 
 #	$(CC) $^ -o $@ -lmpg123
 
-gmixplay.o: gmixplay_app.h
-
 bin/gmixplay: $(OBJS) $(GLOBJS)
-	$(CC) $(CCFLAGS_GLADE) $^ -o $@ $(LDFLAGS_GLADE) -lmpg123
+	$(CC) $(CCFLAGS_GLADE) $^ -o $@ $(LDFLAGS_GLADE) $(LIBS)
 
 # rules for GTK/GLADE
 g%.o: g%.c
 g%.o: g%.c g%.d
-	$(CC) $(DEPFLAGS) $(CCFLAGS_GLADE) -c $<
-	$(POSTCOMPILE)
+	$(CC) $(GDEPFLAGS) $(CCFLAGS_GLADE) -c $<
+	$(GPOSTCOMPILE)
 
 # default
 %.o: %.c
@@ -71,9 +75,12 @@ gmixplay_app.h: gmixplay_app.glade
 	xxd -i gmixplay_app.glade > gmixplay_app.h
 	
 prepare:
-	apt-get install ncurses-dev mpg123 libmpg123-dev libgtk-3-dev
+	apt-get install ncurses-dev mpg123 libmpg123-dev libgtk-3-dev libasound-dev
 
 %.d: ;
 .PRECIOUS: %.d
+
+# explicit dependency on generated header
+gmixplay.o: gmixplay_app.h
 
 include $(wildcard $(patsubst %,%.d,$(basename $(SRCS))))

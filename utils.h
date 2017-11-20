@@ -1,6 +1,8 @@
 #ifndef FBFS_UTILS_H
 #define FBFS_UTILS_H
 
+#include "config.h"
+
 /* Default values */
 #include <stdlib.h>
 #define ONOFF(x) (x)?"ON":"OFF"
@@ -40,7 +42,7 @@ void progressStart( const char *msg, ... );
 #define progressLog( ... ) printver( 0, __VA_ARGS__ )
 /* void progressLog( const char *msg, ... ); */
 void progressEnd( const char *msg );
-void updateUI( void *data );
+void updateUI( mpconfig *data );
 
 /**
  * String manipulation functions to get rid of warnings in strncat,

@@ -12,11 +12,12 @@
  */
 #include <string.h>
 #include <stdio.h>
-#include "errno.h"
-#include "config.h"
+#include <errno.h>
+#include <assert.h>
+
 #include "utils.h"
-#include "player.h"
 #include "musicmgr.h"
+#include "config.h"
 
 /**
  * parses a multi-string config value in the form of:
@@ -43,7 +44,7 @@ static int scanparts( char *line, char ***target ) {
 			pos=strchr( line, ';' );
 			*pos=0;
 			(*target)[i]=falloc( strlen(line)+1, sizeof( char ) );
-			strip( (*target)[i], line, MAXPATHLEN );
+			strip( (*target)[i], line, strlen(line)+1 );
 			line=pos+1;
 		}
 	}
@@ -54,35 +55,56 @@ static int scanparts( char *line, char ***target ) {
 /**
  * reads the configuration file at $HOME/.mixplay/mixplay.conf and stores the settings
  * in the given control structure.
+ * returns -1 is no configuration file exists
  */
-int readConfig( struct mpcontrol_t *config ) {
+int readConfig( mpconfig *config ) {
     char	conffile[MAXPATHLEN]; /*  = "mixplay.conf"; */
     char	line[MAXPATHLEN];
     char	*pos;
     FILE    *fp;
 
-    printver( 1, "Writing config\n" );
+    assert( config != NULL );
+
+    printver( 1, "Reading config\n" );
+
+    /* Set some default values */
+    config->root=NULL;
+    config->current=config->root;
+    config->playstream=0;
+    config->volume=80;
+    strcpy( config->playtime, "00:00" );
+    strcpy( config->remtime, "00:00" );
+    config->percent=0;
+    config->status=mpc_idle;
+    config->command=mpc_idle;
+    config->dbname=falloc( MAXPATHLEN, sizeof( char ) );
+    snprintf( config->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", getenv("HOME") );
 
     snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", getenv( "HOME" ) );
-
 	fp=fopen( conffile, "r" );
 
     if( NULL != fp ) {
         do {
             fgets( line, MAXPATHLEN, fp );
-            pos=strchr( line, '=' )+1;
+            if( line[0]=='#' ) continue;
+            pos=strchr( line, '=' );
+            if( ( NULL == pos ) || ( strlen( ++pos ) == 0 ) ) continue;
             if( strstr( line, "musicdir=" ) == line ) {
             	config->musicdir=falloc( strlen(pos)+1, sizeof( char ) );
-            	strip( config->musicdir, pos, MAXPATHLEN );
+            	strip( config->musicdir, pos, strlen(pos)+1 );
+            }
+            if( strstr( line, "channel=" ) == line ) {
+            	config->channel=falloc( strlen(pos)+1, sizeof( char ) );
+            	strip( config->channel, pos, strlen(pos)+1 );
             }
             if( strstr( line, "profiles=" ) == line ) {
-            	config->profiles=scanparts( line, &config->profile );
+            	config->profiles=scanparts( pos, &config->profile );
             }
             if( strstr( line, "streams=" ) == line ) {
-            	config->streams=scanparts( line, &config->stream );
+            	config->streams=scanparts( pos, &config->stream );
             }
             if( strstr( line, "snames=" ) == line ) {
-            	if( scanparts( line, &config->stream ) != config->streams ) {
+            	if( scanparts( pos, &config->sname ) != config->streams ) {
             		fail( F_FAIL, "Number of streams and stream names does not match!");
             	}
             }
@@ -97,7 +119,6 @@ int readConfig( struct mpcontrol_t *config ) {
             }
         }
         while( !feof( fp ) );
-
     	return 0;
     }
 
@@ -108,7 +129,7 @@ int readConfig( struct mpcontrol_t *config ) {
  * writes the configuration from the given control structure into the file at
  * $HOME/.mixplay/mixplay.conf
  */
-void writeConfig( struct mpcontrol_t *config ) {
+void writeConfig( mpconfig *config ) {
     char	conffile[MAXPATHLEN]; /*  = "mixplay.conf"; */
     int		i;
     FILE    *fp;
@@ -137,6 +158,15 @@ void writeConfig( struct mpcontrol_t *config ) {
         fprintf( fp, "\nactive=%i", config->active );
         fprintf( fp, "\nskipdnp=%i", config->skipdnp );
         fprintf( fp, "\nfade=%i", config->fade );
+        if( config->channel != NULL ) {
+            fprintf( fp, "\nchannel=%s", config->channel );
+        }
+        else {
+        	printf("\n# channel=Master  for standard installations");
+        	printf("\n# channel=Digital for HifiBerry");
+        	printf("\n# channel=Main");
+        	printf("\n# channel=DAC");
+        }
         fprintf( fp, "\n" );
         fclose( fp );
     }
@@ -145,3 +175,40 @@ void writeConfig( struct mpcontrol_t *config ) {
     }
 }
 
+/**
+ * just free something if it actually exists
+ */
+static void sfree( void *ptr ) {
+	if( ptr != NULL ) {
+		free( ptr );
+	}
+}
+
+/**
+ * recursive free() to clean up all of the configuration
+ */
+void freeConfig( mpconfig *control ) {
+	int i;
+
+	if( control == NULL ) {
+		return;
+	}
+
+    sfree( control->dbname );
+    sfree( control->dnpname );
+    sfree( control->favname );
+    sfree( control->musicdir );
+    for( i=0; i<control->profiles; i++ ) {
+    	sfree( control->profile[i] );
+    }
+    sfree( control->profile );
+
+    for( i=0; i<control->streams; i++ ) {
+    	sfree( control->stream[i] );
+    	sfree( control->sname[i] );
+    }
+    sfree( control->stream );
+    sfree( control->sname );
+
+    control->root=cleanTitles( control->root );
+}

@@ -48,10 +48,7 @@ int main( int argc, char **argv ) {
         }
     }
 
-    buildUI( &control );
-
-    control.root=NULL;
-    control.playstream=0;
+    readConfig( &control );
 
     if ( optind < argc ) {
     	if( 0 == setArgument( &control, argv[optind] ) ) {
@@ -60,75 +57,31 @@ int main( int argc, char **argv ) {
         }
     }
 
-    if( control.debug ) {
-        progressStart( "Debug" );
+    pthread_create( &(control.rtid), NULL, reader, control );
+
+    if( NULL == control.root ) {
+        /* Runs as thread to have updates in the UI */
+        setProfile( &control );
     }
-
-    /* start the player processes */
-    /* these may wait in the background until */
-    /* something needs to be played at all */
-    for( i=0; i <= control.fade; i++ ) {
-        /* create communication pipes */
-        pipe( control.p_status[i] );
-        pipe( control.p_command[i] );
-        pid[i] = fork();
-
-        if ( 0 > pid[i] ) {
-            fail( errno, "could not fork" );
-        }
-
-        /* child process */
-        if ( 0 == pid[i] ) {
-            printver( 2, "Starting player %i\n", i+1 );
-
-            if ( dup2( control.p_command[i][0], STDIN_FILENO ) != STDIN_FILENO ) {
-                fail( errno, "Could not dup stdin for player %i", i+1 );
-            }
-
-            if ( dup2( control.p_status[i][1], STDOUT_FILENO ) != STDOUT_FILENO ) {
-                fail( errno, "Could not dup stdout for player %i", i+1 );
-            }
-
-            /* this process needs no pipes */
-            close( control.p_command[i][0] );
-            close( control.p_command[i][1] );
-            close( control.p_status[i][0] );
-            close( control.p_status[i][1] );
-            /* Start mpg123 in Remote mode */
-            execlp( "mpg123", "mpg123", "-R", "--rva-mix", "2> &1", NULL );
-            fail( errno, "Could not exec mpg123" );
-        }
-
-        close( control.p_command[i][0] );
-        close( control.p_status[i][1] );
+    else {
+    	control.active=0;
+        control.dbname[0]=0;
+        setCommand( &control, mpc_play );
     }
-
-    /* first thing to be called after the GUI is enabled */
-    gdk_threads_add_idle( initAll, &control );
-
-    /* Add keyboard handler // @TODO */
-/*    gtk_widget_add_events(control.widgets->mixplay_main, GDK_KEY_PRESS_MASK); */
-/*    g_signal_connect (G_OBJECT (window), "keyboard_press", G_CALLBACK (on_key_press), NULL); */
 
     /* Start main loop */
-    gtk_main();
+    while( control.status != mpc_quit ){
+    	;
+    }
+
     printver( 2, "Dropped out of the gtk_main loop\n" );
-    control.status=mpc_quit;
 
     pthread_join( control.rtid, NULL );
     for( i=0; i <= control.fade; i++ ) {
     	kill( pid[i], SIGTERM );
     }
 
-    /* Free any allocated data */
-    free( control.dbname );
-    free( control.dnpname );
-    free( control.favname );
-    free( control.musicdir );
-    g_strfreev( control.profile );
-    g_strfreev( control.stream );
-    g_slice_free( MpData, control.widgets );
-    control.root=cleanTitles( control.root );
+    freeConfig( &control );
     dbClose( db );
 
 	return 0;

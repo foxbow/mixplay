@@ -25,13 +25,8 @@ static int initAll( void *data ) {
     readConfig( control );
     pthread_t tid;
 
-    control->current=control->root;
     gldata(control)->log[0]='\0';
-    strcpy( control->playtime, "00:00" );
-    strcpy( control->remtime, "00:00" );
-    control->percent=0;
-    control->status=mpc_idle;
-    control->command=mpc_idle;
+
     pthread_create( &control->rtid, NULL, reader, control );
 
     if( NULL == control->root ) {
@@ -97,9 +92,7 @@ int main( int argc, char **argv ) {
     unsigned char	c;
     struct 		mpcontrol_t control;
     struct		glcontrol_t glcontrol;
-    int			i;
     int 		db=0;
-    pid_t		pid[2];
 
     mpcontrol=&control;
 
@@ -152,45 +145,6 @@ int main( int argc, char **argv ) {
         }
     }
 
-    /* start the player processes */
-    /* these may wait in the background until */
-    /* something needs to be played at all */
-    for( i=0; i <= control.fade; i++ ) {
-        /* create communication pipes */
-        pipe( control.p_status[i] );
-        pipe( control.p_command[i] );
-        pid[i] = fork();
-
-        if ( 0 > pid[i] ) {
-            fail( errno, "could not fork" );
-        }
-
-        /* child process */
-        if ( 0 == pid[i] ) {
-            printver( 2, "Starting player %i\n", i+1 );
-
-            if ( dup2( control.p_command[i][0], STDIN_FILENO ) != STDIN_FILENO ) {
-                fail( errno, "Could not dup stdin for player %i", i+1 );
-            }
-
-            if ( dup2( control.p_status[i][1], STDOUT_FILENO ) != STDOUT_FILENO ) {
-                fail( errno, "Could not dup stdout for player %i", i+1 );
-            }
-
-            /* this process needs no pipes */
-            close( control.p_command[i][0] );
-            close( control.p_command[i][1] );
-            close( control.p_status[i][0] );
-            close( control.p_status[i][1] );
-            /* Start mpg123 in Remote mode */
-            execlp( "mpg123", "mpg123", "-R", "--rva-mix", "2> &1", NULL );
-            fail( errno, "Could not exec mpg123" );
-        }
-
-        close( control.p_command[i][0] );
-        close( control.p_status[i][1] );
-    }
-
     initAll( &control );
 
     /* Start main loop */
@@ -199,19 +153,9 @@ int main( int argc, char **argv ) {
     control.status=mpc_quit;
 
     pthread_join( control.rtid, NULL );
-    for( i=0; i <= control.fade; i++ ) {
-    	kill( pid[i], SIGTERM );
-    }
 
-    /* Free any allocated data */
-    free( control.dbname );
-    free( control.dnpname );
-    free( control.favname );
-    free( control.musicdir );
-    g_strfreev( control.profile );
-    g_strfreev( control.stream );
-    g_slice_free( MpData, glcontrol.widgets );
-    control.root=cleanTitles( control.root );
+    freeConfig( &control );
+
     dbClose( db );
 
     return( 0 );

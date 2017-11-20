@@ -3,6 +3,7 @@
  */
 
 #include "ncbox.h"
+#include "config.h"
 #include <ncurses.h>
 #include <string.h>
 #include <stdlib.h>
@@ -363,4 +364,7 @@ void progressStart( const char *msg, ... ) {
 /* void progressLog( const char *msg, ... ); */
 void progressEnd( const char *msg ) {
 	printver( 0, msg );
+}
+void updateUI( mpconfig *control ) {
+	// drawframe( control->current, control->playtime, control->playstream);
 }

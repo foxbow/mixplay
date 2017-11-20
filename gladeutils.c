@@ -395,7 +395,7 @@ static int g_updateUI( void *data ) {
  *
  * needed to keep updateUI() GUI independent
  */
-void updateUI( void *control ) {
+void updateUI( mpconfig *control ) {
     gdk_threads_add_idle( g_updateUI, control );
 
     while ( gtk_events_pending () ) {
