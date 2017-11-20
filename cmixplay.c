@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include <getopt.h>
 #include <ncurses.h>
+#include <sys/stat.h>
 
 #include "utils.h"
 #include "ncbox.h"
@@ -12,24 +13,17 @@
 #include "player.h"
 #include "config.h"
 
-/* global control structure */
-mpconfig *mpcontrol;
-
 int main( int argc, char **argv ) {
     unsigned char	c;
     mpconfig    control;
     int 		db=0;
     fd_set fds;
     struct timeval to;
-/*    char line[MAXPATHLEN]; */
+	char path[MAXPATHLEN];
     long key;
     char status[MAXPATHLEN] = "INIT";
 
     muteVerbosity();
-    mpcontrol=&control;
-
-    memset( mpcontrol, 0, sizeof( struct mpcontrol_t ) );
-
     control.fade=1;
 
     /* parse command line options */
@@ -46,8 +40,38 @@ int main( int argc, char **argv ) {
         }
     }
 
-    /* check for existance ? */
-    readConfig( &control );
+    if( readConfig( &control ) == -1 ) {
+        printf( "music directory needs to be set.\n" );
+        printf( "It will be set up now\n" );
+
+        snprintf( path, MAXPATHLEN, "%s/.mixplay", getenv("HOME") );
+        if( mkdir( path, 0700 ) == -1 ) {
+        	if( errno == EEXIST ) {
+        		fprintf( stderr, "WARNING: %s already exists!\n", path );
+        	}
+        	else {
+        		fail( errno, "Could not create config dir %s", path );
+        	}
+        }
+
+        while( 1 ) {
+            printf( "Default music directory:" );
+            fflush( stdout );
+            memset( path, 0, MAXPATHLEN );
+            fgets(path, MAXPATHLEN, stdin );
+            path[strlen( path )-1]=0; /* cut off CR */
+            abspath( path, getenv( "HOME" ), MAXPATHLEN );
+
+            if( isDir( path ) ) {
+                break;
+            }
+            else {
+                printf( "%s is not a directory!\n", path );
+            }
+        }
+
+        writeConfig( &control );
+    }
 
     if ( optind < argc ) {
     	if( 0 == setArgument( &control, argv[optind] ) ) {
