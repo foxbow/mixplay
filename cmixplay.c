@@ -2,7 +2,6 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
-#include <X11/Xlib.h>
 #include <getopt.h>
 #include <ncurses.h>
 
