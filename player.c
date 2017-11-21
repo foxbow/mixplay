@@ -517,7 +517,7 @@ void *reader( void *cont ) {
         			addMessage( 2, "P+ %s", line );
         		}
                 switch ( line[1] ) {
-                    int cmd=0, rem=0;
+                    int cmd, rem;
 
                 case 'R': /* startup */
                     addMessage(  1, "MPG123 foreground instance is up" );

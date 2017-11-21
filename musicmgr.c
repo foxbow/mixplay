@@ -1044,16 +1044,16 @@ int markFavourite( struct entry_t *title, int range ) {
         break;
 
     case SL_PATH:
-        snprintf( buff.dir, MAXPATHLEN, "p=%s", title->path );
+        sprintf( buff.dir, "p=%s", title->path );
         fail( F_WARN, "Range path is obsolete!\n%s", title->display );
         break;
 
     case SL_TITLE:
-        snprintf( buff.dir, MAXPATHLEN, "t=%s", title->title );
+        sprintf( buff.dir, "t=%s", title->title );
         break;
 
     case SL_DISPLAY:
-        snprintf( buff.dir, MAXPATHLEN, "d=%s", title->display );
+        sprintf( buff.dir, "d=%s", title->display );
         break;
     }
 
@@ -1067,7 +1067,7 @@ int markFavourite( struct entry_t *title, int range ) {
  * returns the LAST entry of the list. So the next item is the first in the list
  */
 struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedir ) {
-    char dirbuff[MAXPATHLEN];
+    char dirbuff[2*MAXPATHLEN];
     struct dirent **entry;
     int num, i;
 
@@ -1086,7 +1086,7 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 
     for( i=0; i<num; i++ ) {
         activity( "Scanning" );
-        snprintf( dirbuff, MAXPATHLEN, "%s/%s", curdir, entry[i]->d_name );
+        sprintf( dirbuff, "%s/%s", curdir, entry[i]->d_name );
         files=insertTitle( files, dirbuff );
         free( entry[i] );
     }

@@ -44,7 +44,7 @@ struct entry_t {
 };
 
 struct marklist_t {
-    char dir[MAXPATHLEN];
+    char dir[MAXPATHLEN+2];
     struct marklist_t *next;
 };
 

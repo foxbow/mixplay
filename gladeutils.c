@@ -265,7 +265,7 @@ static int g_updateUI( void *data ) {
     struct	mpcontrol_t *control;
     struct entry_t *runner;
     int i=0;
-    char	buff[MAXPATHLEN];
+    char	buff[2*MAXPATHLEN];
     gboolean	usedb;
     control=( struct mpcontrol_t* )data;
 

@@ -17,6 +17,7 @@ language.settings.xml
 bin/mixplay
 bin/gmixplay
 bin/scanformusic
+bin/cmixplay
 core
 
 # Object files
