@@ -35,13 +35,10 @@ void muteVerbosity();
  * These functions need to be implemented in the UI
  * See: ncbox.c, gladeutils.c
  */
-void printver( int vl, const char *msg, ... );
 void fail( int error, const char* msg, ... );
 void activity( const char *msg, ... );
-void progressStart( const char *msg, ... );
-#define progressLog( ... ) printver( 0, __VA_ARGS__ )
-/* void progressLog( const char *msg, ... ); */
-void progressEnd( const char *msg );
+void progressStart( char *msg, ... );
+void progressEnd( char *msg );
 void updateUI( mpconfig *data );
 
 /**

@@ -148,8 +148,10 @@ int main( int argc, char **argv ) {
     initAll( &control );
 
     /* Start main loop */
+    control.inUI=-1;
     gtk_main();
-    printver( 2, "Dropped out of the gtk_main loop\n" );
+    control.inUI=0;
+    addMessage( 2, "Dropped out of the gtk_main loop\n" );
     control.status=mpc_quit;
 
     pthread_join( control.rtid, NULL );

@@ -21,6 +21,7 @@
 #include "config.h"
 
 static pthread_mutex_t msglock=PTHREAD_MUTEX_INITIALIZER;
+static mpconfig *c_config;
 
 /**
  * parses a multi-string config value in the form of:
@@ -67,8 +68,9 @@ int readConfig( mpconfig *config ) {
     FILE    *fp;
 
     assert( config != NULL );
+    c_config=config;
 
-    printver( 1, "Reading config\n" );
+    addMessage( 1, "Reading config\n" );
 
     /* Set some default values */
     config->root=NULL;
@@ -81,6 +83,8 @@ int readConfig( mpconfig *config ) {
     config->status=mpc_idle;
     config->command=mpc_idle;
     config->dbname=falloc( MAXPATHLEN, sizeof( char ) );
+    config->msg.lines=0;
+    config->msg.current=0;
     snprintf( config->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", getenv("HOME") );
 
     snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", getenv( "HOME" ) );
@@ -137,7 +141,7 @@ void writeConfig( mpconfig *config ) {
     int		i;
     FILE    *fp;
 
-    printver( 1, "Writing config\n" );
+    addMessage( 1, "Writing config\n" );
 
     snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", getenv( "HOME" ) );
 
@@ -217,34 +221,78 @@ void freeConfig( mpconfig *control ) {
 }
 
 /**
- * sets the current message
- * this call will be blocking if a message is already there and has not been fetched
- * with getMessage() yet.
+ * helperfunction to implement message ringbuffer
  */
-void setMessage( mpconfig *config, int v, char *msg, ... ) {
+static void msgbuffAdd( struct msgbuf_t msgbuf, char *line ) {
+	msgbuf.msg[(msgbuf.current+msgbuf.lines)%10]=line;
+	if( msgbuf.lines == 10 ) {
+		msgbuf.current=(msgbuf.current+1)%10;
+	}
+	else {
+		msgbuf.lines++;
+	}
+}
+
+/**
+ * helperfunction to implement message ringbuffer
+ */
+static char *msgbuffGet( struct msgbuf_t msgbuf ) {
+	char *retval = NULL;
+	if( msgbuf.lines > 0 ) {
+		retval=msgbuf.msg[msgbuf.current];
+		msgbuf.current = (msgbuf.current+1)%10;
+		msgbuf.lines--;
+	}
+	return retval;
+}
+
+/**
+ * adds a message to the message buffer
+ *
+ * If the application is not in UI mode, the message will just be printed to make sure messages
+ * are displayed on the correct media.
+ */
+void addMessage( int v, char *msg, ... ) {
     va_list args;
-    char line[MP_MSGLEN];
+    char *line;
+
+    assert( c_config != NULL );
 
     if( v >= getVerbosity() ) {
 		pthread_mutex_lock( &msglock );
+		line = falloc( MP_MSGLEN, sizeof(char) );
 		va_start( args, msg );
-		vsnprintf( config->msg, MP_MSGLEN, msg, args );
+		vsnprintf( line, MP_MSGLEN, msg, args );
 		va_end( args );
-		scrollAdd( config->msg, line, MP_MSGLEN );
+    	if( ( c_config !=NULL ) && ( c_config->inUI ) ) {
+			msgbuffAdd( c_config->msg, line );
+    	}
+    	else {
+    		printf( "V%i %s\n", v, line );
+    	}
 		pthread_mutex_unlock( &msglock );
     }
 }
 
 /**
- * gets the current message and cleans the message buffer
- * returns length of the current message buffer
+ * gets the current message removes it from the ring and frees the message buffer
+ * returns 0 and makes msg an empty string if no message is in the ring
  */
-int getMessage( mpconfig *config, char *msg ) {
+int getMessage( char *msg ) {
+	char *buf;
+
+	assert( c_config != NULL );
+
 	pthread_mutex_lock( &msglock );
-	strcpy( msg, config->msg );
-	config->msg[0]=0;
+	buf=msgbuffGet( c_config->msg );
+	if( buf != NULL ) {
+		strcpy( msg, buf );
+		free(buf);
+	}
+	else {
+		msg[0]=0;
+	}
 	pthread_mutex_unlock( &msglock );
 
 	return strlen( msg );
 }
-

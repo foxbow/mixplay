@@ -230,7 +230,7 @@ void infoStart( GtkButton *button, gpointer data ) {
 
     case 2:
     	progressStart( "Database Info" );
-    	progressLog( "Music dir: %s\n", mpcontrol->musicdir );
+    	addMessage( 0, "Music dir: %s\n", mpcontrol->musicdir );
     	dumpInfo( mpcontrol->root, -1, mpcontrol->skipdnp );
     	progressEnd( "End Database info." );
     	break;
@@ -486,9 +486,9 @@ void profileStart( GtkButton *button, gpointer data ) {
         gtk_widget_destroy ( dialog );
 
     	progressStart( "Fillstick" );
-    	progressLog( "Copying to %s\n", path );
+    	addMessage( 0, "Copying to %s\n", path );
         fillstick( mpcontrol->current, path, ( selected == GTK_RESPONSE_ACCEPT ) );
-    	progressEnd( "End Database info." );
+    	progressEnd( "Done." );
 
         if( NULL != path ) {
         	free(path);

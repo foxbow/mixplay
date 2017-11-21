@@ -22,7 +22,7 @@ int main( int argc, char **argv ) {
 	char path[MAXPATHLEN];
     long key;
 
-    muteVerbosity();
+    setVerbosity(1);
     control.fade=1;
 
     /* parse command line options */
@@ -95,6 +95,7 @@ int main( int argc, char **argv ) {
     }
 
     /* Start curses mode */
+    control.inUI=-1;
     initscr();
     curs_set( 0 );
     cbreak();
@@ -239,6 +240,7 @@ int main( int argc, char **argv ) {
 
     } while( control.status != mpc_quit );
     endwin();
+    control.inUI=0;
 
     printver( 2, "Dropped out of the main loop\n" );
 

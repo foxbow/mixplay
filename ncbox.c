@@ -20,11 +20,11 @@ void activity( const char *msg, ... ) {
     char roller[5]="|/-\\";
     char text[256]="";
     int pos;
+    va_list args;
 
     if( getVerbosity() && ( _ftrpos%( 100/getVerbosity() ) == 0 ) ) {
         pos=( _ftrpos/( 100/getVerbosity() ) )%4;
 
-        va_list args;
         va_start( args, msg );
         vsprintf( text, msg, args );
         printf( "%s %c          \r", text, roller[pos] );
@@ -356,13 +356,12 @@ void drawframe( struct entry_t *current, const char *status, int stream ) {
 /*
  * dummy implementations
  */
-void progressStart( const char *msg, ... ) {
-	printver( 0, msg );
+void progressStart( char *msg, ... ) {
+	addMessage( 0, msg );
 }
-#define progressLog( ... ) printver( 0, __VA_ARGS__ )
-/* void progressLog( const char *msg, ... ); */
-void progressEnd( const char *msg ) {
-	printver( 0, msg );
+
+void progressEnd( char *msg ) {
+	addMessage( 0, msg );
 }
 
 void updateUI( mpconfig *control ) {
@@ -379,10 +378,10 @@ void updateUI( mpconfig *control ) {
 		else {
 			sprintf( status, "%s [", control->playtime );
 			for( i=0; i<30; i++ ) {
-				if( i < ( control->percent / 30 ) ) {
+				if( i < ( ( control->percent * 3 ) / 10 ) ) {
 					status[i+7]='=';
 				}
-				else if( i == ( control->percent / 30 ) ) {
+				else if( i == ( ( control->percent * 3 ) / 10 ) ) {
 					status[i+7]='>';
 				}
 				else {
@@ -396,7 +395,7 @@ void updateUI( mpconfig *control ) {
 	}
 	drawframe( control->current, status, control->playstream );
 
-	if( getMessage( control, status ) ) {
+	if( getMessage( status ) ) {
 		popUp( 1, status );
     }
 }

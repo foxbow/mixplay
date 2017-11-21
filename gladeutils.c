@@ -48,7 +48,9 @@ void activity( const char *msg, ... ) {
         vsprintf( text, msg, args );
         va_end( args );
         snprintf( line, NAMELEN, "%s %c", text, roller[pos] );
-        gdk_threads_add_idle( g_activity, line );
+        if( mpcontrol->inUI ) {
+        	gdk_threads_add_idle( g_activity, line );
+        }
     }
 
     _ftrpos=( _ftrpos+1 )%400;
@@ -84,23 +86,27 @@ void fail( int error, const char* msg, ... ) {
 
     if( F_WARN == error ) {
         fprintf( stderr, "WARN: %s\n", line );
-        gdk_threads_add_idle( g_warn, line );
+        if( mpcontrol->inUI ) {
+        	gdk_threads_add_idle( g_warn, line );
+        }
         return;
     }
     else {
         fprintf( stderr, "FAIL: %s\n", line );
-        if( F_FAIL == error ) {
-        	dialog = gtk_message_dialog_new ( GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
-                                          GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
-                                          "FAIL: %s", line );
-        }
-        else {
-        	dialog = gtk_message_dialog_new ( GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
-                                          GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
-                                          "%s\nERROR: %i - %s", line, abs( error ), strerror( abs( error ) ) );
-        }
+        if( mpcontrol->inUI ) {
+			if( F_FAIL == error ) {
+				dialog = gtk_message_dialog_new ( GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
+											  GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
+											  "FAIL: %s", line );
+			}
+			else {
+				dialog = gtk_message_dialog_new ( GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
+											  GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
+											  "%s\nERROR: %i - %s", line, abs( error ), strerror( abs( error ) ) );
+			}
 
-        gtk_dialog_run ( GTK_DIALOG ( dialog ) );
+			gtk_dialog_run ( GTK_DIALOG ( dialog ) );
+        }
         setCommand(mpcontrol, mpc_quit );
     }
 
@@ -126,30 +132,6 @@ static int g_progressLog( void *line ) {
     pthread_mutex_unlock( &msglock );
 
     return 0;
-}
-
-/**
- * print the given message when the verbosity is at
- * least vl
- *
- * kind of threadsafe to keep messages in order and to avoid messing up the log buffer
- */
-void printver( int vl, const char *msg, ... ) {
-    va_list args;
-    char *line;
-    line=falloc( 512, sizeof( char ) );
-
-    va_start( args, msg );
-    vsnprintf( line, 512, msg, args );
-    va_end( args );
-
-    if( vl <= gldata(mpcontrol)->debug ) {
-        gdk_threads_add_idle( g_progressLog, line );
-    }
-    else if( vl <= getVerbosity() ) {
-        fprintf( stderr, "%i: %s", vl, line );
-        free( line );
-    }
 }
 
 /**
@@ -189,7 +171,7 @@ static int g_progressStart( void *line ) {
  * Opens an info requester
  * will be ignored if an info requester is already open
  */
-void progressStart( const char *msg, ... ) {
+void progressStart( char *msg, ... ) {
     va_list args;
     char *line;
     line=falloc( 512, sizeof( char ) );
@@ -197,20 +179,21 @@ void progressStart( const char *msg, ... ) {
     va_start( args, msg );
     vsnprintf( line, 512, msg, args );
     va_end( args );
-    gdk_threads_add_idle( g_progressStart, line );
+    if( mpcontrol->inUI ) {
+		gdk_threads_add_idle( g_progressStart, line );
 
-    while ( gtk_events_pending () ) {
-        gtk_main_iteration ();
+		while ( gtk_events_pending () ) {
+			gtk_main_iteration ();
+		}
     }
-
 }
 
 /**
  * Standard progress logging function
- * this is just another name for printver() and defined in gladeutils.h
+ * this is just another name for addMessage() and defined in gladeutils.h
  * just mentioned here for clarity
  */
-/* #define progressLog( ... ) printver( 0, __VA_ARGS__ ) */
+/* #define progressLog( ... ) addMessage( 0, __VA_ARGS__ ) */
 
 /**
  * actual gtk code for progressDone
@@ -224,7 +207,7 @@ static int g_progressEnd( void *line ) {
 /**
  * enables closing of the info requester
  */
-void progressEnd( const char *msg ) {
+void progressEnd( char *msg ) {
 	char *line;
 
 	if( NULL == gldata(mpcontrol)->widgets->mp_popup ) {
@@ -240,10 +223,12 @@ void progressEnd( const char *msg ) {
     else {
     	strncpy( line, msg, 512 );
     }
-  	gdk_threads_add_idle( g_progressEnd, line );
+    if( mpcontrol->inUI ) {
+		gdk_threads_add_idle( g_progressEnd, line );
 
-    while ( gtk_events_pending () ) {
-        gtk_main_iteration ();
+		while ( gtk_events_pending () ) {
+			gtk_main_iteration ();
+		}
     }
 }
 
@@ -285,7 +270,7 @@ static int g_updateUI( void *data ) {
     control=( struct mpcontrol_t* )data;
 
     if( mpc_quit == control->command ) {
-        printver( 2, "Already closing..\n" );
+        addMessage( 2, "Already closing..\n" );
         return 0;
     }
 
@@ -295,7 +280,7 @@ static int g_updateUI( void *data ) {
     }
 
     if( gldata(control)->widgets->title_current == NULL ) {
-        printver( 2, "No title widget yet..\n" );
+        addMessage( 2, "No title widget yet..\n" );
         return 0;
     }
 
@@ -396,9 +381,11 @@ static int g_updateUI( void *data ) {
  * needed to keep updateUI() GUI independent
  */
 void updateUI( mpconfig *control ) {
-    gdk_threads_add_idle( g_updateUI, control );
+	if( mpcontrol->inUI ) {
+		gdk_threads_add_idle( g_updateUI, control );
 
-    while ( gtk_events_pending () ) {
-        gtk_main_iteration ();
-    }
+		while ( gtk_events_pending () ) {
+			gtk_main_iteration ();
+		}
+	}
 }

@@ -44,6 +44,12 @@ enum mpcmd_t {
 };
 typedef enum mpcmd_t mpcmd;
 
+struct msgbuf_t {
+	char *msg[10];
+	int  current;
+	int  lines;
+};
+
 /**
  * holds the widgets and pipes for communication
  */
@@ -72,7 +78,7 @@ struct mpcontrol_t {
     void *data;					/* extended data for gmixplay */
     int volume;					/* current volume [0..100] */
     char *channel;				/* the name of the ALSA master channel */
-    char msg[MP_MSGLEN];		/* generic message buffer */
+    struct msgbuf_t msg;		/* generic message buffer */
     int inUI;					/* flag to show if the UI is active */
 };
 
@@ -82,7 +88,7 @@ void writeConfig( mpconfig *config );
 int readConfig( mpconfig *config );
 void freeConfig( mpconfig *config );
 
-void setMessage( mpconfig *config, int v, char *msg, ... );
-int getMessage( mpconfig *config, char *msg );
+void addMessage( int v, char *msg, ... );
+int getMessage( char *msg );
 
 #endif /* _CONFIG_H_ */

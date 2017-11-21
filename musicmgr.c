@@ -300,7 +300,7 @@ static int matchList( struct entry_t **result, struct entry_t **base, struct mar
         term=term->next;
     }
 
-    printver( 1, "Added %i titles\n", cnt );
+    addMessage( 1, "Added %i titles\n", cnt );
 
     return cnt;
 }
@@ -322,7 +322,7 @@ struct entry_t *searchList( struct entry_t *base, struct marklist_t *term ) {
 
     cnt = matchList( &result, &base, term );
 
-    printver( 1, "Created playlist with %i titles\n", cnt );
+    addMessage( 1, "Created playlist with %i titles\n", cnt );
 
     /* Mark every other title so they won't be shuffled. */
     if( result != NULL ) {
@@ -365,7 +365,7 @@ int applyDNPlist( struct entry_t *base, struct marklist_t *list ) {
 
         while( ptr ) {
             if( matchTitle( pos, ptr->dir ) ) {
-                printver( 3, "[D] %s: %s\n", ptr->dir, pos->display );
+                addMessage( 3, "[D] %s: %s\n", ptr->dir, pos->display );
                 pos->flags |= MP_DNP;
                 cnt++;
                 break;
@@ -378,7 +378,7 @@ int applyDNPlist( struct entry_t *base, struct marklist_t *list ) {
     }
     while( pos != base );
 
-    printver( 1, "Marked %i titles as DNP\n", cnt );
+    addMessage( 1, "Marked %i titles as DNP\n", cnt );
 
     return cnt;
 }
@@ -430,7 +430,7 @@ struct marklist_t *loadList( const char *path ) {
         }
     }
 
-    printver( 2, "Loaded %s with %i entries.\n", path, cnt );
+    addMessage( 2, "Loaded %s with %i entries.\n", path, cnt );
 
     free( buff );
     fclose( file );
@@ -536,7 +536,7 @@ struct entry_t *loadPlaylist( const char *path ) {
 
     fclose( fp );
 
-    printver( 3, "Loaded %s with %i entries.\n", path, cnt );
+    addMessage( 3, "Loaded %s with %i entries.\n", path, cnt );
 
     return current->dbnext;
 }
@@ -553,7 +553,7 @@ static struct entry_t *plRemove( struct entry_t *entry ) {
         fail( F_FAIL, "plRemove() called with NULL!" );
     }
 
-    printver( 2, "Removed: %s\n", entry->display );
+    addMessage( 2, "Removed: %s\n", entry->display );
     entry->flags |= MP_DNP;
 
     if( entry->plnext != entry ) {
@@ -571,7 +571,7 @@ static struct entry_t *removeByPatLine( struct entry_t *base, const char *patter
     struct entry_t *runner=base;
     runner=base->plprev;
 
-    printver( 1, "Rule: %s\n", pattern );
+    addMessage( 1, "Rule: %s\n", pattern );
     while( runner != base ) {
         if( matchTitle( runner, pattern ) ) {
             runner=plRemove( runner );
@@ -748,7 +748,7 @@ int DNPSkip( struct entry_t *base, const unsigned int level ) {
 
         if( runner->skipcount > level ) {
             runner->flags |= MP_DNP;
-            printver( 2, "Marked %s as DNP after %i skips\n", runner->display, runner->skipcount );
+            addMessage( 2, "Marked %s as DNP after %i skips\n", runner->display, runner->skipcount );
             skipskip++;
         }
 
@@ -756,7 +756,7 @@ int DNPSkip( struct entry_t *base, const unsigned int level ) {
     }
     while( base != runner );
 
-    printver( 1, "Marked %i titles as DNP for being skipped\n", skipskip );
+    addMessage( 1, "Marked %i titles as DNP for being skipped\n", skipskip );
     return skipskip;
 }
 
@@ -796,7 +796,7 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 
 	newCount( base );
     num = countTitles( base, MP_ALL, MP_DNP ); /* |MP_MARK ); */
-    printver( 2, "Shuffling %i titles\n", num );
+    addMessage( 2, "Shuffling %i titles\n", num );
 
     for( i=0; i<num; i++ ) {
         unsigned long skip;
@@ -838,7 +838,7 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
                     runner=skipOver( runner );
 
                     if( guard==runner ) {
-                        printver( 2, "\nStopped nameskipping at %i/%i\n%s\n", i, num, runner->display );
+                        addMessage( 2, "\nStopped nameskipping at %i/%i\n%s\n", i, num, runner->display );
                         skipguard=0; /* No more alternatives */
                         break;
                     }
@@ -884,7 +884,7 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
                         if( guard == runner ) {
                         	valid=1;    /* we're back where we started and this one is valid by name */
                             pcount++;   /* allow more replays */
-                            printver( 2, "Increasing maxplaycount to %li at %i\n", pcount, i );
+                            addMessage( 2, "Increasing maxplaycount to %li at %i\n", pcount, i );
                         }
                     }
                 }
@@ -895,17 +895,17 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
             }
 
             if( ++cycles > 10 ) {
-                printver( 2, "Looks like we ran into a loop in round %i/%i\n", i, num );
+                addMessage( 2, "Looks like we ran into a loop in round %i/%i\n", i, num );
                 cycles=0;
                 /* skipguard=0; */
                 pcount++;   /* allow replays */
-                printver( 2, "Increasing maxplaycount to %li\n", pcount );
+                addMessage( 2, "Increasing maxplaycount to %li\n", pcount );
             }
         } /* while( skipguard && ( valid != 3 ) ) */
 
         /* title passed all tests */
         if( valid == 3 ) {
-            printver( 3, "[+] (%i/%li/%3s) %s\n", runner->playcount, pcount, ONOFF( runner->flags&MP_FAV ), runner->display );
+            addMessage( 3, "[+] (%i/%li/%3s) %s\n", runner->playcount, pcount, ONOFF( runner->flags&MP_FAV ), runner->display );
             strlncpy( lastname, runner->artist, NAMELEN );
             end = addToPL( runner, end );
             added++;
@@ -924,17 +924,17 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 /*				activity("badend"); */
 /*			} */
             insskip++;
-            printver( 3, "[*] (%i/%li) %s [%s]\n", runner->playcount, pcount, runner->display, guard->display );
+            addMessage( 3, "[*] (%i/%li) %s [%s]\n", runner->playcount, pcount, runner->display, guard->display );
             guard=addToPL( runner, guard );
             added++;
         }
     }
 
-    printver( 2, "Added %i titles                          \n", added );
-    printver( 2, "Skipped %i titles to avoid artist repeats\n", nameskip );
-    printver( 2, "Skipped %i titles to keep playrate even (max=%i)\n", playskip, pcount );
-    printver( 2, "Stuffed %i titles into playlist\n", insskip );
-    printver( 2, "Had a maximum of %i cycles\n", maxcycles );
+    addMessage( 2, "Added %i titles                          \n", added );
+    addMessage( 2, "Skipped %i titles to avoid artist repeats\n", nameskip );
+    addMessage( 2, "Skipped %i titles to keep playrate even (max=%i)\n", playskip, pcount );
+    addMessage( 2, "Stuffed %i titles into playlist\n", insskip );
+    addMessage( 2, "Had a maximum of %i cycles\n", maxcycles );
 
     /* Make sure something valid is returned */
     if( NULL == end ) {
@@ -1003,7 +1003,7 @@ int applyFavourites( struct entry_t *root, struct marklist_t *favourites ) {
 
         while( ptr ) {
             if( matchTitle( runner, ptr->dir ) ) {
-                printver( 3, "[F] %s: %s\n", ptr->dir, runner->display );
+                addMessage( 3, "[F] %s: %s\n", ptr->dir, runner->display );
                 runner->flags|=MP_FAV;
                 cnt++;
                 break;
@@ -1016,7 +1016,7 @@ int applyFavourites( struct entry_t *root, struct marklist_t *favourites ) {
     }
     while ( runner != root );
 
-    printver( 1, "Marked %i favourites\n", cnt );
+    addMessage( 1, "Marked %i favourites\n", cnt );
 
     return cnt;
 }
@@ -1074,7 +1074,7 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
         curdir[strlen( curdir )-1]=0;
     }
 
-    printver( 3, "Checking %s\n", curdir );
+    addMessage( 3, "Checking %s\n", curdir );
 
     /* get all music files */
     num = getMusic( curdir, &entry );
@@ -1200,30 +1200,30 @@ void dumpInfo( struct entry_t *root, int global, int skip ) {
         if( pcount > 0 ) {
             switch( pl ) {
             case 0:
-                printver( 0, "Never played:\t%i titles\n", pcount );
+                addMessage( 0, "Never played:\t%i titles\n", pcount );
                 break;
 
             case 1:
-                printver( 0, " Once played:\t%i titles\n", pcount );
+                addMessage( 0, " Once played:\t%i titles\n", pcount );
                 break;
 
             case 2:
-                printver( 0, "Twice played:\t%i titles\n", pcount );
+                addMessage( 0, "Twice played:\t%i titles\n", pcount );
                 break;
 
             default:
-                printver( 0, "%5i\ttimes played:\t%i titles\n", pl, pcount );
+                addMessage( 0, "%5i\ttimes played:\t%i titles\n", pl, pcount );
             }
         }
     }
 
-    printver( 0, "%4i\tfavourites\n", fav );
+    addMessage( 0, "%4i\tfavourites\n", fav );
 
     if( global ) {
-        printver( 0, "%4i\tdo not plays\n", dnp );
+        addMessage( 0, "%4i\tdo not plays\n", dnp );
     }
 
-    printver( 0, "%4i\tskipped\n", skipped );
+    addMessage( 0, "%4i\tskipped\n", skipped );
 }
 
 /**
@@ -1255,7 +1255,7 @@ static int copyTitle( struct entry_t *title, const char* target, const unsigned 
         fail( errno, "Couldn't open %s for writing", filename );
     }
 
-    printver( 2, "Copy %s to %s\n", title->display, filename );
+    addMessage( 2, "Copy %s to %s\n", title->display, filename );
 
     if( -1 == sendfile( out, in, NULL, len ) ) {
     	if( errno == EOVERFLOW ) return -1;
@@ -1289,6 +1289,6 @@ int fillstick( struct entry_t *root, const char *target, int fav ) {
 	}
 	while( current != root );
 
-	printver( 1, "Copied %i titles to %s\n", index, target );
+	addMessage( 1, "Copied %i titles to %s\n", index, target );
 	return index;
 }
