@@ -3,7 +3,6 @@
  */
 
 #include "ncbox.h"
-#include "config.h"
 #include <ncurses.h>
 #include <string.h>
 #include <stdlib.h>
@@ -365,6 +364,39 @@ void progressStart( const char *msg, ... ) {
 void progressEnd( const char *msg ) {
 	printver( 0, msg );
 }
+
 void updateUI( mpconfig *control ) {
-	// drawframe( control->current, control->playtime, control->playstream);
+    char status[MP_MSGLEN];
+    int i;
+
+	if( control->status == mpc_idle ) {
+		sprintf( status, " STOP/PAUSE " );
+	}
+	else {
+		if( control->playstream ) {
+			sprintf( status, "%s PLAYING", control->playtime );
+		}
+		else {
+			sprintf( status, "%s [", control->playtime );
+			for( i=0; i<30; i++ ) {
+				if( i < ( control->percent / 30 ) ) {
+					status[i+7]='=';
+				}
+				else if( i == ( control->percent / 30 ) ) {
+					status[i+7]='>';
+				}
+				else {
+					status[i+7]=' ';
+				}
+			}
+			status[i+7]=0;
+			strcat( status, "] " );
+			strcat( status, control->remtime );
+		}
+	}
+	drawframe( control->current, status, control->playstream );
+
+	if( getMessage( control, status ) ) {
+		popUp( 1, status );
+    }
 }

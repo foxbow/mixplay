@@ -10,6 +10,7 @@
 
 #include <pthread.h>
 #include <sys/types.h>
+#define MP_MSGLEN 512
 
 /*
  * commands and states
@@ -38,6 +39,8 @@ enum mpcmd_t {
 	mpc_shuffle,
 	mpc_ivol,
 	mpc_dvol,
+	mpc_fskip,
+	mpc_bskip
 };
 typedef enum mpcmd_t mpcmd;
 
@@ -69,11 +72,17 @@ struct mpcontrol_t {
     void *data;					/* extended data for gmixplay */
     int volume;					/* current volume [0..100] */
     char *channel;				/* the name of the ALSA master channel */
+    char msg[MP_MSGLEN];		/* generic message buffer */
+    int inUI;					/* flag to show if the UI is active */
 };
+
 typedef struct mpcontrol_t mpconfig;
 
 void writeConfig( mpconfig *config );
 int readConfig( mpconfig *config );
 void freeConfig( mpconfig *config );
+
+void setMessage( mpconfig *config, int v, char *msg, ... );
+int getMessage( mpconfig *config, char *msg );
 
 #endif /* _CONFIG_H_ */

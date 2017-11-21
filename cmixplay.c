@@ -21,7 +21,6 @@ int main( int argc, char **argv ) {
     struct timeval to;
 	char path[MAXPATHLEN];
     long key;
-    char status[MAXPATHLEN] = "INIT";
 
     muteVerbosity();
     control.fade=1;
@@ -70,6 +69,9 @@ int main( int argc, char **argv ) {
             }
         }
 
+        control.musicdir=falloc( strlen(path)+1, sizeof( char ) );
+        strip( control.musicdir, path, strlen(path)+1 );
+
         writeConfig( &control );
     }
 
@@ -98,7 +100,7 @@ int main( int argc, char **argv ) {
     cbreak();
     keypad( stdscr, TRUE );
     noecho();
-    drawframe( NULL, status, control.playstream );
+    drawframe( NULL, "INIT", control.playstream );
 
     /* The main control loop */
     do {
@@ -155,7 +157,7 @@ int main( int argc, char **argv ) {
 						}
 
 						break;
-#if 0
+#if 0 /* todo: implement search properly */
 					case 'S':
 					case 'J':
 						popAsk( "Search: ", line );
@@ -167,7 +169,7 @@ int main( int argc, char **argv ) {
 									break;
 								}
 
-								next=next->plnext; /* @TODO: include DNPs? */
+								next=next->plnext; /* include DNPs? */
 							}
 							while( control.current != next );
 
@@ -187,17 +189,7 @@ int main( int argc, char **argv ) {
 
 						break;
 #endif
-/*
-					case 'F':
-						fade=fade?0:3;
-						popUp( 1, "Fading is now %s", ONOFF( fade ) );
-						break;
 
-					case 'R':
-						repeat=repeat?0:1;
-						popUp( 1, "Repeat is now %s", ONOFF( repeat ) );
-						break;
-*/
 					case 'I':
 						popUp( 0, "   fade: %s\n"
 							   "dnplist: %s\n"
@@ -215,33 +207,24 @@ int main( int argc, char **argv ) {
 						setCommand(&control, mpc_prev );
 						break;
 
-/*
-					case 'N':
-						order=5;
-						write( p_command[fdset][1], "STOP\n", 6 );
-						break;
-
-					case 'P':
-						order=-5;
-						write( p_command[fdset][1], "STOP\n", 6 );
-						break;
-
 					case KEY_LEFT:
-						write( p_command[fdset][1], "JUMP -64\n", 10 );
+						setCommand(&control, mpc_bskip );
 						break;
 
 					case KEY_RIGHT:
-						write( p_command[fdset][1], "JUMP +64\n", 10 );
+						setCommand(&control, mpc_fskip );
 						break;
-*/
+
 					case 'r':
 						setCommand(&control, mpc_repl );
 						break;
 
+					case 'd':
 					case 'b':
 						setCommand(&control, mpc_dnptitle );
 						break;
 
+					case 'D':
 					case 'B':
 						setCommand(&control, mpc_dnpalbum );
 						break;
@@ -253,14 +236,6 @@ int main( int argc, char **argv ) {
 				}
 			}
 		}
-        if( control.playstream ) {
-            sprintf( status, "%s PLAYING", control.playtime );
-        }
-        else {
-            sprintf( status, "%s PLAYING %s", control.playtime, control.remtime );
-        }
-
-		drawframe( control.current, status, control.playstream );
 
     } while( control.status != mpc_quit );
     endwin();

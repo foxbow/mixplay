@@ -10,6 +10,7 @@
  *  Created on: 16.11.2017
  *      Author: bweber
  */
+#include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
@@ -18,6 +19,8 @@
 #include "utils.h"
 #include "musicmgr.h"
 #include "config.h"
+
+static pthread_mutex_t msglock=PTHREAD_MUTEX_INITIALIZER;
 
 /**
  * parses a multi-string config value in the form of:
@@ -212,3 +215,36 @@ void freeConfig( mpconfig *control ) {
 
     control->root=cleanTitles( control->root );
 }
+
+/**
+ * sets the current message
+ * this call will be blocking if a message is already there and has not been fetched
+ * with getMessage() yet.
+ */
+void setMessage( mpconfig *config, int v, char *msg, ... ) {
+    va_list args;
+    char line[MP_MSGLEN];
+
+    if( v >= getVerbosity() ) {
+		pthread_mutex_lock( &msglock );
+		va_start( args, msg );
+		vsnprintf( config->msg, MP_MSGLEN, msg, args );
+		va_end( args );
+		scrollAdd( config->msg, line, MP_MSGLEN );
+		pthread_mutex_unlock( &msglock );
+    }
+}
+
+/**
+ * gets the current message and cleans the message buffer
+ * returns length of the current message buffer
+ */
+int getMessage( mpconfig *config, char *msg ) {
+	pthread_mutex_lock( &msglock );
+	strcpy( msg, config->msg );
+	config->msg[0]=0;
+	pthread_mutex_unlock( &msglock );
+
+	return strlen( msg );
+}
+

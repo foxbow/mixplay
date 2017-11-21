@@ -388,6 +388,8 @@ void *reader( void *cont ) {
     		"mpc_shuffle",
 			"mpc_ivol",
 			"mpc_dvol",
+			"mpc_bskip",
+			"mpc_fskip"
     };
 
     control=( struct mpcontrol_t * )cont;
@@ -896,6 +898,14 @@ void *reader( void *cont ) {
         case mpc_dvol:
         	adjustVolume( p_command[fdset][1], control,  -VOLSTEP );
         	break;
+
+        case mpc_bskip:
+            write( p_command[fdset][1], "JUMP -64\n", 10 );
+            break;
+
+        case mpc_fskip:
+            write( p_command[fdset][1], "JUMP +64\n", 10 );
+            break;
 
         case mpc_idle:
             /* do null */
