@@ -242,7 +242,7 @@ int main( int argc, char **argv ) {
     endwin();
     control.inUI=0;
 
-    addMessage( 2, "Dropped out of the main loop\n" );
+    addMessage( 2, "Dropped out of the main loop" );
 
     pthread_join( control.rtid, NULL );
 

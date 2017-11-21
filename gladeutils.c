@@ -270,7 +270,7 @@ static int g_updateUI( void *data ) {
     control=( struct mpcontrol_t* )data;
 
     if( mpc_quit == control->command ) {
-        addMessage( 2, "Already closing..\n" );
+        addMessage( 2, "Already closing.." );
         return 0;
     }
 
@@ -280,7 +280,7 @@ static int g_updateUI( void *data ) {
     }
 
     if( gldata(control)->widgets->title_current == NULL ) {
-        addMessage( 2, "No title widget yet..\n" );
+        addMessage( 2, "No title widget yet.." );
         return 0;
     }
 

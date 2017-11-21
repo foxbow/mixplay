@@ -40,7 +40,7 @@ static long adjustMasterVolume( const char *channel, long volume ) {
 
     snd_mixer_open(&handle, 0);
     if( handle == NULL ) {
-    	addMessage( 1, "No ALSA support\n" );
+    	addMessage( 1, "No ALSA support" );
     	return -1;
     }
 
@@ -53,7 +53,7 @@ static long adjustMasterVolume( const char *channel, long volume ) {
     snd_mixer_selem_id_set_name(sid, channel );
     elem = snd_mixer_find_selem(handle, sid);
     if( elem == NULL) {
-    	addMessage( 0, "Can't find channel %s!\n", handle );
+    	addMessage( 0, "Can't find channel %s!", handle );
         snd_mixer_close(handle);
     	return -1;
     }
@@ -93,7 +93,7 @@ static int adjustVolume( int fd, struct mpcontrol_t *control, int vol ) {
 		if( newvol>100 ) newvol=100;
 		snprintf( line, MAXPATHLEN, "volume %i\n", newvol );
 		write( fd, line, strlen( line )+1 );
-		addMessage( 1, "Changed volume from %i to %i\n", control->volume, newvol );
+		addMessage( 1, "Changed volume from %i to %i", control->volume, newvol );
 		control->volume=newvol;
 	}
 	return newvol;
@@ -110,7 +110,7 @@ static void setStream( struct mpcontrol_t *control, const char* stream, const ch
     addToPL( control->root->dbnext, control->root );
     strncpy( control->root->dbnext->display, "---", 3 );
     control->current=control->root;
-    addMessage( 1, "Play Stream %s\n-> %s\n", name, stream );
+    addMessage( 1, "Play Stream %s (%s)", name, stream );
 }
 
 /**
@@ -296,7 +296,7 @@ void *setProfile( void *data ) {
         cleanList( favourites );
         control->playstream=0;
 
-        addMessage( 1, "Profile set to %s.\n", profile );
+        addMessage( 1, "Profile set to %s.", profile );
     }
     else {
     	fail( F_FAIL, "Neither profile nor stream set!" );
@@ -304,7 +304,7 @@ void *setProfile( void *data ) {
 
     /* if we're not in player context, start playing automatically */
     if( pthread_mutex_trylock( &cmdlock ) == 0 ){
-    	addMessage( 2, "Autoplay\n" );
+    	addMessage( 2, "Autoplay" );
         control->command=mpc_start;
     }
 
@@ -399,7 +399,7 @@ void *reader( void *cont ) {
     	fade=0;
     }
 
-    addMessage( 2, "Reader started\n" );
+    addMessage( 2, "Reader started" );
 
     /* start the needed mpg123 instances */
     /* start the player processes */
@@ -420,7 +420,7 @@ void *reader( void *cont ) {
 
         /* child process */
         if ( 0 == pid[i] ) {
-            addMessage(  2, "Starting player %i\n", i+1 );
+            addMessage(  2, "Starting player %i", i+1 );
 
             if ( dup2( p_command[i][0], STDIN_FILENO ) != STDIN_FILENO ) {
                 fail( errno, "Could not dup stdin for player %i", i+1 );
@@ -449,7 +449,7 @@ void *reader( void *cont ) {
     /* check if we can control the system's volume */
     control->volume=adjustMasterVolume( control->channel, 0 );
     if( control->volume == -1 ) {
-    	addMessage(  1, "No hardware volume control!\n" );
+    	addMessage(  1, "No hardware volume control!" );
     	control->channel=NULL;
     	control->volume=80;
     	for( i=0; i<=control->fade; i++ ) {
@@ -457,7 +457,7 @@ void *reader( void *cont ) {
     	}
     }
     else {
-    	addMessage(  1, "Hardware volume level is %i%%\n", control->volume );
+    	addMessage(  1, "Hardware volume level is %i%%", control->volume );
     }
 
     do {
@@ -480,12 +480,12 @@ void *reader( void *cont ) {
             if( key > 2 ) {
 				if( '@' == line[0] ) {
 	        		if( ( 'F' != line[1] ) && ( 'V' != line[1] ) ) {
-	        			addMessage(  2, "P- %s\n", line );
+	        			addMessage(  2, "P- %s", line );
 	        		}
 
 					switch ( line[1] ) {
 					case 'R': /* startup */
-						addMessage(  1, "MPG123 background instance is up\n" );
+						addMessage(  1, "MPG123 background instance is up" );
 						break;
 					case 'E':
 						fail( F_FAIL, "ERROR: %s\nIndex: %i\nName: %s\nPath: %s", line,
@@ -503,7 +503,7 @@ void *reader( void *cont ) {
 					}
 				}
 				else {
-					addMessage(  1, "OFF123: %s\n", line );
+					addMessage(  1, "OFF123: %s", line );
 				}
             }
         }
@@ -514,13 +514,13 @@ void *reader( void *cont ) {
         	if( '@' == line[0] ) {
         		/* Don't print volume and progress messages */
         		if( ( 'F' != line[1] ) && ( 'V' != line[1] ) ) {
-        			addMessage( 2, "P+ %s\n", line );
+        			addMessage( 2, "P+ %s", line );
         		}
                 switch ( line[1] ) {
                     int cmd=0, rem=0;
 
                 case 'R': /* startup */
-                    addMessage(  1, "MPG123 foreground instance is up\n" );
+                    addMessage(  1, "MPG123 foreground instance is up" );
                     break;
 
                 case 'I': /* ID3 info */
@@ -536,7 +536,7 @@ void *reader( void *cont ) {
                                 fail( F_FAIL, "Messed up playlist!" );
                             }
 
-                            addMessage( 3, "%s\n", a );
+                            addMessage( 3, "%s", a );
                             a = a + 13;
                             *strchr( a, '\'' ) = '\0';
                             strncpy( control->current->plnext->display, control->current->display, MAXPATHLEN );
@@ -669,7 +669,7 @@ void *reader( void *cont ) {
 
                     case 2:  /* PLAY */
                     	if( control->status == mpc_start ) {
-                        	addMessage(  2, "Playing profile #%i\n", control->active );
+                        	addMessage(  2, "Playing profile #%i", control->active );
                     	}
                     	control->status=mpc_play;
                         break;
@@ -699,7 +699,7 @@ void *reader( void *cont ) {
                 } /* case line[1] */
             } /* if line starts with '@' */
             else {
-            	addMessage( 1, "MPG123: %s\n", line );
+            	addMessage( 1, "MPG123: %s", line );
             	/* Ignore other mpg123 output */
             }
         } /* fgets() > 0 */
@@ -712,7 +712,7 @@ void *reader( void *cont ) {
         pthread_mutex_trylock( &cmdlock );
 
         if( control->command != mpc_idle ) {
-        	addMessage(  2, "MPC %s\n", mpc_command[control->command] );
+        	addMessage(  2, "MPC %s", mpc_command[control->command] );
         }
         switch( control->command ) {
         case mpc_start:
@@ -754,16 +754,16 @@ void *reader( void *cont ) {
             write( p_command[fdset][1], "STOP\n", 6 );
             progressStart( "Filesystem Cleanup" );
 
-            addMessage( 0, "Checking for doubles..\n" );
+            addMessage( 0, "Checking for doubles.." );
             i=dbNameCheck( control->dbname );
             if( i > 0 ) {
-            	addMessage( 0, "Deleted %i titles\n", i );
-                addMessage( 0, "Restarting player..\n" );
+            	addMessage( 0, "Deleted %i titles", i );
+                addMessage( 0, "Restarting player.." );
                 setProfile( control );
                 control->current = control->root;
             }
             else {
-            	addMessage( 0, "No titles deleted\n" );
+            	addMessage( 0, "No titles deleted" );
             }
 
             progressEnd( "Finished Cleanup." );
@@ -777,30 +777,30 @@ void *reader( void *cont ) {
             progressStart( "Database Cleanup" );
 
 
-            addMessage( 0, "Checking for deleted titles..\n" );
+            addMessage( 0, "Checking for deleted titles.." );
             i=dbCheckExist( control->dbname );
 
             if( i > 0 ) {
-                addMessage( 0, "Removed %i titles\n", i );
+                addMessage( 0, "Removed %i titles", i );
                 order=1;
             }
             else {
-                addMessage( 0, "No titles removed\n" );
+                addMessage( 0, "No titles removed" );
             }
 
-            addMessage( 0, "Checking for new titles..\n" );
+            addMessage( 0, "Checking for new titles.." );
             i=dbAddTitles( control->dbname, control->musicdir );
 
             if( i > 0 ) {
-                addMessage( 0, "Added %i new titles\n", i );
+                addMessage( 0, "Added %i new titles", i );
                 order=1;
             }
             else {
-                addMessage( 0, "No titles to be added\n" );
+                addMessage( 0, "No titles to be added" );
             }
 
             if( 1 == order ) {
-                addMessage( 0, "Restarting player..\n" );
+                addMessage( 0, "Restarting player.." );
                 setProfile( control );
                 control->current = control->root;
             }
@@ -922,7 +922,7 @@ void *reader( void *cont ) {
     	kill( pid[i], SIGTERM );
     }
 
-    addMessage( 2, "Reader stopped\n" );
+    addMessage( 2, "Reader stopped" );
 
     return NULL;
 }

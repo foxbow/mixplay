@@ -70,7 +70,7 @@ int readConfig( mpconfig *config ) {
     assert( config != NULL );
     c_config=config;
 
-    addMessage( 1, "Reading config\n" );
+    addMessage( 1, "Reading config" );
 
     /* Set some default values */
     config->root=NULL;
@@ -141,7 +141,7 @@ void writeConfig( mpconfig *config ) {
     int		i;
     FILE    *fp;
 
-    addMessage( 1, "Writing config\n" );
+    addMessage( 1, "Writing config" );
 
     snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", getenv( "HOME" ) );
 

@@ -162,7 +162,7 @@ int main( int argc, char **argv ) {
     	;
     }
 
-    addMessage( 2, "Dropped out of the main loop\n" );
+    addMessage( 2, "Dropped out of the main loop" );
 
     pthread_join( control.rtid, NULL );
     for( i=0; i <= control.fade; i++ ) {

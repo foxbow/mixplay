@@ -151,7 +151,7 @@ int main( int argc, char **argv ) {
     control.inUI=-1;
     gtk_main();
     control.inUI=0;
-    addMessage( 2, "Dropped out of the gtk_main loop\n" );
+    addMessage( 2, "Dropped out of the gtk_main loop" );
     control.status=mpc_quit;
 
     pthread_join( control.rtid, NULL );
