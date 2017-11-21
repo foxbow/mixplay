@@ -50,16 +50,6 @@ void activity( const char *msg, ... ) {
     }
 }
 
-void printver( int vl, const char *msg, ... ) {
-    va_list args;
-
-	if( vl >= getVerbosity() ) {
-	    va_start( args, msg );
-		vfprintf( stderr, msg, args );
-	    va_end( args );
-	}
-}
-
 /*
  * Print errormessage, errno and wait for [enter]
  * msg - Message to print
@@ -172,7 +162,7 @@ int main( int argc, char **argv ) {
     	;
     }
 
-    printver( 2, "Dropped out of the gtk_main loop\n" );
+    addMessage( 2, "Dropped out of the main loop\n" );
 
     pthread_join( control.rtid, NULL );
     for( i=0; i <= control.fade; i++ ) {

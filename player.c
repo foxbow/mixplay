@@ -30,6 +30,7 @@ static pthread_mutex_t cmdlock=PTHREAD_MUTEX_INITIALIZER;
 static long adjustMasterVolume( const char *channel, long volume ) {
     long min, max;
     snd_mixer_t *handle;
+    snd_mixer_elem_t *elem;
     snd_mixer_selem_id_t *sid;
     long retval = 0;
 
@@ -50,7 +51,7 @@ static long adjustMasterVolume( const char *channel, long volume ) {
     snd_mixer_selem_id_alloca(&sid);
     snd_mixer_selem_id_set_index(sid, 0);
     snd_mixer_selem_id_set_name(sid, channel );
-    snd_mixer_elem_t* elem = snd_mixer_find_selem(handle, sid);
+    elem = snd_mixer_find_selem(handle, sid);
     if( elem == NULL) {
     	addMessage( 0, "Can't find channel %s!\n", handle );
         snd_mixer_close(handle);
