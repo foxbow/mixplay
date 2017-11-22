@@ -12,26 +12,6 @@
 #include <ncurses.h>
 #include <sys/stat.h>
 
-static int _ftverbosity=1;
-
-int setVerbosity( int v ) {
-    _ftverbosity=v;
-    return _ftverbosity;
-}
-
-int getVerbosity( void ) {
-    return _ftverbosity;
-}
-
-int incVerbosity() {
-    _ftverbosity++;
-    return _ftverbosity;
-}
-
-void muteVerbosity() {
-    _ftverbosity=0;
-}
-
 /**
  * turn a relative path into an absolute path
  * basedir is the current directory, which does not necessarily need to
@@ -441,6 +421,72 @@ int scrollAdd( char *scroll, const char* line, const size_t len ) {
 
     strncat( scroll, line, len );
     return 1;
+}
+
+/**
+ * helperfunction to implement message ringbuffer
+ */
+void msgBuffAdd( struct msgbuf_t msgbuf, char *line ) {
+	if( msgbuf.lines == MSGNUM ) {
+		free(msgbuf.msg[msgbuf.current]);
+		msgbuf.msg[msgbuf.current]=line;
+		msgbuf.current=(msgbuf.current+1)%MSGNUM;
+	}
+	else {
+		msgbuf.msg[(msgbuf.current+msgbuf.lines)%MSGNUM]=line;
+		msgbuf.lines++;
+	}
+}
+
+/**
+ * helperfunction to implement message ringbuffer
+ */
+char *msgBuffGet( struct msgbuf_t msgbuf ) {
+	char *retval = NULL;
+	if( msgbuf.lines > 0 ) {
+		retval=msgbuf.msg[msgbuf.current];
+		msgbuf.msg[msgbuf.current]=NULL;
+		msgbuf.current = (msgbuf.current+1)%MSGNUM;
+		msgbuf.lines--;
+	}
+	return retval;
+}
+
+/**
+ * returns all lines in the buffer as a single string
+ * Does not empty the buffer
+ */
+char *msgBuffPeek( struct msgbuf_t msgbuf ) {
+	int i;
+	size_t len=200;
+	char *buff;
+
+	buff=falloc( len, sizeof( char ) );
+	buff[0]=0;
+
+	for( i=0; i<msgbuf.lines; i++ ) {
+		if( strlen(buff)+strlen(msgbuf.msg[(i+msgbuf.current)%MSGNUM]) >= 1024 ) {
+			len=len+200;
+			buff=realloc( buff, len*sizeof( char ) );
+			if( NULL == buff ) {
+				fail( errno, "Can't increase message buffer " );
+			}
+		}
+		strcat( buff, msgbuf.msg[(i+msgbuf.current)%MSGNUM] );
+		strcat( buff, "\n" );
+	}
+
+	return buff;
+}
+
+/**
+ * empties the mesage buffer
+ */
+void msgBuffClear( struct msgbuf_t msgbuf ) {
+	char *line;
+	while( ( line=msgBuffGet( msgbuf ) ) != NULL ) {
+		free( line );
+	}
 }
 
 /**

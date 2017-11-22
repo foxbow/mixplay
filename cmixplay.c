@@ -53,11 +53,15 @@ int main( int argc, char **argv ) {
 
     /* parse command line options */
     /* using unsigned char c to work around getopt bug on ARM */
-    while ( ( c = getopt( argc, argv, "vfF" ) ) != 255 ) {
+    while ( ( c = getopt( argc, argv, "dvfF" ) ) != 255 ) {
         switch ( c ) {
         case 'v': /* increase debug message level to display in console output */
             incVerbosity();
             break;
+
+        case 'd':
+        	incDebug();
+        	break;
 
         case 'f':
         	config->fade=0;

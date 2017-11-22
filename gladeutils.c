@@ -110,27 +110,6 @@ void fail( int error, const char* msg, ... ) {
 }
 
 /**
- * actual gtk code for printver
- * is added as an idle thread to the main thread
- */
-static int g_progressLog( void *line ) {
-    pthread_mutex_lock( &msglock );
-	scrollAdd( MP_GLDATA->log, line, MP_LOGLEN );
-	if( NULL != MP_GLDATA->widgets->mp_popup ) {
-		gtk_message_dialog_format_secondary_text( GTK_MESSAGE_DIALOG( MP_GLDATA->widgets->mp_popup ),
-				"%s", MP_GLDATA->log );
-		gtk_widget_queue_draw( MP_GLDATA->widgets->mp_popup );
-	}
-	else if( getConfig()->status != mpc_quit ) {
-		fail( F_WARN, "No log window open for:\n%s", line );
-	}
-    free( line );
-    pthread_mutex_unlock( &msglock );
-
-    return 0;
-}
-
-/**
  * callback for the progress close button
  */
 static void cb_progressClose( GtkDialog *dialog, gint res, gpointer data ) {
@@ -138,7 +117,6 @@ static void cb_progressClose( GtkDialog *dialog, gint res, gpointer data ) {
     pthread_mutex_lock( &msglock );
     gtk_widget_destroy( GTK_WIDGET( dialog ) );
     MP_GLDATA->widgets->mp_popup=NULL;
-    MP_GLDATA->log[0]='\0';
     pthread_mutex_unlock( &msglock );
 }
 
@@ -146,11 +124,11 @@ static void cb_progressClose( GtkDialog *dialog, gint res, gpointer data ) {
  * actual gtk code for prgressOpen
  * is added as an idle thread to the main thread
  */
-static int g_progressStart( void *line ) {
+static int g_progressStart( void *title ) {
     if( NULL == MP_GLDATA->widgets->mp_popup ) {
         MP_GLDATA->widgets->mp_popup = gtk_message_dialog_new ( GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
                                        GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_INFO, GTK_BUTTONS_NONE,
-                                       "%s", ( char * )line );
+                                       "%s", ( char * )title );
         gtk_dialog_add_button( GTK_DIALOG( MP_GLDATA->widgets->mp_popup ), "OK", 1 );
         g_signal_connect_swapped ( MP_GLDATA->widgets->mp_popup, "response",
                                    G_CALLBACK( cb_progressClose ),
@@ -159,13 +137,12 @@ static int g_progressStart( void *line ) {
     gtk_widget_set_sensitive( MP_GLDATA->widgets->mp_popup, FALSE );
     gtk_widget_show_all( MP_GLDATA->widgets->mp_popup );
 
-    free( line );
+    free( title );
     return 0;
 }
 
 /**
  * Opens an info requester
- * will be ignored if an info requester is already open
  */
 void progressStart( char *msg, ... ) {
     va_list args;
@@ -182,22 +159,50 @@ void progressStart( char *msg, ... ) {
 			gtk_main_iteration ();
 		}
     }
+    else {
+        addMessage( 0, line );
+        free( line );
+    }
 }
 
 /**
- * Standard progress logging function
- * this is just another name for addMessage() and defined in gladeutils.h
- * just mentioned here for clarity
+ * pops up a requester to show a message
+ * Usually called from within an ProgressStart() ProgressEnd() bracket
+ * Can be called as is and just pops up a closeable requester
  */
-/* #define progressLog( ... ) addMessage( 0, __VA_ARGS__ ) */
+static int g_progressLog( void *line ) {
+    pthread_mutex_lock( &msglock );
+    char *msg;
+
+    msgBuffAdd( MP_GLDATA->msgbuff, line);
+    msg=msgBuffPeek( MP_GLDATA->msgbuff );
+
+    if( NULL != MP_GLDATA->widgets->mp_popup ) {
+		gtk_message_dialog_format_secondary_text( GTK_MESSAGE_DIALOG( MP_GLDATA->widgets->mp_popup ),
+				"%s", msg );
+		gtk_widget_queue_draw( MP_GLDATA->widgets->mp_popup );
+		free( msg );
+	}
+	else if( getConfig()->status != mpc_quit ) {
+		fail( F_WARN, "No log window open for:\n%s", line );
+	}
+	else {
+		g_progressStart( msg );
+	    gtk_widget_set_sensitive( MP_GLDATA->widgets->mp_popup, TRUE );
+	}
+    free( line );
+    pthread_mutex_unlock( &msglock );
+
+    return 0;
+}
 
 /**
  * actual gtk code for progressDone
  * is added as an idle thread to the main thread
  */
-static int g_progressEnd( void *line ) {
+static int g_progressEnd( void *data ) {
     gtk_widget_set_sensitive( MP_GLDATA->widgets->mp_popup, TRUE );
-    return g_progressLog( line );
+    return 0;
 }
 
 /**
@@ -219,8 +224,10 @@ void progressEnd( char *msg ) {
     else {
     	strncpy( line, msg, 512 );
     }
+	addMessage( 0, line );
+	free( line );
     if( getConfig()->inUI ) {
-		gdk_threads_add_idle( g_progressEnd, line );
+		gdk_threads_add_idle( g_progressEnd, NULL );
 
 		while ( gtk_events_pending () ) {
 			gtk_main_iteration ();
@@ -329,7 +336,7 @@ static int g_updateUI( void *data ) {
                             control->current->genre );
         setButtonLabel( MP_GLDATA->widgets->button_prev, control->current->plprev->display );
 
-        if( MP_GLDATA->debug > 1 ) {
+        if( getDebug() > 1 ) {
             sprintf( buff, "%2i %s", control->current->skipcount, control->current->plnext->display );
             setButtonLabel( MP_GLDATA->widgets->button_next, buff );
         }
@@ -366,6 +373,10 @@ static int g_updateUI( void *data ) {
                         control->remtime );
     gtk_progress_bar_set_fraction( GTK_PROGRESS_BAR( MP_GLDATA->widgets->progress ),
                                    control->percent/100.0 );
+
+    if( getMessage( buff ) > 0 ) {
+    	g_progressLog( buff );
+    }
 
     return 0;
 }

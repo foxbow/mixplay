@@ -77,13 +77,10 @@ mpconfig *readConfig( ) {
     FILE    *fp;
 
     if( c_config == NULL ) {
-        addMessage( 1, "Reading config" );
     	c_config=falloc( 1, sizeof( mpconfig ) );
     }
-    else {
-    	addMessage( 1, "Re-reading config" );
-    }
 
+    memset( c_config, 0, sizeof( mpconfig )-sizeof( void * )  );
 
     /* Set some default values */
     c_config->root=NULL;
@@ -98,6 +95,11 @@ mpconfig *readConfig( ) {
     c_config->dbname=falloc( MAXPATHLEN, sizeof( char ) );
     c_config->msg.lines=0;
     c_config->msg.current=0;
+    c_config->verbosity=0;
+    c_config->debug=0;
+    c_config->msg.current=0;
+    c_config->msg.lines=0;
+
     snprintf( c_config->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", getenv("HOME") );
 
     snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", getenv( "HOME" ) );
@@ -164,10 +166,7 @@ mpconfig *writeConfig( const char *path ) {
 
     snprintf( conffile, MAXPATHLEN, "%s/.mixplay", getenv("HOME") );
     if( mkdir( conffile, 0700 ) == -1 ) {
-    	if( errno == EEXIST ) {
-    		fprintf( stderr, "WARNING: %s already exists!\n", conffile );
-    	}
-    	else {
+    	if( errno != EEXIST ) {
     		fail( errno, "Could not create config dir %s", conffile );
     	}
     }
@@ -253,32 +252,6 @@ void freeConfig( ) {
 }
 
 /**
- * helperfunction to implement message ringbuffer
- */
-static void msgbuffAdd( struct msgbuf_t msgbuf, char *line ) {
-	msgbuf.msg[(msgbuf.current+msgbuf.lines)%10]=line;
-	if( msgbuf.lines == 10 ) {
-		msgbuf.current=(msgbuf.current+1)%10;
-	}
-	else {
-		msgbuf.lines++;
-	}
-}
-
-/**
- * helperfunction to implement message ringbuffer
- */
-static char *msgbuffGet( struct msgbuf_t msgbuf ) {
-	char *retval = NULL;
-	if( msgbuf.lines > 0 ) {
-		retval=msgbuf.msg[msgbuf.current];
-		msgbuf.current = (msgbuf.current+1)%10;
-		msgbuf.lines--;
-	}
-	return retval;
-}
-
-/**
  * adds a message to the message buffer
  *
  * If the application is not in UI mode, the message will just be printed to make sure messages
@@ -290,19 +263,31 @@ void addMessage( int v, char *msg, ... ) {
 
     assert( c_config != NULL );
 
-    if( v >= getVerbosity() ) {
+	if( v <= getVerbosity() ) {
 		pthread_mutex_lock( &msglock );
 		line = falloc( MP_MSGLEN, sizeof(char) );
 		va_start( args, msg );
 		vsnprintf( line, MP_MSGLEN, msg, args );
 		va_end( args );
-    	if( ( c_config !=NULL ) && ( c_config->inUI ) ) {
-			msgbuffAdd( c_config->msg, line );
+    	if( c_config->inUI ) {
+			msgBuffAdd( c_config->msg, line );
+			if( v < getDebug() ) {
+				fprintf( stderr, "D%i %s\n", v, line );
+			}
     	}
     	else {
     		printf( "V%i %s\n", v, line );
+    		free(line);
     	}
-		pthread_mutex_unlock( &msglock );
+    	pthread_mutex_unlock( &msglock );
+    }
+	else if( v < getDebug() ) {
+		line = falloc( MP_MSGLEN, sizeof(char) );
+		va_start( args, msg );
+		vsnprintf( line, MP_MSGLEN, msg, args );
+		va_end( args );
+		fprintf( stderr, "D%i %s\n", v, line );
+		free( line );
     }
 }
 
@@ -316,7 +301,7 @@ int getMessage( char *msg ) {
 	assert( c_config != NULL );
 
 	pthread_mutex_lock( &msglock );
-	buf=msgbuffGet( c_config->msg );
+	buf=msgBuffGet( c_config->msg );
 	if( buf != NULL ) {
 		strcpy( msg, buf );
 		free(buf);
@@ -328,3 +313,35 @@ int getMessage( char *msg ) {
 
 	return strlen( msg );
 }
+
+void incDebug( void ) {
+	assert( c_config != NULL );
+	c_config->debug++;
+}
+
+int getDebug( void ) {
+	assert( c_config != NULL );
+    return c_config->debug;
+}
+
+int setVerbosity( int v ) {
+	assert( c_config != NULL );
+    c_config->verbosity=v;
+    return c_config->verbosity;
+}
+
+int getVerbosity( void ) {
+	assert( c_config != NULL );
+    return c_config->verbosity;
+}
+
+int incVerbosity() {
+	assert( c_config != NULL );
+	c_config->verbosity++;
+    return c_config->verbosity;
+}
+
+void muteVerbosity() {
+	setVerbosity(0);
+}
+

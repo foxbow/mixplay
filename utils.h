@@ -1,8 +1,6 @@
 #ifndef FBFS_UTILS_H
 #define FBFS_UTILS_H
 
-#include "config.h"
-
 /* Default values */
 #include <stdlib.h>
 #define ONOFF(x) (x)?"ON":"OFF"
@@ -23,13 +21,18 @@
 /* Represents a string as a bit array */
 typedef unsigned char* strval_t;
 
+#define MSGNUM 20
+
 /*
- * Verbosity handling of the utils functions
+ * Message ringbuffer structure
  */
-int getVerbosity( void );
-int setVerbosity( int );
-int incVerbosity();
-void muteVerbosity();
+struct msgbuf_t {
+	char *msg[MSGNUM];
+	int  current;
+	int  lines;
+};
+
+#include "config.h"
 
 /*
  * These functions need to be implemented in the UI
@@ -47,6 +50,14 @@ void updateUI( mpconfig *data );
  */
 char *appendString( char *line, const char *val, size_t maxlen );
 char *appendInt( char *line, const char *fmt, const int val, size_t maxlen );
+
+/**
+ * helperfunction to implement message ringbuffer
+ */
+void  msgBuffAdd( struct msgbuf_t msgbuf, char *line );
+char *msgBuffGet( struct msgbuf_t msgbuf );
+char *msgBuffPeek( struct msgbuf_t msgbuf );
+void  msgBuffClear( struct msgbuf_t msgbuf );
 
 /**
  * General utility functions

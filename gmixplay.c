@@ -18,12 +18,9 @@
  */
 static int initAll( void *data ) {
     struct mpcontrol_t *control;
-
-    control=readConfig();
-
     pthread_t tid;
 
-    MP_GLDATA->log[0]='\0';
+    control=getConfig();
 
     pthread_create( &control->rtid, NULL, reader, control );
 
@@ -37,9 +34,6 @@ static int initAll( void *data ) {
         setCommand( mpc_play );
     }
 
-    if( MP_GLDATA->debug ) {
-        progressEnd( "Initialization done." );
-    }
     return 0;
 }
 
@@ -109,13 +103,12 @@ int main( int argc, char **argv ) {
 
     control->fade=1;
     glcontrol.fullscreen=0;
-    glcontrol.debug=0;
 
     /* parse command line options */
     /* using unsigned char c to work around getopt bug on ARM */
     while ( ( c = getopt( argc, argv, "vfdF" ) ) != 255 ) {
         switch ( c ) {
-        case 'v': /* increase debug message level to display in console output */
+        case 'v': /* increase debug message level to display */
             incVerbosity();
             break;
 
@@ -123,8 +116,8 @@ int main( int argc, char **argv ) {
             glcontrol.fullscreen=1;
             break;
 
-        case 'd': /* increase debug message level to display in debug request */
-            glcontrol.debug++;
+        case 'd': /* increase debug message level to display on console */
+            incDebug();
             break;
 
         case 'F': /* single channel - disable fading */

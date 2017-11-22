@@ -35,17 +35,15 @@ bin/mixplayd: $(OBJS) $(DOBJS)
 	$(CC) $^ -o $@ $(LIBS)
 
 bin/gmixplay: $(OBJS) $(GLOBJS)
-	$(CC) $(CCFLAGS_GLADE) $^ -o $@ $(LDFLAGS_GLADE) $(LIBS)
+	$(CC) $^ -o $@ $(LDFLAGS_GLADE) $(LIBS)
 
 # rules for GTK/GLADE
 g%.o: g%.c
-	$(CC) $(GDEPFLAGS) $(CCFLAGS_GLADE) -c $<
-	$(GPOSTCOMPILE)
+	$(CC) $(CCFLAGS_GLADE) -c $<
 
 # default
 %.o: %.c
-	$(CC) $(DEPFLAGS) $(CCFLAGS) -c $<
-	$(POSTCOMPILE)
+	$(CC) $(CCFLAGS) -c $<
 	
 install: all	
 	install -d ~/bin/

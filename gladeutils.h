@@ -45,20 +45,7 @@ struct _MpData {
 struct glcontrol_t {
 	MpData *widgets;			/* all (accessible) widgets */
     int fullscreen;				/* run in fullscreen mode */
-    int debug;					/* debug log level (like verbose but print in requester) */
-    char log[MP_LOGLEN];		/* debug log buffer */
+    struct msgbuf_t msgbuff;	/* generic message buffer */
 };
 
-/** defined in utils.h **/
-/* void progressStart( const char *msg, ... ); */
-/* #define progressLog( ... ) printver( 0, __VA_ARGS__ ) */
-/* void progressLog( const char *msg, ... ); */
-/* void progressEnd( const char *msg ); */
-/* void updateUI( void *data ); */
-/* void printver( int vl, const char *msg, ... ); */
-/* void activity( const char *msg, ... ); */
-/* void fail( int error, const char* msg, ... ); */
-/** Not implemented / needed **/
-
-/* void popUp( int level, const char *text, ... ); */
 #endif /* __GLADEUTILS_H__ */
