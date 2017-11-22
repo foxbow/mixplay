@@ -84,9 +84,10 @@ struct mpcontrol_t {
 
 typedef struct mpcontrol_t mpconfig;
 
-void writeConfig( mpconfig *config );
-int readConfig( mpconfig *config );
-void freeConfig( mpconfig *config );
+mpconfig *writeConfig( const char *path );
+mpconfig *readConfig( void );
+mpconfig *getConfig( void );
+void freeConfig( void );
 
 void addMessage( int v, char *msg, ... );
 int getMessage( char *msg );

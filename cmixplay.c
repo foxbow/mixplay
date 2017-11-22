@@ -4,7 +4,6 @@
 #include <sys/types.h>
 #include <getopt.h>
 #include <ncurses.h>
-#include <sys/stat.h>
 
 #include "utils.h"
 #include "ncbox.h"
@@ -15,43 +14,17 @@
 
 int main( int argc, char **argv ) {
     unsigned char	c;
-    mpconfig    control;
+    mpconfig    *config;
     int 		db=0;
     fd_set fds;
     struct timeval to;
 	char path[MAXPATHLEN];
     long key;
 
-    setVerbosity(1);
-    control.fade=1;
-
-    /* parse command line options */
-    /* using unsigned char c to work around getopt bug on ARM */
-    while ( ( c = getopt( argc, argv, "vF" ) ) != 255 ) {
-        switch ( c ) {
-        case 'v': /* increase debug message level to display in console output */
-            incVerbosity();
-            break;
-
-        case 'F': /* single channel - disable fading */
-        	control.fade=0;
-        	break;
-        }
-    }
-
-    if( readConfig( &control ) == -1 ) {
+    config=readConfig();
+    if( config == NULL ) {
         printf( "music directory needs to be set.\n" );
         printf( "It will be set up now\n" );
-
-        snprintf( path, MAXPATHLEN, "%s/.mixplay", getenv("HOME") );
-        if( mkdir( path, 0700 ) == -1 ) {
-        	if( errno == EEXIST ) {
-        		fprintf( stderr, "WARNING: %s already exists!\n", path );
-        	}
-        	else {
-        		fail( errno, "Could not create config dir %s", path );
-        	}
-        }
 
         while( 1 ) {
             printf( "Default music directory:" );
@@ -69,39 +42,60 @@ int main( int argc, char **argv ) {
             }
         }
 
-        control.musicdir=falloc( strlen(path)+1, sizeof( char ) );
-        strip( control.musicdir, path, strlen(path)+1 );
+        config=writeConfig( path );
+        if( config == NULL ) {
+        	fail( F_FAIL, "Could not create config file!" );
+        }
+    }
 
-        writeConfig( &control );
+    setVerbosity(1);
+    config->fade=1;
+
+    /* parse command line options */
+    /* using unsigned char c to work around getopt bug on ARM */
+    while ( ( c = getopt( argc, argv, "vfF" ) ) != 255 ) {
+        switch ( c ) {
+        case 'v': /* increase debug message level to display in console output */
+            incVerbosity();
+            break;
+
+        case 'f':
+        	config->fade=0;
+        	break;
+
+        case 'F': /* toggle fading */
+        	config->fade=1;
+        	break;
+        }
     }
 
     if ( optind < argc ) {
-    	if( 0 == setArgument( &control, argv[optind] ) ) {
+    	if( 0 == setArgument( argv[optind] ) ) {
             fail( F_FAIL, "Unknown argument!\n", argv[optind] );
             return -1;
         }
     }
 
     /* start the actual player */
-    pthread_create( &control.rtid, NULL, reader, (void *)&control );
+    pthread_create( &config->rtid, NULL, reader, (void *)config );
 
-    if( control.root == NULL ) {
-    	setProfile( &control );
+    if( config->root == NULL ) {
+    	setProfile( config );
     }
     else {
-    	control.active=0;
-        control.dbname[0]=0;
-        setCommand(&control, mpc_play );
+    	config->active=0;
+        config->dbname[0]=0;
+        setCommand( mpc_play );
     }
 
     /* Start curses mode */
-    control.inUI=-1;
+    config->inUI=-1;
     initscr();
     curs_set( 0 );
     cbreak();
     keypad( stdscr, TRUE );
     noecho();
-    drawframe( NULL, "INIT", control.playstream );
+    drawframe( NULL, "INIT", config->playstream );
 
     /* The main control loop */
     do {
@@ -122,39 +116,39 @@ int main( int argc, char **argv ) {
 			else {
 				switch( key ) {
 				case ' ':
-					setCommand(&control, mpc_play );
+					setCommand( mpc_play );
 					break;
 
 				case 's':
-					setCommand(&control, mpc_stop );
+					setCommand( mpc_stop );
 					break;
 
 				case 'q':
-					setCommand( &control, mpc_quit );
+					setCommand( mpc_quit );
 					break;
 				}
 
-				if( ! control.playstream ) {
+				if( ! config->playstream ) {
 					switch( key ) {
 					case '+':
-						setCommand(&control, mpc_ivol );
+						setCommand( mpc_ivol );
 						break;
 
 					case '-':
-						setCommand( &control, mpc_dvol );
+						setCommand( mpc_dvol );
 						break;
 
 					case 'i':
-						if( 0 != control.current->key ) {
+						if( 0 != config->current->key ) {
 							popUp( 0, "%s\nGenre: %s\nKey: %04i\nplaycount: %i\nskipcount: %i\nCount: %s - Skip: %s",
-								   control.current->path, control.current->genre,
-								   control.current->key, control.current->playcount,
-								   control.current->skipcount,
-								   ONOFF( ~( control.current->flags )&MP_CNTD ),
-								   ONOFF( ~( control.current->flags )&MP_SKPD ) );
+								   config->current->path, config->current->genre,
+								   config->current->key, config->current->playcount,
+								   config->current->skipcount,
+								   ONOFF( ~( config->current->flags )&MP_CNTD ),
+								   ONOFF( ~( config->current->flags )&MP_SKPD ) );
 						}
 						else {
-							popUp( 2, control.current->path );
+							popUp( 2, config->current->path );
 						}
 
 						break;
@@ -163,7 +157,7 @@ int main( int argc, char **argv ) {
 					case 'J':
 						popAsk( "Search: ", line );
 						if( strlen( line ) > 2 ) {
-							next=control.current;
+							next=config->current;
 
 							do {
 								if( checkMatch( next->path, line ) ) {
@@ -172,11 +166,11 @@ int main( int argc, char **argv ) {
 
 								next=next->plnext; /* include DNPs? */
 							}
-							while( control.current != next );
+							while( config->current != next );
 
-							if( next != control.current ) {
+							if( next != config->current ) {
 								next->flags|=MP_CNTD; /* Don't count searched titles. */
-								moveEntry( next, control.current );
+								moveEntry( next, config->current );
 								order=1;
 								write( p_command[fdset][1], "STOP\n", 6 );
 							}
@@ -195,58 +189,58 @@ int main( int argc, char **argv ) {
 						popUp( 0, "   fade: %s\n"
 							   "dnplist: %s\n"
 							   "favlist: %s\n"
-							   , ONOFF( control.fade ), control.dnpname, control.favname );
+							   , ONOFF( config->fade ), config->dnpname, config->favname );
 						break;
 
 					case KEY_DOWN:
 					case 'n':
-						setCommand(&control, mpc_next );
+						setCommand( mpc_next );
 						break;
 
 					case KEY_UP:
 					case 'p':
-						setCommand(&control, mpc_prev );
+						setCommand( mpc_prev );
 						break;
 
 					case KEY_LEFT:
-						setCommand(&control, mpc_bskip );
+						setCommand( mpc_bskip );
 						break;
 
 					case KEY_RIGHT:
-						setCommand(&control, mpc_fskip );
+						setCommand( mpc_fskip );
 						break;
 
 					case 'r':
-						setCommand(&control, mpc_repl );
+						setCommand( mpc_repl );
 						break;
 
 					case 'd':
 					case 'b':
-						setCommand(&control, mpc_dnptitle );
+						setCommand( mpc_dnptitle );
 						break;
 
 					case 'D':
 					case 'B':
-						setCommand(&control, mpc_dnpalbum );
+						setCommand( mpc_dnpalbum );
 						break;
 
 					case 'f': /* toggles the favourite flag on a title */
-						setCommand(&control, mpc_favtitle );
+						setCommand( mpc_favtitle );
 						break;
 					}
 				}
 			}
 		}
 
-    } while( control.status != mpc_quit );
+    } while( config->status != mpc_quit );
     endwin();
-    control.inUI=0;
+    config->inUI=0;
 
     addMessage( 2, "Dropped out of the main loop" );
 
-    pthread_join( control.rtid, NULL );
+    pthread_join( config->rtid, NULL );
 
-    freeConfig( &control );
+    freeConfig( );
 
     dbClose( db );
 

@@ -15,13 +15,22 @@
 #include <stdio.h>
 #include <errno.h>
 #include <assert.h>
+#include <sys/stat.h>
 
 #include "utils.h"
 #include "musicmgr.h"
 #include "config.h"
 
 static pthread_mutex_t msglock=PTHREAD_MUTEX_INITIALIZER;
-static mpconfig *c_config;
+static mpconfig *c_config=NULL;
+
+/**
+ * returns the current configuration
+ */
+mpconfig *getConfig() {
+	assert( c_config != NULL );
+	return c_config;
+}
 
 /**
  * parses a multi-string config value in the form of:
@@ -59,33 +68,37 @@ static int scanparts( char *line, char ***target ) {
 /**
  * reads the configuration file at $HOME/.mixplay/mixplay.conf and stores the settings
  * in the given control structure.
- * returns -1 is no configuration file exists
+ * returns NULL is no configuration file exists
  */
-int readConfig( mpconfig *config ) {
+mpconfig *readConfig( ) {
     char	conffile[MAXPATHLEN]; /*  = "mixplay.conf"; */
     char	line[MAXPATHLEN];
     char	*pos;
     FILE    *fp;
 
-    assert( config != NULL );
-    c_config=config;
+    if( c_config == NULL ) {
+        addMessage( 1, "Reading config" );
+    	c_config=falloc( 1, sizeof( mpconfig ) );
+    }
+    else {
+    	addMessage( 1, "Re-reading config" );
+    }
 
-    addMessage( 1, "Reading config" );
 
     /* Set some default values */
-    config->root=NULL;
-    config->current=config->root;
-    config->playstream=0;
-    config->volume=80;
-    strcpy( config->playtime, "00:00" );
-    strcpy( config->remtime, "00:00" );
-    config->percent=0;
-    config->status=mpc_idle;
-    config->command=mpc_idle;
-    config->dbname=falloc( MAXPATHLEN, sizeof( char ) );
-    config->msg.lines=0;
-    config->msg.current=0;
-    snprintf( config->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", getenv("HOME") );
+    c_config->root=NULL;
+    c_config->current=NULL;
+    c_config->playstream=0;
+    c_config->volume=80;
+    strcpy( c_config->playtime, "00:00" );
+    strcpy( c_config->remtime, "00:00" );
+    c_config->percent=0;
+    c_config->status=mpc_idle;
+    c_config->command=mpc_idle;
+    c_config->dbname=falloc( MAXPATHLEN, sizeof( char ) );
+    c_config->msg.lines=0;
+    c_config->msg.current=0;
+    snprintf( c_config->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", getenv("HOME") );
 
     snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", getenv( "HOME" ) );
 	fp=fopen( conffile, "r" );
@@ -97,51 +110,68 @@ int readConfig( mpconfig *config ) {
             pos=strchr( line, '=' );
             if( ( NULL == pos ) || ( strlen( ++pos ) == 0 ) ) continue;
             if( strstr( line, "musicdir=" ) == line ) {
-            	config->musicdir=falloc( strlen(pos)+1, sizeof( char ) );
-            	strip( config->musicdir, pos, strlen(pos)+1 );
+            	c_config->musicdir=falloc( strlen(pos)+1, sizeof( char ) );
+            	strip( c_config->musicdir, pos, strlen(pos)+1 );
             }
             if( strstr( line, "channel=" ) == line ) {
-            	config->channel=falloc( strlen(pos)+1, sizeof( char ) );
-            	strip( config->channel, pos, strlen(pos)+1 );
+            	c_config->channel=falloc( strlen(pos)+1, sizeof( char ) );
+            	strip( c_config->channel, pos, strlen(pos)+1 );
             }
             if( strstr( line, "profiles=" ) == line ) {
-            	config->profiles=scanparts( pos, &config->profile );
+            	c_config->profiles=scanparts( pos, &c_config->profile );
             }
             if( strstr( line, "streams=" ) == line ) {
-            	config->streams=scanparts( pos, &config->stream );
+            	c_config->streams=scanparts( pos, &c_config->stream );
             }
             if( strstr( line, "snames=" ) == line ) {
-            	if( scanparts( pos, &config->sname ) != config->streams ) {
+            	if( scanparts( pos, &c_config->sname ) != c_config->streams ) {
             		fail( F_FAIL, "Number of streams and stream names does not match!");
             	}
             }
             if( strstr( line, "active=" ) == line ) {
-            	config->active=atoi(pos);
+            	c_config->active=atoi(pos);
             }
             if( strstr( line, "skipdnp=" ) == line ) {
-            	config->skipdnp=atoi(pos);
+            	c_config->skipdnp=atoi(pos);
             }
             if( strstr( line, "fade=" ) == line ) {
-            	config->fade=atoi(pos);
+            	c_config->fade=atoi(pos);
             }
         }
         while( !feof( fp ) );
-    	return 0;
+    	return c_config;
     }
 
-   	return -1;
+   	return NULL;
 }
 
 /**
  * writes the configuration from the given control structure into the file at
  * $HOME/.mixplay/mixplay.conf
  */
-void writeConfig( mpconfig *config ) {
+mpconfig *writeConfig( const char *path ) {
     char	conffile[MAXPATHLEN]; /*  = "mixplay.conf"; */
     int		i;
     FILE    *fp;
 
     addMessage( 1, "Writing config" );
+    assert( c_config != NULL );
+
+    if( path != NULL ) {
+        c_config->musicdir=falloc( strlen(path)+1, sizeof( char ) );
+        strip( c_config->musicdir, path, strlen(path)+1 );
+    }
+
+    snprintf( conffile, MAXPATHLEN, "%s/.mixplay", getenv("HOME") );
+    if( mkdir( conffile, 0700 ) == -1 ) {
+    	if( errno == EEXIST ) {
+    		fprintf( stderr, "WARNING: %s already exists!\n", conffile );
+    	}
+    	else {
+    		fail( errno, "Could not create config dir %s", conffile );
+    	}
+    }
+
 
     snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", getenv( "HOME" ) );
 
@@ -149,24 +179,24 @@ void writeConfig( mpconfig *config ) {
 
     if( NULL != fp ) {
         fprintf( fp, "[mixplay]" );
-        fprintf( fp, "\nmusicdir=%s", config->musicdir );
+        fprintf( fp, "\nmusicdir=%s", c_config->musicdir );
         fprintf( fp, "\nprofiles=" );
-        for( i=0; i< config->profiles; i++ ) {
-        	fprintf( fp, "%s;", config->profile[i] );
+        for( i=0; i< c_config->profiles; i++ ) {
+        	fprintf( fp, "%s;", c_config->profile[i] );
         }
         fprintf( fp, "\nstreams=" );
-        for( i=0; i< config->streams; i++ ) {
-        	fprintf( fp, "%s;", config->stream[i] );
+        for( i=0; i< c_config->streams; i++ ) {
+        	fprintf( fp, "%s;", c_config->stream[i] );
         }
         fprintf( fp, "\nsnames=" );
-        for( i=0; i< config->streams; i++ ) {
-        	fprintf( fp, "%s;", config->sname[i] );
+        for( i=0; i< c_config->streams; i++ ) {
+        	fprintf( fp, "%s;", c_config->sname[i] );
         }
-        fprintf( fp, "\nactive=%i", config->active );
-        fprintf( fp, "\nskipdnp=%i", config->skipdnp );
-        fprintf( fp, "\nfade=%i", config->fade );
-        if( config->channel != NULL ) {
-            fprintf( fp, "\nchannel=%s", config->channel );
+        fprintf( fp, "\nactive=%i", c_config->active );
+        fprintf( fp, "\nskipdnp=%i", c_config->skipdnp );
+        fprintf( fp, "\nfade=%i", c_config->fade );
+        if( c_config->channel != NULL ) {
+            fprintf( fp, "\nchannel=%s", c_config->channel );
         }
         else {
         	printf("\n# channel=Master  for standard installations");
@@ -180,6 +210,8 @@ void writeConfig( mpconfig *config ) {
     else {
         fail( errno, "Could not open %s", conffile );
     }
+
+    return c_config;
 }
 
 /**
@@ -194,30 +226,30 @@ static void sfree( void *ptr ) {
 /**
  * recursive free() to clean up all of the configuration
  */
-void freeConfig( mpconfig *control ) {
+void freeConfig( ) {
 	int i;
 
-	if( control == NULL ) {
-		return;
-	}
+	assert( c_config != NULL );
 
-    sfree( control->dbname );
-    sfree( control->dnpname );
-    sfree( control->favname );
-    sfree( control->musicdir );
-    for( i=0; i<control->profiles; i++ ) {
-    	sfree( control->profile[i] );
+    sfree( c_config->dbname );
+    sfree( c_config->dnpname );
+    sfree( c_config->favname );
+    sfree( c_config->musicdir );
+    for( i=0; i<c_config->profiles; i++ ) {
+    	sfree( c_config->profile[i] );
     }
-    sfree( control->profile );
+    sfree( c_config->profile );
 
-    for( i=0; i<control->streams; i++ ) {
-    	sfree( control->stream[i] );
-    	sfree( control->sname[i] );
+    for( i=0; i<c_config->streams; i++ ) {
+    	sfree( c_config->stream[i] );
+    	sfree( c_config->sname[i] );
     }
-    sfree( control->stream );
-    sfree( control->sname );
+    sfree( c_config->stream );
+    sfree( c_config->sname );
 
-    control->root=cleanTitles( control->root );
+    c_config->root=cleanTitles( c_config->root );
+    sfree( c_config );
+    c_config=NULL;
 }
 
 /**

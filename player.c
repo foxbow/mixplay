@@ -117,9 +117,9 @@ static void setStream( struct mpcontrol_t *control, const char* stream, const ch
  * sends a command to the player
  * also makes sure that commands are queued
  */
-void setCommand( struct mpcontrol_t *control, mpcmd cmd ) {
+void setCommand(  mpcmd cmd ) {
     pthread_mutex_lock( &cmdlock );
-    control->command=cmd;
+    getConfig()->command=cmd;
 }
 
 /**
@@ -127,9 +127,10 @@ void setCommand( struct mpcontrol_t *control, mpcmd cmd ) {
  * also handles playing of a single file, a directory, a playlist or an URL
  * returns 0 if nothing was recognized
  */
-int setArgument( struct mpcontrol_t *control, const char *arg ) {
+int setArgument( const char *arg ) {
     char line [MAXPATHLEN];
     int  i;
+    mpconfig *control=getConfig();
 
 	control->active=0;
     if( isURL( arg ) ) {
@@ -865,7 +866,7 @@ void *reader( void *cont ) {
         case mpc_quit:
             control->status=mpc_quit;
         	if( control->active != 0 ) {
-        		writeConfig( control );
+        		writeConfig( NULL );
         	}
             /* The player does not know about the main App so anything setting mcp_quit
              * MUST make sure that the main app terminates as well ! */
@@ -876,7 +877,7 @@ void *reader( void *cont ) {
             control->status=mpc_idle;
             if( control->dbname[0] == 0 ) {
             	i=control->active;
-            	readConfig( control );
+            	readConfig( );
             	control->active=i;
             }
             setProfile( control );

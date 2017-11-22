@@ -8,14 +8,13 @@
 #include "gladeutils.h"
 #include "player.h"
 
-extern struct mpcontrol_t *mpcontrol;
 
 /**
  * called by the up button
  * just sets the mpcontrol command
  */
 void playprev( GtkButton *button, gpointer data ) {
-    setCommand( mpcontrol, mpc_prev );
+    setCommand( mpc_prev );
 }
 
 /**
@@ -23,7 +22,7 @@ void playprev( GtkButton *button, gpointer data ) {
  * just sets the mpcontrol command
  */
 void playnext( GtkButton *button, gpointer data ) {
-    setCommand( mpcontrol, mpc_next );
+    setCommand( mpc_next );
 }
 
 /**
@@ -33,8 +32,12 @@ void playnext( GtkButton *button, gpointer data ) {
  */
 void markfav( GtkButton *button, gpointer data ) {
     GtkWidget *dialog;
-    struct entry_t *title = mpcontrol->current;
+    struct entry_t *title;
     int reply;
+    mpconfig *mpcontrol=getConfig();
+
+    title = mpcontrol->current;
+
     /*
      * Do not pause. This may mess up things, if the current title
      * changes while the requester is still open. Then the next title
@@ -42,7 +45,7 @@ void markfav( GtkButton *button, gpointer data ) {
      * during play.
      */
     dialog = gtk_message_dialog_new(
-                 GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
+                 GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
                  GTK_DIALOG_DESTROY_WITH_PARENT,
                  GTK_MESSAGE_QUESTION,
                  GTK_BUTTONS_NONE,
@@ -83,12 +86,13 @@ void markfav( GtkButton *button, gpointer data ) {
 void playPause( GtkButton *button, gpointer data ) {
     GtkWidget *dialog;
     int reply;
+    mpconfig *mpcontrol=getConfig();
 
     if( mpcontrol->status == mpc_play ) {
-        setCommand( mpcontrol, mpc_play );
+        setCommand( mpc_play );
 
         dialog = gtk_message_dialog_new(
-                     GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
+                     GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
                      GTK_DIALOG_DESTROY_WITH_PARENT,
                      GTK_MESSAGE_INFO,
                      GTK_BUTTONS_NONE,
@@ -115,11 +119,11 @@ void playPause( GtkButton *button, gpointer data ) {
         switch( reply ) {
         case mpc_dnptitle:
             if( mpcontrol->status == mpc_play ) {
-                setCommand( mpcontrol, mpc_play );
+                setCommand( mpc_play );
             }
 
             dialog = gtk_message_dialog_new(
-                         GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
+                         GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
                          GTK_DIALOG_DESTROY_WITH_PARENT,
                          GTK_MESSAGE_QUESTION,
                          GTK_BUTTONS_NONE,
@@ -138,10 +142,10 @@ void playPause( GtkButton *button, gpointer data ) {
             gtk_widget_destroy( dialog );
 
             if( reply > 0 ) {
-                setCommand( mpcontrol, reply );
+                setCommand( reply );
             }
             else {
-                setCommand( mpcontrol, mpc_play );
+                setCommand( mpc_play );
             }
 
             break;
@@ -151,15 +155,15 @@ void playPause( GtkButton *button, gpointer data ) {
         	break;
 
         case mpc_shuffle:
-        	setCommand(mpcontrol, reply );
+        	setCommand( reply );
         	break;
 
         case mpc_repl:
-            setCommand( mpcontrol, mpc_repl );
+            setCommand( mpc_repl );
             /* no break */
 
         default:
-            setCommand( mpcontrol, mpc_play );
+            setCommand( mpc_play );
         }
     }
     else {
@@ -174,7 +178,7 @@ void playPause( GtkButton *button, gpointer data ) {
  */
 void destroy( GtkWidget *widget, gpointer   data ) {
 	gtk_main_quit();
-    setCommand( mpcontrol, mpc_quit ); /* should be redundant.. */
+    setCommand( mpc_quit ); /* should be redundant.. */
 }
 
 static char *itostr( int i ) {
@@ -189,10 +193,11 @@ static char *itostr( int i ) {
 void infoStart( GtkButton *button, gpointer data ) {
     GtkWidget *dialog;
     int reply;
+    mpconfig *mpcontrol=getConfig();
 
 	if( mpcontrol->current->key != 0 ) {
 		dialog = gtk_message_dialog_new(
-                 GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
+                 GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
                  GTK_DIALOG_DESTROY_WITH_PARENT,
                  GTK_MESSAGE_QUESTION,
                  GTK_BUTTONS_NONE,
@@ -216,7 +221,7 @@ void infoStart( GtkButton *button, gpointer data ) {
 
     switch( reply ) {
     case 1:
-        gtk_show_about_dialog ( GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
+        gtk_show_about_dialog ( GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
                                 "program-name", "gmixplay",
                                 "copyright", "2017 B.Weber",
                                 "license-type", GTK_LICENSE_MIT_X11,
@@ -237,7 +242,7 @@ void infoStart( GtkButton *button, gpointer data ) {
 
     case mpc_doublets:
         dialog = gtk_message_dialog_new(
-                     GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
+                     GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
                      GTK_DIALOG_DESTROY_WITH_PARENT,
                      GTK_MESSAGE_WARNING,
                      GTK_BUTTONS_YES_NO,
@@ -255,7 +260,7 @@ void infoStart( GtkButton *button, gpointer data ) {
     	break;
 
     case mpc_dbclean:
-		setCommand( mpcontrol, reply );
+		setCommand( reply );
 		break;
     }
 }
@@ -273,7 +278,7 @@ static void activeSelect_cb(GtkTreeSelection *selection, gpointer data ) {
     if (gtk_tree_selection_get_selected (selection, &model, &iter))
     {
             gtk_tree_model_get( model, &iter, 2, &active, -1);
-            mpcontrol->active=active;
+            getConfig()->active=active;
     }
 }
 
@@ -292,10 +297,12 @@ void profileStart( GtkButton *button, gpointer data ) {
     GtkTreeSelection *tselect;
     char *path=NULL;
     int i, reply, selected;
-    int64_t profile=mpcontrol->active;
+    int64_t profile;
+    mpconfig *mpcontrol=getConfig();
+    profile=mpcontrol->active;
 
     dialog = gtk_message_dialog_new(
-                 GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
+                 GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
                  GTK_DIALOG_DESTROY_WITH_PARENT,
                  GTK_MESSAGE_INFO,
                  GTK_BUTTONS_NONE,
@@ -351,7 +358,7 @@ void profileStart( GtkButton *button, gpointer data ) {
     switch( reply ) {
     case 1: /* browse filesystem */
     	dialog = gtk_file_chooser_dialog_new ( "Select Music",
-                                               GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
+                                               GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
 											   GTK_FILE_CHOOSER_ACTION_OPEN,
 											   "_Cancel",
                                                GTK_RESPONSE_CANCEL,
@@ -360,7 +367,7 @@ void profileStart( GtkButton *button, gpointer data ) {
                                                NULL );
     	gtk_dialog_add_button(GTK_DIALOG(dialog), "Play", 1);
 
-        if( gldata(mpcontrol)->fullscreen ) {
+        if( MP_GLDATA->fullscreen ) {
             gtk_window_fullscreen( GTK_WINDOW( dialog ) );
         }
 
@@ -374,7 +381,7 @@ void profileStart( GtkButton *button, gpointer data ) {
     	break;
     case 2: /* Enter URL */
         dialog = gtk_message_dialog_new(
-                     GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
+                     GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
                      GTK_DIALOG_DESTROY_WITH_PARENT,
                      GTK_MESSAGE_INFO,
                      GTK_BUTTONS_NONE,
@@ -406,7 +413,7 @@ void profileStart( GtkButton *button, gpointer data ) {
     case 3: /* search */
 		mpcontrol->active = profile;
         dialog = gtk_message_dialog_new(
-                     GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
+                     GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
                      GTK_DIALOG_DESTROY_WITH_PARENT,
                      GTK_MESSAGE_INFO,
                      GTK_BUTTONS_NONE,
@@ -442,15 +449,15 @@ void profileStart( GtkButton *button, gpointer data ) {
         		/* */
         		/* close requester */
         		if( mpcontrol->status == mpc_play ) {
-        			setCommand(mpcontrol, mpc_stop);
+        			setCommand( mpc_stop);
         		}
         		i=searchPlay( mpcontrol->current, path );
         		fail(F_WARN, "Found %i titles\n", i );
         		if( i > 0) {
-        			setCommand( mpcontrol, mpc_play );
+        			setCommand( mpc_play );
         		}
         		else {
-        			setCommand( mpcontrol, mpc_start );
+        			setCommand( mpc_start );
         		}
         	}
         }
@@ -465,7 +472,7 @@ void profileStart( GtkButton *button, gpointer data ) {
     	break;
     case 4: /* Fillstick */
     	dialog = gtk_file_chooser_dialog_new ( "Select Target",
-                                               GTK_WINDOW( gldata(mpcontrol)->widgets->mixplay_main ),
+                                               GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
 											   GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
 											   "_Cancel",
                                                GTK_RESPONSE_CANCEL,
@@ -474,7 +481,7 @@ void profileStart( GtkButton *button, gpointer data ) {
                                                NULL );
     	gtk_dialog_add_button(GTK_DIALOG(dialog), "All", 1);
 
-        if( gldata(mpcontrol)->fullscreen ) {
+        if( MP_GLDATA->fullscreen ) {
             gtk_window_fullscreen( GTK_WINDOW( dialog ) );
         }
 
@@ -501,7 +508,7 @@ void profileStart( GtkButton *button, gpointer data ) {
     		fail( F_WARN, "No profile active" );
     	}
     	else if( mpcontrol->active != profile ) {
-    		setCommand( mpcontrol, mpc_profile );
+    		setCommand( mpc_profile );
     	}
     	else {
     		mpcontrol->active = profile;
@@ -514,11 +521,11 @@ void profileStart( GtkButton *button, gpointer data ) {
 
     if( path != NULL ) {
     	if( mpcontrol->status == mpc_start ) {
-    		setCommand( mpcontrol, mpc_start );
+    		setCommand( mpc_start );
     	}
-    	if( setArgument( mpcontrol, path ) ){
+    	if( setArgument( path ) ){
         	mpcontrol->active = 0;
-    		setCommand( mpcontrol, mpc_start );
+    		setCommand( mpc_start );
     	}
     	free( path );
     }

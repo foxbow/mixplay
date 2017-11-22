@@ -16,7 +16,7 @@
 #define MP_GET_WIDGET( builder, name, data ) \
     MP_GET_OBJECT( builder, name, GTK_WIDGET, data )
 
-#define gldata(control) ((struct glcontrol_t *)control->data)
+#define MP_GLDATA ((struct glcontrol_t *)getConfig()->data)
 
 /* Main data structure definition */
 typedef struct _MpData MpData;
