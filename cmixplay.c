@@ -22,6 +22,7 @@ int main( int argc, char **argv ) {
     long key;
 
     config=readConfig();
+
     if( config == NULL ) {
         printf( "music directory needs to be set.\n" );
         printf( "It will be set up now\n" );
@@ -49,7 +50,6 @@ int main( int argc, char **argv ) {
     }
 
     setVerbosity(1);
-    config->fade=1;
 
     /* parse command line options */
     /* using unsigned char c to work around getopt bug on ARM */
@@ -190,10 +190,12 @@ int main( int argc, char **argv ) {
 #endif
 
 					case 'I':
-						popUp( 0, "   fade: %s\n"
+						popUp( 0,
+							   "profile: %s\n"
+							   "   fade: %s\n"
 							   "dnplist: %s\n"
-							   "favlist: %s\n"
-							   , ONOFF( config->fade ), config->dnpname, config->favname );
+							   "favlist: %s\n",
+							   config->profile[config->active-1], ONOFF( config->fade ), config->dnpname, config->favname );
 						break;
 
 					case KEY_DOWN:

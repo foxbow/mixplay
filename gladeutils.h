@@ -45,7 +45,7 @@ struct _MpData {
 struct glcontrol_t {
 	MpData *widgets;			/* all (accessible) widgets */
     int fullscreen;				/* run in fullscreen mode */
-    struct msgbuf_t msgbuff;	/* generic message buffer */
+    struct msgbuf_t *msgbuff;	/* generic message buffer */
 };
 
 #endif /* __GLADEUTILS_H__ */

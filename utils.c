@@ -392,62 +392,39 @@ void *falloc( size_t num, size_t size ) {
 }
 
 /**
- * add a line to a list of lines
- * if the result is longer than the length of the buffer,
- * remove lines from the start until it fits again
- */
-int scrollAdd( char *scroll, const char* line, const size_t len ) {
-    char *pos;
-
-    if( strlen( line ) > len ) {
-        fail( F_FAIL, "Adding too much text to scroll!" );
-    }
-
-    if( ( strlen( scroll ) + strlen( line ) ) < len ) {
-        strncat( scroll, line, len );
-        return 0;
-    }
-
-    while( ( strlen( scroll ) + strlen( line ) ) >= len ) {
-        pos=strchr( scroll, '\n' );
-
-        if( NULL==pos ) {
-            fail( F_FAIL, "Scroll has one line with the length of %i?", len );
-        }
-
-        pos++;
-        memmove( scroll, pos, strlen( pos ) );
-    }
-
-    strncat( scroll, line, len );
-    return 1;
-}
-
-/**
  * helperfunction to implement message ringbuffer
  */
-void msgBuffAdd( struct msgbuf_t msgbuf, char *line ) {
-	if( msgbuf.lines == MSGNUM ) {
-		free(msgbuf.msg[msgbuf.current]);
-		msgbuf.msg[msgbuf.current]=line;
-		msgbuf.current=(msgbuf.current+1)%MSGNUM;
+void msgBuffAdd( struct msgbuf_t *msgbuf, char *line ) {
+	char *myline;
+	myline=falloc( strlen(line)+1, sizeof( char ) );
+	strcpy( myline, line );
+	/* overflow? */
+	if( msgbuf->lines == MSGNUM ) {
+		/* discard oldest (current) message */
+		free(msgbuf->msg[msgbuf->current]);
+		/* replace with new message */
+		msgbuf->msg[msgbuf->current]=myline;
+		/* bump current message to the next oldest */
+		msgbuf->current=(msgbuf->current+1)%MSGNUM;
 	}
 	else {
-		msgbuf.msg[(msgbuf.current+msgbuf.lines)%MSGNUM]=line;
-		msgbuf.lines++;
+		/* current+lines points to the next free buffer */
+		msgbuf->msg[(msgbuf->current+msgbuf->lines)%MSGNUM]=myline;
+		msgbuf->lines++;
 	}
 }
 
 /**
  * helperfunction to implement message ringbuffer
+ * Return pointer must be free'd after use!
  */
-char *msgBuffGet( struct msgbuf_t msgbuf ) {
+char *msgBuffGet( struct msgbuf_t *msgbuf ) {
 	char *retval = NULL;
-	if( msgbuf.lines > 0 ) {
-		retval=msgbuf.msg[msgbuf.current];
-		msgbuf.msg[msgbuf.current]=NULL;
-		msgbuf.current = (msgbuf.current+1)%MSGNUM;
-		msgbuf.lines--;
+	if( msgbuf->lines > 0 ) {
+		retval=msgbuf->msg[msgbuf->current];
+		msgbuf->msg[msgbuf->current]=NULL;
+		msgbuf->current =(msgbuf->current+1)%MSGNUM;
+		msgbuf->lines--;
 	}
 	return retval;
 }
@@ -455,24 +432,26 @@ char *msgBuffGet( struct msgbuf_t msgbuf ) {
 /**
  * returns all lines in the buffer as a single string
  * Does not empty the buffer
+ * Return pointer must be free'd after use!
  */
-char *msgBuffPeek( struct msgbuf_t msgbuf ) {
-	int i;
-	size_t len=200;
+char *msgBuffPeek( struct msgbuf_t *msgbuf ) {
+	int i, lineno;
 	char *buff;
+	size_t len=256;
 
 	buff=falloc( len, sizeof( char ) );
 	buff[0]=0;
 
-	for( i=0; i<msgbuf.lines; i++ ) {
-		if( strlen(buff)+strlen(msgbuf.msg[(i+msgbuf.current)%MSGNUM]) >= 1024 ) {
-			len=len+200;
+	for( i=0; i<msgbuf->lines; i++ ) {
+		lineno=(i+msgbuf->current)%MSGNUM;
+		while( strlen(buff)+strlen(msgbuf->msg[lineno]) >= len ) {
+			len=len+strlen(msgbuf->msg[lineno])+1;
 			buff=realloc( buff, len*sizeof( char ) );
 			if( NULL == buff ) {
-				fail( errno, "Can't increase message buffer " );
+				fail( errno, "Can't increase message buffer" );
 			}
 		}
-		strcat( buff, msgbuf.msg[(i+msgbuf.current)%MSGNUM] );
+		strcat( buff, msgbuf->msg[lineno] );
 		strcat( buff, "\n" );
 	}
 
@@ -482,43 +461,9 @@ char *msgBuffPeek( struct msgbuf_t msgbuf ) {
 /**
  * empties the mesage buffer
  */
-void msgBuffClear( struct msgbuf_t msgbuf ) {
+void msgBuffClear( struct msgbuf_t *msgbuf ) {
 	char *line;
 	while( ( line=msgBuffGet( msgbuf ) ) != NULL ) {
 		free( line );
 	}
-}
-
-/**
- * better strncat(), this takes the original string length into account and makes sure that
- * the result is terminated properly.
- * Returns the concatenated string on success and NULL on overflow
- * On overflow line will be truncated to maxlen but still be usable.
- */
-char *appendString( char *line, const char *val, const size_t maxlen ){
-	int i, j=0, l;
-	char *retval=line;
-
-	j=strlen(line);
-	l=j+strlen( val );
-	if( l > maxlen-1 ) {
-		l=maxlen-1;
-		retval=0;
-	}
-
-	for( i=0; i<l; i++ ) {
-		line[i]=val[j];
-		j++;
-	}
-
-	return retval;
-}
-
-/**
- * line appendString() but for an integer value.
- */
-char *appendInt( char *line, const char *fmt, const int val, size_t maxlen ) {
-	static char numbuff[256];
-	snprintf( numbuff, 255, fmt, val );
-	return appendString( line, numbuff, maxlen );
 }

@@ -12,7 +12,7 @@ NCOBJS=cmixplay.o ncbox.o
 GLOBJS=gladeutils.o gcallbacks.o gmixplay.o  
 LIBS=-lmpg123 -lasound -lpthread
 
-EXES=bin/cmixplay bin/gmixplay # bin/mixplayd
+EXES=bin/cmixplay bin/gmixplay bin/mixplayd
 
 all: $(EXES)
 

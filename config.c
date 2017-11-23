@@ -69,6 +69,8 @@ static int scanparts( char *line, char ***target ) {
  * reads the configuration file at $HOME/.mixplay/mixplay.conf and stores the settings
  * in the given control structure.
  * returns NULL is no configuration file exists
+ *
+ * This function should be called more or less first thing in the application
  */
 mpconfig *readConfig( ) {
     char	conffile[MAXPATHLEN]; /*  = "mixplay.conf"; */
@@ -78,9 +80,8 @@ mpconfig *readConfig( ) {
 
     if( c_config == NULL ) {
     	c_config=falloc( 1, sizeof( mpconfig ) );
+    	c_config->msg=falloc( 1, sizeof( struct msgbuf_t ) );
     }
-
-    memset( c_config, 0, sizeof( mpconfig )-sizeof( void * )  );
 
     /* Set some default values */
     c_config->root=NULL;
@@ -93,12 +94,11 @@ mpconfig *readConfig( ) {
     c_config->status=mpc_idle;
     c_config->command=mpc_idle;
     c_config->dbname=falloc( MAXPATHLEN, sizeof( char ) );
-    c_config->msg.lines=0;
-    c_config->msg.current=0;
     c_config->verbosity=0;
     c_config->debug=0;
-    c_config->msg.current=0;
-    c_config->msg.lines=0;
+    c_config->fade=1;
+    c_config->msg->lines=0;
+    c_config->msg->current=0;
 
     snprintf( c_config->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", getenv("HOME") );
 
@@ -261,14 +261,20 @@ void addMessage( int v, char *msg, ... ) {
     va_list args;
     char *line;
 
-    assert( c_config != NULL );
+	pthread_mutex_lock( &msglock );
+	line = falloc( MP_MSGLEN, sizeof(char) );
+	va_start( args, msg );
+	vsnprintf( line, MP_MSGLEN, msg, args );
+	va_end( args );
+
+	if( c_config == NULL ) {
+		fprintf( stderr, "*%i %s\n", v, line );
+		free(line);
+    	pthread_mutex_unlock( &msglock );
+		return;
+    }
 
 	if( v <= getVerbosity() ) {
-		pthread_mutex_lock( &msglock );
-		line = falloc( MP_MSGLEN, sizeof(char) );
-		va_start( args, msg );
-		vsnprintf( line, MP_MSGLEN, msg, args );
-		va_end( args );
     	if( c_config->inUI ) {
 			msgBuffAdd( c_config->msg, line );
 			if( v < getDebug() ) {
@@ -279,16 +285,12 @@ void addMessage( int v, char *msg, ... ) {
     		printf( "V%i %s\n", v, line );
     		free(line);
     	}
-    	pthread_mutex_unlock( &msglock );
     }
 	else if( v < getDebug() ) {
-		line = falloc( MP_MSGLEN, sizeof(char) );
-		va_start( args, msg );
-		vsnprintf( line, MP_MSGLEN, msg, args );
-		va_end( args );
 		fprintf( stderr, "D%i %s\n", v, line );
 		free( line );
     }
+	pthread_mutex_unlock( &msglock );
 }
 
 /**

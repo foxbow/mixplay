@@ -117,6 +117,7 @@ static void cb_progressClose( GtkDialog *dialog, gint res, gpointer data ) {
     pthread_mutex_lock( &msglock );
     gtk_widget_destroy( GTK_WIDGET( dialog ) );
     MP_GLDATA->widgets->mp_popup=NULL;
+    msgBuffClear( MP_GLDATA->msgbuff );
     pthread_mutex_unlock( &msglock );
 }
 
@@ -136,7 +137,6 @@ static int g_progressStart( void *title ) {
     }
     gtk_widget_set_sensitive( MP_GLDATA->widgets->mp_popup, FALSE );
     gtk_widget_show_all( MP_GLDATA->widgets->mp_popup );
-
     free( title );
     return 0;
 }
@@ -190,7 +190,6 @@ static int g_progressLog( void *line ) {
 		g_progressStart( msg );
 	    gtk_widget_set_sensitive( MP_GLDATA->widgets->mp_popup, TRUE );
 	}
-    free( line );
     pthread_mutex_unlock( &msglock );
 
     return 0;

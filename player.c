@@ -397,6 +397,7 @@ void *reader( void *cont ) {
     assert( control->fade < 2 );
 
     if( control->fade == 0 ) {
+        addMessage( 1, "No crossfading" );
     	fade=0;
     }
 
@@ -438,7 +439,6 @@ void *reader( void *cont ) {
             close( p_status[i][1] );
             /* Start mpg123 in Remote mode */
             execlp( "mpg123", "mpg123", "-R", "2> &1", NULL );
-/*            execlp( "mpg123", "mpg123", "-R", "--rva-mix", "2> &1", NULL ); */
             fail( errno, "Could not exec mpg123" );
         }
 
