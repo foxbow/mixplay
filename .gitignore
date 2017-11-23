@@ -15,6 +15,7 @@ language.settings.xml
 
 # Binaries
 bin/mixplay
+bin/mixplayd
 bin/gmixplay
 bin/scanformusic
 bin/cmixplay
