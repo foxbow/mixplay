@@ -445,7 +445,7 @@ char *msgBuffPeek( struct msgbuf_t *msgbuf ) {
 	for( i=0; i<msgbuf->lines; i++ ) {
 		lineno=(i+msgbuf->current)%MSGNUM;
 		while( strlen(buff)+strlen(msgbuf->msg[lineno]) >= len ) {
-			len=len+strlen(msgbuf->msg[lineno])+1;
+			len=len+256;
 			buff=realloc( buff, len*sizeof( char ) );
 			if( NULL == buff ) {
 				fail( errno, "Can't increase message buffer" );

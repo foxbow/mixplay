@@ -194,7 +194,7 @@ int main( int argc, char **argv ) {
 							   "profile: %s\n"
 							   "   fade: %s\n"
 							   "dnplist: %s\n"
-							   "favlist: %s\n",
+							   "favlist: %s",
 							   config->profile[config->active-1], ONOFF( config->fade ), config->dnpname, config->favname );
 						break;
 

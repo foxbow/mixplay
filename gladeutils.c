@@ -7,7 +7,7 @@
 /*
  * mutex to block simultaneous access to dialog functions
  */
-static pthread_mutex_t msglock=PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t gmsglock=PTHREAD_MUTEX_INITIALIZER;
 
 
 static int g_activity( void *text ) {
@@ -114,15 +114,15 @@ void fail( int error, const char* msg, ... ) {
  */
 static void cb_progressClose( GtkDialog *dialog, gint res, gpointer data ) {
     /* make sure that nothing is added while we close the dialog */
-    pthread_mutex_lock( &msglock );
+    pthread_mutex_lock( &gmsglock );
     gtk_widget_destroy( GTK_WIDGET( dialog ) );
     MP_GLDATA->widgets->mp_popup=NULL;
     msgBuffClear( MP_GLDATA->msgbuff );
-    pthread_mutex_unlock( &msglock );
+    pthread_mutex_unlock( &gmsglock );
 }
 
 /**
- * actual gtk code for prgressOpen
+ * actual gtk code for progressOpen
  * is added as an idle thread to the main thread
  */
 static int g_progressStart( void *title ) {
@@ -152,6 +152,7 @@ void progressStart( char *msg, ... ) {
     va_start( args, msg );
     vsnprintf( line, 512, msg, args );
     va_end( args );
+
     if( getConfig()->inUI ) {
 		gdk_threads_add_idle( g_progressStart, line );
 
@@ -171,26 +172,35 @@ void progressStart( char *msg, ... ) {
  * Can be called as is and just pops up a closeable requester
  */
 static int g_progressLog( void *line ) {
-    pthread_mutex_lock( &msglock );
     char *msg;
+    char *title=NULL;
 
+    pthread_mutex_lock( &gmsglock );
     msgBuffAdd( MP_GLDATA->msgbuff, line);
     msg=msgBuffPeek( MP_GLDATA->msgbuff );
 
+    if( NULL == MP_GLDATA->widgets->mp_popup ) {
+    	/* The app is cleaning up but has not yet left the main loop */
+    	if( getConfig()->status == mpc_quit ) {
+    			fprintf( stderr, "** %s\n", (char *)line );
+    	}
+    	else {
+    		/* Use a temporary string as g_progressStart free()s the parameter! */
+    	    title=falloc( strlen("Info:")+1, sizeof( char ) );
+    	    strcpy( title, "Info:" );
+    		g_progressStart( title );
+    	    gtk_widget_set_sensitive( MP_GLDATA->widgets->mp_popup, TRUE );
+    	}
+    }
+
     if( NULL != MP_GLDATA->widgets->mp_popup ) {
-		gtk_message_dialog_format_secondary_text( GTK_MESSAGE_DIALOG( MP_GLDATA->widgets->mp_popup ),
-				"%s", msg );
-		gtk_widget_queue_draw( MP_GLDATA->widgets->mp_popup );
-		free( msg );
-	}
-	else if( getConfig()->status != mpc_quit ) {
-		fail( F_WARN, "No log window open for:\n%s", line );
-	}
-	else {
-		g_progressStart( msg );
-	    gtk_widget_set_sensitive( MP_GLDATA->widgets->mp_popup, TRUE );
-	}
-    pthread_mutex_unlock( &msglock );
+    	gtk_message_dialog_format_secondary_text( GTK_MESSAGE_DIALOG( MP_GLDATA->widgets->mp_popup ),
+    			"%s", msg );
+    	gtk_widget_queue_draw( MP_GLDATA->widgets->mp_popup );
+    }
+
+    free( msg );
+    pthread_mutex_unlock( &gmsglock );
 
     return 0;
 }

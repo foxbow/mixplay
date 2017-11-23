@@ -480,7 +480,7 @@ void *reader( void *cont ) {
 
             if( key > 2 ) {
 				if( '@' == line[0] ) {
-	        		if( ( 'F' != line[1] ) && ( 'V' != line[1] ) ) {
+	        		if( ( 'F' != line[1] ) && ( 'V' != line[1] ) && ( 'I' != line[1] )) {
 	        			addMessage(  2, "P- %s", line );
 	        		}
 
@@ -513,8 +513,8 @@ void *reader( void *cont ) {
         if( FD_ISSET( p_status[fdset][0], &fds ) &&
                 ( 3 < readline( line, 512, p_status[fdset][0] ) ) ) {
         	if( '@' == line[0] ) {
-        		/* Don't print volume and progress messages */
-        		if( ( 'F' != line[1] ) && ( 'V' != line[1] ) ) {
+        		/* Don't print volume, progress and MP3Tag messages */
+        		if( ( 'F' != line[1] ) && ( 'V' != line[1] ) && ( 'I' != line[1] ) ) {
         			addMessage( 2, "P+ %s", line );
         		}
                 switch ( line[1] ) {
@@ -553,10 +553,6 @@ void *reader( void *cont ) {
                                 strip( control->current->title, a, NAMELEN );
                             }
                         }
-                    }
-                    /* standard mpg123 info */
-                    else if ( strstr( line, "ID3" ) != NULL ) {
-                        /* ignored */
                     }
 
                     break;
@@ -701,7 +697,6 @@ void *reader( void *cont ) {
             } /* if line starts with '@' */
             else {
             	addMessage( 1, "MPG123: %s", line );
-            	/* Ignore other mpg123 output */
             }
         } /* fgets() > 0 */
 
