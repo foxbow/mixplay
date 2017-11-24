@@ -75,7 +75,7 @@ static void buildUI( struct mpcontrol_t * control ) {
     /* Show window. All other widgets are automatically shown by GtkBuilder */
     gtk_widget_show( MP_GLDATA->widgets->mixplay_main );
 
-    if( MP_GLDATA->fullscreen ) {
+   if( MP_GLDATA->fullscreen ) {
         gtk_window_fullscreen( GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ) );
     }
 }
@@ -108,13 +108,13 @@ int main( int argc, char **argv ) {
 
     /* parse command line options */
     /* using unsigned char c to work around getopt bug on ARM */
-    while ( ( c = getopt( argc, argv, "vfdF" ) ) != 255 ) {
+    while ( ( c = getopt( argc, argv, "vfdFS" ) ) != 255 ) {
         switch ( c ) {
         case 'v': /* increase debug message level to display */
             incVerbosity();
             break;
 
-        case 'f':
+        case 'S':
             glcontrol.fullscreen=1;
             break;
 
@@ -122,8 +122,12 @@ int main( int argc, char **argv ) {
             incDebug();
             break;
 
-        case 'F': /* single channel - disable fading */
+        case 'f': /* single channel - disable fading */
         	control->fade=0;
+        	break;
+
+        case 'F': /* enable fading */
+        	control->fade=1;
         	break;
         }
     }

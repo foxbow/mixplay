@@ -171,7 +171,6 @@ mpconfig *writeConfig( const char *path ) {
     	}
     }
 
-
     snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", getenv( "HOME" ) );
 
 	fp=fopen( conffile, "w" );

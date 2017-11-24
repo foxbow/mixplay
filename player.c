@@ -22,6 +22,39 @@
 static pthread_mutex_t cmdlock=PTHREAD_MUTEX_INITIALIZER;
 
 /**
+ * checks if two instances of mpg123 make sense
+ * -1 - No ALSA support available
+ *  0 - unknown
+ *  1 - one instance
+ *  2 - two instances
+ */
+static int probeAudio( const char *channel ) {
+    snd_mixer_t *handle1, *handle2;
+
+    if( channel == NULL || strlen( channel ) == 0 ) {
+    	addMessage( 1, "No channel set!\n" );
+    	return 0;
+    }
+
+    snd_mixer_open(&handle1, 0);
+    if( handle1 == NULL ) {
+    	addMessage( 1, "No ALSA support" );
+    	return -1;
+    }
+
+    snd_mixer_open(&handle2, 0);
+    if( handle2 == NULL ){
+        snd_mixer_close(handle1);
+    	return 1;
+    }
+
+    snd_mixer_close(handle1);
+    snd_mixer_close(handle2);
+
+    return 2;
+}
+
+/**
  * adjusts the master volume
  * if volume is 0 the current volume is returned without changing it
  * otherwise it's changed by 'volume'
@@ -365,7 +398,6 @@ void *reader( void *cont ) {
     int 	p_command[2][2];		/* command pipes to mpg123 */
     pid_t	pid[2];
 
-
     /* Debug stuff */
     char *mpc_command[] = {
     	    "mpc_idle",
@@ -396,12 +428,39 @@ void *reader( void *cont ) {
     control=( struct mpcontrol_t * )cont;
     assert( control->fade < 2 );
 
-    if( control->fade == 0 ) {
+    addMessage( 2, "Reader starting" );
+
+    /* probe Audio hardware */
+	key=probeAudio( control->channel );
+
+	if( control->fade == 0 ) {
         addMessage( 1, "No crossfading" );
+		if( key == 2 ) {
+			addMessage( 0, "Crossfading should be possible, try -F" );
+		}
     	fade=0;
     }
+    else {
+    	switch( key ) {
+    	case -1: /* no ALSA */
+    	case 0:  /* unknown hardware support */
+    		addMessage( 0, "Crossfading may not work.\n"
+    				"In case of sound problems start with -f" );
+    		break;
 
-    addMessage( 2, "Reader started" );
+    	case 1: /* only one channel available */
+    		addMessage( 0, "Crossfading is not supported in this configuration!");
+    		fade=0;
+    		control->fade=0;
+    		writeConfig( NULL );
+    		/* no break */
+
+    	case 2: /* two channels available */
+    		break;
+    	default:
+    		fail( F_FAIL, "Congrats: probeMultiPlay() returned %i", key );
+    	}
+    }
 
     /* start the needed mpg123 instances */
     /* start the player processes */
@@ -446,21 +505,21 @@ void *reader( void *cont ) {
         close( p_status[i][1] );
     }
 
-
     /* check if we can control the system's volume */
-    control->volume=adjustMasterVolume( control->channel, 0 );
-    if( control->volume == -1 ) {
-    	addMessage(  1, "No hardware volume control!" );
+    if( ( key > 0 ) && ( ( control->volume=adjustMasterVolume( control->channel, 0 ) ) != -1 ) ) {
+    	addMessage(  1, "Hardware volume level is %i%%", control->volume );
+    }
+    else {
+    	/* control mpg123 volume instead - not recommended */
+    	addMessage( 0, "No hardware volume control!" );
     	control->channel=NULL;
     	control->volume=80;
     	for( i=0; i<=control->fade; i++ ) {
 			write( p_command[i][1], "volume 80\n", 11 );
     	}
     }
-    else {
-    	addMessage(  1, "Hardware volume level is %i%%", control->volume );
-    }
 
+    /* main loop */
     do {
         FD_ZERO( &fds );
         for( i=0; i<=control->fade; i++ ) {
@@ -518,7 +577,8 @@ void *reader( void *cont ) {
         			addMessage( 2, "P+ %s", line );
         		}
                 switch ( line[1] ) {
-                    int cmd, rem;
+                    int cmd;
+					float rem;
 
                 case 'R': /* startup */
                     addMessage(  1, "MPG123 foreground instance is up" );
@@ -576,7 +636,7 @@ void *reader( void *cont ) {
                      * rem = seconds left (float)
                      */
                 	a=strrchr( line, ' ' );
-                    rem=atoi( a );
+                    rem=strtof( a, NULL );
                     *a=0;
                     a=strrchr( line, ' ' );
                     intime=atoi( a );
@@ -590,7 +650,7 @@ void *reader( void *cont ) {
                     /* file play */
                     if( control->playstream == 0 ) {
                         control->percent=( 100*intime )/( rem+intime );
-                        sprintf( control->remtime, "%02i:%02i", rem/60, rem%60 );
+                        sprintf( control->remtime, "%02i:%02i", (int)rem/60, (int)rem%60 );
 
                         if( rem <= fade ) {
                             /* should the playcount be increased? */

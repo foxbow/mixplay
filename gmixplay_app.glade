@@ -12,7 +12,8 @@
     <property name="default_width">480</property>
     <property name="default_height">320</property>
     <property name="hide_titlebar_when_maximized">True</property>
-    <property name="icon">mixplay.svg</property>
+    <property name="icon_name">gnome-mime-audio</property>
+    <property name="type_hint">dialog</property>
     <property name="has_resize_grip">True</property>
     <property name="startup_id">gmixplay</property>
     <property name="show_menubar">False</property>
@@ -37,11 +38,11 @@
                 <property name="image_position">top</property>
                 <property name="always_show_image">True</property>
                 <signal name="clicked" handler="playprev" swapped="no"/>
-                <accelerator key="p" signal="clicked"/>
                 <accelerator key="Up" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
+                <accelerator key="p" signal="clicked"/>
               </object>
               <packing>
-                <property name="expand">False</property>
+                <property name="expand">True</property>
                 <property name="fill">True</property>
                 <property name="position">0</property>
               </packing>
@@ -105,8 +106,8 @@
                         </attributes>
                       </object>
                     </child>
-                    <accelerator key="AudioPlay" signal="clicked"/>
                     <accelerator key="space" signal="clicked"/>
+                    <accelerator key="AudioPlay" signal="clicked"/>
                   </object>
                   <packing>
                     <property name="expand">True</property>
@@ -183,14 +184,77 @@
                 <property name="image_position">bottom</property>
                 <property name="always_show_image">True</property>
                 <signal name="clicked" handler="playnext" swapped="no"/>
-                <accelerator key="Down" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
                 <accelerator key="n" signal="clicked"/>
+                <accelerator key="Down" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
               </object>
               <packing>
                 <property name="expand">True</property>
                 <property name="fill">True</property>
                 <property name="pack_type">end</property>
                 <property name="position">4</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkBox" id="box2">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="valign">start</property>
+            <child>
+              <object class="GtkButton" id="button_profile">
+                <property name="label" translatable="yes">profile</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <signal name="clicked" handler="profileStart" swapped="no"/>
+                <accelerator key="p" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="button_play">
+                <property name="label" translatable="yes">info</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="focus_on_click">False</property>
+                <property name="image_position">top</property>
+                <property name="always_show_image">True</property>
+                <signal name="clicked" handler="infoStart" swapped="no"/>
+                <accelerator key="i" signal="clicked"/>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkButton" id="button_fav">
+                <property name="label">FAV</property>
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="focus_on_click">False</property>
+                <property name="image_position">top</property>
+                <property name="always_show_image">True</property>
+                <signal name="clicked" handler="markfav" swapped="no"/>
+                <accelerator key="f" signal="clicked"/>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">2</property>
               </packing>
             </child>
           </object>
@@ -210,66 +274,6 @@
             <property name="fill">True</property>
             <property name="padding">2</property>
             <property name="position">2</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkGrid" id="grid1">
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="column_homogeneous">True</property>
-            <child>
-              <object class="GtkButton" id="button_fav">
-                <property name="label">FAV</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="focus_on_click">False</property>
-                <property name="image_position">top</property>
-                <property name="always_show_image">True</property>
-                <signal name="clicked" handler="markfav" swapped="no"/>
-                <accelerator key="f" signal="clicked"/>
-              </object>
-              <packing>
-                <property name="left_attach">2</property>
-                <property name="top_attach">0</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkButton" id="button_play">
-                <property name="label" translatable="yes">info</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="focus_on_click">False</property>
-                <property name="image_position">top</property>
-                <property name="always_show_image">True</property>
-                <signal name="clicked" handler="infoStart" swapped="no"/>
-                <accelerator key="i" signal="clicked"/>
-              </object>
-              <packing>
-                <property name="left_attach">1</property>
-                <property name="top_attach">0</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkButton" id="button_profile">
-                <property name="label" translatable="yes">profile</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <signal name="clicked" handler="profileStart" swapped="no"/>
-                <accelerator key="p" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
-              </object>
-              <packing>
-                <property name="left_attach">0</property>
-                <property name="top_attach">0</property>
-              </packing>
-            </child>
-          </object>
-          <packing>
-            <property name="expand">False</property>
-            <property name="fill">True</property>
-            <property name="position">3</property>
           </packing>
         </child>
         <child>
@@ -326,9 +330,9 @@
             </child>
           </object>
           <packing>
-            <property name="expand">False</property>
+            <property name="expand">True</property>
             <property name="fill">True</property>
-            <property name="position">4</property>
+            <property name="position">3</property>
           </packing>
         </child>
       </object>
