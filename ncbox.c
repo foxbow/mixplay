@@ -42,34 +42,36 @@ void activity( const char *msg, ... ) {
  * msg - Message to print
  * info - second part of the massage, for instance a variable
  * error - errno that was set
- *         F_WARN = print message w/o errno and return
  *         F_FAIL = print message w/o errno and exit
  */
 void fail( int error, const char* msg, ... ) {
     va_list args;
+    char line[512];
+
     va_start( args, msg );
-
-    if( error <= 0 ) {
-        fprintf( stdout, "\n" );
-        vfprintf( stdout, msg, args );
-        fprintf( stdout, "\n" );
-    }
-    else {
-        fprintf( stdout, "\n" );
-        vfprintf( stdout, msg, args );
-        fprintf( stdout, "\n ERROR: %i - %s\n", abs( error ), strerror( abs( error ) ) );
-    }
-
-    fprintf( stdout, "Press [ENTER]\n" );
-    fflush( stdout );
-    fflush( stderr );
+    vsprintf( line, msg, args );
     va_end( args );
+
+    if( error == 0 ) {
+    	addMessage( 0, "OBSOLETE: %s", line );
+    	return;
+    }
+
+	fprintf( stdout, "\n" );
+
+	if( error == F_FAIL ) {
+		fprintf( stdout, "ERROR: %s\n", line );
+	}
+	else {
+		fprintf( stdout, "ERROR: %s\n%i - %s\n", line, abs( error ), strerror( abs( error ) ) );
+	}
+	fprintf( stdout, "Press [ENTER]\n" );
+	fflush( stdout );
+	fflush( stderr );
 
     while( getc( stdin )!=10 );
 
-    if ( error != 0 ) {
-        exit( error );
-    }
+    exit( error );
 
     return;
 }

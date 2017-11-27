@@ -167,7 +167,7 @@ void playPause( GtkButton *button, gpointer data ) {
         }
     }
     else {
-        fail( F_WARN, "Already paused!" );
+        addMessage( 0, "Already paused!" );
     }
 }
 
@@ -436,7 +436,7 @@ void profileStart( GtkButton *button, gpointer data ) {
         	snprintf( path, MAXPATHLEN, "%c*%s", selected, gtk_entry_get_text( GTK_ENTRY( urlLine ) ) );
         	gtk_widget_destroy( dialog );
         	if( strlen( path ) < 5 ) {
-        		fail( F_WARN, "Need at least three characters!\nSucks to be you U2!" );
+        		addMessage( 0, "Need at least three characters!\nSucks to be you U2!" );
         	}
         	else {
         		/* create selection requester */
@@ -452,7 +452,7 @@ void profileStart( GtkButton *button, gpointer data ) {
         			setCommand( mpc_stop);
         		}
         		i=searchPlay( mpcontrol->current, path );
-        		fail(F_WARN, "Found %i titles\n", i );
+        		addMessage( 0, "Found %i titles\n", i );
         		if( i > 0) {
         			setCommand( mpc_play );
         		}
@@ -505,7 +505,7 @@ void profileStart( GtkButton *button, gpointer data ) {
 
     case GTK_RESPONSE_OK:
     	if( mpcontrol->active == 0 ) {
-    		fail( F_WARN, "No profile active" );
+    		addMessage( 0, "No profile active" );
     	}
     	else if( mpcontrol->active != profile ) {
     		setCommand( mpc_profile );

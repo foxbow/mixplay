@@ -9,7 +9,6 @@
 #define CMP_BITS (CMP_CHARS*CMP_CHARS)
 #define CMP_ARRAYLEN ((CMP_BITS%8==0)?CMP_BITS/8:(CMP_BITS/8)+1)
 
-#define F_WARN 0
 #define F_FAIL -1
 
 #ifndef MAX

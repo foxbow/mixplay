@@ -52,18 +52,6 @@ void activity( const char *msg, ... ) {
     _ftrpos=( _ftrpos+1 )%400;
 }
 
-static int g_warn( void *line ) {
-    GtkWidget *dialog;
-
-    dialog = gtk_message_dialog_new ( GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
-                                      GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_WARNING, GTK_BUTTONS_CLOSE,
-                                      "%s", (char *)line );
-    gtk_dialog_run ( GTK_DIALOG ( dialog ) );
-	gtk_widget_destroy ( dialog );
-	free(line);
-	return 0;
-}
-
 /*
  * Show errormessage quit
  * msg - Message to print
@@ -80,31 +68,23 @@ void fail( int error, const char* msg, ... ) {
     vsnprintf( line, 1024, msg, args );
     va_end( args );
 
-    if( F_WARN == error ) {
-        fprintf( stderr, "WARN: %s\n", line );
-        if( getConfig()->inUI ) {
-        	gdk_threads_add_idle( g_warn, line );
-        }
-        return;
-    }
-    else {
-        fprintf( stderr, "FAIL: %s\n", line );
-        if( getConfig()->inUI ) {
-			if( F_FAIL == error ) {
-				dialog = gtk_message_dialog_new ( GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
-											  GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
-											  "FAIL: %s", line );
-			}
-			else {
-				dialog = gtk_message_dialog_new ( GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
-											  GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
-											  "%s\nERROR: %i - %s", line, abs( error ), strerror( abs( error ) ) );
-			}
+	fprintf( stderr, "FAIL: %s\n", line );
+	if( getConfig()->inUI ) {
+		if( F_FAIL == error ) {
+			dialog = gtk_message_dialog_new ( GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
+										  GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
+										  "FAIL: %s", line );
+		}
+		else {
+			dialog = gtk_message_dialog_new ( GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
+										  GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
+										  "%s\nERROR: %i - %s", line, abs( error ), strerror( abs( error ) ) );
+		}
 
-			gtk_dialog_run ( GTK_DIALOG ( dialog ) );
-        }
-        setCommand( mpc_quit );
-    }
+		gtk_dialog_run ( GTK_DIALOG ( dialog ) );
+	}
+
+	setCommand( mpc_quit );
 
     return;
 }
@@ -221,13 +201,13 @@ void progressEnd( char *msg ) {
 	char *line;
 
 	if( NULL == MP_GLDATA->widgets->mp_popup ) {
-        fail( F_WARN, "No progress request open!" );
+        addMessage( 0, "No progress request open!" );
     }
 
 	line=falloc( 512, sizeof( char ) );
 
     if( NULL == msg ) {
-        fail( F_WARN, "progressEnd() called with ZERO!" );
+        addMessage( 0, "progressEnd() called with ZERO!" );
     	strncpy( line, "Done.\n", 512 );
     }
     else {

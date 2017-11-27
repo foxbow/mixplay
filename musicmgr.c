@@ -1045,7 +1045,7 @@ int markFavourite( struct entry_t *title, int range ) {
 
     case SL_PATH:
         sprintf( buff.dir, "p=%s", title->path );
-        fail( F_WARN, "Range path is obsolete!\n%s", title->display );
+        addMessage( 0, "Range path is obsolete!\n%s", title->display );
         break;
 
     case SL_TITLE:
@@ -1133,7 +1133,7 @@ void dumpTitles( struct entry_t *root, const int pl ) {
     }
     while( ptr != root );
 
-    /* fail( F_WARN, "END DUMP" ); */
+    /* addMessage( 0, "END DUMP" ); */
 }
 
 /**

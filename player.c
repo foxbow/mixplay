@@ -22,39 +22,6 @@
 static pthread_mutex_t cmdlock=PTHREAD_MUTEX_INITIALIZER;
 
 /**
- * checks if two instances of mpg123 make sense
- * -1 - No ALSA support available
- *  0 - unknown
- *  1 - one instance
- *  2 - two instances
- */
-static int probeAudio( const char *channel ) {
-    snd_mixer_t *handle1, *handle2;
-
-    if( channel == NULL || strlen( channel ) == 0 ) {
-    	addMessage( 1, "No channel set!\n" );
-    	return 0;
-    }
-
-    snd_mixer_open(&handle1, 0);
-    if( handle1 == NULL ) {
-    	addMessage( 1, "No ALSA support" );
-    	return -1;
-    }
-
-    snd_mixer_open(&handle2, 0);
-    if( handle2 == NULL ){
-        snd_mixer_close(handle1);
-    	return 1;
-    }
-
-    snd_mixer_close(handle1);
-    snd_mixer_close(handle2);
-
-    return 2;
-}
-
-/**
  * adjusts the master volume
  * if volume is 0 the current volume is returned without changing it
  * otherwise it's changed by 'volume'
@@ -430,36 +397,9 @@ void *reader( void *cont ) {
 
     addMessage( 2, "Reader starting" );
 
-    /* probe Audio hardware */
-	key=probeAudio( control->channel );
-
 	if( control->fade == 0 ) {
         addMessage( 1, "No crossfading" );
-		if( key == 2 ) {
-			addMessage( 0, "Crossfading should be possible, try -F" );
-		}
     	fade=0;
-    }
-    else {
-    	switch( key ) {
-    	case -1: /* no ALSA */
-    	case 0:  /* unknown hardware support */
-    		addMessage( 0, "Crossfading may not work.\n"
-    				"In case of sound problems start with -f" );
-    		break;
-
-    	case 1: /* only one channel available */
-    		addMessage( 0, "Crossfading is not supported in this configuration!");
-    		fade=0;
-    		control->fade=0;
-    		writeConfig( NULL );
-    		/* no break */
-
-    	case 2: /* two channels available */
-    		break;
-    	default:
-    		fail( F_FAIL, "Congrats: probeMultiPlay() returned %i", key );
-    	}
     }
 
     /* start the needed mpg123 instances */
@@ -506,7 +446,8 @@ void *reader( void *cont ) {
     }
 
     /* check if we can control the system's volume */
-    if( ( key > 0 ) && ( ( control->volume=adjustMasterVolume( control->channel, 0 ) ) != -1 ) ) {
+    control->volume=adjustMasterVolume( control->channel, 0 );
+    if( control->volume != -1  ) {
     	addMessage(  1, "Hardware volume level is %i%%", control->volume );
     }
     else {
@@ -521,6 +462,7 @@ void *reader( void *cont ) {
 
     /* main loop */
     do {
+    	redraw=0;
         FD_ZERO( &fds );
         for( i=0; i<=control->fade; i++ ) {
         	FD_SET( p_status[i][0], &fds );
@@ -529,8 +471,8 @@ void *reader( void *cont ) {
         to.tv_usec=100000; /* 1/10 second */
         i=select( FD_SETSIZE, &fds, NULL, NULL, &to );
 
-        if( i>0 ) {
-            redraw=1;
+        if( i > 0 ) {
+        	redraw=1;
         }
 
         /* drain inactive player */
@@ -732,7 +674,7 @@ void *reader( void *cont ) {
                         break;
 
                     default:
-                        fail( F_WARN, "Unknown status %i!\n%s", cmd, line );
+                        addMessage( 0, "Unknown status %i!\n%s", cmd, line );
                         break;
                     }
 
@@ -751,12 +693,12 @@ void *reader( void *cont ) {
                     break;
 
                 default:
-                    fail( F_WARN, "Warning!\n%s", line );
+                    addMessage( 0, "Warning!\n%s", line );
                     break;
                 } /* case line[1] */
             } /* if line starts with '@' */
             else {
-            	addMessage( 1, "MPG123: %s", line );
+            	addMessage( 0, "MPG123: %s", line );
             }
         } /* fgets() > 0 */
 
