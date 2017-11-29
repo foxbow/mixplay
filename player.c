@@ -22,6 +22,15 @@
 static pthread_mutex_t cmdlock=PTHREAD_MUTEX_INITIALIZER;
 
 /**
+ * is needed by netreader() when no player is running
+ */
+void clearCommand( ) {
+    pthread_mutex_trylock( &cmdlock );
+    getConfig()->command=mpc_idle;
+    pthread_mutex_unlock( &cmdlock );
+}
+
+/**
  * adjusts the master volume
  * if volume is 0 the current volume is returned without changing it
  * otherwise it's changed by 'volume'
@@ -305,7 +314,7 @@ void *setProfile( void *data ) {
 
     /* if we're not in player context, start playing automatically */
     if( pthread_mutex_trylock( &cmdlock ) == 0 ){
-    	addMessage( 2, "Autoplay" );
+    	addMessage( 1, "Autoplay" );
         control->command=mpc_start;
     }
 
@@ -364,33 +373,6 @@ void *reader( void *cont ) {
     int 	p_status[2][2];			/* status pipes to mpg123 */
     int 	p_command[2][2];		/* command pipes to mpg123 */
     pid_t	pid[2];
-
-    /* Debug stuff */
-    char *mpc_command[] = {
-    	    "mpc_idle",
-    	    "mpc_play",
-    	    "mpc_stop",
-    	    "mpc_prev",
-    	    "mpc_next",
-    	    "mpc_start",
-    	    "mpc_favtitle",
-    	    "mpc_favartist",
-    	    "mpc_favalbum",
-    	    "mpc_repl",
-    	    "mpc_profile",
-    	    "mpc_quit",
-    	    "mpc_dbclean",
-    	    "mpc_dnptitle",
-    	    "mpc_dnpartist",
-    	    "mpc_dnpalbum",
-    	    "mpc_dnpgenre",
-    		"mpc_doublets",
-    		"mpc_shuffle",
-			"mpc_ivol",
-			"mpc_dvol",
-			"mpc_bskip",
-			"mpc_fskip"
-    };
 
     control=( struct mpcontrol_t * )cont;
     assert( control->fade < 2 );
@@ -710,7 +692,7 @@ void *reader( void *cont ) {
         pthread_mutex_trylock( &cmdlock );
 
         if( control->command != mpc_idle ) {
-        	addMessage(  2, "MPC %s", mpc_command[control->command] );
+        	addMessage(  2, "MPC %s", mpcString(control->command) );
         }
         switch( control->command ) {
         case mpc_start:

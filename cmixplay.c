@@ -11,6 +11,7 @@
 #include "database.h"
 #include "player.h"
 #include "config.h"
+#include "mpcomm.h"
 
 int main( int argc, char **argv ) {
     unsigned char	c;
@@ -20,8 +21,13 @@ int main( int argc, char **argv ) {
     struct timeval to;
 	char path[MAXPATHLEN];
     long key;
+    conninfo host;
+    int localplay=1;
 
     config=readConfig();
+    host.port=MP_PORT;
+    host.address="127.0.0.1";
+    host.cmd=mpc_idle;
 
     if( config == NULL ) {
         printf( "music directory needs to be set.\n" );
@@ -53,7 +59,7 @@ int main( int argc, char **argv ) {
 
     /* parse command line options */
     /* using unsigned char c to work around getopt bug on ARM */
-    while ( ( c = getopt( argc, argv, "dvfF" ) ) != 255 ) {
+    while ( ( c = getopt( argc, argv, "dvfFh:p:r" ) ) != 255 ) {
         switch ( c ) {
         case 'v': /* increase debug message level to display in console output */
             incVerbosity();
@@ -70,37 +76,62 @@ int main( int argc, char **argv ) {
         case 'F': /* toggle fading */
         	config->fade=1;
         	break;
+
+        case 'p':
+        	host.port=atoi( optarg );
+        	localplay=0;
+        	break;
+
+        case 'h':
+        	host.address=falloc( strlen(optarg)+1, sizeof( char ) );
+        	strcpy( host.address, optarg );
+        	localplay=0;
+        	break;
+
+        case 'r':
+        	localplay=0;
+        	break;
         }
     }
 
     if ( optind < argc ) {
+    	if( localplay ) {
+    		fail( F_FAIL, "Can't set arguments on localplay!" );
+    	}
     	if( 0 == setArgument( argv[optind] ) ) {
             fail( F_FAIL, "Unknown argument!\n", argv[optind] );
             return -1;
         }
     }
 
-    /* start the actual player */
-    pthread_create( &config->rtid, NULL, reader, (void *)config );
+    if ( localplay ) {
+		/* start the actual player */
+		pthread_create( &config->rtid, NULL, reader, (void *)config );
 
-    if( config->root == NULL ) {
-    	setProfile( config );
+		if( config->root == NULL ) {
+			setProfile( config );
+		}
+		else {
+			config->active=0;
+			config->dbname[0]=0;
+			setCommand( mpc_play );
+		}
     }
     else {
-    	config->active=0;
-        config->dbname[0]=0;
-        setCommand( mpc_play );
+		pthread_create( &config->rtid, NULL, netreader, (void *)&host );
+		config->playstream=0;
     }
 
     /* Start curses mode */
-    config->inUI=-1;
     initscr();
     curs_set( 0 );
     cbreak();
     keypad( stdscr, TRUE );
     noecho();
     drawframe( NULL, "INIT", config->playstream );
+    config->inUI=-1;
 
+    clearCommand();
     /* The main control loop */
     do {
 		FD_ZERO( &fds );
@@ -129,6 +160,7 @@ int main( int argc, char **argv ) {
 
 				case 'q':
 					setCommand( mpc_quit );
+					config->status=mpc_quit;
 					break;
 				}
 
@@ -235,10 +267,21 @@ int main( int argc, char **argv ) {
 						break;
 					}
 				}
+
+				if( !localplay ) {
+					if( config->command == mpc_quit ) {
+						config->status = mpc_quit;
+					}
+					else if( config->command != mpc_idle ) {
+						sendCommand( &host, config->command );
+					}
+					clearCommand( );
+				}
 			}
 		}
 
     } while( config->status != mpc_quit );
+
     endwin();
     config->inUI=0;
 

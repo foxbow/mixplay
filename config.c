@@ -24,6 +24,46 @@
 static pthread_mutex_t msglock=PTHREAD_MUTEX_INITIALIZER;
 static mpconfig *c_config=NULL;
 
+static const char *mpc_command[] = {
+	    "mpc_play",
+	    "mpc_stop",
+	    "mpc_prev",
+	    "mpc_next",
+	    "mpc_start",
+	    "mpc_favtitle",
+	    "mpc_favartist",
+	    "mpc_favalbum",
+	    "mpc_repl",
+	    "mpc_profile",
+	    "mpc_quit",
+	    "mpc_dbclean",
+	    "mpc_dnptitle",
+	    "mpc_dnpartist",
+	    "mpc_dnpalbum",
+	    "mpc_dnpgenre",
+		"mpc_doublets",
+		"mpc_shuffle",
+		"mpc_ivol",
+		"mpc_dvol",
+		"mpc_bskip",
+		"mpc_fskip",
+	    "mpc_idle"
+};
+
+const char *mpcString( mpcmd cmd ) {
+	return mpc_command[cmd];
+}
+
+const mpcmd mpcCommand( const char *name ) {
+	int i=0;
+	for( i=0; i<= mpc_idle; i++ ) {
+		if( strstr( name, mpc_command[i] ) ) break;
+	}
+	if( i>mpc_idle ) {
+		fail( F_FAIL, "Unknown command code %i for >%s<!", i, name );
+	}
+	return i;
+}
 /**
  * returns the current configuration
  */
@@ -97,6 +137,7 @@ mpconfig *readConfig( ) {
     c_config->verbosity=0;
     c_config->debug=0;
     c_config->fade=1;
+    c_config->inUI=0;
     c_config->msg->lines=0;
     c_config->msg->current=0;
 

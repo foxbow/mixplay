@@ -302,7 +302,7 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, struct entry_t *ti
     genPathName( basedir, title ); /* Set some default values as tag info may be incomplete */
 
     if( mpg123_open( mh, title->path ) != MPG123_OK ) {
-        addMessage( 1, "Could not open %s as MP3 file", title->path );
+        addMessage( 2, "Could not open %s as MP3 file", title->path );
         return;
     }
 

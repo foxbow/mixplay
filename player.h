@@ -15,6 +15,7 @@ void setCommand( mpcmd cmd );
 void *reader( void *control );
 void *setProfile( void *control );
 int  setArgument( const char *arg );
+void clearCommand( );
 
 /* must be implemented by the calling app */
 void updateUI( mpconfig *control );

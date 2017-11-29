@@ -626,9 +626,7 @@ struct entry_t *removeByPattern( struct entry_t *entry, const char *pat ) {
     	fail( F_FAIL, "Unknown pattern %s!", pat );
 	}
 
-	entry=removeByPatLine( entry, pattern );
-	if( entry != NULL ) entry=entry->plnext;
-	return entry;
+	return removeByPatLine( entry, pattern );
 }
 
 /**

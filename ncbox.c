@@ -57,15 +57,17 @@ void fail( int error, const char* msg, ... ) {
     	return;
     }
 
-	fprintf( stdout, "\n" );
+    getConfig()->status=mpc_quit;
+
+	fprintf( stderr, "\n" );
 
 	if( error == F_FAIL ) {
-		fprintf( stdout, "ERROR: %s\n", line );
+		fprintf( stderr, "ERROR: %s\n", line );
 	}
 	else {
-		fprintf( stdout, "ERROR: %s\n%i - %s\n", line, abs( error ), strerror( abs( error ) ) );
+		fprintf( stderr, "ERROR: %s\n%i - %s\n", line, abs( error ), strerror( abs( error ) ) );
 	}
-	fprintf( stdout, "Press [ENTER]\n" );
+	fprintf( stderr, "Press [ENTER]\n" );
 	fflush( stdout );
 	fflush( stderr );
 
@@ -356,6 +358,10 @@ void updateUI( mpconfig *control ) {
     char status[MP_MSGLEN];
     int i;
 
+    if( isendwin() ) {
+    	control->status = mpc_quit;
+    	return;
+    }
 	if( control->status == mpc_idle ) {
 		sprintf( status, " STOP/PAUSE " );
 	}

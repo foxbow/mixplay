@@ -467,3 +467,19 @@ void msgBuffClear( struct msgbuf_t *msgbuf ) {
 		free( line );
 	}
 }
+
+void dumpbin( const void *data, size_t len ) {
+	int i;
+	for( i=0; i< len; i++ ) {
+		if( ( i%16 ) == 0 ) {
+			putchar('\n');
+		}
+		if( isalnum( ((char*)data)[i] ) ) {
+			putchar( ((char*)data)[i] );
+		}
+		else {
+			putchar('.');
+		}
+	}
+	putchar('\n');
+}

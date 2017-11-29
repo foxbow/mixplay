@@ -10,6 +10,8 @@
 
 #include <pthread.h>
 #include <sys/types.h>
+#include "musicmgr.h"
+
 #define MP_MSGLEN 512
 
 /*
@@ -18,7 +20,6 @@
  * char *mpc_command[]
  */
 enum mpcmd_t {
-    mpc_idle,
     mpc_play,
     mpc_stop,
     mpc_prev,
@@ -40,8 +41,10 @@ enum mpcmd_t {
 	mpc_ivol,
 	mpc_dvol,
 	mpc_fskip,
-	mpc_bskip
+	mpc_bskip,
+    mpc_idle
 };
+
 typedef enum mpcmd_t mpcmd;
 
 /**
@@ -50,7 +53,7 @@ typedef enum mpcmd_t mpcmd;
 struct mpcontrol_t {
     char *musicdir;				/* path to the music */
     int profiles;				/* number of profiles */
-    int active;		        /* active >0 = profile / 0=none / <0 = stream */
+    int active;		        	/* active >0 = profile / 0=none / <0 = stream */
     char **profile;				/* profile names */
     int streams;				/* number of streams */
     char **stream;				/* stream URLs */
@@ -94,5 +97,8 @@ void muteVerbosity( void );
 
 void addMessage( int v, char *msg, ... );
 int getMessage( char *msg );
+
+const char *mpcString( mpcmd cmd );
+const mpcmd mpcCommand( const char *val );
 
 #endif /* _CONFIG_H_ */
