@@ -21,13 +21,8 @@ int main( int argc, char **argv ) {
     struct timeval to;
 	char path[MAXPATHLEN];
     long key;
-    conninfo host;
-    int localplay=1;
 
     config=readConfig();
-    host.port=MP_PORT;
-    host.address="127.0.0.1";
-    host.cmd=mpc_idle;
 
     if( config == NULL ) {
         printf( "music directory needs to be set.\n" );
@@ -78,24 +73,24 @@ int main( int argc, char **argv ) {
         	break;
 
         case 'p':
-        	host.port=atoi( optarg );
-        	localplay=0;
+        	config->port=atoi( optarg );
+        	config->remote=1;
         	break;
 
         case 'h':
-        	host.address=falloc( strlen(optarg)+1, sizeof( char ) );
-        	strcpy( host.address, optarg );
-        	localplay=0;
+        	config->host=falloc( strlen(optarg)+1, sizeof( char ) );
+        	strcpy( config->host, optarg );
+        	config->remote=1;
         	break;
 
         case 'r':
-        	localplay=0;
+        	config->remote=1;
         	break;
         }
     }
 
     if ( optind < argc ) {
-    	if( localplay ) {
+    	if( !config->remote ) {
     		fail( F_FAIL, "Can't set arguments on localplay!" );
     	}
     	if( 0 == setArgument( argv[optind] ) ) {
@@ -104,7 +99,7 @@ int main( int argc, char **argv ) {
         }
     }
 
-    if ( localplay ) {
+    if ( !config->remote ) {
 		/* start the actual player */
 		pthread_create( &config->rtid, NULL, reader, (void *)config );
 
@@ -118,21 +113,19 @@ int main( int argc, char **argv ) {
 		}
     }
     else {
-		pthread_create( &config->rtid, NULL, netreader, (void *)&host );
+		pthread_create( &config->rtid, NULL, netreader, (void*)config );
 		config->playstream=0;
     }
 
     /* Start curses mode */
+    config->inUI=-1;
     initscr();
     curs_set( 0 );
     cbreak();
     keypad( stdscr, TRUE );
     noecho();
     drawframe( NULL, "INIT", config->playstream );
-    config->inUI=-1;
 
-    clearCommand();
-    /* The main control loop */
     do {
 		FD_ZERO( &fds );
 		FD_SET( fileno( stdin ), &fds );
@@ -157,6 +150,12 @@ int main( int argc, char **argv ) {
 				case 's':
 					setCommand( mpc_stop );
 					break;
+
+				case 'Q':
+					if( config->remote ) {
+						setCommand( config->command );
+					}
+					/* no break */
 
 				case 'q':
 					setCommand( mpc_quit );
@@ -268,15 +267,6 @@ int main( int argc, char **argv ) {
 					}
 				}
 
-				if( !localplay ) {
-					if( config->command == mpc_quit ) {
-						config->status = mpc_quit;
-					}
-					else if( config->command != mpc_idle ) {
-						sendCommand( &host, config->command );
-					}
-					clearCommand( );
-				}
 			}
 		}
 

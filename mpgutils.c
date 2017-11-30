@@ -302,7 +302,7 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, struct entry_t *ti
     genPathName( basedir, title ); /* Set some default values as tag info may be incomplete */
 
     if( mpg123_open( mh, title->path ) != MPG123_OK ) {
-        addMessage( 2, "Could not open %s as MP3 file", title->path );
+        addMessage( 1, "Could not open %s as MP3 file", title->path );
         return;
     }
 
@@ -363,6 +363,8 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, struct entry_t *ti
 int fillTagInfo( const char *basedir, struct entry_t *title ) {
     mpg123_handle* mh;
 
+    /* Do not try to scan non mp3 files */
+    if( !isMusic( title->path) ) return 0;
     mpg123_init();
     mh = mpg123_new( NULL, NULL );
 /*	mpg123_param( mh, MPG123_VERBOSE, 0, 0.0 ); */

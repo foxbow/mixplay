@@ -11,11 +11,10 @@
 #define VOLSTEP 2
 #include "config.h"
 
-void setCommand( mpcmd cmd );
+void setPCommand( mpcmd cmd );
 void *reader( void *control );
 void *setProfile( void *control );
 int  setArgument( const char *arg );
-void clearCommand( );
 
 /* must be implemented by the calling app */
 void updateUI( mpconfig *control );

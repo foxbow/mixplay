@@ -22,34 +22,31 @@
 static pthread_mutex_t cmdlock=PTHREAD_MUTEX_INITIALIZER;
 
 /**
- * is needed by netreader() when no player is running
- */
-void clearCommand( ) {
-    pthread_mutex_trylock( &cmdlock );
-    getConfig()->command=mpc_idle;
-    pthread_mutex_unlock( &cmdlock );
-}
-
-/**
  * adjusts the master volume
  * if volume is 0 the current volume is returned without changing it
  * otherwise it's changed by 'volume'
  * if ALSA does not work or the current card cannot be selected -1 is returned
  */
-static long adjustMasterVolume( const char *channel, long volume ) {
+static long adjustVolume( long volume ) {
     long min, max;
     snd_mixer_t *handle;
     snd_mixer_elem_t *elem;
     snd_mixer_selem_id_t *sid;
     long retval = 0;
+    char *channel;
+    mpconfig *config;
+    config=getConfig();
+    channel=config->channel;
 
     if( channel == NULL || strlen( channel ) == 0 ) {
+    	config->volume=-1;
     	return -1;
     }
 
     snd_mixer_open(&handle, 0);
     if( handle == NULL ) {
     	addMessage( 1, "No ALSA support" );
+    	config->volume=-1;
     	return -1;
     }
 
@@ -64,6 +61,7 @@ static long adjustMasterVolume( const char *channel, long volume ) {
     if( elem == NULL) {
     	addMessage( 0, "Can't find channel %s!", handle );
         snd_mixer_close(handle);
+    	config->volume=-1;
     	return -1;
     }
 
@@ -71,41 +69,16 @@ static long adjustMasterVolume( const char *channel, long volume ) {
 	snd_mixer_selem_get_playback_volume(elem, SND_MIXER_SCHN_MONO, &retval );
 	retval=(( retval * 100 ) / max)+1;
 
-	if( volume != 0 ) {
-		retval+=volume;
-		if( retval < 0 ) retval=0;
-		if( retval > 100 ) retval=100;
-    	snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
-    	snd_mixer_selem_set_playback_volume_all(elem, ( retval * max ) / 100);
-    }
+	retval+=volume;
+	if( retval < 0 ) retval=0;
+	if( retval > 100 ) retval=100;
+	snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
+	snd_mixer_selem_set_playback_volume_all(elem, ( retval * max ) / 100);
+	config->volume=retval;
 
     snd_mixer_close(handle);
 
     return retval;
-}
-
-/**
- * sets the output volume
- * if ALSA is working correctly with the current card, the hardware volume is set
- * otherwise the mpg123 output volume is used as a workaround.
- */
-static int adjustVolume( int fd, struct mpcontrol_t *control, int vol ) {
-	char line[NAMELEN];
-	int newvol=-1;
-
-	if( control->channel != NULL ) {
-		newvol=adjustMasterVolume( control->channel, vol );
-	}
-	else {
-		newvol=control->volume+vol;
-		if( newvol <0 )  newvol=0;
-		if( newvol>100 ) newvol=100;
-		snprintf( line, MAXPATHLEN, "volume %i\n", newvol );
-		write( fd, line, strlen( line )+1 );
-		addMessage( 1, "Changed volume from %i to %i", control->volume, newvol );
-		control->volume=newvol;
-	}
-	return newvol;
 }
 
 /**
@@ -126,7 +99,7 @@ static void setStream( struct mpcontrol_t *control, const char* stream, const ch
  * sends a command to the player
  * also makes sure that commands are queued
  */
-void setCommand(  mpcmd cmd ) {
+void setPCommand(  mpcmd cmd ) {
     pthread_mutex_lock( &cmdlock );
     getConfig()->command=cmd;
 }
@@ -318,6 +291,9 @@ void *setProfile( void *data ) {
         control->command=mpc_start;
     }
 
+    if( active != control->active ) {
+    	control->changed = -1;
+    }
     return NULL;
 }
 
@@ -428,7 +404,7 @@ void *reader( void *cont ) {
     }
 
     /* check if we can control the system's volume */
-    control->volume=adjustMasterVolume( control->channel, 0 );
+    control->volume=adjustVolume( 0 );
     if( control->volume != -1  ) {
     	addMessage(  1, "Hardware volume level is %i%%", control->volume );
     }
@@ -436,10 +412,6 @@ void *reader( void *cont ) {
     	/* control mpg123 volume instead - not recommended */
     	addMessage( 0, "No hardware volume control!" );
     	control->channel=NULL;
-    	control->volume=80;
-    	for( i=0; i<=control->fade; i++ ) {
-			write( p_command[i][1], "volume 80\n", 11 );
-    	}
     }
 
     /* main loop */
@@ -590,14 +562,14 @@ void *reader( void *cont ) {
                                 if( control->fade ) {
                                 	fdset=fdset?0:1;
                                 	invol=0;
-                                	outvol=( control->channel == NULL )?control->volume:100;
+                                	outvol=100;
                                 	write( p_command[fdset][1], "volume 0\n", 9 );
                                 }
                                 sendplay( p_command[fdset][1], control );
                             }
                         }
 
-                        if( invol < ((control->channel==NULL)?control->volume:100 ) ) {
+                        if( invol < 100 ) {
                             invol++;
                             snprintf( line, MAXPATHLEN, "volume %i\n", invol );
                             write( p_command[fdset][1], line, strlen( line ) );
@@ -842,9 +814,10 @@ void *reader( void *cont ) {
             write( p_command[fdset][1], "JUMP 0\n", 8 );
             break;
 
+        case mpc_QUIT:
         case mpc_quit:
             control->status=mpc_quit;
-        	if( control->active != 0 ) {
+        	if( control->changed != 0 ) {
         		writeConfig( NULL );
         	}
             /* The player does not know about the main App so anything setting mcp_quit
@@ -872,11 +845,11 @@ void *reader( void *cont ) {
         	break;
 
         case mpc_ivol:
-        	adjustVolume( p_command[fdset][1], control,  +VOLSTEP );
+        	adjustVolume( +VOLSTEP );
         	break;
 
         case mpc_dvol:
-        	adjustVolume( p_command[fdset][1], control,  -VOLSTEP );
+        	adjustVolume( -VOLSTEP );
         	break;
 
         case mpc_bskip:

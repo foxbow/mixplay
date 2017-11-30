@@ -283,13 +283,21 @@ static int g_updateUI( void *data ) {
     gtk_widget_set_visible( MP_GLDATA->widgets->played, !( control->playstream ) );
     gtk_widget_set_visible( MP_GLDATA->widgets->remain, !( control->playstream ) );
 
+    gtk_widget_set_visible( MP_GLDATA->widgets->volctl, !(control->volume == -1) );
+
     if( ( NULL != control->current ) && ( 0 != strlen( control->current->path ) ) ) {
-        usedb=( control->root->key )?TRUE:FALSE;
+        usedb=( control->root->key || control->remote )?TRUE:FALSE;
         /* These depend on a database */
         gtk_widget_set_visible( MP_GLDATA->widgets->button_fav, usedb );
 
-        gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->title_current ),
-                            control->current->title );
+        if( strlen(control->current->title) > 0  ) {
+			gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->title_current ),
+								control->current->title );
+        }
+        else {
+			gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->title_current ),
+								control->current->display );
+        }
 
         if( control->root->key != 0  ) {
         	infoLine( buff, control->current->plprev, MAXPATHLEN );
@@ -298,8 +306,8 @@ static int g_updateUI( void *data ) {
             gtk_widget_set_tooltip_text( MP_GLDATA->widgets->title_current, buff );
         }
         else {
-            gtk_widget_set_tooltip_text( MP_GLDATA->widgets->title_current, control->current->path );
-            gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_prev, NULL );
+       		gtk_widget_set_tooltip_text( MP_GLDATA->widgets->title_current, control->current->path );
+           	gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_prev, NULL );
         }
 
         runner=control->current->plnext->plnext;
@@ -317,12 +325,13 @@ static int g_updateUI( void *data ) {
         gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_next, buff );
 
         gtk_widget_set_sensitive( MP_GLDATA->widgets->title_current, ( control->status == mpc_play ) );
-        gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->artist_current ),
-                            control->current->artist );
-        gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->album_current ),
-                            control->current->album );
-        gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->genre_current ),
-                            control->current->genre );
+		gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->artist_current ),
+							control->current->artist );
+		gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->album_current ),
+							control->current->album );
+		gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->genre_current ),
+							control->current->genre );
+
         setButtonLabel( MP_GLDATA->widgets->button_prev, control->current->plprev->display );
 
         if( getDebug() > 1 ) {
@@ -355,7 +364,9 @@ static int g_updateUI( void *data ) {
                                control->current->display );
     }
 
-
+    sprintf( buff, "%i%%", control->volume );
+    gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->volume ),
+    					buff );
     gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->played ),
                         control->playtime );
     gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->remain ),

@@ -334,7 +334,7 @@ void drawframe( struct entry_t *current, const char *status, int stream ) {
                 }
 
                 mvhline( i, 2, ' ', maxlen + 2 );
-                mvprintw( i, 2, "%s", buff );
+                mvprintw( i, 3, "%s", buff );
                 attroff( A_BOLD );
             }
         }

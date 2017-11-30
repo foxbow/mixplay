@@ -8,6 +8,13 @@
 #include "gladeutils.h"
 #include "player.h"
 
+void voli( GtkButton *button, gpointer data ) {
+    setCommand( mpc_ivol );
+}
+
+void vold( GtkButton *button, gpointer data ) {
+    setCommand( mpc_dvol );
+}
 
 /**
  * called by the up button
@@ -166,8 +173,8 @@ void playPause( GtkButton *button, gpointer data ) {
             setCommand( mpc_play );
         }
     }
-    else {
-        addMessage( 0, "Already paused!" );
+    else { /* someone else paused the player */
+        setCommand( mpc_play );
     }
 }
 
@@ -517,6 +524,10 @@ void profileStart( GtkButton *button, gpointer data ) {
 
     default:
 		mpcontrol->active = profile;
+    }
+
+    if( mpcontrol->active != profile ) {
+    	mpcontrol->changed=-1;
     }
 
     if( path != NULL ) {

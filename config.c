@@ -20,6 +20,8 @@
 #include "utils.h"
 #include "musicmgr.h"
 #include "config.h"
+#include "mpcomm.h"
+#include "player.h"
 
 static pthread_mutex_t msglock=PTHREAD_MUTEX_INITIALIZER;
 static mpconfig *c_config=NULL;
@@ -47,6 +49,7 @@ static const char *mpc_command[] = {
 		"mpc_dvol",
 		"mpc_bskip",
 		"mpc_fskip",
+		"mpc_QUIT",
 	    "mpc_idle"
 };
 
@@ -64,6 +67,32 @@ const mpcmd mpcCommand( const char *name ) {
 	}
 	return i;
 }
+
+void setCommand( mpcmd cmd ) {
+	mpconfig *config;
+	config=getConfig();
+
+	if( cmd == mpc_idle ) {
+		return;
+	}
+
+	if( config->remote ) {
+		switch( cmd ) {
+		case mpc_QUIT: /* also quit server! */
+			setSCommand( mpc_quit );
+			/* no break */
+		case mpc_quit:
+			config->status = mpc_quit;
+			break;
+		default:
+			setSCommand( cmd );
+		}
+	}
+	else {
+		setPCommand( cmd );
+	}
+}
+
 /**
  * returns the current configuration
  */
@@ -140,6 +169,9 @@ mpconfig *readConfig( ) {
     c_config->inUI=0;
     c_config->msg->lines=0;
     c_config->msg->current=0;
+    c_config->host="127.0.0.1";
+    c_config->port=MP_PORT;
+    c_config->changed=0;
 
     snprintf( c_config->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", getenv("HOME") );
 
@@ -180,6 +212,16 @@ mpconfig *readConfig( ) {
             if( strstr( line, "fade=" ) == line ) {
             	c_config->fade=atoi(pos);
             }
+            if( strstr( line, "host=" ) == line ) {
+            	c_config->host=falloc( strlen(pos)+1, sizeof( char ) );
+            	strip( c_config->host, pos, strlen(pos)+1 );
+            }
+            if( strstr( line, "port=" ) == line ) {
+            	c_config->port=atoi(pos);
+            }
+            if( strstr( line, "remote=" ) == line ) {
+            	c_config->remote=atoi(pos);
+            }
         }
         while( !feof( fp ) );
     	return c_config;
@@ -192,7 +234,7 @@ mpconfig *readConfig( ) {
  * writes the configuration from the given control structure into the file at
  * $HOME/.mixplay/mixplay.conf
  */
-mpconfig *writeConfig( const char *path ) {
+mpconfig *writeConfig( const char *musicpath ) {
     char	conffile[MAXPATHLEN]; /*  = "mixplay.conf"; */
     int		i;
     FILE    *fp;
@@ -200,9 +242,9 @@ mpconfig *writeConfig( const char *path ) {
     addMessage( 1, "Writing config" );
     assert( c_config != NULL );
 
-    if( path != NULL ) {
-        c_config->musicdir=falloc( strlen(path)+1, sizeof( char ) );
-        strip( c_config->musicdir, path, strlen(path)+1 );
+    if( musicpath != NULL ) {
+        c_config->musicdir=falloc( strlen(musicpath)+1, sizeof( char ) );
+        strip( c_config->musicdir, musicpath, strlen(musicpath)+1 );
     }
 
     snprintf( conffile, MAXPATHLEN, "%s/.mixplay", getenv("HOME") );
@@ -238,11 +280,16 @@ mpconfig *writeConfig( const char *path ) {
             fprintf( fp, "\nchannel=%s", c_config->channel );
         }
         else {
-        	printf("\n# channel=Master  for standard installations");
-        	printf("\n# channel=Digital for HifiBerry");
-        	printf("\n# channel=Main");
-        	printf("\n# channel=DAC");
+        	fprintf( fp, "channel=Master  for standard installations");
+        	fprintf( fp, "\n# channel=Digital for HifiBerry");
+        	fprintf( fp, "\n# channel=Main");
+        	fprintf( fp, "\n# channel=DAC");
         }
+        fprintf( fp, "\nhost=%s", c_config->host );
+        if( c_config->port != MP_PORT ) {
+            fprintf( fp, "\nport=%i", c_config->port );
+        }
+        fprintf( fp, "\nremote=%i", c_config->remote );
         fprintf( fp, "\n" );
         fclose( fp );
     }

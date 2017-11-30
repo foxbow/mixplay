@@ -11,27 +11,35 @@
 #include "gmixplay_app.h"
 #include "player.h"
 #include "config.h"
+#include "mpcomm.h"
 
 /**
  * the control thread to communicate with the mpg123 processes
  * should be triggered after the app window is realized
  */
 static int initAll( void *data ) {
-    struct mpcontrol_t *control;
+    mpconfig *control;
     pthread_t tid;
 
     control=getConfig();
 
-    pthread_create( &control->rtid, NULL, reader, control );
+    if ( !control->remote ) {
+		/* start the actual player */
+		pthread_create( &control->rtid, NULL, reader, (void *)control );
 
-    if( NULL == control->root ) {
-        /* Runs as thread to have updates in the UI */
-        pthread_create( &tid, NULL, setProfile, ( void * )control );
+	    if( NULL == control->root ) {
+	        /* Runs as thread to have updates in the UI */
+	        pthread_create( &tid, NULL, setProfile, ( void * )control );
+	    }
+	    else {
+	    	control->active=0;
+	        control->dbname[0]=0;
+	        setCommand( mpc_play );
+	    }
     }
     else {
-    	control->active=0;
-        control->dbname[0]=0;
-        setCommand( mpc_play );
+		pthread_create( &control->rtid, NULL, netreader, (void *)control );
+		control->playstream=0;
     }
 
     return 0;
@@ -63,6 +71,8 @@ static void buildUI( struct mpcontrol_t * control ) {
     GW( remain );
     GW( progress );
     GW( button_profile );
+    GW( volctl );
+    GW( volume );
 #undef GW
     MP_GLDATA->widgets->mp_popup = NULL;
 
@@ -108,7 +118,7 @@ int main( int argc, char **argv ) {
 
     /* parse command line options */
     /* using unsigned char c to work around getopt bug on ARM */
-    while ( ( c = getopt( argc, argv, "vfdFS" ) ) != 255 ) {
+    while ( ( c = getopt( argc, argv, "vfdFSrh:p:" ) ) != 255 ) {
         switch ( c ) {
         case 'v': /* increase debug message level to display */
             incVerbosity();
@@ -123,11 +133,48 @@ int main( int argc, char **argv ) {
             break;
 
         case 'f': /* single channel - disable fading */
-        	control->fade=0;
+        	if( control->fade == 1 ) {
+        		control->fade=0;
+        		control->changed=-1;
+        	}
         	break;
 
         case 'F': /* enable fading */
-        	control->fade=1;
+        	if( control->fade == 0 ) {
+        		control->fade=1;
+        		control->changed=-1;
+        	}
+        	break;
+
+        case 'r':
+        	if( control->remote == 0 ) {
+        		control->remote=1;
+        		control->changed=-1;
+        	}
+        	break;
+
+        case 'l':
+        	if( control->remote == 1 ) {
+        		control->remote=0;
+        		control->changed=-1;
+        	}
+        	break;
+
+        case 'h':
+        	if( strcmp( control->host, optarg ) ) {
+        		control->changed=-1;
+        		control->remote=1;
+        		control->host=falloc( strlen(optarg)+1, sizeof(char) );
+        		strcpy( control->host, optarg );
+        	}
+        	break;
+
+        case 'p':
+        	if( control->port != atoi(optarg) ) {
+				control->changed=-1;
+				control->remote=1;
+				control->port=atoi(optarg);
+        	}
         	break;
         }
     }
@@ -152,8 +199,9 @@ int main( int argc, char **argv ) {
     control->inUI=0;
     addMessage( 2, "Dropped out of the gtk_main loop" );
     control->status=mpc_quit;
-
-    pthread_join( control->rtid, NULL );
+    if( control->changed ) {
+    	writeConfig(NULL);
+    }
 
     freeConfig( );
 

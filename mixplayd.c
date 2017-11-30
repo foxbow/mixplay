@@ -34,16 +34,16 @@ static int _ftrpos=0;
  * */
 void *clientHandler(void *mainsocket)
 {
-    //Get the socket descriptor
     int sock = *(int*)mainsocket;
     size_t len;
     struct timeval to;
     int running=1;
     char *commdata;
     fd_set fds;
+    mpconfig *config;
 
     commdata=falloc( MP_MAXCOMLEN, sizeof( char ) );
-    mpconfig *config = getConfig();
+    config = getConfig();
     pthread_detach(pthread_self());
 
     addMessage( 1, "Client handler started" );
@@ -96,11 +96,10 @@ void activity( const char *msg, ... ) {
     char roller[5]="|/-\\";
     char text[256]="";
     int pos;
+    va_list args;
 
     if( getVerbosity() && ( _ftrpos%( 100/getVerbosity() ) == 0 ) ) {
         pos=( _ftrpos/( 100/getVerbosity() ) )%4;
-
-        va_list args;
         va_start( args, msg );
         vsprintf( text, msg, args );
         printf( "%s %c          \r", text, roller[pos] );

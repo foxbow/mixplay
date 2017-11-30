@@ -12,7 +12,7 @@ NCOBJS=cmixplay.o ncbox.o
 GLOBJS=gladeutils.o gcallbacks.o gmixplay.o  
 LIBS=-lmpg123 -lasound -lpthread
 
-EXES=bin/cmixplay bin/gmixplay bin/mixplayd
+EXES=bin/cmixplay bin/mixplayd bin/gmixplay
 
 all: $(EXES)
 
@@ -49,6 +49,7 @@ install: all
 	install -d ~/bin/
 	install -s -m 0755 bin/cmixplay ~/bin/
 	install -s -m 0755 bin/gmixplay ~/bin/
+	install -s -m 0755 bin/mixplayd ~/bin/
 	install -d ~/.local/share/icons/
 	install -m 0644 mixplay.svg ~/.local/share/icons/
 	install -d ~/.local/share/applications/
@@ -57,6 +58,7 @@ install: all
 install-global: all
 	install -s -m 0755 bin/cmixplay /usr/bin/
 	install -s -m 0755 bin/gmixplay /usr/bin/
+	install -s -m 0755 bin/mixplayd /usr/bin/
 	install -m 0644 mixplay.svg /usr/share/pixmaps/
 	desktop-file-install -m 0755 --rebuild-mime-info-cache gmixplay.desktop 
 

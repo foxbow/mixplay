@@ -42,6 +42,7 @@ enum mpcmd_t {
 	mpc_dvol,
 	mpc_fskip,
 	mpc_bskip,
+	mpc_QUIT,
     mpc_idle
 };
 
@@ -79,11 +80,15 @@ struct mpcontrol_t {
     struct msgbuf_t *msg;		/* generic message buffer */
     int inUI;					/* flag to show if the UI is active */
     void *data;					/* extended data for gmixplay */
+    char *host;
+    int  port;
+    int remote;
+    int changed;
 };
 
 typedef struct mpcontrol_t mpconfig;
 
-mpconfig *writeConfig( const char *path );
+mpconfig *writeConfig( const char *musicpath );
 mpconfig *readConfig( void );
 mpconfig *getConfig( void );
 void freeConfig( void );
@@ -100,5 +105,6 @@ int getMessage( char *msg );
 
 const char *mpcString( mpcmd cmd );
 const mpcmd mpcCommand( const char *val );
+void setCommand( mpcmd cmd );
 
 #endif /* _CONFIG_H_ */

@@ -17,9 +17,9 @@
 
 static pthread_mutex_t cmdlock=PTHREAD_MUTEX_INITIALIZER;
 
-void sendCommand( conninfo *info, mpcmd cmd ) {
+void setSCommand( mpcmd cmd ) {
     pthread_mutex_lock( &cmdlock );
-    info->cmd=cmd;
+    getConfig()->command=cmd;
 }
 
 
@@ -83,11 +83,11 @@ size_t deserialize( mpconfig *data, const char *buff ) {
 	size_t pos=0;
 
 	if( data->current == NULL ) {
-		data->current=insertTitle( data->current, "mixplayd/server/title.mp3" );
+		data->current=insertTitle( data->current, "server/mixplayd/title" );
 		data->root=data->current;
 		addToPL( data->current, data->current );
-		addToPL( insertTitle( data->current, "mixplayd/server/title.mp3" ), data->current );
-		addToPL( insertTitle( data->current, "mixplayd/server/title.mp3" ), data->current );
+		addToPL( insertTitle( data->current, "server/mixplayd/title" ), data->current );
+		addToPL( insertTitle( data->current, "server/mixplayd/title" ), data->current );
 	}
 	pos+=getstring( buff+pos, data->current->plprev->display );
 	pos+=getstring( buff+pos, data->current->display );
@@ -107,25 +107,23 @@ size_t deserialize( mpconfig *data, const char *buff ) {
 void *netreader( void *control ) {
     int sock;
     struct sockaddr_in server;
-    conninfo *connection;
     char *commdata;
     mpconfig *config;
     struct timeval to;
     fd_set fds;
 
     commdata=falloc( MP_MAXCOMLEN, sizeof( char ) );
-    connection = (conninfo *)control;
+//    config=(mpconfig*)control;
     config=getConfig();
 
-    //Create socket
     sock = socket(AF_INET , SOCK_STREAM , 0);
     if (sock == -1) {
         fail( errno, "Could not create socket!");
     }
 
-    server.sin_addr.s_addr = inet_addr( connection->address );
+    server.sin_addr.s_addr = inet_addr( config->host );
     server.sin_family = AF_INET;
-    server.sin_port = htons( connection->port );
+    server.sin_port = htons( config->port );
 
     if (connect(sock , (struct sockaddr *)&server , sizeof(server)) < 0) {
        fail( errno, "connect() failed!");
@@ -158,9 +156,9 @@ void *netreader( void *control ) {
 		}
 
         pthread_mutex_trylock( &cmdlock );
-        if( connection->cmd != mpc_idle ) {
-        	send( sock , mpcString( connection->cmd ), strlen( mpcString( connection->cmd ) )+1, 0 );
-        	connection->cmd=mpc_idle;
+        if( config->command != mpc_idle ) {
+        	send( sock , mpcString( config->command ), strlen( mpcString( config->command ) )+1, 0 );
+        	config->command=mpc_idle;
         }
         pthread_mutex_unlock( &cmdlock );
     }
@@ -169,6 +167,6 @@ void *netreader( void *control ) {
 
     free( commdata );
     close(sock);
-
+    config->rtid=0;
 	return NULL;
 }
