@@ -283,6 +283,7 @@ static int g_updateUI( void *data ) {
     gtk_widget_set_visible( MP_GLDATA->widgets->played, !( control->playstream ) );
     gtk_widget_set_visible( MP_GLDATA->widgets->remain, !( control->playstream ) );
 
+    /* do we have volume control? */
     gtk_widget_set_visible( MP_GLDATA->widgets->volctl, !(control->volume == -1) );
 
     if( ( NULL != control->current ) && ( 0 != strlen( control->current->path ) ) ) {
@@ -290,14 +291,8 @@ static int g_updateUI( void *data ) {
         /* These depend on a database */
         gtk_widget_set_visible( MP_GLDATA->widgets->button_fav, usedb );
 
-        if( strlen(control->current->title) > 0  ) {
-			gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->title_current ),
+		gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->title_current ),
 								control->current->title );
-        }
-        else {
-			gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->title_current ),
-								control->current->display );
-        }
 
         if( control->root->key != 0  ) {
         	infoLine( buff, control->current->plprev, MAXPATHLEN );
@@ -311,18 +306,21 @@ static int g_updateUI( void *data ) {
         }
 
         runner=control->current->plnext->plnext;
-        while( ( runner != control->current ) && i < 5 ) {
-        	if( i == 0 ) {
-        		buff[0]=0;
-        	}
-			else {
+        buff[0]=0;
+        while( ( runner != control->current->plprev ) && i < 5 ) {
+        	if( i > 0 ) {
 				strcat( buff, "\n" );
 			}
 			strcat( buff, runner->display );
 			runner=runner->plnext;
 			i++;
         }
-        gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_next, buff );
+        if( strlen(buff) > 0 ) {
+        	gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_next, buff );
+        }
+        else {
+        	gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_next, NULL );
+        }
 
         gtk_widget_set_sensitive( MP_GLDATA->widgets->title_current, ( control->status == mpc_play ) );
 		gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->artist_current ),
@@ -364,9 +362,8 @@ static int g_updateUI( void *data ) {
                                control->current->display );
     }
 
-    sprintf( buff, "%i%%", control->volume );
-    gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->volume ),
-    					buff );
+    gtk_progress_bar_set_fraction( GTK_PROGRESS_BAR( MP_GLDATA->widgets->volume ),
+                                   control->volume/100.0 );
     gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->played ),
                         control->playtime );
     gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->remain ),

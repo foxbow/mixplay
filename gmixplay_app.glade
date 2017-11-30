@@ -219,19 +219,20 @@
                     <signal name="clicked" handler="voli" swapped="no"/>
                   </object>
                   <packing>
-                    <property name="expand">True</property>
+                    <property name="expand">False</property>
                     <property name="fill">True</property>
                     <property name="position">0</property>
                   </packing>
                 </child>
                 <child>
-                  <object class="GtkLabel" id="volume">
+                  <object class="GtkProgressBar" id="volume">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">000</property>
+                    <property name="orientation">vertical</property>
+                    <property name="pulse_step">0.01</property>
                   </object>
                   <packing>
-                    <property name="expand">False</property>
+                    <property name="expand">True</property>
                     <property name="fill">True</property>
                     <property name="position">1</property>
                   </packing>
@@ -245,7 +246,7 @@
                     <signal name="clicked" handler="vold" swapped="no"/>
                   </object>
                   <packing>
-                    <property name="expand">True</property>
+                    <property name="expand">False</property>
                     <property name="fill">True</property>
                     <property name="position">2</property>
                   </packing>

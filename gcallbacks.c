@@ -104,7 +104,7 @@ void playPause( GtkButton *button, gpointer data ) {
                      GTK_MESSAGE_INFO,
                      GTK_BUTTONS_NONE,
                      "Pause" );
-        if( mpcontrol->current->key != 0 ) {
+        if( mpcontrol->current->key != 0 || mpcontrol->remote ) {
 			gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
 									"Play",   mpc_play,
 									"_Replay", mpc_repl,
@@ -202,7 +202,7 @@ void infoStart( GtkButton *button, gpointer data ) {
     int reply;
     mpconfig *mpcontrol=getConfig();
 
-	if( mpcontrol->current->key != 0 ) {
+	if( mpcontrol->current->key != 0 || mpcontrol->remote ) {
 		dialog = gtk_message_dialog_new(
                  GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
                  GTK_DIALOG_DESTROY_WITH_PARENT,

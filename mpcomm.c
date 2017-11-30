@@ -55,26 +55,55 @@ static size_t appendint( char *start, const int val ) {
 	return len;
 }
 
+static size_t appendTitle( char *buff, const struct entry_t *title ) {
+	size_t len=0;
+	if( title != NULL ) {
+		len+=appendstr( buff+len, title->artist );
+		len+=appendstr( buff+len, title->album );
+		len+=appendstr( buff+len, title->title );
+		len+=appendint( buff+len, title->flags );
+	}
+	else {
+		len+=appendstr( buff+len, "---" );
+		len+=appendstr( buff+len, "---" );
+		len+=appendstr( buff+len, "---" );
+		len+=appendint( buff+len, 0 );
+	}
+	return len;
+}
+
+static size_t getTitle( const char *buff, struct entry_t *title ) {
+	size_t len=0;
+	len+=getstring( buff+len, title->artist );
+	len+=getstring( buff+len, title->album );
+	len+=getstring( buff+len, title->title );
+	len+=getint( buff+len, (int*)&title->flags );
+	sprintf( title->display, "%s - %s", title->artist, title->title );
+	strcpy( title->path, "[mixplayd]" );
+	return len;
+}
+
 size_t serialize( const mpconfig *data, char *buff ) {
 	size_t len=0;
 
 	memset( buff, 0, MP_MAXCOMLEN );
 
 	if( data->current != NULL ) {
-		len+=appendstr( buff+len, data->current->plprev->display );
-		len+=appendstr( buff+len, data->current->display );
-		len+=appendstr( buff+len, data->current->plnext->display );
+		len+=appendTitle( buff+len, data->current->plprev );
+		len+=appendTitle( buff+len, data->current );
+		len+=appendTitle( buff+len, data->current->plnext );
 	}
 	else {
-		len+=appendstr( buff+len, "---" );
-		len+=appendstr( buff+len, "---" );
-		len+=appendstr( buff+len, "---" );
+		len+=appendTitle( buff+len, NULL );
+		len+=appendTitle( buff+len, NULL );
+		len+=appendTitle( buff+len, NULL );
 	}
 	len+=appendstr( buff+len, data->playtime );
 	len+=appendstr( buff+len, data->remtime );
 	len+=appendint( buff+len, data->percent );
 	len+=appendint( buff+len, data->volume );
 	len+=appendint( buff+len, data->status );
+	len+=appendint( buff+len, data->playstream );
 	
 	return len;
 }
@@ -83,21 +112,22 @@ size_t deserialize( mpconfig *data, const char *buff ) {
 	size_t pos=0;
 
 	if( data->current == NULL ) {
+		/* dummy path to fill artist, album, title */
 		data->current=insertTitle( data->current, "server/mixplayd/title" );
 		data->root=data->current;
 		addToPL( data->current, data->current );
 		addToPL( insertTitle( data->current, "server/mixplayd/title" ), data->current );
 		addToPL( insertTitle( data->current, "server/mixplayd/title" ), data->current );
 	}
-	pos+=getstring( buff+pos, data->current->plprev->display );
-	pos+=getstring( buff+pos, data->current->display );
-	pos+=getstring( buff+pos, data->current->plnext->display );
+	pos+=getTitle( buff+pos, data->current->plprev );
+	pos+=getTitle( buff+pos, data->current );
+	pos+=getTitle( buff+pos, data->current->plnext );
 	pos+=getstring( buff+pos, data->playtime );
 	pos+=getstring( buff+pos, data->remtime );
 	pos+=getint( buff+pos, &data->percent );
 	pos+=getint( buff+pos, &data->volume );
 	pos+=getint( buff+pos, &data->status );
-
+	pos+=getint( buff+pos, &data->playstream );
 	return pos;
 }
 

@@ -10,7 +10,21 @@
 
 #include "config.h"
 
-#define MP_MAXCOMLEN (3*NAMELEN+2*10+2*sizeof(int)+sizeof(mpcmd))
+/*
+ * max size of a title on the net
+ * - artist, album, title [NAMELEN]
+ * - flags                [int]
+ */
+#define MP_ENTRYLEN ((3*NAMELEN)+sizeof(int))
+
+/*
+ * max size of an update packet
+ * 3 titles  								3*[MP_ENTRYLEN]
+ * - intime, remtime 						2*[10]
+ * - percent, volume, status, playstream	4*[int]
+ * - 0 Byte									1
+ */
+#define MP_MAXCOMLEN (3*MP_ENTRYLEN+2*10+4*sizeof(int)+1)
 #define MP_PORT 2347
 
 void *netreader( void *control );
