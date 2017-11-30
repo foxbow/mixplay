@@ -159,7 +159,7 @@ void *netreader( void *control ) {
     }
 
     addMessage( 1, "Connected");
-    //keep communicating with server
+
     while( config->status != mpc_quit ) {
     	FD_ZERO( &fds );
     	FD_SET( sock, &fds );
