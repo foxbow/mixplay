@@ -211,29 +211,23 @@ int main( int argc, char **argv ) {
         int mainsocket , client_sock , c , *new_sock;
         struct sockaddr_in server , client;
 
-        //Create socket
         mainsocket = socket(AF_INET , SOCK_STREAM , 0);
         if (mainsocket == -1) {
             fail( errno, "Could not create socket");
         }
         addMessage( 1, "Socket created" );
 
-        //Prepare the sockaddr_in structure
         server.sin_family = AF_INET;
         server.sin_addr.s_addr = INADDR_ANY;
         server.sin_port = htons( port );
 
-        //Bind
         if( bind(mainsocket,(struct sockaddr *)&server , sizeof(server)) < 0) {
             fail( errno, "bind() failed!" );
             return 1;
         }
         addMessage( 1, "bind() done");
 
-        //Listen
         listen(mainsocket , 3);
-
-        //Accept and incoming connection
         addMessage( 0, "Listening on port %i", port );
 
         c = sizeof(struct sockaddr_in);
@@ -244,7 +238,7 @@ int main( int argc, char **argv ) {
             new_sock = falloc( sizeof(int), 1 );
             *new_sock = client_sock;
 
-            /* todo collect pids */
+            /* todo collect pids? */
             if( pthread_create( &pid , NULL ,  clientHandler , (void*) new_sock) < 0) {
                 fail( errno, "Could not create thread!" );
                 return 1;
@@ -258,7 +252,6 @@ int main( int argc, char **argv ) {
 
     addMessage( 2, "Dropped out of the main loop" );
 
-    pthread_join( control->rtid, NULL );
     for( i=0; i <= control->fade; i++ ) {
     	kill( pid[i], SIGTERM );
     }

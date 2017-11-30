@@ -8,7 +8,7 @@
 #ifndef __PLAYER_H__
 #define __PLAYER_H__
 
-#define VOLSTEP 2
+#define VOLSTEP 1
 #include "config.h"
 
 void setPCommand( mpcmd cmd );

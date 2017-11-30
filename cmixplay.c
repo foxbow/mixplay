@@ -152,10 +152,9 @@ int main( int argc, char **argv ) {
 					break;
 
 				case 'Q':
-					if( config->remote ) {
-						setCommand( config->command );
-					}
-					/* no break */
+					setCommand( mpc_QUIT );
+					config->status=mpc_quit;
+					break;
 
 				case 'q':
 					setCommand( mpc_quit );

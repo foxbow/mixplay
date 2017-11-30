@@ -113,8 +113,7 @@ void *netreader( void *control ) {
     fd_set fds;
 
     commdata=falloc( MP_MAXCOMLEN, sizeof( char ) );
-//    config=(mpconfig*)control;
-    config=getConfig();
+    config=(mpconfig*)control;
 
     sock = socket(AF_INET , SOCK_STREAM , 0);
     if (sock == -1) {
