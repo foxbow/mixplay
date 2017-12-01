@@ -89,31 +89,15 @@ static size_t getTitle( const char *buff, struct entry_t *title ) {
 	return len;
 }
 
-static size_t getMsg( const char* buff, mpconfig *config ) {
-	size_t len=0;
-
-	len+=getInt( buff+len, &config->msglevel );
-	if( config->msglevel >= 0 ) {
-		if( config->message == NULL ) {
-			config->message=falloc( strlen(buff), sizeof(char) );
-		}
-		else {
-			config->message=realloc( config->message, strlen(buff) * sizeof(char) );
-		}
-		len+=getStr( buff, config->message );
-	}
-
-	return len;
-}
-
 /*
  * put data to be sent over into the buff
  */
-size_t serialize( const mpconfig *data, char *buff ) {
+size_t serialize( const mpconfig *data, char *buff, long *count ) {
 	size_t len=0;
 
 	memset( buff, 0, MP_MAXCOMLEN );
 
+	len+=appInt( buff+len,  MP_COMVER );
 	if( data->current != NULL ) {
 		len+=appTitle( buff+len, data->current->plprev );
 		len+=appTitle( buff+len, data->current );
@@ -130,11 +114,13 @@ size_t serialize( const mpconfig *data, char *buff ) {
 	len+=appInt( buff+len, data->volume );
 	len+=appInt( buff+len, data->status );
 	len+=appInt( buff+len, data->playstream );
-	len+=appInt( buff+len, data->msglevel );
-	if( data->msglevel >= 0 ) {
-		len+=appStr( buff+len, data->message );
+	if( *count < data->msg->count ) {
+		len+=appStr( buff+len, msgBuffPeek( data->msg ) );
+		(*count)++;
 	}
-	
+	else {
+		len+=appStr( buff+len, "" );
+	}
 	return len;
 }
 
@@ -144,6 +130,8 @@ size_t serialize( const mpconfig *data, char *buff ) {
 size_t deserialize( mpconfig *data, const char *buff ) {
 	size_t pos=0;
 	int ver;
+	char msgline[128];
+
 	pos+=getInt( buff+pos, &ver );
 	if( ver != MP_COMVER ) {
 		fail( F_FAIL, "mixplayd protocol mismatch!\nServer has version %i, we have version %i!", ver, MP_COMVER );
@@ -166,7 +154,10 @@ size_t deserialize( mpconfig *data, const char *buff ) {
 	pos+=getInt( buff+pos, &data->volume );
 	pos+=getInt( buff+pos, &data->status );
 	pos+=getInt( buff+pos, &data->playstream );
-	pos+=getMsg( buff+pos, data );
+	pos+=getStr( buff+pos, msgline );
+	if( strlen( msgline ) > 0  ){
+		addMessage( 0, msgline );
+	}
 	return pos;
 }
 

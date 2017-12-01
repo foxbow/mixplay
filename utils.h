@@ -29,7 +29,9 @@ struct msgbuf_t {
 	char *msg[MSGNUM];
 	int  current;
 	int  lines;
+	long count;
 };
+typedef struct msgbuf_t msgbuf;
 
 #include "config.h"
 
@@ -49,6 +51,7 @@ void updateUI( mpconfig *data );
 void  msgBuffAdd( struct msgbuf_t *msgbuf, char *line );
 char *msgBuffGet( struct msgbuf_t *msgbuf );
 char *msgBuffPeek( struct msgbuf_t *msgbuf );
+char *msgBuffAll( struct msgbuf_t *msgbuf );
 void  msgBuffClear( struct msgbuf_t *msgbuf );
 
 /**

@@ -393,8 +393,9 @@ void *falloc( size_t num, size_t size ) {
 
 /**
  * helperfunction to implement message ringbuffer
+ * returns the current message number
  */
-void msgBuffAdd( struct msgbuf_t *msgbuf, char *line ) {
+void msgBuffAdd( msgbuf *msgbuf, char *line ) {
 	char *myline;
 	myline=falloc( strlen(line)+1, sizeof( char ) );
 	strcpy( myline, line );
@@ -412,14 +413,16 @@ void msgBuffAdd( struct msgbuf_t *msgbuf, char *line ) {
 		msgbuf->msg[(msgbuf->current+msgbuf->lines)%MSGNUM]=myline;
 		msgbuf->lines++;
 	}
+	msgbuf->count++;
 }
 
 /**
  * helperfunction to implement message ringbuffer
+ * returns the current message and removes it from the buffer
  * Return pointer must be free'd after use!
  */
 char *msgBuffGet( struct msgbuf_t *msgbuf ) {
-	char *retval = NULL;
+	char *retval = "";
 	if( msgbuf->lines > 0 ) {
 		retval=msgbuf->msg[msgbuf->current];
 		msgbuf->msg[msgbuf->current]=NULL;
@@ -430,11 +433,24 @@ char *msgBuffGet( struct msgbuf_t *msgbuf ) {
 }
 
 /**
+ * helperfunction to implement message ringbuffer
+ * returns the current message and keeps it in the buffer
+ * Return pointer must be free'd after use!
+ */
+char *msgBuffPeek( struct msgbuf_t *msgbuf ) {
+	char *retval = "";
+	if( msgbuf->lines > 0 ) {
+		retval=msgbuf->msg[msgbuf->current];
+	}
+	return retval;
+}
+
+/**
  * returns all lines in the buffer as a single string
  * Does not empty the buffer
  * Return pointer must be free'd after use!
  */
-char *msgBuffPeek( struct msgbuf_t *msgbuf ) {
+char *msgBuffAll( struct msgbuf_t *msgbuf ) {
 	int i, lineno;
 	char *buff;
 	size_t len=256;

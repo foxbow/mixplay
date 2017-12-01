@@ -33,7 +33,7 @@
 
 void *netreader( void *control );
 void setSCommand( mpcmd cmd );
-size_t serialize( const mpconfig *data, char *buff );
+size_t serialize( const mpconfig *data, char *buff, long *count );
 size_t deserialize( mpconfig *data, const char *buff );
 
 #endif /* MPCOMM_H_ */

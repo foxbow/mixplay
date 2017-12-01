@@ -158,7 +158,7 @@ static int g_progressLog( void *line ) {
 
     pthread_mutex_lock( &gmsglock );
     msgBuffAdd( MP_GLDATA->msgbuff, line);
-    msg=msgBuffPeek( MP_GLDATA->msgbuff );
+    msg=msgBuffAll( MP_GLDATA->msgbuff );
 
     if( NULL == MP_GLDATA->widgets->mp_popup ) {
     	/* The app is cleaning up but has not yet left the main loop */

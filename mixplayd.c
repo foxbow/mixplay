@@ -41,13 +41,15 @@ void *clientHandler(void *mainsocket)
     char *commdata;
     fd_set fds;
     mpconfig *config;
+    long curmsg;
 
     commdata=falloc( MP_MAXCOMLEN, sizeof( char ) );
     config = getConfig();
+    curmsg = config->msg->count;
+
     pthread_detach(pthread_self());
 
     addMessage( 1, "Client handler started" );
-    config->inUI++;
     while( running ) {
     	FD_ZERO( &fds );
     	FD_SET( sock, &fds );
@@ -72,13 +74,12 @@ void *clientHandler(void *mainsocket)
 		}
 
     	if( running && ( config->status != mpc_start ) ) {
-			len=serialize( config, commdata );
+			len=serialize( config, commdata, &curmsg );
 			if( len != send(sock , commdata , len, 0) ) {
 				addMessage( 0, "Send failed!\n%s", strerror( errno ) );
 			}
     	}
 	}
-    config->inUI--;
     addMessage( 1, "Client handler exited" );
 
     free( mainsocket );
@@ -167,7 +168,7 @@ int main( int argc, char **argv ) {
 
     /* parse command line options */
     /* using unsigned char c to work around getopt quirk on ARM */
-    while ( ( c = getopt( argc, argv, "dvFp:" ) ) != 255 ) {
+    while ( ( c = getopt( argc, argv, "dFp:" ) ) != 255 ) {
         switch ( c ) {
         case 'd':
         	incDebug();
@@ -207,6 +208,7 @@ int main( int argc, char **argv ) {
     }
 
     /* Start main loop */
+    control->inUI=-1;
     while( control->status != mpc_quit ){
         int mainsocket , client_sock , c , *new_sock;
         struct sockaddr_in server , client;
@@ -249,6 +251,7 @@ int main( int argc, char **argv ) {
             fail( errno, "accept() failed!" );
         }
     }
+    control->inUI=0;
 
     addMessage( 2, "Dropped out of the main loop" );
 
