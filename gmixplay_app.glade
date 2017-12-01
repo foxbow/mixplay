@@ -42,8 +42,8 @@
                     <property name="image_position">top</property>
                     <property name="always_show_image">True</property>
                     <signal name="clicked" handler="playprev" swapped="no"/>
-                    <accelerator key="p" signal="clicked"/>
                     <accelerator key="Up" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
+                    <accelerator key="p" signal="clicked"/>
                   </object>
                   <packing>
                     <property name="expand">True</property>
@@ -110,8 +110,8 @@
                             </attributes>
                           </object>
                         </child>
-                        <accelerator key="AudioPlay" signal="clicked"/>
                         <accelerator key="space" signal="clicked"/>
+                        <accelerator key="AudioPlay" signal="clicked"/>
                       </object>
                       <packing>
                         <property name="expand">True</property>
@@ -188,8 +188,8 @@
                     <property name="image_position">bottom</property>
                     <property name="always_show_image">True</property>
                     <signal name="clicked" handler="playnext" swapped="no"/>
-                    <accelerator key="Down" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
                     <accelerator key="n" signal="clicked"/>
+                    <accelerator key="Down" signal="clicked" modifiers="GDK_SHIFT_MASK"/>
                   </object>
                   <packing>
                     <property name="expand">True</property>
@@ -217,6 +217,8 @@
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
                     <signal name="clicked" handler="voli" swapped="no"/>
+                    <accelerator key="plus" signal="clicked"/>
+                    <accelerator key="AudioRaiseVolume" signal="clicked"/>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -246,6 +248,8 @@
                     <property name="can_focus">True</property>
                     <property name="receives_default">True</property>
                     <signal name="clicked" handler="vold" swapped="no"/>
+                    <accelerator key="minus" signal="clicked"/>
+                    <accelerator key="AudioLowerVolume" signal="clicked"/>
                   </object>
                   <packing>
                     <property name="expand">False</property>

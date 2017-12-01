@@ -395,7 +395,7 @@ void *reader( void *cont ) {
             close( p_status[i][0] );
             close( p_status[i][1] );
             /* Start mpg123 in Remote mode */
-            execlp( "mpg123", "mpg123", "-R", "2> &1", NULL );
+            execlp( "mpg123", "mpg123", "-R", "--rva-radio", "2> &1", NULL );
             fail( errno, "Could not exec mpg123" );
         }
 
