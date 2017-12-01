@@ -17,13 +17,19 @@
 
 static pthread_mutex_t cmdlock=PTHREAD_MUTEX_INITIALIZER;
 
+/*
+ * sets the command to be sent to mixplayd
+ */
 void setSCommand( mpcmd cmd ) {
     pthread_mutex_lock( &cmdlock );
     getConfig()->command=cmd;
 }
 
 
-static size_t appendstr( char *start, const char *text ) {
+/*
+ * helperfunctions for de/serializing config and info
+ */
+static size_t appStr( char *start, const char *text ) {
 	int pos;
 	strcat( start, text );
 	pos=strlen(text)+1;
@@ -31,12 +37,12 @@ static size_t appendstr( char *start, const char *text ) {
 	return pos;
 }
 
-static size_t getstring( const char *pos, char *buff ) {
+static size_t getStr( const char *pos, char *buff ) {
 	strcpy( buff, pos );
 	return( strlen(buff)+1 );
 }
 
-static size_t getint( const char* pos, int *val ) {
+static size_t getInt( const char* pos, int *val ) {
 	size_t len=0;
 	for( len=0; len < sizeof( int ); len++ ) {
 		((char *)val)[len]=*(pos+len);
@@ -46,7 +52,7 @@ static size_t getint( const char* pos, int *val ) {
 
 }
 
-static size_t appendint( char *start, const int val ) {
+static size_t appInt( char *start, const int val ) {
 	size_t len;
 	for( len=0; len < sizeof( int ); len++ ) {
 		*(start+len)=((char *)&val)[len];
@@ -55,62 +61,94 @@ static size_t appendint( char *start, const int val ) {
 	return len;
 }
 
-static size_t appendTitle( char *buff, const struct entry_t *title ) {
+static size_t appTitle( char *buff, const struct entry_t *title ) {
 	size_t len=0;
 	if( title != NULL ) {
-		len+=appendstr( buff+len, title->artist );
-		len+=appendstr( buff+len, title->album );
-		len+=appendstr( buff+len, title->title );
-		len+=appendint( buff+len, title->flags );
+		len+=appStr( buff+len, title->artist );
+		len+=appStr( buff+len, title->album );
+		len+=appStr( buff+len, title->title );
+		len+=appInt( buff+len, title->flags );
 	}
 	else {
-		len+=appendstr( buff+len, "---" );
-		len+=appendstr( buff+len, "---" );
-		len+=appendstr( buff+len, "---" );
-		len+=appendint( buff+len, 0 );
+		len+=appStr( buff+len, "---" );
+		len+=appStr( buff+len, "---" );
+		len+=appStr( buff+len, "---" );
+		len+=appInt( buff+len, 0 );
 	}
 	return len;
 }
 
 static size_t getTitle( const char *buff, struct entry_t *title ) {
 	size_t len=0;
-	len+=getstring( buff+len, title->artist );
-	len+=getstring( buff+len, title->album );
-	len+=getstring( buff+len, title->title );
-	len+=getint( buff+len, (int*)&title->flags );
+	len+=getStr( buff+len, title->artist );
+	len+=getStr( buff+len, title->album );
+	len+=getStr( buff+len, title->title );
+	len+=getInt( buff+len, (int*)&title->flags );
 	sprintf( title->display, "%s - %s", title->artist, title->title );
 	strcpy( title->path, "[mixplayd]" );
 	return len;
 }
 
+static size_t getMsg( const char* buff, mpconfig *config ) {
+	size_t len=0;
+
+	len+=getInt( buff+len, &config->msglevel );
+	if( config->msglevel >= 0 ) {
+		if( config->message == NULL ) {
+			config->message=falloc( strlen(buff), sizeof(char) );
+		}
+		else {
+			config->message=realloc( config->message, strlen(buff) * sizeof(char) );
+		}
+		len+=getStr( buff, config->message );
+	}
+
+	return len;
+}
+
+/*
+ * put data to be sent over into the buff
+ */
 size_t serialize( const mpconfig *data, char *buff ) {
 	size_t len=0;
 
 	memset( buff, 0, MP_MAXCOMLEN );
 
 	if( data->current != NULL ) {
-		len+=appendTitle( buff+len, data->current->plprev );
-		len+=appendTitle( buff+len, data->current );
-		len+=appendTitle( buff+len, data->current->plnext );
+		len+=appTitle( buff+len, data->current->plprev );
+		len+=appTitle( buff+len, data->current );
+		len+=appTitle( buff+len, data->current->plnext );
 	}
 	else {
-		len+=appendTitle( buff+len, NULL );
-		len+=appendTitle( buff+len, NULL );
-		len+=appendTitle( buff+len, NULL );
+		len+=appTitle( buff+len, NULL );
+		len+=appTitle( buff+len, NULL );
+		len+=appTitle( buff+len, NULL );
 	}
-	len+=appendstr( buff+len, data->playtime );
-	len+=appendstr( buff+len, data->remtime );
-	len+=appendint( buff+len, data->percent );
-	len+=appendint( buff+len, data->volume );
-	len+=appendint( buff+len, data->status );
-	len+=appendint( buff+len, data->playstream );
+	len+=appStr( buff+len, data->playtime );
+	len+=appStr( buff+len, data->remtime );
+	len+=appInt( buff+len, data->percent );
+	len+=appInt( buff+len, data->volume );
+	len+=appInt( buff+len, data->status );
+	len+=appInt( buff+len, data->playstream );
+	len+=appInt( buff+len, data->msglevel );
+	if( data->msglevel >= 0 ) {
+		len+=appStr( buff+len, data->message );
+	}
 	
 	return len;
 }
 
+/*
+ * sort data from buff into the current configuration
+ */
 size_t deserialize( mpconfig *data, const char *buff ) {
 	size_t pos=0;
-
+	int ver;
+	pos+=getInt( buff+pos, &ver );
+	if( ver != MP_COMVER ) {
+		fail( F_FAIL, "mixplayd protocol mismatch!\nServer has version %i, we have version %i!", ver, MP_COMVER );
+		return -1;
+	}
 	if( data->current == NULL ) {
 		/* dummy path to fill artist, album, title */
 		data->current=insertTitle( data->current, "server/mixplayd/title" );
@@ -122,12 +160,13 @@ size_t deserialize( mpconfig *data, const char *buff ) {
 	pos+=getTitle( buff+pos, data->current->plprev );
 	pos+=getTitle( buff+pos, data->current );
 	pos+=getTitle( buff+pos, data->current->plnext );
-	pos+=getstring( buff+pos, data->playtime );
-	pos+=getstring( buff+pos, data->remtime );
-	pos+=getint( buff+pos, &data->percent );
-	pos+=getint( buff+pos, &data->volume );
-	pos+=getint( buff+pos, &data->status );
-	pos+=getint( buff+pos, &data->playstream );
+	pos+=getStr( buff+pos, data->playtime );
+	pos+=getStr( buff+pos, data->remtime );
+	pos+=getInt( buff+pos, &data->percent );
+	pos+=getInt( buff+pos, &data->volume );
+	pos+=getInt( buff+pos, &data->status );
+	pos+=getInt( buff+pos, &data->playstream );
+	pos+=getMsg( buff+pos, data );
 	return pos;
 }
 
@@ -155,7 +194,8 @@ void *netreader( void *control ) {
     server.sin_port = htons( config->port );
 
     if (connect(sock , (struct sockaddr *)&server , sizeof(server)) < 0) {
-       fail( errno, "connect() failed!");
+       fail( errno, "Could not connect to %s on port %i\nIs mixplayd running?",
+    		   config->host, config->port );
     }
 
     addMessage( 1, "Connected");
@@ -175,12 +215,16 @@ void *netreader( void *control ) {
 				config->status=mpc_quit;
 				break;
 			case 0:
-				addMessage( 1, "Server disconnected");
+				addMessage( 0, "mixplayd has disconnected the session");
 				config->status=mpc_quit;
 				break;
 			default:
-				deserialize(config, commdata);
-				updateUI( config );
+				if( deserialize(config, commdata) == -1 ) {
+					goto cleanup;
+				}
+				else {
+					updateUI( config );
+				}
 			}
 		}
 
@@ -192,6 +236,7 @@ void *netreader( void *control ) {
         pthread_mutex_unlock( &cmdlock );
     }
 
+cleanup:
     addMessage( 1, "Disconnected");
 
     free( commdata );

@@ -8,6 +8,7 @@
 #ifndef MPCOMM_H_
 #define MPCOMM_H_
 
+#define MP_COMVER 3
 #include "config.h"
 
 /*
@@ -19,12 +20,15 @@
 
 /*
  * max size of an update packet
- * 3 titles  								3*[MP_ENTRYLEN]
- * - intime, remtime 						2*[10]
- * - percent, volume, status, playstream	4*[int]
- * - 0 Byte									1
+ * - version					1*[int]
+ * 3 titles  					3*[MP_ENTRYLEN]
+ * - intime, remtime 			2*[10]
+ * - percent, volume, status,
+ * + playstream, messagelen		5*[int]
+ * - message					128
+ * - 0 Byte						1
  */
-#define MP_MAXCOMLEN (3*MP_ENTRYLEN+2*10+4*sizeof(int)+1)
+#define MP_MAXCOMLEN (sizeof(int)+3*MP_ENTRYLEN+2*10+5*sizeof(int)+128+1)
 #define MP_PORT 2347
 
 void *netreader( void *control );

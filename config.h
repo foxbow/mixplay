@@ -84,6 +84,8 @@ struct mpcontrol_t {
     int  port;
     int remote;
     int changed;
+    int msglevel;				/* verbosity level of message -1=no message */
+    char *message;				/* holds the last message */
 };
 
 typedef struct mpcontrol_t mpconfig;

@@ -68,21 +68,8 @@ void markfav( GtkButton *button, gpointer data ) {
     reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
     gtk_widget_destroy( dialog );
 
-    switch( reply ) {
-    case mpc_favtitle:
-        addToFile( mpcontrol->favname, title->display, "d=" );
-        title->flags|=MP_FAV;
-        break;
-
-    case mpc_favalbum:
-        addToFile( mpcontrol->favname, title->album, "l=" );
-        markFavourite( title, SL_ALBUM );
-        break;
-
-    case mpc_favartist:
-        addToFile( mpcontrol->favname, title->artist, "a=" );
-        markFavourite( title, SL_ARTIST );
-        break;
+    if( reply != GTK_RESPONSE_CANCEL ) {
+    	setCommand( reply );
     }
 }
 

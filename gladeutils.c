@@ -62,6 +62,8 @@ void fail( int error, const char* msg, ... ) {
     char *line;
     GtkWidget *dialog;
 
+	setCommand( mpc_quit );
+
     line=falloc( 1024, sizeof(char) );
 
     va_start( args, msg );
@@ -82,9 +84,8 @@ void fail( int error, const char* msg, ... ) {
 		}
 
 		gtk_dialog_run ( GTK_DIALOG ( dialog ) );
+	    gtk_main_quit();
 	}
-
-	setCommand( mpc_quit );
 
     return;
 }
