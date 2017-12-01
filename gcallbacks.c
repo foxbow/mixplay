@@ -204,8 +204,12 @@ void infoStart( GtkButton *button, gpointer data ) {
 								"_Database",  2,
 								"_Clean up database", mpc_dbclean,
 /*								"Clean up _filesystem", mpc_doublets, */
-								"_Quit!", mpc_quit,
 								NULL );
+		if( mpcontrol->remote ) {
+			gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
+					"_Stop server", mpc_QUIT,
+					NULL );
+		}
 	    reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
 	    gtk_widget_destroy( dialog );
     }

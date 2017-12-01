@@ -770,28 +770,28 @@ void *reader( void *cont ) {
         case mpc_dnptitle:
             addToFile( control->dnpname, control->current->display, "d=" );
             control->current=removeByPattern( control->current, "d=" );
-            order=1;
+            order=0;
             write( p_command[fdset][1], "STOP\n", 6 );
             break;
 
         case mpc_dnpalbum:
             addToFile( control->dnpname, control->current->album, "l=" );
             control->current=removeByPattern( control->current, "l=" );
-            order=1;
+            order=0;
             write( p_command[fdset][1], "STOP\n", 6 );
             break;
 
         case mpc_dnpartist:
             addToFile( control->dnpname, control->current->artist, "a=" );
             control->current=removeByPattern( control->current, "a=" );
-            order=1;
+            order=0;
             write( p_command[fdset][1], "STOP\n", 6 );
             break;
 
         case mpc_dnpgenre:
             addToFile( control->dnpname, control->current->genre, "g*" );
             control->current=removeByPattern( control->current, "g*" );
-            order=1;
+            order=0;
             write( p_command[fdset][1], "STOP\n", 6 );
             break;
 
