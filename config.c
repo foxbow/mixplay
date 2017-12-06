@@ -339,10 +339,13 @@ void freeConfig( ) {
 }
 
 /**
- * adds a message to the message buffer
+ * adds a message to the message buffer if verbosity is >= v
  *
  * If the application is not in UI mode, the message will just be printed to make sure messages
  * are displayed on the correct media.
+ *
+ * If debug > v the message is printed on the console (to avoid verbosity 0 messages to
+ * always appear in the debug stream.
  */
 void addMessage( int v, char *msg, ... ) {
     va_list args;
@@ -370,13 +373,13 @@ void addMessage( int v, char *msg, ... ) {
     	}
     	else {
     		printf( "V%i %s\n", v, line );
-    		free(line);
     	}
     }
 	else if( v < getDebug() ) {
 		fprintf( stderr, "D%i %s\n", v, line );
-		free( line );
     }
+
+	free(line);
 	pthread_mutex_unlock( &msglock );
 }
 

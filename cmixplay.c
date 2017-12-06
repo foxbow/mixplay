@@ -90,8 +90,9 @@ int main( int argc, char **argv ) {
     }
 
     if ( optind < argc ) {
-    	if( !config->remote ) {
-    		fail( F_FAIL, "Can't set arguments on localplay!" );
+    	if( config->remote ) {
+    		addMessage( 1, "Disabling remote connection" );
+    		config->remote=0;
     	}
     	if( 0 == setArgument( argv[optind] ) ) {
             fail( F_FAIL, "Unknown argument!\n", argv[optind] );

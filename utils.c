@@ -422,7 +422,7 @@ void msgBuffAdd( msgbuf *msgbuf, char *line ) {
  * Return pointer must be free'd after use!
  */
 char *msgBuffGet( struct msgbuf_t *msgbuf ) {
-	char *retval = "";
+	char *retval = NULL;
 	if( msgbuf->lines > 0 ) {
 		retval=msgbuf->msg[msgbuf->current];
 		msgbuf->msg[msgbuf->current]=NULL;
@@ -435,7 +435,8 @@ char *msgBuffGet( struct msgbuf_t *msgbuf ) {
 /**
  * helperfunction to implement message ringbuffer
  * returns the current message and keeps it in the buffer
- * Return pointer must be free'd after use!
+ * Return pointer MUST NOT be free'd after use!
+ * Caveat: Returns "" if no messages are available
  */
 char *msgBuffPeek( struct msgbuf_t *msgbuf ) {
 	char *retval = "";
@@ -448,7 +449,8 @@ char *msgBuffPeek( struct msgbuf_t *msgbuf ) {
 /**
  * returns all lines in the buffer as a single string
  * Does not empty the buffer
- * Return pointer must be free'd after use!
+ * Return pointer SHOULD be free'd after use!
+ * Caveat: Returns NULL if no messages are available
  */
 char *msgBuffAll( struct msgbuf_t *msgbuf ) {
 	int i, lineno;
@@ -484,6 +486,9 @@ void msgBuffClear( struct msgbuf_t *msgbuf ) {
 	}
 }
 
+/*
+ * debug function to dump binary data on the screen
+ */
 void dumpbin( const void *data, size_t len ) {
 	int i;
 	for( i=0; i< len; i++ ) {

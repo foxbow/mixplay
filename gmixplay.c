@@ -185,6 +185,10 @@ int main( int argc, char **argv ) {
     control->playstream=0;
 
     if ( optind < argc ) {
+    	if( control->remote ) {
+    		addMessage( 1, "Disabling remote connection" );
+    		control->remote=0;
+    	}
     	if( 0 == setArgument( argv[optind] ) ) {
             fail( F_FAIL, "Unknown argument!\n", argv[optind] );
             return -1;
