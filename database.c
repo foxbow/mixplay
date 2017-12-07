@@ -135,7 +135,7 @@ int dbOpen( const char *path ) {
         fail( errno, "Could not open database %s", path );
     }
 
-    printver( 2, "Opened database %s\n", path );
+    addMessage( 2, "Opened database %s", path );
     return db;
 }
 
@@ -207,7 +207,7 @@ static struct entry_t *addDBTitle( struct dbentry_t dbentry, struct entry_t *roo
  */
 void dbBackup( const char *dbname ) {
     char backupname[MAXPATHLEN]="";
-    printver( 1, "Backing up database\n" );
+    addMessage( 1, "Backing up database" );
 
     strncpy( backupname, dbname, MAXPATHLEN );
     strncat( backupname, ".bak", MAXPATHLEN );
@@ -239,7 +239,7 @@ struct entry_t *dbGetMusic( const char *dbname ) {
         fail( F_FAIL, "Database %s is corrupt!\nRun 'mixplay -C' to rescan", dbname );
     }
 
-    printver( 1, "Loaded %i titles from the database\n", index-1 );
+    addMessage( 1, "Loaded %i titles from the database", index-1 );
 
     return ( dbroot?dbroot->dbnext:NULL );
 }
@@ -255,7 +255,7 @@ int dbCheckExist( const char *dbname ) {
 
     root=dbGetMusic( dbname );
     runner=root;
-    printver( 1, "Cleaning database...\n" );
+    addMessage( 1, "Cleaning database..." );
 
     do {
         activity( "Cleaning" );
@@ -276,10 +276,10 @@ int dbCheckExist( const char *dbname ) {
 
     if( num > 0 ) {
         dbDump( dbname, root );
-        printver( 1, "Removed %i titles\n", num );
+        addMessage( 1, "Removed %i titles", num );
     }
     else {
-        printver( 1, "No titles to remove\n" );
+        addMessage( 1, "No titles to remove" );
     }
 
     cleanTitles( root );
@@ -303,7 +303,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
     dbroot=dbGetMusic( dbname );
 
     db=dbOpen( dbname );
-    printver( 1, "Calculating mean playcount...\n" );
+    addMessage( 1, "Calculating mean playcount..." );
 
     if( NULL != dbroot ) {
         dbrunner=dbroot;
@@ -321,11 +321,11 @@ int dbAddTitles( const char *dbname, char *basedir ) {
     }
 
     /* scan directory */
-    printver( 1, "Scanning...\n" );
+    addMessage( 1, "Scanning..." );
     fsroot=recurse( basedir, NULL, basedir );
     fsroot=fsroot->dbnext;
 
-    printver( 1, "Adding titles...\n" );
+    addMessage( 1, "Adding titles..." );
 
     while( NULL != fsroot ) {
         activity( "Adding" );
@@ -341,7 +341,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
         fsroot=removeTitle( fsroot );
     }
 
-    printver( 1, "Added %i titles with playcount %i to %s\n", num, mean, dbname );
+    addMessage( 1, "Added %i titles with playcount %i to %s", num, mean, dbname );
     dbClose( db );
     return num;
 }
@@ -426,7 +426,7 @@ int dbNameCheck( const char *dbname ) {
 						case  7: /* 0111 */
 						case 11: /* 1011 */
 							unlink( currentEntry->path );
-							printver( 1, "removed %s\n", currentEntry->path );
+							addMessage( 1, "removed %s", currentEntry->path );
 							runner->flags |= MP_MARK;
 							count++;
 							break;
@@ -436,7 +436,7 @@ int dbNameCheck( const char *dbname ) {
 						case 13: /* 1101 */
 						case 14: /* 1110 */
 							unlink( runner->path );
-							printver( 1, "removed %s\n", runner->path );
+							addMessage( 1, "removed %s", runner->path );
 							currentEntry->flags |= MP_MARK;
 							count++;
 							break;
@@ -472,7 +472,7 @@ int dbNameCheck( const char *dbname ) {
 
     fclose( fp );
 
-    printver(1, "Marked %i titles as removable\n", count );
+    addMessage(1, "Marked %i titles as removable", count );
 
 	return count;
 }

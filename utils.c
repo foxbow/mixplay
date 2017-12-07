@@ -12,26 +12,6 @@
 #include <ncurses.h>
 #include <sys/stat.h>
 
-static int _ftverbosity=1;
-
-int setVerbosity( int v ) {
-    _ftverbosity=v;
-    return _ftverbosity;
-}
-
-int getVerbosity( void ) {
-    return _ftverbosity;
-}
-
-int incVerbosity() {
-    _ftverbosity++;
-    return _ftverbosity;
-}
-
-void muteVerbosity() {
-    _ftverbosity=0;
-}
-
 /**
  * turn a relative path into an absolute path
  * basedir is the current directory, which does not necessarily need to
@@ -412,67 +392,115 @@ void *falloc( size_t num, size_t size ) {
 }
 
 /**
- * add a line to a list of lines
- * if the result is longer than the length of the buffer,
- * remove lines from the start until it fits again
+ * helperfunction to implement message ringbuffer
+ * returns the current message number
  */
-int scrollAdd( char *scroll, const char* line, const size_t len ) {
-    char *pos;
-
-    if( strlen( line ) > len ) {
-        fail( F_FAIL, "Adding too much text to scroll!" );
-    }
-
-    if( ( strlen( scroll ) + strlen( line ) ) < len ) {
-        strncat( scroll, line, len );
-        return 0;
-    }
-
-    while( ( strlen( scroll ) + strlen( line ) ) >= len ) {
-        pos=strchr( scroll, '\n' );
-
-        if( NULL==pos ) {
-            fail( F_FAIL, "Scroll has one line with the length of %i?", len );
-        }
-
-        pos++;
-        memmove( scroll, pos, strlen( pos ) );
-    }
-
-    strncat( scroll, line, len );
-    return 1;
+void msgBuffAdd( msgbuf *msgbuf, char *line ) {
+	char *myline;
+	myline=falloc( strlen(line)+1, sizeof( char ) );
+	strcpy( myline, line );
+	/* overflow? */
+	if( msgbuf->lines == MSGNUM ) {
+		/* discard oldest (current) message */
+		free(msgbuf->msg[msgbuf->current]);
+		/* replace with new message */
+		msgbuf->msg[msgbuf->current]=myline;
+		/* bump current message to the next oldest */
+		msgbuf->current=(msgbuf->current+1)%MSGNUM;
+	}
+	else {
+		/* current+lines points to the next free buffer */
+		msgbuf->msg[(msgbuf->current+msgbuf->lines)%MSGNUM]=myline;
+		msgbuf->lines++;
+	}
+	msgbuf->count++;
 }
 
 /**
- * better strncat(), this takes the original string length into account and makes sure that
- * the result is terminated properly.
- * Returns the concatenated string on success and NULL on overflow
- * On overflow line will be truncated to maxlen but still be usable.
+ * helperfunction to implement message ringbuffer
+ * returns the current message and removes it from the buffer
+ * Return pointer must be free'd after use!
  */
-char *appendString( char *line, const char *val, const size_t maxlen ){
-	int i, j=0, l;
-	char *retval=line;
-
-	j=strlen(line);
-	l=j+strlen( val );
-	if( l > maxlen-1 ) {
-		l=maxlen-1;
-		retval=0;
+char *msgBuffGet( struct msgbuf_t *msgbuf ) {
+	char *retval = NULL;
+	if( msgbuf->lines > 0 ) {
+		retval=msgbuf->msg[msgbuf->current];
+		msgbuf->msg[msgbuf->current]=NULL;
+		msgbuf->current =(msgbuf->current+1)%MSGNUM;
+		msgbuf->lines--;
 	}
-
-	for( i=0; i<l; i++ ) {
-		line[i]=val[j];
-		j++;
-	}
-
 	return retval;
 }
 
 /**
- * line appendString() but for an integer value.
+ * helperfunction to implement message ringbuffer
+ * returns the current message and keeps it in the buffer
+ * Return pointer MUST NOT be free'd after use!
+ * Caveat: Returns "" if no messages are available
  */
-char *appendInt( char *line, const char *fmt, const int val, size_t maxlen ) {
-	static char numbuff[256];
-	snprintf( numbuff, 255, fmt, val );
-	return appendString( line, numbuff, maxlen );
+char *msgBuffPeek( struct msgbuf_t *msgbuf ) {
+	char *retval = "";
+	if( msgbuf->lines > 0 ) {
+		retval=msgbuf->msg[msgbuf->current];
+	}
+	return retval;
+}
+
+/**
+ * returns all lines in the buffer as a single string
+ * Does not empty the buffer
+ * Return pointer SHOULD be free'd after use!
+ * Caveat: Returns NULL if no messages are available
+ */
+char *msgBuffAll( struct msgbuf_t *msgbuf ) {
+	int i, lineno;
+	char *buff;
+	size_t len=256;
+
+	buff=falloc( len, sizeof( char ) );
+	buff[0]=0;
+
+	for( i=0; i<msgbuf->lines; i++ ) {
+		lineno=(i+msgbuf->current)%MSGNUM;
+		while( strlen(buff)+strlen(msgbuf->msg[lineno]) >= len ) {
+			len=len+256;
+			buff=realloc( buff, len*sizeof( char ) );
+			if( NULL == buff ) {
+				fail( errno, "Can't increase message buffer" );
+			}
+		}
+		strcat( buff, msgbuf->msg[lineno] );
+		strcat( buff, "\n" );
+	}
+
+	return buff;
+}
+
+/**
+ * empties the mesage buffer
+ */
+void msgBuffClear( struct msgbuf_t *msgbuf ) {
+	char *line;
+	while( ( line=msgBuffGet( msgbuf ) ) != NULL ) {
+		free( line );
+	}
+}
+
+/*
+ * debug function to dump binary data on the screen
+ */
+void dumpbin( const void *data, size_t len ) {
+	int i;
+	for( i=0; i< len; i++ ) {
+		if( ( i%16 ) == 0 ) {
+			putchar('\n');
+		}
+		if( isalnum( ((char*)data)[i] ) ) {
+			putchar( ((char*)data)[i] );
+		}
+		else {
+			putchar('.');
+		}
+	}
+	putchar('\n');
 }

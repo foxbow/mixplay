@@ -20,11 +20,11 @@ void activity( const char *msg, ... ) {
     char roller[5]="|/-\\";
     char text[256]="";
     int pos;
+    va_list args;
 
     if( getVerbosity() && ( _ftrpos%( 100/getVerbosity() ) == 0 ) ) {
         pos=( _ftrpos/( 100/getVerbosity() ) )%4;
 
-        va_list args;
         va_start( args, msg );
         vsprintf( text, msg, args );
         printf( "%s %c          \r", text, roller[pos] );
@@ -37,53 +37,43 @@ void activity( const char *msg, ... ) {
     }
 }
 
-/**
- * print the given message when the verbosity is at
- * least vl
- */
-void printver( int vl, const char *msg, ... ) {
-    va_list args;
-
-    if( vl <= getVerbosity() ) {
-        va_start( args, msg );
-        vfprintf( stderr, msg, args );
-        va_end( args );
-    }
-}
-
 /*
  * Print errormessage, errno and wait for [enter]
  * msg - Message to print
  * info - second part of the massage, for instance a variable
  * error - errno that was set
- *         F_WARN = print message w/o errno and return
  *         F_FAIL = print message w/o errno and exit
  */
 void fail( int error, const char* msg, ... ) {
     va_list args;
+    char line[512];
+
     va_start( args, msg );
-
-    if( error <= 0 ) {
-        fprintf( stdout, "\n" );
-        vfprintf( stdout, msg, args );
-        fprintf( stdout, "\n" );
-    }
-    else {
-        fprintf( stdout, "\n" );
-        vfprintf( stdout, msg, args );
-        fprintf( stdout, "\n ERROR: %i - %s\n", abs( error ), strerror( abs( error ) ) );
-    }
-
-    fprintf( stdout, "Press [ENTER]\n" );
-    fflush( stdout );
-    fflush( stderr );
+    vsprintf( line, msg, args );
     va_end( args );
+
+    if( error == 0 ) {
+    	addMessage( 0, "OBSOLETE: %s", line );
+    	return;
+    }
+
+    getConfig()->status=mpc_quit;
+
+	fprintf( stderr, "\n" );
+
+	if( error == F_FAIL ) {
+		fprintf( stderr, "ERROR: %s\n", line );
+	}
+	else {
+		fprintf( stderr, "ERROR: %s\n%i - %s\n", line, abs( error ), strerror( abs( error ) ) );
+	}
+	fprintf( stderr, "Press [ENTER]\n" );
+	fflush( stdout );
+	fflush( stderr );
 
     while( getc( stdin )!=10 );
 
-    if ( error != 0 ) {
-        exit( error );
-    }
+    exit( error );
 
     return;
 }
@@ -344,11 +334,62 @@ void drawframe( struct entry_t *current, const char *status, int stream ) {
                 }
 
                 mvhline( i, 2, ' ', maxlen + 2 );
-                mvprintw( i, 2, "%s", buff );
+                mvprintw( i, 3, "%s", buff );
                 attroff( A_BOLD );
             }
         }
     }
 
     refresh();
+}
+
+/*
+ * dummy implementations
+ */
+void progressStart( char *msg, ... ) {
+	addMessage( 0, msg );
+}
+
+void progressEnd( char *msg ) {
+	addMessage( 0, msg );
+}
+
+void updateUI( mpconfig *control ) {
+    char status[MP_MSGLEN];
+    int i;
+
+    if( isendwin() ) {
+    	control->status = mpc_quit;
+    	return;
+    }
+	if( control->status == mpc_idle ) {
+		sprintf( status, " STOP/PAUSE " );
+	}
+	else {
+		if( control->playstream ) {
+			sprintf( status, "%s PLAYING", control->playtime );
+		}
+		else {
+			sprintf( status, "%s [", control->playtime );
+			for( i=0; i<30; i++ ) {
+				if( i < ( ( control->percent * 3 ) / 10 ) ) {
+					status[i+7]='=';
+				}
+				else if( i == ( ( control->percent * 3 ) / 10 ) ) {
+					status[i+7]='>';
+				}
+				else {
+					status[i+7]=' ';
+				}
+			}
+			status[i+7]=0;
+			strcat( status, "] " );
+			strcat( status, control->remtime );
+		}
+	}
+	drawframe( control->current, status, control->playstream );
+
+	if( getMessage( status ) ) {
+		popUp( 1, status );
+    }
 }

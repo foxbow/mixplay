@@ -9,7 +9,6 @@
 #define CMP_BITS (CMP_CHARS*CMP_CHARS)
 #define CMP_ARRAYLEN ((CMP_BITS%8==0)?CMP_BITS/8:(CMP_BITS/8)+1)
 
-#define F_WARN 0
 #define F_FAIL -1
 
 #ifndef MAX
@@ -21,28 +20,39 @@
 /* Represents a string as a bit array */
 typedef unsigned char* strval_t;
 
+#define MSGNUM 20
+
 /*
- * Verbosity handling of the utils functions
+ * Message ringbuffer structure
  */
-int getVerbosity( void );
-int setVerbosity( int );
-int incVerbosity();
-void muteVerbosity();
+struct msgbuf_t {
+	char *msg[MSGNUM];
+	int  current;
+	int  lines;
+	long count;
+};
+typedef struct msgbuf_t msgbuf;
+
+#include "config.h"
 
 /*
  * These functions need to be implemented in the UI
  * See: ncbox.c, gladeutils.c
  */
-void printver( int vl, const char *msg, ... );
 void fail( int error, const char* msg, ... );
 void activity( const char *msg, ... );
+void progressStart( char *msg, ... );
+void progressEnd( char *msg );
+void updateUI( mpconfig *data );
 
 /**
- * String manipulation functions to get rid of warnings in strncat,
- * snprintf etc
+ * helperfunction to implement message ringbuffer
  */
-char *appendString( char *line, const char *val, size_t maxlen );
-char *appendInt( char *line, const char *fmt, const int val, size_t maxlen );
+void  msgBuffAdd( struct msgbuf_t *msgbuf, char *line );
+char *msgBuffGet( struct msgbuf_t *msgbuf );
+char *msgBuffPeek( struct msgbuf_t *msgbuf );
+char *msgBuffAll( struct msgbuf_t *msgbuf );
+void  msgBuffClear( struct msgbuf_t *msgbuf );
 
 /**
  * General utility functions
@@ -59,5 +69,6 @@ int readline( char *line, size_t len, int fd );
 char *abspath( char *path, const char *basedir, int len );
 int checkMatch( const char* name, const char* pat );
 void *falloc( size_t num, size_t size );
-int scrollAdd( char *scroll, const char* line, const size_t len );
+void dumpbin( const void *data, size_t len );
+
 #endif

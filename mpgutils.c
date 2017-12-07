@@ -302,14 +302,14 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, struct entry_t *ti
     genPathName( basedir, title ); /* Set some default values as tag info may be incomplete */
 
     if( mpg123_open( mh, title->path ) != MPG123_OK ) {
-        printver( 1, "Could not open %s as MP3 file\n", title->path );
+        addMessage( 1, "Could not open %s as MP3 file", title->path );
         return;
     }
 
     while( mpg123_framebyframe_next( mh ) == MPG123_OK ) {
         meta = mpg123_meta_check( mh );
         if( meta & MPG123_ID3 ) {
-        	printver(3,"Found ID3 tag\n");
+        	addMessage(3,"Found ID3 tag");
             break;
         }
     }
@@ -339,18 +339,18 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, struct entry_t *ti
             }
         }
         else if( v1 != NULL ) {
-        	printver( 3, "ID3v1 Tags found!\n" );
+        	addMessage( 3, "ID3v1 Tags found!" );
             strip( title->title, v1->title, 32 );
             strip( title->artist, v1->artist, 32 );
             strip( title->album, v1->album, 32 );
             strncpy( title->genre, getGenre( v1->genre ), NAMELEN );
         }
         else {
-            printver( 1, "ID3 OK but no tags in %s\n", title->path );
+            addMessage( 1, "ID3 OK but no tags in %s", title->path );
         }
     }
     else {
-        printver( 0, "Tag parse error in %s\n", title->path );
+        addMessage( 0, "Tag parse error in %s", title->path );
     }
 
     snprintf( title->display, MAXPATHLEN, "%s - %s", title->artist, title->title );
@@ -363,6 +363,8 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, struct entry_t *ti
 int fillTagInfo( const char *basedir, struct entry_t *title ) {
     mpg123_handle* mh;
 
+    /* Do not try to scan non mp3 files */
+    if( !isMusic( title->path) ) return 0;
     mpg123_init();
     mh = mpg123_new( NULL, NULL );
 /*	mpg123_param( mh, MPG123_VERBOSE, 0, 0.0 ); */

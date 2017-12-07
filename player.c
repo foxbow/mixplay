@@ -4,167 +4,104 @@
  *  Created on: 26.04.2017
  *      Author: bweber
  */
-#include "player.h"
-
 #include <assert.h>
-#include "database.h"
 #include <string.h>
 #include <pthread.h>
 #include <errno.h>
+#include <signal.h>
 #include <sys/stat.h>
+#include <stdio.h>
+#include <alsa/asoundlib.h>
+#include <unistd.h>
 
-pthread_mutex_t cmdlock=PTHREAD_MUTEX_INITIALIZER;
+#include "utils.h"
+#include "database.h"
+#include "player.h"
+#include "config.h"
+
+static pthread_mutex_t cmdlock=PTHREAD_MUTEX_INITIALIZER;
 
 /**
- * writes the current configuration
+ * adjusts the master volume
+ * if volume is 0 the current volume is returned without changing it
+ * otherwise it's changed by 'volume'
+ * if ALSA does not work or the current card cannot be selected -1 is returned
  */
-void writeConfig( struct mpcontrol_t *config ) {
-    char		conffile[MAXPATHLEN]; /*  = "mixplay.conf"; */
-    GKeyFile	*keyfile;
-    GError		*error=NULL;
+static long adjustVolume( long volume ) {
+    long min, max;
+    snd_mixer_t *handle;
+    snd_mixer_elem_t *elem;
+    snd_mixer_selem_id_t *sid;
+    long retval = 0;
+    char *channel;
+    mpconfig *config;
+    config=getConfig();
+    channel=config->channel;
 
-    printver( 1, "Writing config\n" );
-
-    snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", getenv( "HOME" ) );
-    keyfile=g_key_file_new();
-
-    g_key_file_set_string( keyfile, "mixplay", "musicdir", config->musicdir );
-    g_key_file_set_string_list( keyfile, "mixplay", "profiles", ( const char* const* )config->profile, config->profiles );
-    if( config->streams > 0 ) {
-        g_key_file_set_string_list( keyfile, "mixplay", "streams", ( const char* const* )config->stream, config->streams );
-        g_key_file_set_string_list( keyfile, "mixplay", "snames", ( const char* const* )config->sname, config->streams );
+    if( channel == NULL || strlen( channel ) == 0 ) {
+    	config->volume=-1;
+    	return -1;
     }
-    g_key_file_set_int64( keyfile, "mixplay", "active", config->active );
-    g_key_file_set_int64( keyfile, "mixplay", "skipdnp", config->skipdnp );
-    g_key_file_set_int64( keyfile, "mixplay", "fade", config->fade );
-    g_key_file_save_to_file( keyfile, conffile, &error );
 
-    if( NULL != error ) {
-        fail( F_FAIL, "Could not write configuration!\n%s", error->message );
+    snd_mixer_open(&handle, 0);
+    if( handle == NULL ) {
+    	addMessage( 1, "No ALSA support" );
+    	config->volume=-1;
+    	return -1;
     }
+
+    snd_mixer_attach(handle, "default");
+    snd_mixer_selem_register(handle, NULL, NULL);
+    snd_mixer_load(handle);
+
+    snd_mixer_selem_id_alloca(&sid);
+    snd_mixer_selem_id_set_index(sid, 0);
+    snd_mixer_selem_id_set_name(sid, channel );
+    elem = snd_mixer_find_selem(handle, sid);
+    if( elem == NULL) {
+    	addMessage( 0, "Can't find channel %s!", handle );
+        snd_mixer_close(handle);
+    	config->volume=-1;
+    	return -1;
+    }
+
+	snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
+	snd_mixer_selem_get_playback_volume(elem, SND_MIXER_SCHN_MONO, &retval );
+	retval=(( retval * 100 ) / max)+1;
+
+	retval+=volume;
+	if( retval < 0 ) retval=0;
+	if( retval > 100 ) retval=100;
+	snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
+	snd_mixer_selem_set_playback_volume_all(elem, ( retval * max ) / 100);
+	config->volume=retval;
+
+    snd_mixer_close(handle);
+
+    return retval;
 }
 
 /**
- * load configuration file
- * if the file does not exist, create new configuration
+ * sets the given stream
  */
-void readConfig( struct mpcontrol_t *config ) {
-    GKeyFile	*keyfile;
-    GError		*error=NULL;
-    char		confdir[MAXPATHLEN];  /* = "$HOME/.mixplay"; */
-    char		conffile[MAXPATHLEN]; /* = "mixplay.conf"; */
-    GtkWidget 	*dialog;
-    GtkFileChooserAction action = GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER;
-    gint 		res;
-    gsize		snum;
-
-    printver( 1, "Reading config\n" );
-
-    /* load default configuration */
-    snprintf( confdir, MAXPATHLEN, "%s/.mixplay", getenv( "HOME" ) );
-    snprintf( conffile, MAXPATHLEN, "%s/mixplay.conf", confdir );
-    config->dbname=falloc( MAXPATHLEN, sizeof( char ) );
-    snprintf( config->dbname, MAXPATHLEN, "%s/mixplay.db", confdir );
-
-    if( !isDir( confdir ) ) {
-        if( mkdir( confdir, 0700 ) == -1 ) {
-            fail( errno, "Could not create config dir %s", confdir );
-        }
-    }
-
-    keyfile=g_key_file_new();
-    g_key_file_load_from_file( keyfile, conffile, G_KEY_FILE_KEEP_COMMENTS, &error );
-
-    if( NULL != error ) {
-        if( config->debug ) {
-            fail( F_WARN, "Could not load config from %s\n%s", conffile, error->message );
-        }
-
-        error=NULL;
-        dialog = gtk_file_chooser_dialog_new ( "Select Music directory",
-                                               GTK_WINDOW( config->widgets->mixplay_main ),
-                                               action,
-                                               "_Cancel",
-                                               GTK_RESPONSE_CANCEL,
-                                               "_Okay",
-                                               GTK_RESPONSE_ACCEPT,
-                                               NULL );
-
-        if( config->fullscreen ) {
-            gtk_window_fullscreen( GTK_WINDOW( dialog ) );
-        }
-
-        res = gtk_dialog_run( GTK_DIALOG ( dialog ) );
-
-        if ( res == GTK_RESPONSE_ACCEPT ) {
-        	/* Set minimum defaults to let mixplay work */
-        	config->musicdir=falloc( MAXPATHLEN, sizeof( char ) );
-            strncpy( config->musicdir, gtk_file_chooser_get_filename( GTK_FILE_CHOOSER( dialog ) ), MAXPATHLEN );
-            gtk_widget_destroy ( dialog );
-            config->profile=falloc( 1, sizeof( char * ) );
-            config->profile[0]=falloc( 8, sizeof( char ) );
-            strcpy( config->profile[0], "mixplay" );
-            config->profiles=1;
-            config->active=1;
-            config->skipdnp=3;
-            writeConfig( config );
-            return;
-        }
-        else {
-            fail( F_FAIL, "No Music directory chosen!" );
-        }
-    }
-
-    /* get music dir */
-    config->musicdir=g_key_file_get_string( keyfile, "mixplay", "musicdir", &error );
-    if( NULL != error ) {
-        fail( F_FAIL, "No music dir set in configuration!\n%s", error->message );
-    }
-
-    /* read list of profiles */
-    config->profile =g_key_file_get_string_list( keyfile, "mixplay", "profiles", &config->profiles, &error );
-    if( NULL != error ) {
-    	fail( F_FAIL, "No profiles set in config file!\n%s", error->message );
-    }
-
-    /* get active configuration */
-	config->active  =g_key_file_get_uint64( keyfile, "mixplay", "active", &error );
-	if( NULL != error ) {
-		fail( F_FAIL, "No active profile set in config!\n%s", error->message );
-	}
-
-	config->skipdnp  =g_key_file_get_uint64( keyfile, "mixplay", "skipdnp", &error );
-
-	/* Ignore fade setting if if has been overridden */
-	if( config->fade == 1 ) {
-		config->fade  =g_key_file_get_uint64( keyfile, "mixplay", "fade", &error );
-		if( NULL != error ) {
-			config->fade=1;
-		}
-	}
-
-	/* read streams if any are there */
-    config->stream=g_key_file_get_string_list( keyfile, "mixplay", "streams", &config->streams, &error );
-    if( NULL == error ) {
-    	snum=config->streams;
-        config->sname =g_key_file_get_string_list( keyfile, "mixplay", "snames", &config->streams, &error );
-        if( NULL != error ) {
-            fail( F_FAIL, "Streams set but no names!\n%s", error->message );
-        }
-        if( snum != config->streams ) {
-        	fail( F_FAIL, "Read %i streams but %i names!", snum, config->streams );
-        }
-    }
-
-    g_key_file_free( keyfile );
+static void setStream( struct mpcontrol_t *control, const char* stream, const char *name ) {
+	control->root=cleanTitles( control->root );
+    control->root=insertTitle( NULL, stream );
+    strncpy( control->root->title, name, NAMELEN );
+    insertTitle( control->root, control->root->title );
+    addToPL( control->root->dbnext, control->root );
+    strncpy( control->root->dbnext->display, "---", 3 );
+    control->current=control->root;
+    addMessage( 1, "Play Stream %s (%s)", name, stream );
 }
 
 /**
- * implements command queue
+ * sends a command to the player
+ * also makes sure that commands are queued
  */
-void setCommand( struct mpcontrol_t *control, mpcmd cmd ) {
+void setPCommand(  mpcmd cmd ) {
     pthread_mutex_lock( &cmdlock );
-    control->command=cmd;
+    getConfig()->command=cmd;
 }
 
 /**
@@ -172,9 +109,10 @@ void setCommand( struct mpcontrol_t *control, mpcmd cmd ) {
  * also handles playing of a single file, a directory, a playlist or an URL
  * returns 0 if nothing was recognized
  */
-int setArgument( struct mpcontrol_t *control, const char *arg ) {
+int setArgument( const char *arg ) {
     char line [MAXPATHLEN];
     int  i;
+    mpconfig *control=getConfig();
 
 	control->active=0;
     if( isURL( arg ) ) {
@@ -189,6 +127,7 @@ int setArgument( struct mpcontrol_t *control, const char *arg ) {
 
         strncat( line, arg, MAXPATHLEN );
         control->root=cleanTitles( control->root );
+        control->current=control->root;
         setStream( control, line, "Waiting for stream info..." );
         return 1;
     }
@@ -196,6 +135,7 @@ int setArgument( struct mpcontrol_t *control, const char *arg ) {
         /* play single song... */
     	control->root=cleanTitles( control->root );
         control->root=insertTitle( NULL, arg );
+        control->current=control->root;
         return 2;
     }
     else if( isDir( arg ) ) {
@@ -228,6 +168,7 @@ int setArgument( struct mpcontrol_t *control, const char *arg ) {
 
         cleanTitles( control->root );
         control->root=loadPlaylist( arg );
+        control->current=control->root;
         return 4;
     }
 
@@ -239,27 +180,16 @@ int setArgument( struct mpcontrol_t *control, const char *arg ) {
  */
 static void sendplay( int fdset, struct mpcontrol_t *control ) {
     char line[MAXPATHLEN]="load ";
+    assert( control->current != NULL );
+
     strncat( line, control->current->path, MAXPATHLEN );
     strncat( line, "\n", MAXPATHLEN );
 
-    if ( write( control->p_command[fdset][1], line, MAXPATHLEN ) < strlen( line ) ) {
+    if ( write( fdset, line, MAXPATHLEN ) < strlen( line ) ) {
         fail( F_FAIL, "Could not write\n%s", line );
     }
 
-    printver( 2, "CMD: %s", line );
-}
-
-/**
- * sets the given stream
- */
-void setStream( struct mpcontrol_t *control, const char* stream, const char *name ) {
-	control->root=cleanTitles( control->root );
-    control->root=insertTitle( NULL, stream );
-    strncpy( control->root->title, name, NAMELEN );
-    insertTitle( control->root, control->root->title );
-    addToPL( control->root->dbnext, control->root );
-    strncpy( control->root->dbnext->display, "---", 3 );
-    printver( 1, "Play Stream %s\n-> %s\n", name, stream );
+    addMessage( 2, "CMD: %s", line );
 }
 
 /**
@@ -315,7 +245,7 @@ void *setProfile( void *data ) {
         control->root=dbGetMusic( control->dbname );
 
         if( NULL == control->root ) {
-            printver( 1, "Scanning musicdir" );
+            addMessage( 1, "Scanning musicdir" );
             lastver=getVerbosity();
 
             if( lastver < 1 ) {
@@ -328,8 +258,7 @@ void *setProfile( void *data ) {
                 fail( F_FAIL, "No music found at %s!", control->musicdir );
             }
 
-            printver( 1, "Added %i titles.", num );
-/*            progressEnd( NULL ); // @TODO - why is this here? */
+            addMessage( 1, "Added %i titles.", num );
             control->root=dbGetMusic( control->dbname );
 
             if( NULL == control->root ) {
@@ -350,7 +279,7 @@ void *setProfile( void *data ) {
         cleanList( favourites );
         control->playstream=0;
 
-        printver( 1, "Profile set to %s.\n", profile );
+        addMessage( 1, "Profile set to %s.", profile );
     }
     else {
     	fail( F_FAIL, "Neither profile nor stream set!" );
@@ -358,10 +287,13 @@ void *setProfile( void *data ) {
 
     /* if we're not in player context, start playing automatically */
     if( pthread_mutex_trylock( &cmdlock ) == 0 ){
-    	printver( 2, "Autoplay\n" );
+    	addMessage( 1, "Autoplay" );
         control->command=mpc_start;
     }
 
+    if( active != control->active ) {
+    	control->changed = -1;
+    }
     return NULL;
 }
 
@@ -400,79 +332,116 @@ static void playCount( struct mpcontrol_t *control ) {
  * in mixplay, gmixplay and probably other GUI variants (ie: web)
  */
 void *reader( void *cont ) {
-    struct mpcontrol_t *control;
-    struct entry_t *next;
-    fd_set fds;
-    struct timeval to;
-    int64_t i, key;
-    int invol=100;
-    int outvol=100;
-    int redraw=0;
-    int fdset=0;
-    char line[MAXPATHLEN];
-    char *a, *t;
-    int order=1;
-    int intime=0;
-    int fade=3;
-
-    /* Debug stuff */
-    char *mpc_command[] = {
-    	    "mpc_idle",
-    	    "mpc_play",
-    	    "mpc_stop",
-    	    "mpc_prev",
-    	    "mpc_next",
-    	    "mpc_start",
-    	    "mpc_favtitle",
-    	    "mpc_favartist",
-    	    "mpc_favalbum",
-    	    "mpc_repl",
-    	    "mpc_profile",
-    	    "mpc_quit",
-    	    "mpc_dbclean",
-    	    "mpc_dnptitle",
-    	    "mpc_dnpartist",
-    	    "mpc_dnpalbum",
-    	    "mpc_dnpgenre",
-    		"mpc_doublets",
-    		"mpc_shuffle",
-    };
+    struct mpcontrol_t	*control;
+    struct entry_t 		*next;
+    fd_set				fds;
+    struct timeval		to;
+    int64_t	i, key;
+    int		invol=80;
+    int		outvol=80;
+    int 	redraw=0;
+    int 	fdset=0;
+    char 	line[MAXPATHLEN];
+    char 	*a, *t;
+    int 	order=1;
+    int 	intime=0;
+    int 	fade=3;
+    int 	p_status[2][2];			/* status pipes to mpg123 */
+    int 	p_command[2][2];		/* command pipes to mpg123 */
+    pid_t	pid[2];
 
     control=( struct mpcontrol_t * )cont;
     assert( control->fade < 2 );
 
-    if( control->fade == 0 ) {
+    addMessage( 2, "Reader starting" );
+
+	if( control->fade == 0 ) {
+        addMessage( 1, "No crossfading" );
     	fade=0;
     }
 
-    printver( 2, "Reader started\n" );
+    /* start the needed mpg123 instances */
+    /* start the player processes */
+    /* these may wait in the background until */
+    /* something needs to be played at all */
+    for( i=0; i <= control->fade; i++ ) {
+        /* create communication pipes */
+        pipe( p_status[i] );
+        pipe( p_command[i] );
+        pid[i] = fork();
+        /* todo: consider spawn() instead
+         * https://unix.stackexchange.com/questions/252901/get-output-of-posix-spawn
+         */
 
+        if ( 0 > pid[i] ) {
+            fail( errno, "could not fork" );
+        }
+
+        /* child process */
+        if ( 0 == pid[i] ) {
+            addMessage(  2, "Starting player %i", i+1 );
+
+            if ( dup2( p_command[i][0], STDIN_FILENO ) != STDIN_FILENO ) {
+                fail( errno, "Could not dup stdin for player %i", i+1 );
+            }
+
+            if ( dup2( p_status[i][1], STDOUT_FILENO ) != STDOUT_FILENO ) {
+                fail( errno, "Could not dup stdout for player %i", i+1 );
+            }
+
+            /* this process needs no pipes */
+            close( p_command[i][0] );
+            close( p_command[i][1] );
+            close( p_status[i][0] );
+            close( p_status[i][1] );
+            /* Start mpg123 in Remote mode */
+            execlp( "mpg123", "mpg123", "-R", "--rva-radio", "2> &1", NULL );
+            fail( errno, "Could not exec mpg123" );
+        }
+
+        close( p_command[i][0] );
+        close( p_status[i][1] );
+    }
+
+    /* check if we can control the system's volume */
+    control->volume=adjustVolume( 0 );
+    if( control->volume != -1  ) {
+    	addMessage(  1, "Hardware volume level is %i%%", control->volume );
+    }
+    else {
+    	/* control mpg123 volume instead - not recommended */
+    	addMessage( 0, "No hardware volume control!" );
+    	control->channel=NULL;
+    }
+
+    /* main loop */
     do {
+    	redraw=0;
         FD_ZERO( &fds );
         for( i=0; i<=control->fade; i++ ) {
-        	FD_SET( control->p_status[i][0], &fds );
+        	FD_SET( p_status[i][0], &fds );
         }
         to.tv_sec=0;
         to.tv_usec=100000; /* 1/10 second */
         i=select( FD_SETSIZE, &fds, NULL, NULL, &to );
 
-        if( i>0 ) {
-            redraw=1;
+        if( i > 0 ) {
+        	redraw=1;
         }
 
         /* drain inactive player */
-        if( control->fade && FD_ISSET( control->p_status[fdset?0:1][0], &fds ) ) {
-            key=readline( line, 512, control->p_status[fdset?0:1][0] );
+        if( control->fade && FD_ISSET( p_status[fdset?0:1][0], &fds ) ) {
+            key=readline( line, 512, p_status[fdset?0:1][0] );
 
             if( key > 2 ) {
 				if( '@' == line[0] ) {
-	        		if( ( 'F' != line[1] ) && ( 'V' != line[1] ) ) {
-	        			printver( 2, "P- %s\n", line );
+	        		if( ( 'F' != line[1] ) && ( 'V' != line[1] ) && ( 'I' != line[1] )) {
+	        			addMessage(  2, "P- %s", line );
 	        		}
 
 					switch ( line[1] ) {
 					case 'R': /* startup */
-						printver( 1, "MPG123 background instance is up\n" );
+						addMessage(  1, "MPG123 background instance is up" );
 						break;
 					case 'E':
 						fail( F_FAIL, "ERROR: %s\nIndex: %i\nName: %s\nPath: %s", line,
@@ -481,33 +450,34 @@ void *reader( void *cont ) {
 							  control->current->path );
 						break;
 					case 'F':
-						if( ( key > 1 ) && ( outvol > 0 ) ) {
+						if( outvol > 0 ) {
 							outvol--;
 							snprintf( line, MAXPATHLEN, "volume %i\n", outvol );
-							write( control->p_command[fdset?0:1][1], line, strlen( line ) );
+							write( p_command[fdset?0:1][1], line, strlen( line ) );
 						}
 						break;
 					}
 				}
 				else {
-					printver( 1, "OFF123: %s\n", line );
+					addMessage(  1, "OFF123: %s", line );
 				}
             }
         }
 
         /* Interpret mpg123 output and ignore invalid lines */
-        if( FD_ISSET( control->p_status[fdset][0], &fds ) &&
-                ( 3 < readline( line, 512, control->p_status[fdset][0] ) ) ) {
+        if( FD_ISSET( p_status[fdset][0], &fds ) &&
+                ( 3 < readline( line, 512, p_status[fdset][0] ) ) ) {
         	if( '@' == line[0] ) {
-        		/* Don't print volume and progress messages */
-        		if( ( 'F' != line[1] ) && ( 'V' != line[1] ) ) {
-        			printver( 2, "P+ %s\n", line );
+        		/* Don't print volume, progress and MP3Tag messages */
+        		if( ( 'F' != line[1] ) && ( 'V' != line[1] ) && ( 'I' != line[1] ) ) {
+        			addMessage( 2, "P+ %s", line );
         		}
                 switch ( line[1] ) {
-                    int cmd=0, rem=0;
+                    int cmd;
+					float rem;
 
                 case 'R': /* startup */
-                    printver( 1, "MPG123 foreground instance is up\n" );
+                    addMessage(  1, "MPG123 foreground instance is up" );
                     break;
 
                 case 'I': /* ID3 info */
@@ -523,7 +493,7 @@ void *reader( void *cont ) {
                                 fail( F_FAIL, "Messed up playlist!" );
                             }
 
-                            printver( 3, "%s\n", a );
+                            addMessage( 3, "%s", a );
                             a = a + 13;
                             *strchr( a, '\'' ) = '\0';
                             strncpy( control->current->plnext->display, control->current->display, MAXPATHLEN );
@@ -539,10 +509,6 @@ void *reader( void *cont ) {
                                 strip( control->current->title, a, NAMELEN );
                             }
                         }
-                    }
-                    /* standard mpg123 info */
-                    else if ( strstr( line, "ID3" ) != NULL ) {
-                        /* ignored */
                     }
 
                     break;
@@ -566,7 +532,7 @@ void *reader( void *cont ) {
                      * rem = seconds left (float)
                      */
                 	a=strrchr( line, ' ' );
-                    rem=atoi( a );
+                    rem=strtof( a, NULL );
                     *a=0;
                     a=strrchr( line, ' ' );
                     intime=atoi( a );
@@ -580,7 +546,7 @@ void *reader( void *cont ) {
                     /* file play */
                     if( control->playstream == 0 ) {
                         control->percent=( 100*intime )/( rem+intime );
-                        sprintf( control->remtime, "%02i:%02i", rem/60, rem%60 );
+                        sprintf( control->remtime, "%02i:%02i", (int)rem/60, (int)rem%60 );
 
                         if( rem <= fade ) {
                             /* should the playcount be increased? */
@@ -597,16 +563,16 @@ void *reader( void *cont ) {
                                 	fdset=fdset?0:1;
                                 	invol=0;
                                 	outvol=100;
-                                	write( control->p_command[fdset][1], "volume 0\n", 9 );
+                                	write( p_command[fdset][1], "volume 0\n", 9 );
                                 }
-                                sendplay( fdset, control );
+                                sendplay( p_command[fdset][1], control );
                             }
                         }
 
                         if( invol < 100 ) {
                             invol++;
                             snprintf( line, MAXPATHLEN, "volume %i\n", invol );
-                            write( control->p_command[fdset][1], line, strlen( line ) );
+                            write( p_command[fdset][1], line, strlen( line ) );
                         }
 
                     }
@@ -621,7 +587,7 @@ void *reader( void *cont ) {
                     case 0: /* STOP */
                     	/* player was not yet fully initialized, start again */
                     	if( control->status != mpc_play ) {
-                			sendplay( fdset, control );
+                			sendplay( p_command[fdset][1], control );
                     	}
                         /* should the playcount be increased? */
                     	else if( control->playstream == 0 ) {
@@ -640,7 +606,7 @@ void *reader( void *cont ) {
 								}
 
 								control->current=next;
-								sendplay( fdset, control );
+								sendplay( p_command[fdset][1], control );
 							}
 
 							order=1;
@@ -656,13 +622,13 @@ void *reader( void *cont ) {
 
                     case 2:  /* PLAY */
                     	if( control->status == mpc_start ) {
-                        	printver( 2, "Playing profile #%i\n", control->active );
+                        	addMessage(  2, "Playing profile #%i", control->active );
                     	}
                     	control->status=mpc_play;
                         break;
 
                     default:
-                        fail( F_WARN, "Unknown status %i!\n%s", cmd, line );
+                        addMessage( 0, "Unknown status %i!\n%s", cmd, line );
                         break;
                     }
 
@@ -681,16 +647,16 @@ void *reader( void *cont ) {
                     break;
 
                 default:
-                    fail( F_WARN, "Warning!\n%s", line );
+                    addMessage( 0, "Warning!\n%s", line );
                     break;
                 } /* case line[1] */
             } /* if line starts with '@' */
             else {
-            	printver(1, "MPG123: %s\n", line );
-            	/* Ignore other mpg123 output */
+            	addMessage( 0, "MPG123: %s", line );
             }
         } /* fgets() > 0 */
 
+        /* notify UI that something has changed */
         if( redraw ) {
             updateUI( control );
         }
@@ -698,30 +664,30 @@ void *reader( void *cont ) {
         pthread_mutex_trylock( &cmdlock );
 
         if( control->command != mpc_idle ) {
-        	printver( 2, "MPC %s\n", mpc_command[control->command] );
+        	addMessage(  2, "MPC %s", mpcString(control->command) );
         }
         switch( control->command ) {
         case mpc_start:
 			control->current = control->root;
         	if( control->status == mpc_start ) {
-                write( control->p_command[fdset][1], "STOP\n", 6 );
+                write( p_command[fdset][1], "STOP\n", 6 );
         	}
         	else {
 				control->status=mpc_start;
-				sendplay( fdset, control );
+				sendplay( p_command[fdset][1], control );
         	}
             break;
 
         case mpc_play:
         	if( control->status != mpc_start ) {
-        		write( control->p_command[fdset][1], "PAUSE\n", 7 );
+        		write( p_command[fdset][1], "PAUSE\n", 7 );
         		control->status=( mpc_play == control->status )?mpc_idle:mpc_play;
         	}
             break;
 
         case mpc_prev:
             order=-1;
-            write( control->p_command[fdset][1], "STOP\n", 6 );
+            write( p_command[fdset][1], "STOP\n", 6 );
             break;
 
         case mpc_next:
@@ -733,100 +699,100 @@ void *reader( void *cont ) {
                 /* updateCurrent( control ); - done in STOP handling */
             }
 
-            write( control->p_command[fdset][1], "STOP\n", 6 );
+            write( p_command[fdset][1], "STOP\n", 6 );
             break;
 
         case mpc_doublets:
-            write( control->p_command[fdset][1], "STOP\n", 6 );
+            write( p_command[fdset][1], "STOP\n", 6 );
             progressStart( "Filesystem Cleanup" );
 
-            progressLog( "Checking for doubles..\n" );
+            addMessage( 0, "Checking for doubles.." );
             i=dbNameCheck( control->dbname );
             if( i > 0 ) {
-            	progressLog( "Deleted %i titles\n", i );
-                progressLog( "Restarting player..\n" );
+            	addMessage( 0, "Deleted %i titles", i );
+                addMessage( 0, "Restarting player.." );
                 setProfile( control );
                 control->current = control->root;
             }
             else {
-            	progressLog( "No titles deleted\n" );
+            	addMessage( 0, "No titles deleted" );
             }
 
             progressEnd( "Finished Cleanup." );
-            sendplay( fdset, control );
+            sendplay( p_command[fdset][1], control );
 
             break;
 
         case mpc_dbclean:
             order=0;
-            write( control->p_command[fdset][1], "STOP\n", 6 );
+            write( p_command[fdset][1], "STOP\n", 6 );
             progressStart( "Database Cleanup" );
 
 
-            progressLog( "Checking for deleted titles..\n" );
+            addMessage( 0, "Checking for deleted titles.." );
             i=dbCheckExist( control->dbname );
 
             if( i > 0 ) {
-                progressLog( "Removed %i titles\n", i );
+                addMessage( 0, "Removed %i titles", i );
                 order=1;
             }
             else {
-                progressLog( "No titles removed\n" );
+                addMessage( 0, "No titles removed" );
             }
 
-            progressLog( "Checking for new titles..\n" );
+            addMessage( 0, "Checking for new titles.." );
             i=dbAddTitles( control->dbname, control->musicdir );
 
             if( i > 0 ) {
-                progressLog( "Added %i new titles\n", i );
+                addMessage( 0, "Added %i new titles", i );
                 order=1;
             }
             else {
-                progressLog( "No titles to be added\n" );
+                addMessage( 0, "No titles to be added" );
             }
 
             if( 1 == order ) {
-                progressLog( "Restarting player..\n" );
+                addMessage( 0, "Restarting player.." );
                 setProfile( control );
                 control->current = control->root;
             }
 
             progressEnd( "Finished Cleanup." );
-            sendplay( fdset, control );
+            sendplay( p_command[fdset][1], control );
             break;
 
         case mpc_stop:
             order=0;
-            write( control->p_command[fdset][1], "STOP\n", 6 );
+            write( p_command[fdset][1], "STOP\n", 6 );
             /* control->status=mpc_idle; */
             break;
 
         case mpc_dnptitle:
             addToFile( control->dnpname, control->current->display, "d=" );
             control->current=removeByPattern( control->current, "d=" );
-            order=1;
-            write( control->p_command[fdset][1], "STOP\n", 6 );
+            order=0;
+            write( p_command[fdset][1], "STOP\n", 6 );
             break;
 
         case mpc_dnpalbum:
             addToFile( control->dnpname, control->current->album, "l=" );
             control->current=removeByPattern( control->current, "l=" );
-            order=1;
-            write( control->p_command[fdset][1], "STOP\n", 6 );
+            order=0;
+            write( p_command[fdset][1], "STOP\n", 6 );
             break;
 
         case mpc_dnpartist:
             addToFile( control->dnpname, control->current->artist, "a=" );
             control->current=removeByPattern( control->current, "a=" );
-            order=1;
-            write( control->p_command[fdset][1], "STOP\n", 6 );
+            order=0;
+            write( p_command[fdset][1], "STOP\n", 6 );
             break;
 
         case mpc_dnpgenre:
             addToFile( control->dnpname, control->current->genre, "g*" );
             control->current=removeByPattern( control->current, "g*" );
-            order=1;
-            write( control->p_command[fdset][1], "STOP\n", 6 );
+            order=0;
+            write( p_command[fdset][1], "STOP\n", 6 );
             break;
 
         case mpc_favtitle:
@@ -845,36 +811,54 @@ void *reader( void *cont ) {
             break;
 
         case mpc_repl:
-            write( control->p_command[fdset][1], "JUMP 0\n", 8 );
+            write( p_command[fdset][1], "JUMP 0\n", 8 );
             break;
 
+        case mpc_QUIT:
         case mpc_quit:
             control->status=mpc_quit;
-        	if( control->active != 0 ) {
-        		writeConfig( control );
+        	if( control->changed != 0 ) {
+        		writeConfig( NULL );
         	}
-            gtk_main_quit();
+            /* The player does not know about the main App so anything setting mcp_quit
+             * MUST make sure that the main app terminates as well ! */
             break;
 
         case mpc_profile:
-            write( control->p_command[fdset][1], "STOP\n", 6 );
+            write( p_command[fdset][1], "STOP\n", 6 );
             control->status=mpc_idle;
             if( control->dbname[0] == 0 ) {
             	i=control->active;
-            	readConfig( control );
+            	readConfig( );
             	control->active=i;
             }
             setProfile( control );
             control->current = control->root;
-            sendplay( fdset, control );
+            sendplay( p_command[fdset][1], control );
             break;
 
         case mpc_shuffle:
             control->root=shuffleTitles(control->root);
             control->current=control->root;
 			control->status=mpc_start;
-			sendplay( fdset, control );
+			sendplay( p_command[fdset][1], control );
         	break;
+
+        case mpc_ivol:
+        	adjustVolume( +VOLSTEP );
+        	break;
+
+        case mpc_dvol:
+        	adjustVolume( -VOLSTEP );
+        	break;
+
+        case mpc_bskip:
+            write( p_command[fdset][1], "JUMP -64\n", 10 );
+            break;
+
+        case mpc_fskip:
+            write( p_command[fdset][1], "JUMP +64\n", 10 );
+            break;
 
         case mpc_idle:
             /* do null */
@@ -887,7 +871,11 @@ void *reader( void *cont ) {
     }
     while ( control->status != mpc_quit );
 
-    printver( 2, "Reader stopped\n" );
+    for( i=0; i <= control->fade; i++ ) {
+    	kill( pid[i], SIGTERM );
+    }
+
+    addMessage( 2, "Reader stopped" );
 
     return NULL;
 }

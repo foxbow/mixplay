@@ -1,27 +1,24 @@
-#include "player.h"
-#include "gladeutils.h"
 #include <string.h>
 #include <stdlib.h>
+
+#include "gladeutils.h"
+#include "player.h"
 
 /*
  * mutex to block simultaneous access to dialog functions
  */
-static pthread_mutex_t msglock=PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t gmsglock=PTHREAD_MUTEX_INITIALIZER;
 
-/*
- * Global mixplay control and data structure.
- */
-extern struct mpcontrol_t *mpcontrol;
 
 static int g_activity( void *text ) {
-    if ( mpcontrol->widgets->mp_popup != NULL ) {
-        gtk_window_set_title( GTK_WINDOW( mpcontrol->widgets->mp_popup ), ( char * )text );
-        gtk_widget_queue_draw( mpcontrol->widgets->mp_popup );
+    if ( MP_GLDATA->widgets->mp_popup != NULL ) {
+        gtk_window_set_title( GTK_WINDOW( MP_GLDATA->widgets->mp_popup ), ( char * )text );
+        gtk_widget_queue_draw( MP_GLDATA->widgets->mp_popup );
     }
-    else if( mpcontrol->widgets->album_current != NULL ) {
-        gtk_label_set_text( GTK_LABEL( mpcontrol->widgets->album_current ),
+    else if( MP_GLDATA->widgets->album_current != NULL ) {
+        gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->album_current ),
                             text );
-        gtk_widget_queue_draw( mpcontrol->widgets->mixplay_main );
+        gtk_widget_queue_draw( MP_GLDATA->widgets->mixplay_main );
     }
 
     free( text );
@@ -47,22 +44,12 @@ void activity( const char *msg, ... ) {
         vsprintf( text, msg, args );
         va_end( args );
         snprintf( line, NAMELEN, "%s %c", text, roller[pos] );
-        gdk_threads_add_idle( g_activity, line );
+        if( getConfig()->inUI ) {
+        	gdk_threads_add_idle( g_activity, line );
+        }
     }
 
     _ftrpos=( _ftrpos+1 )%400;
-}
-
-static int g_warn( void *line ) {
-    GtkWidget *dialog;
-
-    dialog = gtk_message_dialog_new ( GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
-                                      GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_WARNING, GTK_BUTTONS_CLOSE,
-                                      "%s", (char *)line );
-    gtk_dialog_run ( GTK_DIALOG ( dialog ) );
-	gtk_widget_destroy ( dialog );
-	free(line);
-	return 0;
 }
 
 /*
@@ -75,80 +62,32 @@ void fail( int error, const char* msg, ... ) {
     char *line;
     GtkWidget *dialog;
 
+	setCommand( mpc_quit );
+
     line=falloc( 1024, sizeof(char) );
 
     va_start( args, msg );
     vsnprintf( line, 1024, msg, args );
     va_end( args );
 
-    if( F_WARN == error ) {
-        fprintf( stderr, "WARN: %s\n", line );
-        gdk_threads_add_idle( g_warn, line );
-        return;
-    }
-    else {
-        fprintf( stderr, "FAIL: %s\n", line );
-        if( F_FAIL == error ) {
-        	dialog = gtk_message_dialog_new ( GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
-                                          GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
-                                          "FAIL: %s", line );
-        }
-        else {
-        	dialog = gtk_message_dialog_new ( GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
-                                          GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
-                                          "%s\nERROR: %i - %s", line, abs( error ), strerror( abs( error ) ) );
-        }
+	fprintf( stderr, "FAIL: %s\n", line );
+	if( getConfig()->inUI ) {
+		if( F_FAIL == error ) {
+			dialog = gtk_message_dialog_new ( GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
+										  GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
+										  "FAIL: %s", line );
+		}
+		else {
+			dialog = gtk_message_dialog_new ( GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
+										  GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_ERROR, GTK_BUTTONS_CLOSE,
+										  "%s\nERROR: %i - %s", line, abs( error ), strerror( abs( error ) ) );
+		}
 
-        gtk_dialog_run ( GTK_DIALOG ( dialog ) );
-        setCommand(mpcontrol, mpc_quit );
-    }
+		gtk_dialog_run ( GTK_DIALOG ( dialog ) );
+	    gtk_main_quit();
+	}
 
     return;
-}
-
-/**
- * actual gtk code for printver
- * is added as an idle thread to the main thread
- */
-static int g_progressLog( void *line ) {
-    pthread_mutex_lock( &msglock );
-	scrollAdd( mpcontrol->log, line, MP_LOGLEN );
-	if( NULL != mpcontrol->widgets->mp_popup ) {
-		gtk_message_dialog_format_secondary_text( GTK_MESSAGE_DIALOG( mpcontrol->widgets->mp_popup ),
-				"%s", mpcontrol->log );
-		gtk_widget_queue_draw( mpcontrol->widgets->mp_popup );
-	}
-	else if( mpcontrol->status != mpc_quit ) {
-		fail( F_WARN, "No log window open for:\n%s", line );
-	}
-    free( line );
-    pthread_mutex_unlock( &msglock );
-
-    return 0;
-}
-
-/**
- * print the given message when the verbosity is at
- * least vl
- *
- * kind of threadsafe to keep messages in order and to avoid messing up the log buffer
- */
-void printver( int vl, const char *msg, ... ) {
-    va_list args;
-    char *line;
-    line=falloc( 512, sizeof( char ) );
-
-    va_start( args, msg );
-    vsnprintf( line, 512, msg, args );
-    va_end( args );
-
-    if( vl <= mpcontrol->debug ) {
-        gdk_threads_add_idle( g_progressLog, line );
-    }
-    else if( vl <= getVerbosity() ) {
-        fprintf( stderr, "%i: %s", vl, line );
-        free( line );
-    }
 }
 
 /**
@@ -156,39 +95,37 @@ void printver( int vl, const char *msg, ... ) {
  */
 static void cb_progressClose( GtkDialog *dialog, gint res, gpointer data ) {
     /* make sure that nothing is added while we close the dialog */
-    pthread_mutex_lock( &msglock );
+    pthread_mutex_lock( &gmsglock );
     gtk_widget_destroy( GTK_WIDGET( dialog ) );
-    mpcontrol->widgets->mp_popup=NULL;
-    mpcontrol->log[0]='\0';
-    pthread_mutex_unlock( &msglock );
+    MP_GLDATA->widgets->mp_popup=NULL;
+    msgBuffClear( MP_GLDATA->msgbuff );
+    pthread_mutex_unlock( &gmsglock );
 }
 
 /**
- * actual gtk code for prgressOpen
+ * actual gtk code for progressOpen
  * is added as an idle thread to the main thread
  */
-static int g_progressStart( void *line ) {
-    if( NULL == mpcontrol->widgets->mp_popup ) {
-        mpcontrol->widgets->mp_popup = gtk_message_dialog_new ( GTK_WINDOW( mpcontrol->widgets->mixplay_main ),
+static int g_progressStart( void *title ) {
+    if( NULL == MP_GLDATA->widgets->mp_popup ) {
+        MP_GLDATA->widgets->mp_popup = gtk_message_dialog_new ( GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
                                        GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_INFO, GTK_BUTTONS_NONE,
-                                       "%s", ( char * )line );
-        gtk_dialog_add_button( GTK_DIALOG( mpcontrol->widgets->mp_popup ), "OK", 1 );
-        g_signal_connect_swapped ( mpcontrol->widgets->mp_popup, "response",
+                                       "%s", ( char * )title );
+        gtk_dialog_add_button( GTK_DIALOG( MP_GLDATA->widgets->mp_popup ), "OK", 1 );
+        g_signal_connect_swapped ( MP_GLDATA->widgets->mp_popup, "response",
                                    G_CALLBACK( cb_progressClose ),
-                                   mpcontrol->widgets->mp_popup );
+                                   MP_GLDATA->widgets->mp_popup );
     }
-    gtk_widget_set_sensitive( mpcontrol->widgets->mp_popup, FALSE );
-    gtk_widget_show_all( mpcontrol->widgets->mp_popup );
-
-    free( line );
+    gtk_widget_set_sensitive( MP_GLDATA->widgets->mp_popup, FALSE );
+    gtk_widget_show_all( MP_GLDATA->widgets->mp_popup );
+    free( title );
     return 0;
 }
 
 /**
  * Opens an info requester
- * will be ignored if an info requester is already open
  */
-void progressStart( const char *msg, ... ) {
+void progressStart( char *msg, ... ) {
     va_list args;
     char *line;
     line=falloc( 512, sizeof( char ) );
@@ -196,53 +133,95 @@ void progressStart( const char *msg, ... ) {
     va_start( args, msg );
     vsnprintf( line, 512, msg, args );
     va_end( args );
-    gdk_threads_add_idle( g_progressStart, line );
 
-    while ( gtk_events_pending () ) {
-        gtk_main_iteration ();
+    if( getConfig()->inUI ) {
+		gdk_threads_add_idle( g_progressStart, line );
+
+		while ( gtk_events_pending () ) {
+			gtk_main_iteration ();
+		}
     }
-
+    else {
+        addMessage( 0, line );
+        free( line );
+    }
 }
 
 /**
- * Standard progress logging function
- * this is just another name for printver() and defined in gladeutils.h
- * just mentioned here for clarity
+ * pops up a requester to show a message
+ * Usually called from within an ProgressStart() ProgressEnd() bracket
+ * Can be called as is and just pops up a closeable requester
  */
-/* #define progressLog( ... ) printver( 0, __VA_ARGS__ ) */
+static int g_progressLog( void *line ) {
+    char *msg;
+    char *title=NULL;
+
+    pthread_mutex_lock( &gmsglock );
+    msgBuffAdd( MP_GLDATA->msgbuff, line);
+    msg=msgBuffAll( MP_GLDATA->msgbuff );
+
+    if( NULL == MP_GLDATA->widgets->mp_popup ) {
+    	/* The app is cleaning up but has not yet left the main loop */
+    	if( getConfig()->status == mpc_quit ) {
+    			fprintf( stderr, "** %s\n", (char *)line );
+    	}
+    	else {
+    		/* Use a temporary string as g_progressStart free()s the parameter! */
+    	    title=falloc( strlen("Info:")+1, sizeof( char ) );
+    	    strcpy( title, "Info:" );
+    		g_progressStart( title );
+    	    gtk_widget_set_sensitive( MP_GLDATA->widgets->mp_popup, TRUE );
+    	}
+    }
+
+    if( NULL != MP_GLDATA->widgets->mp_popup ) {
+    	gtk_message_dialog_format_secondary_text( GTK_MESSAGE_DIALOG( MP_GLDATA->widgets->mp_popup ),
+    			"%s", msg );
+    	gtk_widget_queue_draw( MP_GLDATA->widgets->mp_popup );
+    }
+
+    free( msg );
+    pthread_mutex_unlock( &gmsglock );
+
+    return 0;
+}
 
 /**
  * actual gtk code for progressDone
  * is added as an idle thread to the main thread
  */
-static int g_progressEnd( void *line ) {
-    gtk_widget_set_sensitive( mpcontrol->widgets->mp_popup, TRUE );
-    return g_progressLog( line );
+static int g_progressEnd( void *data ) {
+    gtk_widget_set_sensitive( MP_GLDATA->widgets->mp_popup, TRUE );
+    return 0;
 }
 
 /**
  * enables closing of the info requester
  */
-void progressEnd( const char *msg ) {
+void progressEnd( char *msg ) {
 	char *line;
 
-	if( NULL == mpcontrol->widgets->mp_popup ) {
-        fail( F_WARN, "No progress request open!" );
+	if( NULL == MP_GLDATA->widgets->mp_popup ) {
+        addMessage( 0, "No progress request open!" );
     }
 
 	line=falloc( 512, sizeof( char ) );
 
     if( NULL == msg ) {
-        fail( F_WARN, "progressEnd() called with ZERO!" );
+        addMessage( 0, "progressEnd() called with ZERO!" );
     	strncpy( line, "Done.\n", 512 );
     }
     else {
     	strncpy( line, msg, 512 );
     }
-  	gdk_threads_add_idle( g_progressEnd, line );
+	addMessage( 0, line );
+	free( line );
+    if( getConfig()->inUI ) {
+		gdk_threads_add_idle( g_progressEnd, NULL );
 
-    while ( gtk_events_pending () ) {
-        gtk_main_iteration ();
+		while ( gtk_events_pending () ) {
+			gtk_main_iteration ();
+		}
     }
 }
 
@@ -279,12 +258,12 @@ static int g_updateUI( void *data ) {
     struct	mpcontrol_t *control;
     struct entry_t *runner;
     int i=0;
-    char	buff[MAXPATHLEN];
+    char	buff[2*MAXPATHLEN];
     gboolean	usedb;
     control=( struct mpcontrol_t* )data;
 
     if( mpc_quit == control->command ) {
-        printver( 2, "Already closing..\n" );
+        addMessage( 2, "Already closing.." );
         return 0;
     }
 
@@ -293,97 +272,109 @@ static int g_updateUI( void *data ) {
     	return 0;
     }
 
-    if( control->widgets->title_current == NULL ) {
-        printver( 2, "No title widget yet..\n" );
+    if( MP_GLDATA->widgets->title_current == NULL ) {
+        addMessage( 2, "No title widget yet.." );
         return 0;
     }
 
     /* these don't make sense when a stream is played */
-    gtk_widget_set_visible( control->widgets->button_next, !( control->playstream ) );
-    gtk_widget_set_sensitive( control->widgets->button_prev, !( control->playstream ) );
-    gtk_widget_set_visible( control->widgets->progress, !( control->playstream ) );
-    gtk_widget_set_visible( control->widgets->played, !( control->playstream ) );
-    gtk_widget_set_visible( control->widgets->remain, !( control->playstream ) );
+    gtk_widget_set_visible( MP_GLDATA->widgets->button_next, !(control->playstream ) );
+    gtk_widget_set_sensitive( MP_GLDATA->widgets->button_prev, !( control->playstream ) );
+    gtk_widget_set_visible( MP_GLDATA->widgets->progress, !( control->playstream ) );
+    gtk_widget_set_visible( MP_GLDATA->widgets->played, !( control->playstream ) );
+    gtk_widget_set_visible( MP_GLDATA->widgets->remain, !( control->playstream ) );
+
+    /* do we have volume control? */
+    gtk_widget_set_visible( MP_GLDATA->widgets->volctl, !(control->volume == -1) );
 
     if( ( NULL != control->current ) && ( 0 != strlen( control->current->path ) ) ) {
-        usedb=( control->root->key )?TRUE:FALSE;
+        usedb=( control->root->key || control->remote )?TRUE:FALSE;
         /* These depend on a database */
-        gtk_widget_set_visible( control->widgets->button_fav, usedb );
+        gtk_widget_set_visible( MP_GLDATA->widgets->button_fav, usedb );
 
-        gtk_label_set_text( GTK_LABEL( control->widgets->title_current ),
-                            control->current->title );
+		gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->title_current ),
+								control->current->title );
 
-        if( mpcontrol->root->key != 0  ) {
-        	infoLine( buff, mpcontrol->current->plprev, MAXPATHLEN );
-            gtk_widget_set_tooltip_text( mpcontrol->widgets->button_prev, buff );
-        	infoLine( buff, mpcontrol->current, MAXPATHLEN );
-            gtk_widget_set_tooltip_text( mpcontrol->widgets->title_current, buff );
+        if( control->root->key != 0  ) {
+        	infoLine( buff, control->current->plprev, MAXPATHLEN );
+            gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_prev, buff );
+        	infoLine( buff, control->current, MAXPATHLEN );
+            gtk_widget_set_tooltip_text( MP_GLDATA->widgets->title_current, buff );
         }
         else {
-            gtk_widget_set_tooltip_text( mpcontrol->widgets->title_current, mpcontrol->current->path );
-            gtk_widget_set_tooltip_text( mpcontrol->widgets->button_prev, NULL );
+       		gtk_widget_set_tooltip_text( MP_GLDATA->widgets->title_current, control->current->path );
+           	gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_prev, NULL );
         }
 
-        runner=mpcontrol->current->plnext->plnext;
-        while( ( runner != mpcontrol->current ) && i < 5 ) {
-        	if( i == 0 ) {
-        		buff[0]=0;
-        	}
-			else {
+        runner=control->current->plnext->plnext;
+        buff[0]=0;
+        while( ( runner != control->current->plprev ) && i < 5 ) {
+        	if( i > 0 ) {
 				strcat( buff, "\n" );
 			}
 			strcat( buff, runner->display );
 			runner=runner->plnext;
 			i++;
         }
-        gtk_widget_set_tooltip_text( mpcontrol->widgets->button_next, buff );
-
-        gtk_widget_set_sensitive( control->widgets->title_current, ( control->status == mpc_play ) );
-        gtk_label_set_text( GTK_LABEL( control->widgets->artist_current ),
-                            control->current->artist );
-        gtk_label_set_text( GTK_LABEL( control->widgets->album_current ),
-                            control->current->album );
-        gtk_label_set_text( GTK_LABEL( control->widgets->genre_current ),
-                            control->current->genre );
-        setButtonLabel( control->widgets->button_prev, control->current->plprev->display );
-
-        if( mpcontrol->debug > 1 ) {
-            sprintf( buff, "%2i %s", control->current->skipcount, control->current->plnext->display );
-            setButtonLabel( control->widgets->button_next, buff );
+        if( strlen(buff) > 0 ) {
+        	gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_next, buff );
         }
         else {
-            setButtonLabel( control->widgets->button_next, control->current->plnext->display );
+        	gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_next, NULL );
         }
 
-        gtk_widget_set_sensitive( control->widgets->button_fav, ( !( control->current->flags & MP_FAV ) ) );
+        gtk_widget_set_sensitive( MP_GLDATA->widgets->title_current, ( control->status == mpc_play ) );
+		gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->artist_current ),
+							control->current->artist );
+		gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->album_current ),
+							control->current->album );
+		gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->genre_current ),
+							control->current->genre );
+
+        setButtonLabel( MP_GLDATA->widgets->button_prev, control->current->plprev->display );
+
+        if( getDebug() > 1 ) {
+            sprintf( buff, "%2i %s", control->current->skipcount, control->current->plnext->display );
+            setButtonLabel( MP_GLDATA->widgets->button_next, buff );
+        }
+        else {
+            setButtonLabel( MP_GLDATA->widgets->button_next, control->current->plnext->display );
+        }
+
+        gtk_widget_set_sensitive( MP_GLDATA->widgets->button_fav, ( !( control->current->flags & MP_FAV ) ) );
 
         if( 0 == control->active ) {
            	if( control->playstream ) {
-           	    gtk_widget_set_visible( control->widgets->remain, 0 );
-        		setButtonLabel( control->widgets->button_profile, "Add Stream" );
+           	    gtk_widget_set_visible( MP_GLDATA->widgets->remain, 0 );
+        		setButtonLabel( MP_GLDATA->widgets->button_profile, "Add Stream" );
            	}
            	else {
-           	    gtk_widget_set_visible( control->widgets->remain, -1 );
-        		setButtonLabel( control->widgets->button_profile, "Profile.." );
+           	    gtk_widget_set_visible( MP_GLDATA->widgets->remain, -1 );
+        		setButtonLabel( MP_GLDATA->widgets->button_profile, "Profile.." );
            	}
         }
         else {
-    	    gtk_widget_set_visible( control->widgets->remain, -1 );
+    	    gtk_widget_set_visible( MP_GLDATA->widgets->remain, -1 );
     	    snprintf( buff, MAXPATHLEN, "Playing \n%s", (control->active < 0)?control->sname[-control->active-1]:control->profile[control->active-1] );
-        	setButtonLabel( control->widgets->button_profile, buff );
+        	setButtonLabel( MP_GLDATA->widgets->button_profile, buff );
         }
 
-        gtk_window_set_title ( GTK_WINDOW( control->widgets->mixplay_main ),
+        gtk_window_set_title ( GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
                                control->current->display );
     }
 
-
-    gtk_label_set_text( GTK_LABEL( control->widgets->played ),
+    gtk_progress_bar_set_fraction( GTK_PROGRESS_BAR( MP_GLDATA->widgets->volume ),
+                                   control->volume/100.0 );
+    gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->played ),
                         control->playtime );
-    gtk_label_set_text( GTK_LABEL( control->widgets->remain ),
+    gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->remain ),
                         control->remtime );
-    gtk_progress_bar_set_fraction( GTK_PROGRESS_BAR( control->widgets->progress ),
+    gtk_progress_bar_set_fraction( GTK_PROGRESS_BAR( MP_GLDATA->widgets->progress ),
                                    control->percent/100.0 );
+
+    if( getMessage( buff ) > 0 ) {
+    	g_progressLog( buff );
+    }
 
     return 0;
 }
@@ -394,10 +385,12 @@ static int g_updateUI( void *data ) {
  *
  * needed to keep updateUI() GUI independent
  */
-void updateUI( void *control ) {
-    gdk_threads_add_idle( g_updateUI, control );
+void updateUI( mpconfig *control ) {
+	if( control->inUI ) {
+		gdk_threads_add_idle( g_updateUI, control );
 
-    while ( gtk_events_pending () ) {
-        gtk_main_iteration ();
-    }
+		while ( gtk_events_pending () ) {
+			gtk_main_iteration ();
+		}
+	}
 }

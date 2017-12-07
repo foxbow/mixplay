@@ -1,6 +1,8 @@
-# Generated headers
+# Generated headers and dependencies
 gmixplay_app.h
 gmixplay_fs.h
+*.d
+*.Td
 
 # Editor backups
 *~
@@ -13,8 +15,10 @@ language.settings.xml
 
 # Binaries
 bin/mixplay
+bin/mixplayd
 bin/gmixplay
 bin/scanformusic
+bin/cmixplay
 core
 
 # Object files
@@ -49,3 +53,4 @@ core
 
 # Debug files
 *.dSYM/
+
