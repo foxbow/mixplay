@@ -118,7 +118,7 @@ int main( int argc, char **argv ) {
 
     /* parse command line options */
     /* using unsigned char c to work around getopt bug on ARM */
-    while ( ( c = getopt( argc, argv, "vfdFSrh:p:" ) ) != 255 ) {
+    while ( ( c = getopt( argc, argv, "vfldFSrh:p:" ) ) != 255 ) {
         switch ( c ) {
         case 'v': /* increase debug message level to display */
             incVerbosity();

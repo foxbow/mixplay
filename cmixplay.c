@@ -54,37 +54,59 @@ int main( int argc, char **argv ) {
 
     /* parse command line options */
     /* using unsigned char c to work around getopt bug on ARM */
-    while ( ( c = getopt( argc, argv, "dvfFh:p:r" ) ) != 255 ) {
+    while ( ( c = getopt( argc, argv, "vfldFrh:p:" ) ) != 255 ) {
         switch ( c ) {
-        case 'v': /* increase debug message level to display in console output */
+        case 'v': /* increase debug message level to display */
             incVerbosity();
             break;
 
-        case 'd':
-        	incDebug();
+        case 'd': /* increase debug message level to display on console */
+            incDebug();
+            break;
+
+        case 'f': /* single channel - disable fading */
+        	if( config->fade == 1 ) {
+        		config->fade=0;
+        		config->changed=-1;
+        	}
         	break;
 
-        case 'f':
-        	config->fade=0;
-        	break;
-
-        case 'F': /* toggle fading */
-        	config->fade=1;
-        	break;
-
-        case 'p':
-        	config->port=atoi( optarg );
-        	config->remote=1;
-        	break;
-
-        case 'h':
-        	config->host=falloc( strlen(optarg)+1, sizeof( char ) );
-        	strcpy( config->host, optarg );
-        	config->remote=1;
+        case 'F': /* enable fading */
+        	if( config->fade == 0 ) {
+        		config->fade=1;
+        		config->changed=-1;
+        	}
         	break;
 
         case 'r':
-        	config->remote=1;
+        	if( config->remote == 0 ) {
+        		config->remote=1;
+        		config->changed=-1;
+        	}
+        	break;
+
+        case 'l':
+        	if( config->remote == 1 ) {
+        		config->remote=0;
+        		config->changed=-1;
+        	}
+        	break;
+
+        case 'h':
+        	if( strcmp( config->host, optarg ) ) {
+        		config->changed=-1;
+        		config->remote=1;
+        		config->host=falloc( strlen(optarg)+1, sizeof(char) );
+        		strcpy( config->host, optarg );
+        	}
+        	break;
+
+        case 'p':
+        	if( config->port != atoi(optarg) ) {
+				config->changed=-1;
+				config->remote=1;
+				config->port=atoi(optarg);
+        	}
         	break;
         }
     }
@@ -279,6 +301,9 @@ int main( int argc, char **argv ) {
 
     pthread_join( config->rtid, NULL );
 
+    if( config->changed ) {
+    	writeConfig( NULL );
+    }
     freeConfig( );
 
     dbClose( db );

@@ -21,28 +21,22 @@ This is destined to run on a headless box and supply the stereo with a constant 
 * native MP3 streaming (depends on more recent libmp3/libout)
 * serve stream (unlikely but desireable)
 
-## mixplay
-console based based player based on mixplayd but not a front-end.
+## cmixplay
+ncurses based based player
 
 ### Parameters
-* -d <file>  : List of names to exclude [mixplay.dnp]
-* -f <file>  : List of favourites [mixplay.fav]
-* -s <term>  : add search term (can be used multiple times)
-* -S         : interactive search
-* -R <talgp> : Set range (Title, Artist, aLbum, Genre, Path) [p]
-* -p <file>  : use file as fuzzy playlist (party mode)
-* -m         : disable shuffle mode on playlist
-* -r         : disable repeat mode on playlist
+* -d         : increase debug level
+* -f         : disable fading
+* -F         : enable fading
+* -h <host>  : set hostname for remote play [127.0.0.1]
+* -l         : run in local mode
+* -p <port>  : set port for remote play [2347]
+* -r         : act as client
 * -v         : increase verbosity
-* -V         : print version*
-* -h         : print this help*
-* -C         : clear database and add titles anew *
-* -A         : add new titles to the database *
-* -D         : delete removed titles from the database *
-* -F         : disable crossfading between songs
-* -X         : print some database statistics*
 * [path|URL] : path to the music files [play from db]
-*  * these functions will not start the player
+
+The debug level controls which messages are printed on the console. 
+Verbosity controls the messages shown in the app.
 
 ### Control Keys
 * [SPACE] - toggle pause
@@ -62,12 +56,8 @@ on playlists:
 * f - add to favoutites
 
 ## gmixplay
-glade/gtk version of the player based on mixplayd but not a front-end, used as a lightweight desktop music player.
+glade/gtk version of the player
 
-### Parameters
-* -d         : raise debug level
-* -v         : increase verbosity
-* -h         : print this help*
-* -F         : disable crossfading between songs
-* [path|URL] : path to the music files [play from db]
+### Additional Parameters
+* -S         : run in fullscreen mode
 
