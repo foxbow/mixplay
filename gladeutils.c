@@ -100,6 +100,9 @@ static void cb_progressClose( GtkDialog *dialog, gint res, gpointer data ) {
     MP_GLDATA->widgets->mp_popup=NULL;
     msgBuffClear( MP_GLDATA->msgbuff );
     pthread_mutex_unlock( &gmsglock );
+    if( getConfig()->status == mpc_quit ) {
+    	gtk_main_quit();
+    }
 }
 
 /**

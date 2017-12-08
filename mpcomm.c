@@ -7,6 +7,7 @@
 
 #include "mpcomm.h"
 #include "utils.h"
+#include "json.h"
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -17,6 +18,9 @@
 
 static pthread_mutex_t cmdlock=PTHREAD_MUTEX_INITIALIZER;
 
+
+
+
 /*
  * sets the command to be sent to mixplayd
  */
@@ -25,140 +29,126 @@ void setSCommand( mpcmd cmd ) {
     getConfig()->command=cmd;
 }
 
+static jsonObject *appTitle( jsonObject *jo, const char *key, const struct entry_t *title ) {
+	jsonObject *val=NULL;
 
-/*
- * helperfunctions for de/serializing config and info
- */
-static size_t appStr( char *start, const char *text ) {
-	int pos;
-	strcat( start, text );
-	pos=strlen(text)+1;
-	start[pos]=0;
-	return pos;
-}
-
-static size_t getStr( const char *pos, char *buff ) {
-	strcpy( buff, pos );
-	return( strlen(buff)+1 );
-}
-
-static size_t getInt( const char* pos, int *val ) {
-	size_t len=0;
-	for( len=0; len < sizeof( int ); len++ ) {
-		((char *)val)[len]=*(pos+len);
-		len++;
-	}
-	return len;
-
-}
-
-static size_t appInt( char *start, const int val ) {
-	size_t len;
-	for( len=0; len < sizeof( int ); len++ ) {
-		*(start+len)=((char *)&val)[len];
-		len++;
-	}
-	return len;
-}
-
-static size_t appTitle( char *buff, const struct entry_t *title ) {
-	size_t len=0;
 	if( title != NULL ) {
-		len+=appStr( buff+len, title->artist );
-		len+=appStr( buff+len, title->album );
-		len+=appStr( buff+len, title->title );
-		len+=appInt( buff+len, title->flags );
+		val=jsonAddStr( val, "artist", title->artist );
+		jsonAddStr( val, "album", title->album );
+		jsonAddStr( val, "title", title->title );
+		jsonAddInt( val, "flags", title->flags );
 	}
 	else {
-		len+=appStr( buff+len, "---" );
-		len+=appStr( buff+len, "---" );
-		len+=appStr( buff+len, "---" );
-		len+=appInt( buff+len, 0 );
+		val=jsonAddStr( val, "artist", "---" );
+		jsonAddStr( val, ",album", "---" );
+		jsonAddStr( val, ",title", "---" );
+		jsonAddInt( val, ",flags", 0 );
 	}
-	return len;
+	return jsonAddObj(jo, key, val);
 }
 
-static size_t getTitle( const char *buff, struct entry_t *title ) {
-	size_t len=0;
-	len+=getStr( buff+len, title->artist );
-	len+=getStr( buff+len, title->album );
-	len+=getStr( buff+len, title->title );
-	len+=getInt( buff+len, (int*)&title->flags );
-	sprintf( title->display, "%s - %s", title->artist, title->title );
+static void getTitle( jsonObject *jo, const char *key, struct entry_t *title ) {
+	jsonObject *to;
+	to=jsonGetObj( jo, key);
+
+	if( to != NULL ) {
+		jsonCopyStr(to, "artist", title->artist);
+		jsonCopyStr(to, "album", title->album);
+		jsonCopyStr(to, "title", title->title);
+		title->flags=jsonGetInt( to, "flags" );
+		sprintf( title->display, "%s - %s", title->artist, title->title );
+	}
+	else {
+		strcpy( title->display, "No title found.." );
+	}
 	strcpy( title->path, "[mixplayd]" );
-	return len;
 }
 
-/*
+/**
  * put data to be sent over into the buff
- */
+**/
 size_t serialize( const mpconfig *data, char *buff, long *count ) {
-	size_t len=0;
+	jsonObject *joroot=NULL;
+	jsonObject *jo=NULL;
 
 	memset( buff, 0, MP_MAXCOMLEN );
 
-	len+=appInt( buff+len,  MP_COMVER );
+	jo=jsonAddInt( jo, "version", MP_COMVER );
+	joroot=jo;
 	if( data->current != NULL ) {
-		len+=appTitle( buff+len, data->current->plprev );
-		len+=appTitle( buff+len, data->current );
-		len+=appTitle( buff+len, data->current->plnext );
+		jo=appTitle( jo, "prev", data->current->plprev );
+		jo=appTitle( jo, "current", data->current );
+		jo=appTitle( jo, "next", data->current->plnext );
 	}
 	else {
-		len+=appTitle( buff+len, NULL );
-		len+=appTitle( buff+len, NULL );
-		len+=appTitle( buff+len, NULL );
+		jo=appTitle( jo, "prev", NULL );
+		jo=appTitle( jo, "current", NULL );
+		jo=appTitle( jo, "next", NULL );
 	}
-	len+=appStr( buff+len, data->playtime );
-	len+=appStr( buff+len, data->remtime );
-	len+=appInt( buff+len, data->percent );
-	len+=appInt( buff+len, data->volume );
-	len+=appInt( buff+len, data->status );
-	len+=appInt( buff+len, data->playstream );
+	jo=jsonAddStr( jo, "playtime", data->playtime );
+	jo=jsonAddStr( jo, "remtime", data->remtime );
+	jo=jsonAddInt( jo, "percent", data->percent );
+	jo=jsonAddInt( jo, "volume", data->volume );
+	jo=jsonAddInt( jo, "status", data->status );
+	jo=jsonAddInt( jo, "playstream", data->playstream );
 	if( *count < data->msg->count ) {
-		len+=appStr( buff+len, msgBuffPeek( data->msg ) );
+		jo=jsonAddStr( jo, "message", msgBuffPeek( data->msg ) );
 		(*count)++;
 	}
 	else {
-		len+=appStr( buff+len, "" );
+		jo=jsonAddStr( jo, "message", "" );
 	}
-	return len;
+
+	jsonWrite(joroot, buff);
+	jsonDiscard( joroot, 1 );
+
+	return strlen(buff);
 }
 
 /*
  * sort data from buff into the current configuration
  */
-size_t deserialize( mpconfig *data, const char *buff ) {
-	size_t pos=0;
+size_t deserialize( mpconfig *data, char *json ) {
 	int ver;
 	char msgline[128];
+	jsonObject *jo;
 
-	pos+=getInt( buff+pos, &ver );
-	if( ver != MP_COMVER ) {
-		fail( F_FAIL, "mixplayd protocol mismatch!\nServer has version %i, we have version %i!", ver, MP_COMVER );
-		return -1;
+	jo=jsonParse( json );
+	if( jo != NULL ) {
+		ver=jsonGetInt(jo, "version" );
+		if( ver != MP_COMVER ) {
+			fail( F_FAIL, "mixplayd protocol mismatch!\nServer has version %i, we have version %i!", ver, MP_COMVER );
+			return -1;
+		}
+		if( data->current == NULL ) {
+			/* dummy path to fill artist, album, title */
+			data->current=insertTitle( data->current, "server/mixplayd/title" );
+			data->root=data->current;
+			addToPL( data->current, data->current );
+			addToPL( insertTitle( data->current, "server/mixplayd/title" ), data->current );
+			addToPL( insertTitle( data->current, "server/mixplayd/title" ), data->current );
+		}
+
+		getTitle( jo, "prev", data->current->plprev );
+		getTitle( jo, "current", data->current );
+		getTitle( jo, "next", data->current->plnext );
+		jsonCopyStr( jo, "playtime", data->playtime );
+		jsonCopyStr( jo, "remtime", data->remtime );
+		data->percent=jsonGetInt( jo, "percent" );
+		data->volume=jsonGetInt( jo, "volume" );
+		data->status=jsonGetInt( jo, "status" );
+		data->playstream=jsonGetInt( jo, "playstream" );
+		jsonCopyStr( jo, "message", msgline );
+		if( strlen( msgline ) > 0  ){
+			addMessage( 0, msgline );
+		}
+		jsonDiscard( jo, 0 );
 	}
-	if( data->current == NULL ) {
-		/* dummy path to fill artist, album, title */
-		data->current=insertTitle( data->current, "server/mixplayd/title" );
-		data->root=data->current;
-		addToPL( data->current, data->current );
-		addToPL( insertTitle( data->current, "server/mixplayd/title" ), data->current );
-		addToPL( insertTitle( data->current, "server/mixplayd/title" ), data->current );
+	else {
+		addMessage( 1, "Recieved no data.." );
 	}
-	pos+=getTitle( buff+pos, data->current->plprev );
-	pos+=getTitle( buff+pos, data->current );
-	pos+=getTitle( buff+pos, data->current->plnext );
-	pos+=getStr( buff+pos, data->playtime );
-	pos+=getStr( buff+pos, data->remtime );
-	pos+=getInt( buff+pos, &data->percent );
-	pos+=getInt( buff+pos, &data->volume );
-	pos+=getInt( buff+pos, &data->status );
-	pos+=getInt( buff+pos, &data->playstream );
-	pos+=getStr( buff+pos, msgline );
-	if( strlen( msgline ) > 0  ){
-		addMessage( 0, msgline );
-	}
-	return pos;
+
+	return 0;
 }
 
 /**

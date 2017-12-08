@@ -6,8 +6,7 @@ CCFLAGS+=-Wall -g -pedantic
 LDFLAGS_GLADE=`pkg-config --libs gtk+-3.0 gmodule-2.0` `pkg-config --cflags --libs x11`
 CCFLAGS_GLADE=$(CCFLAGS) `pkg-config --cflags gtk+-3.0 gmodule-2.0`
 
-OBJS=utils.o musicmgr.o database.o mpgutils.o player.o config.o player.o mpcomm.o 
-DOBJS=mixplayd.o 
+OBJS=utils.o musicmgr.o database.o mpgutils.o player.o config.o player.o mpcomm.o json.o
 NCOBJS=cmixplay.o ncbox.o
 GLOBJS=gladeutils.o gcallbacks.o gmixplay.o  
 LIBS=-lmpg123 -lasound -lpthread
@@ -28,10 +27,10 @@ distclean: clean
 	rm -f *.Td
 	rm -f core
 
-bin/cmixplay: cmixplay.o player.o config.o $(OBJS) $(NCOBJS) 
+bin/cmixplay: cmixplay.o $(OBJS) $(NCOBJS) 
 	$(CC) $^ -o $@ -lncurses $(LIBS)
 
-bin/mixplayd: $(OBJS) $(DOBJS) 
+bin/mixplayd: mixplayd.o $(OBJS) 
 	$(CC) $^ -o $@ $(LIBS)
 
 bin/gmixplay: $(OBJS) $(GLOBJS)
