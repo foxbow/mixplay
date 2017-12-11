@@ -69,12 +69,9 @@ class listener( threading.Thread ):
 if __name__ == '__main__':
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	s.connect(( 'localhost', 2347 ))
-	if s==None:
-		lissy=listener( s )
-		lissy.start()
+	lissy=listener( s )
+	lissy.start()
 #	app.debug = True
-		app.run( port=8080 )
-		lissy.stop()
-	else:
-		print "Cannot connect to mixplayd!"
+	app.run( port=8080 )
+	lissy.stop()
     
