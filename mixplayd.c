@@ -61,7 +61,7 @@ void *clientHandler(void *mainsocket)
     	if( FD_ISSET( sock, &fds ) ) {
 			switch( recv(sock , commdata , MP_MAXCOMLEN , 0) ) {
 			case -1:
-				addMessage( 0, "Read error on socket!\n%s", strerror( errno ) );
+				addMessage( 1, "Read error on socket!\n%s", strerror( errno ) );
 				running=0;
 				break;
 			case 0:
@@ -76,7 +76,7 @@ void *clientHandler(void *mainsocket)
     	if( running && ( config->status != mpc_start ) ) {
 			len=serialize( config, commdata, &curmsg );
 			if( len != send(sock , commdata , len, 0) ) {
-				addMessage( 0, "Send failed!\n%s", strerror( errno ) );
+				addMessage( 1, "Send failed!\n%s", strerror( errno ) );
 			}
     	}
 	}
@@ -235,7 +235,7 @@ int main( int argc, char **argv ) {
         c = sizeof(struct sockaddr_in);
         while( (client_sock = accept(mainsocket, (struct sockaddr *)&client, (socklen_t*)&c)) ) {
         	pthread_t pid;
-            addMessage( 0, "Connection accepted" );
+            addMessage( 1, "Connection accepted" );
 
             new_sock = falloc( sizeof(int), 1 );
             *new_sock = client_sock;
@@ -253,7 +253,7 @@ int main( int argc, char **argv ) {
     }
     control->inUI=0;
 
-    addMessage( 2, "Dropped out of the main loop" );
+    addMessage( 1, "Dropped out of the main loop" );
 
     for( i=0; i <= control->fade; i++ ) {
     	kill( pid[i], SIGTERM );

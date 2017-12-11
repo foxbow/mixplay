@@ -1,0 +1,40 @@
+#body {
+	text-align: center;
+}
+
+#title, #prev, #next {
+	font-size : 150%;
+	padding: 2px;
+	border: 0;
+}
+
+#current {
+	background-color: #ddd;
+	padding-top: 5px;	
+	padding-bottom: 5px;
+	border:black;
+}
+
+#main {
+	text-align: center;
+	background-color: #eee;
+	padding: 5px;
+}
+
+#dnp, #fav {
+	margin-top: 10px;
+	margin-bottom: 10px;
+	font-size : 150%;
+	padding-left: 10px;
+	padding-right: 10px;
+}
+
+#volpack {
+	display: flex;
+}
+
+#volume {
+	padding-left: 20px; 
+	padding-right: 20px; 
+}
+

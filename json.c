@@ -292,65 +292,72 @@ static int jsonFetchObject( char *json, jsonObject **jo ) {
 	return jpos;
 }
 
+static jsonObject *jsonFollowPath( jsonObject *jo, const char *key ) {
+	jsonObject *target=jo;
+	char *path;
+	const char *pos;
+
+	if( strchr( key, '.' ) != NULL ) {
+		path=falloc( strlen( key )+1, sizeof( char ) );
+		strcpy( path, key );
+		strchr( path, '.' )[0]=0;
+		target=jsonFollowPath( jo, path );
+		free( path );
+	}
+
+	pos=strrchr( key, '.' );
+	if( pos == NULL ){
+		pos=key;
+	}
+
+	while( target != NULL ) {
+		if( strcmp( target->key, pos ) == 0 ) {
+			return target;
+		}
+		target=target->next;
+	}
+
+	return target;
+}
+
 int jsonGetInt( jsonObject *jo, const char *key ) {
 	jsonObject *pos=jo;
 
-	while( pos != NULL ) {
-		if( strcmp( pos->key, key ) == 0 ) {
-			if( pos->type == number ) {
-				return atoi( pos->val );
-			}
-			else {
-				fail( F_FAIL, "Value for key %s is not an integer", key );
-			}
-		}
-		pos=pos->next;
+	pos=jsonFollowPath( jo, key );
+	if( ( pos != NULL ) && ( pos->type == number ) ) {
+		return atoi( pos->val );
 	}
 
-	fail( F_FAIL, "Value for key %s is not set", key );
-	return -1;
+	addMessage( 1, "No number value for key %s", key );
+	return 0;
 }
 
-char *jsonGetStr( jsonObject *jo, const char *key ) {
+const char *jsonGetStr( jsonObject *jo, const char *key ) {
 	jsonObject *pos=jo;
 
-	while( pos != NULL ) {
-		if( strcmp( pos->key, key ) == 0 ) {
-			if( pos->type == string ) {
-				return pos->val;
-			}
-			else {
-				fail( F_FAIL, "Value for key %s is not a string", key );
-			}
-		}
-		pos=pos->next;
+	pos=jsonFollowPath( jo, key );
+	if( ( pos != NULL ) && ( pos->type == string ) ) {
+		return pos->val;
 	}
 
-	fail( F_FAIL, "Value for key %s is not set", key );
-	return NULL;
+	addMessage( 1, "No string value for key %s", key );
+	return "";
 }
 
 int jsonCopyStr( jsonObject *jo, const char *key, char *buf ) {
 	strcpy( buf, jsonGetStr(jo, key) );
-	return strlen( buf );
+	return strlen(buf);
 }
 
 jsonObject *jsonGetObj( jsonObject *jo, const char *key ) {
 	jsonObject *pos=jo;
 
-	while( pos != NULL ) {
-		if( strcmp( pos->key, key ) == 0 ) {
-			if( pos->type == object ) {
-				return pos->val;
-			}
-			else {
-				fail( F_FAIL, "Value for key %s is not an object", key );
-			}
-		}
-		pos=pos->next;
+	pos=jsonFollowPath( jo, key );
+	if( ( pos != NULL ) && ( pos->type == object ) ) {
+		return pos->val;
 	}
 
-	fail( F_FAIL, "Value for key %s is not set", key );
+	addMessage( 1, "No number value for key %s", key );
 	return NULL;
 }
 

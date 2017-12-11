@@ -346,8 +346,12 @@ static int g_updateUI( void *data ) {
 
         gtk_widget_set_sensitive( MP_GLDATA->widgets->button_fav, ( !( control->current->flags & MP_FAV ) ) );
 
-        if( 0 == control->active ) {
-           	if( control->playstream ) {
+    	if( 0 != control->remote ) {
+       	    gtk_widget_set_visible( MP_GLDATA->widgets->remain, 0 );
+    		setButtonLabel( MP_GLDATA->widgets->button_profile, control->host );
+    	}
+    	else if( 0 == control->active ) {
+        	if( control->playstream ) {
            	    gtk_widget_set_visible( MP_GLDATA->widgets->remain, 0 );
         		setButtonLabel( MP_GLDATA->widgets->button_profile, "Add Stream" );
            	}
