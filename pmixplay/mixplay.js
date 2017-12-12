@@ -8,6 +8,7 @@
  *  mpc_dnptitle,
  *	mpc_ivol,
  *	mpc_dvol,
+ *  mpc_quit - just terminate pmixplay
  */
 function sendCMD( cmd ) {
 	var xmlhttp=new XMLHttpRequest();
@@ -25,10 +26,6 @@ function setElement( e, val ) {
 	document.getElementById( e ).innerHTML=val;
 }
 
-function setButton( e, val ) {
-	document.getElementById( e ).value=val;
-}
-
 function updateUI( ){
 	var xmlhttp=new XMLHttpRequest();
 	xmlhttp.onreadystatechange=function() {
@@ -43,6 +40,9 @@ function updateUI( ){
 		  			setElement( 'next', data.next.artist+" - "+data.next.title );
 		  			setElement( 'playtime', data.playtime+" / "+data.remtime );
 		  			setElement( 'volume', data.volume+"%" );
+		  			if( data.message != "" ) {
+		  				alert( data.message );
+		  			}
 		  		}
 		  	}
 		  	else if( xmlhttp.status==503 ) {
