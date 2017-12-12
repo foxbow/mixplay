@@ -18,9 +18,6 @@
 
 static pthread_mutex_t cmdlock=PTHREAD_MUTEX_INITIALIZER;
 
-
-
-
 /*
  * sets the command to be sent to mixplayd
  */
@@ -92,11 +89,11 @@ size_t serialize( const mpconfig *data, char *buff, long *count ) {
 	jo=jsonAddInt( jo, "status", data->status );
 	jo=jsonAddInt( jo, "playstream", data->playstream );
 	if( *count < data->msg->count ) {
-		jo=jsonAddStr( jo, "message", msgBuffPeek( data->msg ) );
+		jo=jsonAddStr( jo, "msg", msgBuffPeek( data->msg ) );
 		(*count)++;
 	}
 	else {
-		jo=jsonAddStr( jo, "message", "" );
+		jo=jsonAddStr( jo, "msg", "" );
 	}
 
 	jsonWrite(joroot, buff);
@@ -138,7 +135,7 @@ size_t deserialize( mpconfig *data, char *json ) {
 		data->volume=jsonGetInt( jo, "volume" );
 		data->status=jsonGetInt( jo, "status" );
 		data->playstream=jsonGetInt( jo, "playstream" );
-		jsonCopyStr( jo, "message", msgline );
+		jsonCopyStr( jo, "msg", msgline );
 		if( strlen( msgline ) > 0  ){
 			addMessage( 0, msgline );
 		}

@@ -33,6 +33,11 @@ function updateUI( ){
   			if( xmlhttp.status==200 ) {
 	  			data=JSON.parse(xmlhttp.responseText);
 	  			if( data !== undefined ) {
+	  				if( data.version != 5 ) {
+	  					alert("Version clash, expected 5 and got "+data.version );
+	  					return;
+	  				}
+	  				document.title=data.current.artist+" - "+data.current.title;
 		  			setElement( 'prev', data.prev.artist+" - "+data.prev.title );
 		  			setElement( 'artist', data.current.artist );
 		  			setElement( 'title', data.current.title );
@@ -40,8 +45,14 @@ function updateUI( ){
 		  			setElement( 'next', data.next.artist+" - "+data.next.title );
 		  			setElement( 'playtime', data.playtime+" / "+data.remtime );
 		  			setElement( 'volume', data.volume+"%" );
-		  			if( data.message != "" ) {
-		  				alert( data.message );
+		  			if( data.msg != "" ) {
+		  				alert( data.msg );
+		  			}
+		  			if( data.flags & 1 )  {
+			  			document.getElementById( 'fav' ).disabled=false;
+		  			}
+		  			else {
+			  			document.getElementById( 'fav' ).disabled=true;		  			
 		  			}
 		  		}
 		  	}
@@ -51,7 +62,7 @@ function updateUI( ){
 		  		}
 		  		else{
 		  			alert( "Stopping update.." );
-		  			return
+		  			return;
 		  		}
 		  	}
 		}
