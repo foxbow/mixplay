@@ -1,3 +1,5 @@
+doUpdate=1;
+
 /**
  * used cmd's so far are:
  *  mpc_play,
@@ -34,6 +36,7 @@ function updateUI( ){
 	  			data=JSON.parse(xmlhttp.responseText);
 	  			if( data !== undefined ) {
 	  				if( data.version != 5 ) {
+	  					doUpdate=0;
 	  					alert("Version clash, expected 5 and got "+data.version );
 	  					return;
 	  				}
@@ -62,15 +65,17 @@ function updateUI( ){
 		  		}
 		  		else{
 		  			alert( "Stopping update.." );
-		  			return;
+		  			doUpdate=0;
 		  		}
 		  	}
 		}
 	}
 	
-	xmlhttp.open("GET", "/status", true);
-	xmlhttp.send();
-	setTimeout("updateUI()",1000)
+	if( doUpdate != 0 ) {
+		xmlhttp.open("GET", "/status", true);
+		xmlhttp.send();
+		setTimeout("updateUI()",1000);
+	}
 }
 
 updateUI();
