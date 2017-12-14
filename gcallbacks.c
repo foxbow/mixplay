@@ -251,6 +251,11 @@ void infoStart( GtkButton *button, gpointer data ) {
         if( reply != GTK_RESPONSE_YES ) {
         	return;
         }
+        setCommand( mpc_doublets );
+        break;
+
+    case mpc_QUIT:
+    	setCommand( mpc_quit );
         /* no break */
 
     case mpc_quit:
@@ -258,7 +263,7 @@ void infoStart( GtkButton *button, gpointer data ) {
     	break;
 
     case mpc_dbclean:
-		setCommand( reply );
+		setCommand( mpc_dbclean );
 		break;
     }
 }
