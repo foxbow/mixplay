@@ -286,9 +286,10 @@ void *setProfile( void *data ) {
     }
 
     /* if we're not in player context, start playing automatically */
-    if( pthread_mutex_trylock( &cmdlock ) == 0 ){
+	control->status=mpc_start;
+    if( pthread_mutex_trylock( &cmdlock ) ) {
     	addMessage( 1, "Autoplay" );
-        control->command=mpc_start;
+    	control->command=mpc_start;
     }
 
     if( active != control->active ) {
@@ -586,7 +587,7 @@ void *reader( void *cont ) {
                     switch ( cmd ) {
                     case 0: /* STOP */
                     	/* player was not yet fully initialized, start again */
-                    	if( control->status != mpc_play ) {
+                    	if( control->status == mpc_start ) {
                 			sendplay( p_command[fdset][1], control );
                     	}
                         /* should the playcount be increased? */
@@ -683,6 +684,13 @@ void *reader( void *cont ) {
         		write( p_command[fdset][1], "PAUSE\n", 7 );
         		control->status=( mpc_play == control->status )?mpc_idle:mpc_play;
         	}
+        	else {
+    			control->current = control->root;
+        		if( control->current != NULL ) {
+        			addMessage( 1, "Autoplay.." );
+    				sendplay( p_command[fdset][1], control );
+        		}
+        	}
             break;
 
         case mpc_prev:
@@ -764,7 +772,6 @@ void *reader( void *cont ) {
         case mpc_stop:
             order=0;
             write( p_command[fdset][1], "STOP\n", 6 );
-            /* control->status=mpc_idle; */
             break;
 
         case mpc_dnptitle:
@@ -867,7 +874,6 @@ void *reader( void *cont ) {
 
         control->command=mpc_idle;
         pthread_mutex_unlock( &cmdlock );
-
     }
     while ( control->status != mpc_quit );
 

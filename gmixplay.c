@@ -134,47 +134,47 @@ int main( int argc, char **argv ) {
 
         case 'f': /* single channel - disable fading */
         	if( control->fade == 1 ) {
-        		control->fade=0;
         		control->changed=-1;
         	}
+    		control->fade=0;
         	break;
 
         case 'F': /* enable fading */
         	if( control->fade == 0 ) {
-        		control->fade=1;
         		control->changed=-1;
         	}
+    		control->fade=1;
         	break;
 
         case 'r':
         	if( control->remote == 0 ) {
-        		control->remote=1;
         		control->changed=-1;
         	}
+    		control->remote=1;
         	break;
 
         case 'l':
         	if( control->remote == 1 ) {
-        		control->remote=0;
         		control->changed=-1;
         	}
+    		control->remote=0;
         	break;
 
         case 'h':
         	if( strcmp( control->host, optarg ) ) {
         		control->changed=-1;
-        		control->remote=1;
-        		control->host=falloc( strlen(optarg)+1, sizeof(char) );
-        		strcpy( control->host, optarg );
+            	control->host=falloc( strlen(optarg)+1, sizeof(char) );
+            	strcpy( control->host, optarg );
         	}
+        	control->remote=1;
         	break;
 
         case 'p':
         	if( control->port != atoi(optarg) ) {
 				control->changed=-1;
-				control->remote=1;
 				control->port=atoi(optarg);
         	}
+			control->remote=1;
         	break;
         }
     }

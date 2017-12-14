@@ -78,11 +78,11 @@ void setCommand( mpcmd cmd ) {
 
 	if( config->remote ) {
 		switch( cmd ) {
-		case mpc_QUIT: /* also quit server! */
-			setSCommand( mpc_quit );
-			/* no break */
 		case mpc_quit:
 			config->status = mpc_quit;
+			break;
+		case mpc_QUIT:
+			setSCommand( mpc_quit );
 			break;
 		default:
 			setSCommand( cmd );
@@ -391,7 +391,6 @@ int getMessage( char *msg ) {
 	char *buf;
 
 	assert( c_config != NULL );
-
 	pthread_mutex_lock( &msglock );
 	buf=msgBuffGet( c_config->msg );
 	if( buf != NULL ) {
@@ -402,7 +401,6 @@ int getMessage( char *msg ) {
 		msg[0]=0;
 	}
 	pthread_mutex_unlock( &msglock );
-
 	return strlen( msg );
 }
 
@@ -436,4 +434,3 @@ int incVerbosity() {
 void muteVerbosity() {
 	setVerbosity(0);
 }
-

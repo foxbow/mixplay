@@ -19,16 +19,16 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <pthread.h>
-
+#include <sys/stat.h>
+#include <syslog.h>
 #include "utils.h"
 #include "musicmgr.h"
 #include "database.h"
 #include "player.h"
 #include "mpcomm.h"
 
-
 static int _ftrpos=0;
-
+static int _isDaemon=1;
 /*
  * This will handle connection for each client
  * */
@@ -124,6 +124,9 @@ void fail( int error, const char* msg, ... ) {
     va_list args;
     va_start( args, msg );
 
+    if( _isDaemon ) {
+    	vsyslog( LOG_ERR, msg, args );
+    }
     if( error <= 0 ) {
         fprintf( stdout, "\n" );
         vfprintf( stdout, msg, args );
@@ -152,7 +155,7 @@ void progressEnd( char* msg  ) {
 }
 
 void updateUI( mpconfig *data ) {
-	;
+	; /* todo log messages */
 }
 
 int main( int argc, char **argv ) {
@@ -162,14 +165,24 @@ int main( int argc, char **argv ) {
     int 		db=0;
     pid_t		pid[2];
     int 		port=MP_PORT;
+    fd_set				fds;
+    struct timeval		to;
+	int 		mainsocket ,client_sock ,alen ,*new_sock;
+	struct sockaddr_in server , client;
 
     control=readConfig( );
+    /* mixplayd can never be remote */
+    control->remote=0;
     muteVerbosity();
 
     /* parse command line options */
     /* using unsigned char c to work around getopt quirk on ARM */
-    while ( ( c = getopt( argc, argv, "dFp:" ) ) != 255 ) {
+    while ( ( c = getopt( argc, argv, "dFp:D" ) ) != 255 ) {
         switch ( c ) {
+        case 'D':
+        	_isDaemon=0;
+        	break;
+
         case 'd':
         	incDebug();
         	break;
@@ -188,6 +201,11 @@ int main( int argc, char **argv ) {
         }
     }
 
+    if( _isDaemon ) {
+    	daemon( 0, 0 );
+    	openlog ("mixplayd", LOG_PID, LOG_DAEMON);
+    }
+
     if ( optind < argc ) {
     	if( 0 == setArgument( argv[optind] ) ) {
             fail( F_FAIL, "Unknown argument!\n", argv[optind] );
@@ -197,6 +215,9 @@ int main( int argc, char **argv ) {
 
     pthread_create( &(control->rtid), NULL, reader, control );
 
+    /* wait for the players to start before handling any commands */
+    sleep(1);
+
     if( NULL == control->root ) {
         /* Runs as thread to have updates in the UI */
         setProfile( control );
@@ -204,37 +225,50 @@ int main( int argc, char **argv ) {
     else {
     	control->active=0;
         control->dbname[0]=0;
-        setCommand( mpc_play );
+        setPCommand( mpc_play );
     }
 
+    while( control->status != mpc_play ) {
+    	if( control->command != mpc_play ) {
+    		setCommand( mpc_play );
+    		sleep(1);
+    	}
+    }
+
+	mainsocket = socket(AF_INET , SOCK_STREAM , 0);
+	if (mainsocket == -1) {
+		fail( errno, "Could not create socket");
+	}
+	addMessage( 1, "Socket created" );
+
+	server.sin_family = AF_INET;
+	server.sin_addr.s_addr = INADDR_ANY;
+	server.sin_port = htons( port );
+
+	if( bind(mainsocket,(struct sockaddr *)&server , sizeof(server)) < 0) {
+		fail( errno, "bind() failed!" );
+		return 1;
+	}
+	addMessage( 1, "bind() done");
+
+	listen(mainsocket , 3);
+	addMessage( 0, "Listening on port %i", port );
+
+	alen = sizeof(struct sockaddr_in);
+	control->inUI=-1;
     /* Start main loop */
-    control->inUI=-1;
     while( control->status != mpc_quit ){
-        int mainsocket , client_sock , c , *new_sock;
-        struct sockaddr_in server , client;
-
-        mainsocket = socket(AF_INET , SOCK_STREAM , 0);
-        if (mainsocket == -1) {
-            fail( errno, "Could not create socket");
-        }
-        addMessage( 1, "Socket created" );
-
-        server.sin_family = AF_INET;
-        server.sin_addr.s_addr = INADDR_ANY;
-        server.sin_port = htons( port );
-
-        if( bind(mainsocket,(struct sockaddr *)&server , sizeof(server)) < 0) {
-            fail( errno, "bind() failed!" );
-            return 1;
-        }
-        addMessage( 1, "bind() done");
-
-        listen(mainsocket , 3);
-        addMessage( 0, "Listening on port %i", port );
-
-        c = sizeof(struct sockaddr_in);
-        while( (client_sock = accept(mainsocket, (struct sockaddr *)&client, (socklen_t*)&c)) ) {
+        FD_ZERO( &fds );
+      	FD_SET( mainsocket, &fds );
+        to.tv_sec=0;
+        to.tv_usec=100000; /* 1/10 second */
+        if( select( FD_SETSIZE, &fds, NULL, NULL, &to ) > 0 ) {
         	pthread_t pid;
+        	client_sock = accept(mainsocket, (struct sockaddr *)&client, (socklen_t*)&alen);
+            if (client_sock < 0) {
+                fail( errno, "accept() failed!" );
+                control->status=mpc_quit;
+            }
             addMessage( 1, "Connection accepted" );
 
             new_sock = falloc( sizeof(int), 1 );
@@ -243,16 +277,14 @@ int main( int argc, char **argv ) {
             /* todo collect pids? */
             if( pthread_create( &pid , NULL ,  clientHandler , (void*) new_sock) < 0) {
                 fail( errno, "Could not create thread!" );
-                return 1;
+                control->status=mpc_quit;
             }
-        }
-
-        if (client_sock < 0) {
-            fail( errno, "accept() failed!" );
         }
     }
     control->inUI=0;
-
+    if( _isDaemon ) {
+    	syslog (LOG_NOTICE, "Dropped out of the main loop");
+    }
     addMessage( 1, "Dropped out of the main loop" );
 
     for( i=0; i <= control->fade; i++ ) {

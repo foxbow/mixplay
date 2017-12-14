@@ -9,7 +9,6 @@
  */
 static pthread_mutex_t gmsglock=PTHREAD_MUTEX_INITIALIZER;
 
-
 static int g_activity( void *text ) {
     if ( MP_GLDATA->widgets->mp_popup != NULL ) {
         gtk_window_set_title( GTK_WINDOW( MP_GLDATA->widgets->mp_popup ), ( char * )text );
@@ -62,8 +61,6 @@ void fail( int error, const char* msg, ... ) {
     char *line;
     GtkWidget *dialog;
 
-	setCommand( mpc_quit );
-
     line=falloc( 1024, sizeof(char) );
 
     va_start( args, msg );
@@ -84,7 +81,8 @@ void fail( int error, const char* msg, ... ) {
 		}
 
 		gtk_dialog_run ( GTK_DIALOG ( dialog ) );
-	    gtk_main_quit();
+		setCommand( mpc_quit );
+/*	    gtk_main_quit(); todo is this right?*/
 	}
 
     return;

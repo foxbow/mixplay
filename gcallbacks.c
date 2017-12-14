@@ -172,7 +172,6 @@ void playPause( GtkButton *button, gpointer data ) {
  */
 void destroy( GtkWidget *widget, gpointer   data ) {
 	gtk_main_quit();
-    setCommand( mpc_quit ); /* should be redundant.. */
 }
 
 static char *itostr( int i ) {
@@ -200,8 +199,8 @@ void infoStart( GtkButton *button, gpointer data ) {
 	     		( mpcontrol->skipdnp > 0 )?itostr( mpcontrol->skipdnp ):"off" );
 
 		gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
-								"_Application",  1,
-								"_Database",  2,
+								"_Application",  mpc_idle+1,
+								"_Database",  mpc_idle+2,
 								"_Clean up database", mpc_dbclean,
 /*								"Clean up _filesystem", mpc_doublets, */
 								NULL );
@@ -218,7 +217,7 @@ void infoStart( GtkButton *button, gpointer data ) {
     }
 
     switch( reply ) {
-    case 1:
+    case mpc_idle+1:
         gtk_show_about_dialog ( GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
                                 "program-name", "gmixplay",
                                 "copyright", "2017 B.Weber",
@@ -231,7 +230,7 @@ void infoStart( GtkButton *button, gpointer data ) {
                                 NULL, NULL );
         break;
 
-    case 2:
+    case mpc_idle+2:
     	progressStart( "Database Info" );
     	addMessage( 0, "Music dir: %s", mpcontrol->musicdir );
     	dumpInfo( mpcontrol->root, -1, mpcontrol->skipdnp );
@@ -253,17 +252,16 @@ void infoStart( GtkButton *button, gpointer data ) {
         }
         setCommand( mpc_doublets );
         break;
-
     case mpc_QUIT:
-    	setCommand( mpc_quit );
-        /* no break */
-
-    case mpc_quit:
+    	setCommand( mpc_QUIT );
+    	/* make sure the message is sent.. */
+    	sleep(1);
     	gtk_main_quit();
     	break;
-
-    case mpc_dbclean:
-		setCommand( mpc_dbclean );
+    default:
+    	if( reply >= 0 ) {
+    		setCommand( reply );
+    	}
 		break;
     }
 }

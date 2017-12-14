@@ -208,7 +208,13 @@ void *netreader( void *control ) {
 
         pthread_mutex_trylock( &cmdlock );
         if( config->command != mpc_idle ) {
-        	send( sock , mpcString( config->command ), strlen( mpcString( config->command ) )+1, 0 );
+        	size_t len=send( sock , mpcString( config->command ), strlen( mpcString( config->command ) )+1, 0 );
+        	if( len != strlen( mpcString( config->command ) )+1 ) {
+        		addMessage( 1, "Send failed: %i/%i", len, strlen( mpcString( config->command ) )+1 );
+        	}
+        	if( config->command == mpc_quit ) {
+        		config->status=mpc_quit;
+        	}
         	config->command=mpc_idle;
         }
         pthread_mutex_unlock( &cmdlock );
