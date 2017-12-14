@@ -54,3 +54,5 @@ core
 # Debug files
 *.dSYM/
 
+# Logfiles
+*.log

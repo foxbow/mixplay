@@ -41,6 +41,10 @@ def sendCMD( cmd ):
 	else:
 		return 503
 
+@app.route( "/favicon.ico" )
+def sendIcon():
+	return app.send_static_file('../mixplay.svg')
+	
 @app.route( "/status" )
 def sendStatus():
 	if( lissy.isAlive() ):
@@ -67,11 +71,16 @@ class listener( threading.Thread ):
 		self.running=0;
 		
 if __name__ == '__main__':
+	if not app.debug:
+		import logging
+		from logging import FileHandler
+		logHandler = FileHandler( "pmixplay.log" )
+		logHandler.setLevel(logging.WARNING)
+		app.logger.addHandler(logHandler)
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	s.connect(( 'localhost', 2347 ))
 	lissy=listener( s )
 	lissy.start()
-#	app.debug = True
 	app.run( host='0.0.0.0', port=8080 )
 	lissy.stop()
     

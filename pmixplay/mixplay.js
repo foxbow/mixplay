@@ -51,11 +51,11 @@ function updateUI( ){
 		  			if( data.msg != "" ) {
 		  				alert( data.msg );
 		  			}
-		  			if( data.flags & 1 )  {
-			  			document.getElementById( 'fav' ).disabled=false;
+		  			if( data.current.flags & 1 )  {
+			  			document.getElementById( 'fav' ).disabled=true;
 		  			}
 		  			else {
-			  			document.getElementById( 'fav' ).disabled=true;		  			
+			  			document.getElementById( 'fav' ).disabled=false;		  			
 		  			}
 		  		}
 		  	}
