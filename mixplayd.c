@@ -29,6 +29,8 @@
 
 static int _ftrpos=0;
 static int _isDaemon=1;
+long curmsg=0;
+
 /*
  * This will handle connection for each client
  * */
@@ -127,15 +129,14 @@ void fail( int error, const char* msg, ... ) {
     if( _isDaemon ) {
     	vsyslog( LOG_ERR, msg, args );
     }
-    if( error <= 0 ) {
-        fprintf( stdout, "\n" );
-        vfprintf( stdout, msg, args );
-        fprintf( stdout, "\n" );
-    }
-    else {
-        fprintf( stdout, "\n" );
-        vfprintf( stdout, msg, args );
-        fprintf( stdout, "\n ERROR: %i - %s\n", abs( error ), strerror( abs( error ) ) );
+	fprintf( stdout, "\n" );
+	vfprintf( stdout, msg, args );
+	fprintf( stdout, "\n" );
+    if( error > 0 ) {
+        fprintf( stdout, "ERROR: %i - %s\n", abs( error ), strerror( abs( error ) ) );
+        if( _isDaemon ) {
+        	syslog( LOG_ERR, "ERROR: %i - %s\n", abs( error ), strerror( abs( error ) ) );
+        }
     }
     va_end( args );
 
@@ -155,7 +156,10 @@ void progressEnd( char* msg  ) {
 }
 
 void updateUI( mpconfig *data ) {
-	; /* todo log messages */
+	if( curmsg < data->msg->count ) {
+		syslog( LOG_INFO, "%s", msgBuffPeek( data->msg ) );
+		curmsg++;
+	}
 }
 
 int main( int argc, char **argv ) {
