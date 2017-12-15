@@ -140,13 +140,11 @@ size_t deserialize( mpconfig *data, char *json ) {
 			addMessage( 0, msgline );
 		}
 		jsonDiscard( jo, 0 );
-	}
-	else {
-		addMessage( 1, "Recieved no data.." );
-		return -1;
+
+		return 0;
 	}
 
-	return 0;
+	return -1;
 }
 
 static int recFromMixplayd( mpconfig *config, char *data ) {

@@ -96,14 +96,9 @@ static int jsonFetchNum( char *json, char **val ) {
 				return jsonFail( __func__, json[i], i, state );
 			}
 			break;
-		default:
-			fail( F_FAIL, "Illegal state %i", state );
 		}
 		i++;
 	}
-
-	addMessage( 2, json );
-	fail( F_FAIL, "Unable to fetch Number" );
 
 	return -1;
 }
@@ -158,14 +153,9 @@ static int jsonFetchString( char *json, char **val ) {
 				return jsonFail( __func__, json[i], i, state );
 			}
 			break;
-		default:
-			fail( F_FAIL, "Illegal state %i", state );
 		}
 		i++;
 	}
-
-	addMessage( 2, json );
-	fail( F_FAIL, "Unable to fetch String" );
 
 	return -1;
 }
@@ -239,8 +229,7 @@ static int jsonFetchKeyVal( char *json, jsonObject **jo ) {
 		}
 	}
 
-	addMessage( 0, "Parser did not finish!" );
-	return jpos;
+	return -1;
 }
 
 static int jsonFetchObject( char *json, jsonObject **jo ) {
@@ -288,7 +277,6 @@ static int jsonFetchObject( char *json, jsonObject **jo ) {
 		}
 	}
 
-	addMessage( 0, "Parser did not finish!" );
 	return jpos;
 }
 
@@ -328,7 +316,6 @@ int jsonGetInt( jsonObject *jo, const char *key ) {
 		return atoi( pos->val );
 	}
 
-	addMessage( 1, "No number value for key %s", key );
 	return 0;
 }
 
@@ -357,7 +344,6 @@ jsonObject *jsonGetObj( jsonObject *jo, const char *key ) {
 		return pos->val;
 	}
 
-	addMessage( 1, "No number value for key %s", key );
 	return NULL;
 }
 
@@ -406,11 +392,10 @@ jsonObject *jsonAddObj( jsonObject *jo, const char *key, jsonObject *val ) {
 
 jsonObject *jsonParse( char *json ) {
 	jsonObject *jo=NULL;
-	if( jsonFetchObject( json, &jo ) > 0 ){
+	if( jsonFetchObject( json, &jo ) >= 0 ){
 		return jo;
 	}
 	else {
-		addMessage( 0, "Could not parse: %s", json );
 		return NULL;
 	}
 }
@@ -434,8 +419,9 @@ static size_t jsonWriteKeyVal( jsonObject *jo, char *json ) {
 	case array:
 		fail( F_FAIL, "No array support!" );
 		break;
-	default:
-		fail( F_FAIL, "Unknown json type %i for %s\n", jo->type, jo->key );
+	case none:
+		return -1;
+		break;
 	}
 	if( jo->next != NULL ) {
 		strcat( json, "," );
