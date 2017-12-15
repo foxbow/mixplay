@@ -68,7 +68,7 @@ size_t serialize( const mpconfig *data, char *buff, long *count ) {
 	jsonObject *joroot=NULL;
 	jsonObject *jo=NULL;
 
-	memset( buff, 0, MP_MAXCOMLEN );
+	buff[0]=0;
 
 	jo=jsonAddInt( jo, "version", MP_COMVER );
 	joroot=jo;
@@ -148,6 +148,28 @@ size_t deserialize( mpconfig *data, char *json ) {
 	return 0;
 }
 
+static int recFromMixplayd( mpconfig *config, char *data ) {
+	char *pos=data;
+	int empty=1;
+	while( pos[1] != 0 ) {
+		if( ( pos[0] == 0x0d ) && ( pos[1] == 0x0a ) ) {
+			if( empty ) {
+				break;
+			}
+			else {
+				empty=1;
+				pos++;
+			}
+		}
+		else {
+			empty=0;
+		}
+		pos++;
+	}
+	if( pos[1] == 0 ) return -1;
+	return deserialize( config, &pos[2] );
+}
+
 /**
  * analog to the reader() in player.c
  */
@@ -158,6 +180,8 @@ void *netreader( void *control ) {
     mpconfig *config;
     struct timeval to;
     fd_set fds;
+    size_t len;
+    int state=0;
 
     commdata=falloc( MP_MAXCOMLEN, sizeof( char ) );
     config=(mpconfig*)control;
@@ -183,7 +207,7 @@ void *netreader( void *control ) {
     	FD_SET( sock, &fds );
 
     	to.tv_sec=0;
-    	to.tv_usec=100000; /* 1/2 second */
+    	to.tv_usec=500000; /* 1/2 second */
     	select( FD_SETSIZE, &fds, NULL, NULL, &to );
 
     	if( FD_ISSET( sock, &fds ) ) {
@@ -197,32 +221,45 @@ void *netreader( void *control ) {
 				config->status=mpc_quit;
 				break;
 			default:
-				if( deserialize(config, commdata) == -1 ) {
+				if( recFromMixplayd(config, commdata) == -1 ) {
 					goto cleanup;
 				}
 				else {
+					state = 2;
 					updateUI( config );
 				}
 			}
 		}
 
         pthread_mutex_trylock( &cmdlock );
+        len=0;
         if( config->command != mpc_idle ) {
-        	size_t len=send( sock , mpcString( config->command ), strlen( mpcString( config->command ) )+1, 0 );
-        	if( len != strlen( mpcString( config->command ) )+1 ) {
-        		addMessage( 1, "Send failed: %i/%i", len, strlen( mpcString( config->command ) )+1 );
+        	sprintf( commdata, "get /cmd/%s HTTP/1.1\015\012xmixplay: 1\015\012\015\012", mpcString( config->command ) );
+        	while( len < strlen( commdata ) ) {
+        		len+=send( sock , &commdata[len], strlen( commdata )-len, 0 );
         	}
-        	if( config->command == mpc_quit ) {
-        		config->status=mpc_quit;
-        	}
-        	config->command=mpc_idle;
+            config->command=mpc_idle;
+        }
+        else if( config->command == mpc_quit ) {
+        	config->status=mpc_quit;
+        }
+        else if( state == 0 ){
+           	sprintf( commdata, "get /status HTTP/1.1\015\012xmixplay: 1\015\012\015\012" );
+           	while( len < strlen( commdata ) ) {
+           		len+=send( sock , &commdata[len], strlen( commdata )-len, 0 );
+           	}
+           	state=1;
+        }
+
+        if( state== 2){
+        	state=0;
         }
         pthread_mutex_unlock( &cmdlock );
     }
 
 cleanup:
     addMessage( 1, "Disconnected");
-
+    config->status=mpc_quit;
     free( commdata );
     close(sock);
     config->rtid=0;

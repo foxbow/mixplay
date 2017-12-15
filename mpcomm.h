@@ -11,7 +11,7 @@
 #define MP_COMVER 5
 #include "config.h"
 
-#define MP_MAXCOMLEN 2048
+#define MP_MAXCOMLEN 4096
 #define MP_PORT 2347
 
 void *netreader( void *control );

@@ -17,8 +17,10 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <sys/sendfile.h>
 #include <sys/stat.h>
 #include <syslog.h>
 #include "utils.h"
@@ -26,6 +28,9 @@
 #include "database.h"
 #include "player.h"
 #include "mpcomm.h"
+#include "mixplayd_html.h"
+#include "mixplayd_js.h"
+#include "mixplayd_css.h"
 
 static int _ftrpos=0;
 static int _isDaemon=1;
@@ -37,13 +42,17 @@ long curmsg=0;
 void *clientHandler(void *mainsocket)
 {
     int sock = *(int*)mainsocket;
-    size_t len;
+    size_t len, sent, msglen;
     struct timeval to;
     int running=1;
     char *commdata;
     fd_set fds;
     mpconfig *config;
     long curmsg;
+    int state=0;
+    char *pos, *end;
+    mpcmd cmd=mpc_idle;
+    static char *mtype;
 
     commdata=falloc( MP_MAXCOMLEN, sizeof( char ) );
     config = getConfig();
@@ -51,8 +60,8 @@ void *clientHandler(void *mainsocket)
 
     pthread_detach(pthread_self());
 
-    addMessage( 1, "Client handler started" );
-    while( running ) {
+    addMessage( 2, "Client handler started" );
+    while( running && ( config->status!=mpc_quit ) ) {
     	FD_ZERO( &fds );
     	FD_SET( sock, &fds );
 
@@ -61,7 +70,8 @@ void *clientHandler(void *mainsocket)
     	select( FD_SETSIZE, &fds, NULL, NULL, &to );
 
     	if( FD_ISSET( sock, &fds ) ) {
-			switch( recv(sock , commdata , MP_MAXCOMLEN , 0) ) {
+    		memset( commdata, 0, MP_MAXCOMLEN );
+			switch( recv(sock, commdata, MP_MAXCOMLEN, 0 ) ) {
 			case -1:
 				addMessage( 1, "Read error on socket!\n%s", strerror( errno ) );
 				running=0;
@@ -71,19 +81,160 @@ void *clientHandler(void *mainsocket)
 				running=0;
 				break;
 			default:
-				setCommand(mpcCommand(commdata) );
+				toLower( commdata );
+				pos=commdata;
+				while( pos != NULL ) {
+					if( ( pos[0]==0x0d ) && ( pos[1]==0x0a ) ) {
+						switch(state){
+						case 0:
+							break;
+						default:
+							if( state < 10 ) {
+								state=(10*state)+1;
+							}
+						}
+						pos=NULL;
+					}
+					else if( strstr( pos, "xmixplay: 1" ) == pos ) {
+						running=-1;
+					}
+					else if( strstr( pos, "get" ) == pos ) {
+						pos=pos+4;
+						end=strchr( pos, ' ' );
+						if( end == NULL ) {
+							addMessage( 0, "Discarding %s", pos );
+						}
+						else {
+							*end=0;
+							if( strcmp( pos, "/status" ) == 0 ) {
+								state=1;
+							}
+							else if( strstr( pos, "/cmd/" ) == pos ) {
+								cmd=mpcCommand(pos+5);
+								state=2;
+							}
+							else if( ( strcmp( pos, "/") == 0 ) || ( strcmp( pos, "/index.html" ) == 0 ) ) {
+								mtype="Content-Type: text/html; charset=utf-8";
+								state=5;
+							}
+							else if( strcmp( pos, "/mixplay.css" ) == 0 ) {
+								mtype="Content-Type: text/css; charset=utf-8";
+								state=6;
+							}
+							else if( strcmp( pos, "/mixplay.js" ) == 0 ) {
+								mtype="Content-Type: application/javascript; charset=utf-8";
+								state=7;
+							}
+							else {
+								addMessage( 1, "Illegal get %s", pos );
+								send(sock , "HTTP/1.0 404 NOT FOUND\015\012\015\012", 25, 0);
+								pos=NULL;
+							}
+							pos=end+1;
+						}
+					}
+					/* get next request line */
+					if( pos!=NULL ) {
+						while( pos[1] != 0 ) {
+							if( ( pos[0] == 0x0d ) && ( pos[1] == 0x0a ) ) {
+								pos+=2;
+								break;
+							}
+							pos++;
+						}
+						if( pos[1] == 0 ) {
+							pos=NULL;
+						}
+					}
+				}
 			}
 		}
 
     	if( running && ( config->status != mpc_start ) ) {
-			len=serialize( config, commdata, &curmsg );
-			if( len != send(sock , commdata , len, 0) ) {
-				addMessage( 1, "Send failed!\n%s", strerror( errno ) );
+    		switch( state ) {
+    		case 11: /* get update */
+    			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: text/html; charset=utf-8\015\012\015\012" );
+    			len=strlen( commdata );
+    			serialize( config, commdata+len, &curmsg );
+    			strcat( commdata, "\015\012" );
+    			len=strlen(commdata);
+    			break;
+    		case 21: /* set command */
+    			if( cmd != mpc_idle ) {
+    				sprintf( commdata, "HTTP/1.1 200 OK\015\012\015\012" );
+    				len=strlen( commdata );
+    				setCommand(cmd);
+    			}
+    			else {
+    				sprintf( commdata, "HTTP/1.1 400 OK\015\012\015\012" );
+    				len=strlen( commdata );
+    			}
+    			break;
+    		case 31: /* unknown command */
+    			sprintf( commdata, "HTTP/1.1 501 NOT IMPLEMENTED\015\012\015\012" );
+				len=strlen( commdata );
+    			break;
+    		case 51: /* send file */
+    			sprintf( commdata, "HTTP/1.1 200 OK\015\012%s\015\012\015\012", mtype );
+    			len=strlen( commdata );
+    			send(sock , commdata, strlen(commdata), 0);
+    			len=0;
+    			while( len < static_mixplay_html_len ) {
+    				len+=send( sock, &static_mixplay_html[len], static_mixplay_html_len-len, 0 );
+    			}
+    			len=0;
+    			state=0;
+    			running=0;
+    			break;
+    		case 61: /* send file */
+    			sprintf( commdata, "HTTP/1.1 200 OK\015\012%s\015\012\015\012", mtype );
+    			len=strlen( commdata );
+    			send(sock , commdata, strlen(commdata), 0);
+    			len=0;
+    			while( len < static_mixplay_css_len ) {
+    				len+=send( sock, &static_mixplay_css[len], static_mixplay_css_len-len, 0 );
+    			}
+    			len=0;
+    			state=0;
+    			running=0;
+    			break;
+    		case 71: /* send file */
+    			sprintf( commdata, "HTTP/1.1 200 OK\015\012%s\015\012\015\012", mtype );
+    			len=strlen( commdata );
+    			send(sock , commdata, strlen(commdata), 0);
+    			len=0;
+    			while( len < static_mixplay_js_len ) {
+    				len+=send( sock, &static_mixplay_js[len], static_mixplay_js_len-len, 0 );
+    			}
+    			len=0;
+    			state=0;
+    			running=0;
+    			break;
+    		default:
+    			len=0;
+    		}
+			if( len>0 ) {
+				sent=0;
+				while( sent < len ) {
+					msglen=send(sock , commdata+sent, len-sent, 0);
+					if( msglen > 0 ) {
+						sent+=msglen;
+					}
+					else {
+						sent=len;
+						addMessage( 1, "send failed" );
+					}
+				}
+				state=0;
+				if( running == 1 ) {
+					running=0;
+				}
 			}
     	}
 	}
-    addMessage( 1, "Client handler exited" );
+    addMessage( 2, "Client handler exited" );
 
+	close(sock);
     free( mainsocket );
     free( commdata );
 
@@ -185,6 +336,7 @@ int main( int argc, char **argv ) {
         switch ( c ) {
         case 'D':
         	_isDaemon=0;
+        	incDebug();
         	break;
 
         case 'd':

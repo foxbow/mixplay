@@ -51,7 +51,7 @@ static int initAll( void *data ) {
 static void buildUI( struct mpcontrol_t * control ) {
     GtkBuilder *builder;
 
-    builder=gtk_builder_new_from_string( ( const char * )gmixplay_app_glade, gmixplay_app_glade_len );
+    builder=gtk_builder_new_from_string( ( const char * )static_gmixplay_app_glade, static_gmixplay_app_glade_len );
 
     /* Allocate data structure */
     MP_GLDATA->widgets = g_slice_new( MpData );

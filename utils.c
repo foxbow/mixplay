@@ -195,7 +195,7 @@ int isURL( const char *uri ) {
 /*
  * Inplace conversion of a string to lowercase
  */
-static char *toLower( char *text ) {
+char *toLower( char *text ) {
     int i;
 
     for( i=0; i<strlen( text ); i++ ) {
@@ -490,17 +490,25 @@ void msgBuffClear( struct msgbuf_t *msgbuf ) {
  * debug function to dump binary data on the screen
  */
 void dumpbin( const void *data, size_t len ) {
-	int i;
-	for( i=0; i< len; i++ ) {
-		if( ( i%16 ) == 0 ) {
-			putchar('\n');
+	int i, j;
+	for( j=0; j<len/8; j++ ) {
+		for( i=0; i< 8; i++ ) {
+			if( i <= len ) {
+				printf("%02x ", ((char*)data)[(j*8)+i] );
+			}
+			else {
+				printf("00 ");
+			}
 		}
-		if( isalnum( ((char*)data)[i] ) ) {
-			putchar( ((char*)data)[i] );
+		printf( "    " );
+		for( i=0; i< 8; i++ ) {
+			if( ( (j*8)+i <= len ) && isprint( ((char*)data)[(j*8)+i] ) ) {
+				putchar( ((char*)data)[(j*8)+i] );
+			}
+			else {
+				putchar('.');
+			}
 		}
-		else {
-			putchar('.');
-		}
+		putchar('\n');
 	}
-	putchar('\n');
 }

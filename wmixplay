@@ -1,4 +1,0 @@
-#!/bin/bash
-cd pmixplay
-nohup python mixplay.py > /dev/null &
-

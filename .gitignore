@@ -1,6 +1,6 @@
 # Generated headers and dependencies
-gmixplay_app.h
-gmixplay_fs.h
+gmixplay_*.h
+mixplayd_*.h
 *.d
 *.Td
 
