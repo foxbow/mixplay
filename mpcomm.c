@@ -143,6 +143,7 @@ size_t deserialize( mpconfig *data, char *json ) {
 	}
 	else {
 		addMessage( 1, "Recieved no data.." );
+		return -1;
 	}
 
 	return 0;
@@ -153,10 +154,10 @@ static int recFromMixplayd( mpconfig *config, char *data ) {
 	int empty=1;
 	while( pos[1] != 0 ) {
 		if( ( pos[0] == 0x0d ) && ( pos[1] == 0x0a ) ) {
-			if( empty ) {
+			if( empty == 1 ) {
 				break;
 			}
-			else {
+			else if( pos[2] != 0 ){
 				empty=1;
 				pos++;
 			}
@@ -166,7 +167,9 @@ static int recFromMixplayd( mpconfig *config, char *data ) {
 		}
 		pos++;
 	}
-	if( pos[1] == 0 ) return -1;
+	if( pos[1] == 0 ) {
+		return -1;
+	}
 	return deserialize( config, &pos[2] );
 }
 
@@ -211,6 +214,7 @@ void *netreader( void *control ) {
     	select( FD_SETSIZE, &fds, NULL, NULL, &to );
 
     	if( FD_ISSET( sock, &fds ) ) {
+    		memset( commdata, 0, MP_MAXCOMLEN );
 			switch( recv(sock , commdata , MP_MAXCOMLEN , 0) ) {
 			case -1:
 				addMessage( 0, "Read error on socket!\n%s", strerror( errno ) );
@@ -221,10 +225,7 @@ void *netreader( void *control ) {
 				config->status=mpc_quit;
 				break;
 			default:
-				if( recFromMixplayd(config, commdata) == -1 ) {
-					goto cleanup;
-				}
-				else {
+				if( recFromMixplayd(config, commdata) == 0 ) {
 					state = 2;
 					updateUI( config );
 				}
@@ -257,9 +258,8 @@ void *netreader( void *control ) {
         pthread_mutex_unlock( &cmdlock );
     }
 
-cleanup:
     addMessage( 1, "Disconnected");
-    config->status=mpc_quit;
+    setCommand( mpc_quit );
     free( commdata );
     close(sock);
     config->rtid=0;

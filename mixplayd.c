@@ -151,6 +151,7 @@ void *clientHandler(void *mainsocket)
 		}
 
     	if( running && ( config->status != mpc_start ) ) {
+    		memset( commdata, 0, MP_MAXCOMLEN );
     		switch( state ) {
     		case 11: /* get update */
     			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: text/html; charset=utf-8\015\012\015\012" );
@@ -161,17 +162,17 @@ void *clientHandler(void *mainsocket)
     			break;
     		case 21: /* set command */
     			if( cmd != mpc_idle ) {
-    				sprintf( commdata, "HTTP/1.1 200 OK\015\012\015\012" );
+    				sprintf( commdata, "HTTP/1.1 200 OK\015\012" );
     				len=strlen( commdata );
     				setCommand(cmd);
     			}
     			else {
-    				sprintf( commdata, "HTTP/1.1 400 OK\015\012\015\012" );
+    				sprintf( commdata, "HTTP/1.1 400 INVALID COMMAND\015\012" );
     				len=strlen( commdata );
     			}
     			break;
     		case 31: /* unknown command */
-    			sprintf( commdata, "HTTP/1.1 501 NOT IMPLEMENTED\015\012\015\012" );
+    			sprintf( commdata, "HTTP/1.1 501 NOT IMPLEMENTED\015\012" );
 				len=strlen( commdata );
     			break;
     		case 51: /* send file */

@@ -18,7 +18,7 @@ static size_t jsonWriteObj( jsonObject *jo, char *json );
 static int jsonFetchObject( char *json, jsonObject **jo );
 
 static int jsonFail( const char *func, char c, const int i, const int state ) {
-	fail( F_FAIL, "%s#%i: Found invalid '%c' in JSON pos %i", func, state, c, i );
+	addMessage( 0, "%s#%i: Found invalid '%c' in JSON pos %i", func, state, c, i );
 	return -1;
 }
 
@@ -142,7 +142,7 @@ static int jsonFetchString( char *json, char **val ) {
 		case 2: /* escape */
 			switch( json[i] ) {
 			case 'u':
-				i+=4; // todo are we really skipping hex numbers?
+				i+=4; /* todo are we really skipping hex numbers? */
 				/* no break */
 			case '"':
 			case '\\':
@@ -406,8 +406,13 @@ jsonObject *jsonAddObj( jsonObject *jo, const char *key, jsonObject *val ) {
 
 jsonObject *jsonParse( char *json ) {
 	jsonObject *jo=NULL;
-	jsonFetchObject( json, &jo );
-	return jo;
+	if( jsonFetchObject( json, &jo ) > 0 ){
+		return jo;
+	}
+	else {
+		addMessage( 0, "Could not parse: %s", json );
+		return NULL;
+	}
 }
 
 static size_t jsonWriteKeyVal( jsonObject *jo, char *json ) {
