@@ -35,7 +35,7 @@ function updateUI( ){
   			if( xmlhttp.status==200 ) {
 	  			data=JSON.parse(xmlhttp.responseText);
 	  			if( data !== undefined ) {
-	  				if( data.version != 5 ) {
+	  				if( data.version != 6 ) {
 	  					doUpdate=0;
 	  					alert("Version clash, expected 5 and got "+data.version );
 	  					return;
@@ -43,14 +43,19 @@ function updateUI( ){
 	  				document.title=data.current.artist+" - "+data.current.title;
 		  			setElement( 'prev', data.prev.artist+" - "+data.prev.title );
 		  			setElement( 'artist', data.current.artist );
-		  			setElement( 'title', data.current.title );
+		  			if( data.status == 0 ) {
+			  			setElement( 'title', data.current.title );
+			  		}
+			  		else {
+			  			setElement( 'title', "<i>"+data.current.title+"</i>" );
+			  		}	
 		  			setElement( 'album', data.current.album );
 		  			setElement( 'next', data.next.artist+" - "+data.next.title );
 		  			setElement( 'playtime', data.playtime+" / "+data.remtime );
 		  			setElement( 'volume', data.volume+"%" );
-		  			if( data.msg != "" ) {
-		  				alert( data.msg );
-		  			}
+//		  			if( data.msg != "" ) {
+//		  				alert( data.msg );
+//		  			}
 		  			if( data.current.flags & 1 )  {
 			  			document.getElementById( 'fav' ).disabled=true;
 		  			}

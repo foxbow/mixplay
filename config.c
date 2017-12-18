@@ -50,6 +50,7 @@ static const char *mpc_command[] = {
 		"mpc_bskip",
 		"mpc_fskip",
 		"mpc_QUIT",
+		"mpc_dbinfo",
 	    "mpc_idle"
 };
 

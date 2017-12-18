@@ -43,6 +43,7 @@ enum mpcmd_t {
 	mpc_fskip,
 	mpc_bskip,
 	mpc_QUIT,
+	mpc_dbinfo,
     mpc_idle
 };
 

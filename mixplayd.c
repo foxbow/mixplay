@@ -36,6 +36,21 @@ static int _ftrpos=0;
 static int _isDaemon=1;
 long curmsg=0;
 
+/**
+ * send a static file
+ */
+static int filePost( int sock, const char *fname ) {
+	int fd;
+	fd=open( fname, O_RDONLY );
+	if( fd != -1 ) {
+		sendfile( sock, fd, 0, 4096 );
+		close(fd);
+		return 0;
+	}
+	return -1;
+}
+
+
 /*
  * This will handle connection for each client
  * */
@@ -53,6 +68,10 @@ void *clientHandler(void *mainsocket)
     char *pos, *end;
     mpcmd cmd=mpc_idle;
     static char *mtype;
+
+    const char *fname;
+    const unsigned char *fdata;
+    unsigned int flen;
 
     commdata=falloc( MP_MAXCOMLEN, sizeof( char ) );
     config = getConfig();
@@ -114,16 +133,25 @@ void *clientHandler(void *mainsocket)
 								state=2;
 							}
 							else if( ( strcmp( pos, "/") == 0 ) || ( strcmp( pos, "/index.html" ) == 0 ) ) {
+								fname="static/.html";
+								fdata=static_mixplay_html;
+								flen=static_mixplay_html_len;
 								mtype="Content-Type: text/html; charset=utf-8";
 								state=5;
 							}
 							else if( strcmp( pos, "/mixplay.css" ) == 0 ) {
+								fname="static/mixplay.css";
+								fdata=static_mixplay_css;
+								flen=static_mixplay_css_len;
 								mtype="Content-Type: text/css; charset=utf-8";
-								state=6;
+								state=5;
 							}
 							else if( strcmp( pos, "/mixplay.js" ) == 0 ) {
+								fname="static/mixplay.js";
+								fdata=static_mixplay_js;
+								flen=static_mixplay_js_len;
 								mtype="Content-Type: application/javascript; charset=utf-8";
-								state=7;
+								state=5;
 							}
 							else {
 								addMessage( 1, "Illegal get %s", pos );
@@ -179,33 +207,11 @@ void *clientHandler(void *mainsocket)
     			sprintf( commdata, "HTTP/1.1 200 OK\015\012%s\015\012\015\012", mtype );
     			len=strlen( commdata );
     			send(sock , commdata, strlen(commdata), 0);
-    			len=0;
-    			while( len < static_mixplay_html_len ) {
-    				len+=send( sock, &static_mixplay_html[len], static_mixplay_html_len-len, 0 );
-    			}
-    			len=0;
-    			state=0;
-    			running=0;
-    			break;
-    		case 61: /* send file */
-    			sprintf( commdata, "HTTP/1.1 200 OK\015\012%s\015\012\015\012", mtype );
-    			len=strlen( commdata );
-    			send(sock , commdata, strlen(commdata), 0);
-    			len=0;
-    			while( len < static_mixplay_css_len ) {
-    				len+=send( sock, &static_mixplay_css[len], static_mixplay_css_len-len, 0 );
-    			}
-    			len=0;
-    			state=0;
-    			running=0;
-    			break;
-    		case 71: /* send file */
-    			sprintf( commdata, "HTTP/1.1 200 OK\015\012%s\015\012\015\012", mtype );
-    			len=strlen( commdata );
-    			send(sock , commdata, strlen(commdata), 0);
-    			len=0;
-    			while( len < static_mixplay_js_len ) {
-    				len+=send( sock, &static_mixplay_js[len], static_mixplay_js_len-len, 0 );
+    			if( _isDaemon || ( filePost( sock, fname ) == -1 ) ){
+					len=0;
+					while( len < flen ) {
+						len+=send( sock, &fdata[len], flen-len, 0 );
+					}
     			}
     			len=0;
     			state=0;
@@ -214,6 +220,7 @@ void *clientHandler(void *mainsocket)
     		default:
     			len=0;
     		}
+
 			if( len>0 ) {
 				sent=0;
 				while( sent < len ) {
@@ -317,9 +324,6 @@ void updateUI( mpconfig *data ) {
 int main( int argc, char **argv ) {
     unsigned char	c;
     mpconfig    *control;
-    int			i;
-    int 		db=0;
-    pid_t		pid[2];
     int 		port=MP_PORT;
     fd_set				fds;
     struct timeval		to;
@@ -431,7 +435,8 @@ int main( int argc, char **argv ) {
             new_sock = falloc( sizeof(int), 1 );
             *new_sock = client_sock;
 
-            /* todo collect pids? */
+            /* todo collect pids?
+             * or better use a threadpool */
             if( pthread_create( &pid , NULL ,  clientHandler , (void*) new_sock) < 0) {
                 fail( errno, "Could not create thread!" );
                 control->status=mpc_quit;
@@ -444,12 +449,7 @@ int main( int argc, char **argv ) {
     }
     addMessage( 1, "Dropped out of the main loop" );
 
-    for( i=0; i <= control->fade; i++ ) {
-    	kill( pid[i], SIGTERM );
-    }
-
     freeConfig( );
-    dbClose( db );
 
 	return 0;
 }

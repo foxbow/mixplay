@@ -200,7 +200,7 @@ void infoStart( GtkButton *button, gpointer data ) {
 
 		gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
 								"_Application",  mpc_idle+1,
-								"_Database",  mpc_idle+2,
+								"_Database",  mpc_dbinfo,
 								"_Clean up database", mpc_dbclean,
 /*								"Clean up _filesystem", mpc_doublets, */
 								NULL );
@@ -230,11 +230,8 @@ void infoStart( GtkButton *button, gpointer data ) {
                                 NULL, NULL );
         break;
 
-    case mpc_idle+2:
-    	progressStart( "Database Info" );
-    	addMessage( 0, "Music dir: %s", mpcontrol->musicdir );
-    	dumpInfo( mpcontrol->root, -1, mpcontrol->skipdnp );
-    	progressEnd( "End Database info." );
+    case mpc_dbinfo:
+    	setCommand( mpc_dbinfo );
     	break;
 
     case mpc_doublets:

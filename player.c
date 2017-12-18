@@ -867,6 +867,13 @@ void *reader( void *cont ) {
             write( p_command[fdset][1], "JUMP +64\n", 10 );
             break;
 
+        case mpc_dbinfo:
+          	progressStart( "Database Info" );
+           	addMessage( 0, "Music dir: %s", control->musicdir );
+           	dumpInfo( control->root, -1, control->skipdnp );
+           	progressEnd( "End Database info." );
+        break;
+  			break;
         case mpc_idle:
             /* do null */
             break;
