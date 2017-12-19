@@ -17,6 +17,24 @@
 #include <unistd.h>
 
 static pthread_mutex_t cmdlock=PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t clientlock=PTHREAD_MUTEX_INITIALIZER;
+static int _curclient;
+
+void setCurClient( int client ) {
+	pthread_mutex_lock( &clientlock );
+	_curclient=client;
+}
+
+int testClient( int client ) {
+	return ( client | _curclient );
+}
+
+void unlockClient( int client ) {
+	if( _curclient == client ) {
+		_curclient=-1;
+		pthread_mutex_unlock( &clientlock );
+	}
+}
 
 /*
  * sets the command to be sent to mixplayd
@@ -64,7 +82,7 @@ static void getTitle( jsonObject *jo, const char *key, struct entry_t *title ) {
 /**
  * put data to be sent over into the buff
 **/
-size_t serialize( const mpconfig *data, char *buff, long *count ) {
+size_t serialize( const mpconfig *data, char *buff, long *count, int clientid ) {
 	jsonObject *joroot=NULL;
 	jsonObject *jo=NULL;
 
@@ -89,10 +107,13 @@ size_t serialize( const mpconfig *data, char *buff, long *count ) {
 	jo=jsonAddInt( jo, "status", data->status );
 	jo=jsonAddInt( jo, "playstream", data->playstream );
 	if( *count < data->msg->count ) {
-		jo=jsonAddStr( jo, "msg", msgBuffPeek( data->msg ) );
+		if ( testClient( clientid ) ){
+			jo=jsonAddStr( jo, "msg", msgBuffPeek( data->msg ) );
+		}
 		(*count)++;
 	}
 	else {
+		unlockClient( clientid );
 		jo=jsonAddStr( jo, "msg", "" );
 	}
 
@@ -136,7 +157,7 @@ size_t deserialize( mpconfig *data, char *json ) {
 		data->status=jsonGetInt( jo, "status" );
 		data->playstream=jsonGetInt( jo, "playstream" );
 		jsonCopyStr( jo, "msg", msgline );
-		if( strlen( msgline ) > 0  ){
+		if( strlen( msgline ) > 0 ){
 			addMessage( 0, msgline );
 		}
 		jsonDiscard( jo, 0 );

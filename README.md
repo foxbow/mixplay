@@ -58,6 +58,28 @@ on playlists:
 ## gmixplay
 glade/gtk version of the player
 
-### Additional Parameters
+### Parameters
+* -d         : increase debug level
+* -f         : disable fading
+* -F         : enable fading
+* -h <host>  : set hostname for remote play [127.0.0.1]
+* -l         : run in local mode
+* -p <port>  : set port for remote play [2347]
+* -r         : act as client
 * -S         : run in fullscreen mode
+* -v         : increase verbosity
+* [path|URL] : path to the music files [play from db]
+
+## mixplayd
+demon version of the player. Communicates via HTTP/GET and JSON replies with 
+clients. Also has a minimal web server to allow connection with a browser.
+
+### Additional Parameters
+* -d         : increase debug level
+* -D	     : do not detach and run in debug mode (this reads web files from the filesystem and does not use the hard coded versions
+* -f         : disable fading
+* -F         : enable fading
+* -p		 : port to use [2347]
+* -v         : increase verbosity
+* [path|URL] : path to the music files [play from db]
 

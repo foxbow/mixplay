@@ -34,6 +34,7 @@
 
 static int _ftrpos=0;
 static int _isDaemon=1;
+
 long curmsg=0;
 
 /**
@@ -50,13 +51,12 @@ static int filePost( int sock, const char *fname ) {
 	return -1;
 }
 
-
 /*
  * This will handle connection for each client
  * */
-void *clientHandler(void *mainsocket)
+static void *clientHandler(void *args )
 {
-    int sock = *(int*)mainsocket;
+    int sock=*(int*)args;
     size_t len, sent, msglen;
     struct timeval to;
     int running=1;
@@ -184,7 +184,7 @@ void *clientHandler(void *mainsocket)
     		case 11: /* get update */
     			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: text/html; charset=utf-8\015\012\015\012" );
     			len=strlen( commdata );
-    			serialize( config, commdata+len, &curmsg );
+    			serialize( config, commdata+len, &curmsg, sock );
     			strcat( commdata, "\015\012" );
     			len=strlen(commdata);
     			break;
@@ -192,7 +192,8 @@ void *clientHandler(void *mainsocket)
     			if( cmd != mpc_idle ) {
     				sprintf( commdata, "HTTP/1.1 200 OK\015\012" );
     				len=strlen( commdata );
-    				setCommand(cmd);
+    				setCurClient( sock );
+        			setCommand(cmd);
     			}
     			else {
     				sprintf( commdata, "HTTP/1.1 400 INVALID COMMAND\015\012" );
@@ -241,9 +242,9 @@ void *clientHandler(void *mainsocket)
     	}
 	}
     addMessage( 2, "Client handler exited" );
-
+    unlockClient( sock );
 	close(sock);
-    free( mainsocket );
+    free( args );
     free( commdata );
 
     return 0;
