@@ -83,7 +83,7 @@ gmixplay_app.h: static/gmixplay_app.glade
 prepare:
 	apt-get install ncurses-dev mpg123 libmpg123-dev libgtk-3-dev libasound-dev
 
-dep.d: *.c *.h
+dep.d: *.h
 	rm -f dep.d
 	gcc *.c -MM -MG >> dep.d
 	

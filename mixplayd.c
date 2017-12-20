@@ -192,9 +192,12 @@ static void *clientHandler(void *args )
     			if( cmd != mpc_idle ) {
     				sprintf( commdata, "HTTP/1.1 200 OK\015\012" );
     				len=strlen( commdata );
-    				setCurClient( sock );
-    				/* setCurClient may block so we need to skip messages */
-    				curmsg=config->msg->count;
+    				if( ( cmd == mpc_dbinfo ) || ( cmd == mpc_dbclean) ||
+    						( cmd == mpc_doublets ) || ( cmd == mpc_shuffle ) ) {
+    					setCurClient( sock );
+    					/* setCurClient may block so we need to skip messages */
+    					curmsg=config->msg->count;
+    				}
         			setCommand(cmd);
     			}
     			else {
