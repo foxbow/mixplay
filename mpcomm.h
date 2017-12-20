@@ -20,5 +20,6 @@ size_t serialize( const mpconfig *data, char *buff, long *count, int clientid );
 size_t deserialize( mpconfig *data, char *json );
 void setCurClient( int client );
 void unlockClient( int client );
+void setUnlockClient( unsigned long msgno );
 
 #endif /* MPCOMM_H_ */

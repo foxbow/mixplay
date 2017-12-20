@@ -193,6 +193,8 @@ static void *clientHandler(void *args )
     				sprintf( commdata, "HTTP/1.1 200 OK\015\012" );
     				len=strlen( commdata );
     				setCurClient( sock );
+    				/* setCurClient may block so we need to skip messages */
+    				curmsg=config->msg->count;
         			setCommand(cmd);
     			}
     			else {
@@ -311,13 +313,14 @@ void progressStart( char* msg, ... ) {
     va_end( args );
 }
 
-void progressEnd( char* msg  ) {
+void progressEnd( char *msg ) {
 	addMessage( 0, msg );
+	setUnlockClient( getConfig()->msg->count );
 }
 
 void updateUI( mpconfig *data ) {
 	if( curmsg < data->msg->count ) {
-		syslog( LOG_INFO, "%s", msgBuffPeek( data->msg ) );
+		syslog( LOG_INFO, "%s", msgBuffPeek( data->msg, curmsg ) );
 		curmsg++;
 	}
 }

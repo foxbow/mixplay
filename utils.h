@@ -3,6 +3,8 @@
 
 /* Default values */
 #include <stdlib.h>
+#include <pthread.h>
+
 #define ONOFF(x) (x)?"ON":"OFF"
 
 #define CMP_CHARS 127
@@ -29,7 +31,8 @@ struct msgbuf_t {
 	char *msg[MSGNUM];
 	int  current;
 	int  lines;
-	long count;
+	unsigned long count;
+	pthread_mutex_t *msgLock;
 };
 typedef struct msgbuf_t msgbuf;
 
@@ -48,11 +51,12 @@ void updateUI( mpconfig *data );
 /**
  * helperfunction to implement message ringbuffer
  */
-void  msgBuffAdd( struct msgbuf_t *msgbuf, char *line );
-char *msgBuffGet( struct msgbuf_t *msgbuf );
-char *msgBuffPeek( struct msgbuf_t *msgbuf );
-char *msgBuffAll( struct msgbuf_t *msgbuf );
-void  msgBuffClear( struct msgbuf_t *msgbuf );
+msgbuf *msgBuffInit();
+unsigned long  msgBuffAdd( msgbuf *msgbuf, char *line );
+char *msgBuffGet( msgbuf *msgbuf );
+const char *msgBuffPeek( msgbuf *msgbuf, unsigned long msgno );
+char *msgBuffAll(  msgbuf *msgbuf );
+void  msgBuffClear( msgbuf *msgbuf );
 
 /**
  * General utility functions

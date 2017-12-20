@@ -81,8 +81,7 @@ void fail( int error, const char* msg, ... ) {
 		}
 
 		gtk_dialog_run ( GTK_DIALOG ( dialog ) );
-		setCommand( mpc_quit );
-/*	    gtk_main_quit(); todo is this right?*/
+	    gtk_main_quit();
 	}
 
     return;
@@ -199,24 +198,9 @@ static int g_progressEnd( void *data ) {
 /**
  * enables closing of the info requester
  */
-void progressEnd( char *msg ) {
-	char *line;
-
-	if( NULL == MP_GLDATA->widgets->mp_popup ) {
-        addMessage( 0, "No progress request open!" );
-    }
-
-	line=falloc( 512, sizeof( char ) );
-
-    if( NULL == msg ) {
-        addMessage( 0, "progressEnd() called with ZERO!" );
-    	strncpy( line, "Done.\n", 512 );
-    }
-    else {
-    	strncpy( line, msg, 512 );
-    }
+void progressEnd( char *line ) {
 	addMessage( 0, line );
-	free( line );
+
     if( getConfig()->inUI ) {
 		gdk_threads_add_idle( g_progressEnd, NULL );
 
@@ -296,7 +280,7 @@ static int g_updateUI( void *data ) {
 		gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->title_current ),
 								control->current->title );
 
-        if( control->root->key != 0  ) {
+        if( control->root->key != 0 ) {
         	infoLine( buff, control->current->plprev, MAXPATHLEN );
             gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_prev, buff );
         	infoLine( buff, control->current, MAXPATHLEN );
@@ -391,6 +375,9 @@ static int g_updateUI( void *data ) {
  */
 void updateUI( mpconfig *control ) {
 	if( control->inUI ) {
+		if( control->status == mpc_quit ) {
+			gtk_main_quit();
+		}
 		gdk_threads_add_idle( g_updateUI, control );
 
 		while ( gtk_events_pending () ) {

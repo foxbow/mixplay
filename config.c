@@ -150,7 +150,7 @@ mpconfig *readConfig( ) {
 
     if( c_config == NULL ) {
     	c_config=falloc( 1, sizeof( mpconfig ) );
-    	c_config->msg=falloc( 1, sizeof( struct msgbuf_t ) );
+    	c_config->msg=msgBuffInit();
     }
 
     /* Set some default values */

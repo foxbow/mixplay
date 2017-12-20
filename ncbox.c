@@ -352,6 +352,7 @@ void progressStart( char *msg, ... ) {
 
 void progressEnd( char *msg ) {
 	addMessage( 0, msg );
+	/* do null */
 }
 
 void updateUI( mpconfig *control ) {

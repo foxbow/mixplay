@@ -287,7 +287,7 @@ void *setProfile( void *data ) {
 
     /* if we're not in player context, start playing automatically */
 	control->status=mpc_start;
-    if( pthread_mutex_trylock( &cmdlock ) ) {
+    if( !pthread_mutex_trylock( &cmdlock ) ) {
     	addMessage( 1, "Autoplay" );
     	control->command=mpc_start;
     }
@@ -725,7 +725,6 @@ void *reader( void *cont ) {
             else {
             	addMessage( 0, "No titles deleted" );
             }
-
             progressEnd( "Finished Cleanup." );
             sendplay( p_command[fdset][1], control );
 

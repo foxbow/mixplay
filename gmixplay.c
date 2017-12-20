@@ -103,9 +103,7 @@ int main( int argc, char **argv ) {
     memset( &glcontrol, 0, sizeof( struct glcontrol_t ) );
     control->data=&glcontrol;
 
-    MP_GLDATA->msgbuff=falloc( 1, sizeof( struct msgbuf_t ) );
-    MP_GLDATA->msgbuff->lines=0;
-    MP_GLDATA->msgbuff->current=0;
+    MP_GLDATA->msgbuff=msgBuffInit();
 
     muteVerbosity();
 

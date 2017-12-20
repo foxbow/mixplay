@@ -19,21 +19,37 @@
 static pthread_mutex_t cmdlock=PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t clientlock=PTHREAD_MUTEX_INITIALIZER;
 static int _curclient;
+static unsigned long _lastmsg=-1;
 
 void setCurClient( int client ) {
 	pthread_mutex_lock( &clientlock );
 	_curclient=client;
+	_lastmsg=-1;
 }
 
 int testClient( int client ) {
-	return ( client | _curclient );
+	if( ( client == -1 ) || ( client == _curclient ) ){
+		return -1;
+	}
+	return 0;
 }
 
 void unlockClient( int client ) {
-	if( _curclient == client ) {
+	if( client == _curclient ) {
 		_curclient=-1;
 		pthread_mutex_unlock( &clientlock );
 	}
+}
+
+void setUnlockClient( unsigned long msgno ) {
+	_lastmsg=msgno;
+}
+
+static int lastMessage() {
+	if( getConfig()->msg->count == _lastmsg ) {
+		return -1;
+	}
+	return 0;
 }
 
 /*
@@ -81,6 +97,7 @@ static void getTitle( jsonObject *jo, const char *key, struct entry_t *title ) {
 
 /**
  * put data to be sent over into the buff
+ * adds messages only if any are available for the client
 **/
 size_t serialize( const mpconfig *data, char *buff, long *count, int clientid ) {
 	jsonObject *joroot=NULL;
@@ -108,12 +125,18 @@ size_t serialize( const mpconfig *data, char *buff, long *count, int clientid ) 
 	jo=jsonAddInt( jo, "playstream", data->playstream );
 	if( *count < data->msg->count ) {
 		if ( testClient( clientid ) ){
-			jo=jsonAddStr( jo, "msg", msgBuffPeek( data->msg ) );
+			jo=jsonAddStr( jo, "msg", msgBuffPeek( data->msg, *count ) );
+		}
+		else {
+			jo=jsonAddStr( jo, "msg", "" );
 		}
 		(*count)++;
 	}
 	else {
-		unlockClient( clientid );
+		if( testClient( clientid ) && lastMessage() ) {
+			(*count)=_lastmsg;
+			unlockClient( clientid );
+		}
 		jo=jsonAddStr( jo, "msg", "" );
 	}
 
@@ -222,7 +245,7 @@ void *netreader( void *control ) {
     		   config->host, config->port );
     }
 
-    addMessage( 1, "Connected");
+    addMessage( 1, "Connected" );
 
     while( config->status != mpc_quit ) {
     	FD_ZERO( &fds );
@@ -278,7 +301,7 @@ void *netreader( void *control ) {
     }
 
     addMessage( 1, "Disconnected");
-    setCommand( mpc_quit );
+    updateUI(config);
     free( commdata );
     close(sock);
     config->rtid=0;

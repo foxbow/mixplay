@@ -13,12 +13,13 @@ LIBS=-lmpg123 -lasound -lpthread
 
 EXES=bin/cmixplay bin/mixplayd bin/gmixplay
 
-all: $(EXES)
+all: dep.d $(EXES)
 
 clean:
 	rm -f *.o
 	rm -f *.gch
 	rm -f $(EXES)
+	rm -f dep.d
 	
 distclean: clean	
 	rm -f gmixplay_app.h
@@ -27,6 +28,8 @@ distclean: clean
 	rm -f *.d
 	rm -f *.Td
 	rm -f core
+
+new: clean all
 
 bin/cmixplay: cmixplay.o $(OBJS) $(NCOBJS) 
 	$(CC) $^ -o $@ -lncurses $(LIBS)
@@ -80,7 +83,7 @@ gmixplay_app.h: static/gmixplay_app.glade
 prepare:
 	apt-get install ncurses-dev mpg123 libmpg123-dev libgtk-3-dev libasound-dev
 
-dep.d:
+dep.d: *.c *.h
 	rm -f dep.d
 	gcc *.c -MM -MG >> dep.d
 	

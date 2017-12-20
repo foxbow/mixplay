@@ -391,14 +391,25 @@ void *falloc( size_t num, size_t size ) {
     return result;
 }
 
+msgbuf *msgBuffInit() {
+	msgbuf *msgBuf=falloc( 1, sizeof( msgbuf ) );
+	msgBuf->msgLock=falloc( 1, sizeof( pthread_mutex_t ) );
+	msgBuf->lines=0;
+    msgBuf->current=0;
+    msgBuf->count=0;
+	pthread_mutex_init( msgBuf->msgLock, NULL );
+	return msgBuf;
+}
+
 /**
  * helperfunction to implement message ringbuffer
  * returns the current message number
  */
-void msgBuffAdd( msgbuf *msgbuf, char *line ) {
+unsigned long msgBuffAdd( msgbuf *msgbuf, char *line ) {
 	char *myline;
 	myline=falloc( strlen(line)+1, sizeof( char ) );
 	strcpy( myline, line );
+	pthread_mutex_lock( msgbuf->msgLock );
 	/* overflow? */
 	if( msgbuf->lines == MSGNUM ) {
 		/* discard oldest (current) message */
@@ -414,6 +425,8 @@ void msgBuffAdd( msgbuf *msgbuf, char *line ) {
 		msgbuf->lines++;
 	}
 	msgbuf->count++;
+	pthread_mutex_unlock( msgbuf->msgLock );
+	return msgbuf->count;
 }
 
 /**
@@ -424,10 +437,12 @@ void msgBuffAdd( msgbuf *msgbuf, char *line ) {
 char *msgBuffGet( struct msgbuf_t *msgbuf ) {
 	char *retval = NULL;
 	if( msgbuf->lines > 0 ) {
+		pthread_mutex_lock( msgbuf->msgLock );
 		retval=msgbuf->msg[msgbuf->current];
 		msgbuf->msg[msgbuf->current]=NULL;
 		msgbuf->current =(msgbuf->current+1)%MSGNUM;
 		msgbuf->lines--;
+		pthread_mutex_unlock( msgbuf->msgLock );
 	}
 	return retval;
 }
@@ -438,10 +453,16 @@ char *msgBuffGet( struct msgbuf_t *msgbuf ) {
  * Return pointer MUST NOT be free'd after use!
  * Caveat: Returns "" if no messages are available
  */
-char *msgBuffPeek( struct msgbuf_t *msgbuf ) {
+const char *msgBuffPeek( struct msgbuf_t *msgbuf, unsigned long msgno ) {
 	char *retval = "";
-	if( msgbuf->lines > 0 ) {
-		retval=msgbuf->msg[msgbuf->current];
+	int pos;
+
+	if( msgno < msgbuf->count ) {
+		pthread_mutex_lock( msgbuf->msgLock );
+		pos=msgbuf->current+msgbuf->lines; /* the latest entry */
+		pos=pos-(msgbuf->count-msgno ); /* get the proper offset */
+		retval=msgbuf->msg[pos%MSGNUM];
+		pthread_mutex_unlock( msgbuf->msgLock );
 	}
 	return retval;
 }
@@ -460,6 +481,7 @@ char *msgBuffAll( struct msgbuf_t *msgbuf ) {
 	buff=falloc( len, sizeof( char ) );
 	buff[0]=0;
 
+	pthread_mutex_lock( msgbuf->msgLock );
 	for( i=0; i<msgbuf->lines; i++ ) {
 		lineno=(i+msgbuf->current)%MSGNUM;
 		while( strlen(buff)+strlen(msgbuf->msg[lineno]) >= len ) {
@@ -472,18 +494,28 @@ char *msgBuffAll( struct msgbuf_t *msgbuf ) {
 		strcat( buff, msgbuf->msg[lineno] );
 		strcat( buff, "\n" );
 	}
+	pthread_mutex_unlock( msgbuf->msgLock );
 
 	return buff;
 }
 
 /**
- * empties the mesage buffer
+ * empties the message buffer
  */
 void msgBuffClear( struct msgbuf_t *msgbuf ) {
 	char *line;
 	while( ( line=msgBuffGet( msgbuf ) ) != NULL ) {
 		free( line );
 	}
+}
+
+/*
+ * Discards the message buffer and all contents
+ */
+void msgBuffDiscard( struct msgbuf_t *msgbuf ) {
+	msgBuffClear( msgbuf );
+	free( msgbuf->msgLock );
+	free( msgbuf );
 }
 
 /*
