@@ -810,10 +810,6 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
         /* skip forward until a title is found the is neither DNP nor MARK */
         valid=0; /* title has not passed any tests */
 
-        if( runner->flags & MP_MARK ) {
-            fail( F_FAIL, "%s is marked!?", runner->display );
-        }
-
         if( cycles>maxcycles ) {
             maxcycles=cycles;
         }

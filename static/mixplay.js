@@ -1,4 +1,17 @@
 doUpdate=1;
+data=null;
+
+function playPause() {
+	if( data != null ) {
+		sendCMD( "mpc_play" );
+		if( data.status == 0 ) {
+			if( confirm( "Replay?" ) ) {
+				sendCMD( "mpc_repl" )
+			}
+			sendCMD( "mpc_play" )
+		}
+	}
+}
 
 /**
  * used cmd's so far are:
@@ -15,7 +28,7 @@ doUpdate=1;
 function sendCMD( cmd ) {
 	var xmlhttp=new XMLHttpRequest();
 	xmlhttp.onreadystatechange=function() {
-  		if ( xmlhttp.readyState==4 && xmlhttp.status!=200 ) {
+  		if ( xmlhttp.readyState==4 && xmlhttp.status!=204 ) {
 			alert( "Error "+xmlhttp.status );
   		}
 	}
@@ -65,11 +78,11 @@ function updateUI( ){
 		  		}
 		  	}
 		  	else if( xmlhttp.status==503 ) {
-		  		if( confirm( "Try to restart thread?" ) ) {
+		  		if( confirm( "Try to restart?" ) ) {
 		  			sendCMD( "mpc_start" );
 		  		}
 		  		else{
-		  			alert( "Stopping update.." );
+		  			alert( "Stopping updates.." );
 		  			doUpdate=0;
 		  		}
 		  	}
@@ -79,7 +92,7 @@ function updateUI( ){
 	if( doUpdate != 0 ) {
 		xmlhttp.open("GET", "/status", true);
 		xmlhttp.send();
-		setTimeout("updateUI()",1000);
+		setTimeout("updateUI()",500);
 	}
 }
 

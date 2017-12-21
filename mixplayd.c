@@ -182,7 +182,7 @@ static void *clientHandler(void *args )
     		memset( commdata, 0, MP_MAXCOMLEN );
     		switch( state ) {
     		case 11: /* get update */
-    			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: text/html; charset=utf-8\015\012\015\012" );
+    			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012\015\012" );
     			len=strlen( commdata );
     			serialize( config, commdata+len, &curmsg, sock );
     			strcat( commdata, "\015\012" );
@@ -190,7 +190,7 @@ static void *clientHandler(void *args )
     			break;
     		case 21: /* set command */
     			if( cmd != mpc_idle ) {
-    				sprintf( commdata, "HTTP/1.1 200 OK\015\012" );
+    				sprintf( commdata, "HTTP/1.1 204 OK\015\012\015\012" );
     				len=strlen( commdata );
     				if( ( cmd == mpc_dbinfo ) || ( cmd == mpc_dbclean) ||
     						( cmd == mpc_doublets ) || ( cmd == mpc_shuffle ) ) {
@@ -201,12 +201,12 @@ static void *clientHandler(void *args )
         			setCommand(cmd);
     			}
     			else {
-    				sprintf( commdata, "HTTP/1.1 400 INVALID COMMAND\015\012" );
+    				sprintf( commdata, "HTTP/1.1 400 INVALID COMMAND\015\012\015\012" );
     				len=strlen( commdata );
     			}
     			break;
     		case 31: /* unknown command */
-    			sprintf( commdata, "HTTP/1.1 501 NOT IMPLEMENTED\015\012" );
+    			sprintf( commdata, "HTTP/1.1 501 NOT IMPLEMENTED\015\012\015\012" );
 				len=strlen( commdata );
     			break;
     		case 51: /* send file */
@@ -369,26 +369,52 @@ int main( int argc, char **argv ) {
         }
     }
 
-    if( _isDaemon ) {
-    	daemon( 0, 0 );
-    	openlog ("mixplayd", LOG_PID, LOG_DAEMON);
-    }
-
     if ( optind < argc ) {
-    	if( 0 == setArgument( argv[optind] ) ) {
+    	switch( setArgument( argv[optind] ) ) {
+    	case 1: /* stream - does this even make sense? */
+    		break;
+
+    	case 2: /* single file */
+    		break;
+
+    	case 3: /* directory */
+    		/* if no default directory is set, use the one given */
+    		if( control->musicdir == NULL ) {
+            	_isDaemon=0;
+            	incDebug();
+    			addMessage( 0, "Setting default configuration values and initializing..." );
+    	        setProfile( control );
+    	        if( control->root == NULL ) {
+    	        	fail( F_FAIL, "No music found at %s!", control->musicdir );
+    	        }
+    	       	addMessage( 0, "Initialization successful!" );
+    			writeConfig( argv[optind] );
+    	        freeConfig( );
+    	       	return 0;
+    		}
+    		break;
+    	case 4: // playlist
+    		break;
+    	default:
             fail( F_FAIL, "Unknown argument!\n", argv[optind] );
             return -1;
         }
     }
 
-    pthread_create( &(control->rtid), NULL, reader, control );
+    if( _isDaemon ) {
+    	daemon( 0, 0 );
+    	openlog ("mixplayd", LOG_PID, LOG_DAEMON);
+    }
 
-    /* wait for the players to start before handling any commands */
-    sleep(1);
+   	pthread_create( &(control->rtid), NULL, reader, control );
+   	/* wait for the players to start before handling any commands */
+   	sleep(1);
 
     if( NULL == control->root ) {
-        /* Runs as thread to have updates in the UI */
         setProfile( control );
+        if( control->root == NULL ) {
+        	fail( F_FAIL, "No music to play!\nStart mixplayd once with a path to set default music directory." );
+        }
     }
     else {
     	control->active=0;
