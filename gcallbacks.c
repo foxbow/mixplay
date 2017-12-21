@@ -305,49 +305,51 @@ void profileStart( GtkButton *button, gpointer data ) {
                  GTK_MESSAGE_INFO,
                  GTK_BUTTONS_NONE,
                  "Profiles/Channels" );
-    if( profile > 0 ) {
+
+    /* add local things */
+    if( mpcontrol->remote == 0 ) {
         gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
                                 "Okay", GTK_RESPONSE_OK,
     							"_Browse", 1,
-    							"_URL", 2,
-								"_Search", 3,
-								"_Fillstick", 4,
-                                "_Cancel", GTK_RESPONSE_CANCEL,
-                                NULL );
-    }
-    else {
-		gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
-								"Okay", GTK_RESPONSE_OK,
-								"_Browse", 1,
-								"_URL", 2,
-								"_Cancel", GTK_RESPONSE_CANCEL,
 								NULL );
+        if(  profile > 0 )  {
+            gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
+        							"_URL", 2,
+    								"_Fillstick", 4,
+                                    NULL );
+        }
+		msgArea=gtk_message_dialog_get_message_area( GTK_MESSAGE_DIALOG( dialog ) );
+
+		store = gtk_list_store_new( 3, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT );
+
+		for( i=0; i < mpcontrol->profiles; i++ ) {
+			gtk_list_store_insert_with_values (store, &iter, -1, 0, "", 1, mpcontrol->profile[i], 2, i+1, -1 );
+		}
+		for( i=0; i < mpcontrol->streams; i++ ) {
+			gtk_list_store_insert_with_values (store, &iter, -1, 0, ">", 1, mpcontrol->sname[i], 2, -(i+1), -1 );
+		}
+
+		list=gtk_tree_view_new_with_model( GTK_TREE_MODEL( store ) );
+		g_object_unref( G_OBJECT(store));
+
+		tselect = gtk_tree_view_get_selection( GTK_TREE_VIEW( list ) );
+		gtk_tree_selection_set_mode( tselect, GTK_SELECTION_BROWSE );
+		g_signal_connect( G_OBJECT( tselect ), "changed", G_CALLBACK( activeSelect_cb), NULL );
+
+		renderer = gtk_cell_renderer_text_new ();
+		column = gtk_tree_view_column_new_with_attributes ("Type", renderer, "text", 0, NULL);
+		gtk_tree_view_append_column (GTK_TREE_VIEW (list), column);
+		column = gtk_tree_view_column_new_with_attributes ("Name", renderer, "text", 1, NULL);
+		gtk_tree_view_append_column (GTK_TREE_VIEW (list), column);
+
+		gtk_container_add( GTK_CONTAINER(msgArea), list );
     }
-    msgArea=gtk_message_dialog_get_message_area( GTK_MESSAGE_DIALOG( dialog ) );
 
-    store = gtk_list_store_new( 3, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT );
+	gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
+							"_Search", 3,
+							"_Cancel", GTK_RESPONSE_CANCEL,
+							NULL );
 
-	for( i=0; i < mpcontrol->profiles; i++ ) {
-		gtk_list_store_insert_with_values (store, &iter, -1, 0, "", 1, mpcontrol->profile[i], 2, i+1, -1 );
-	}
-	for( i=0; i < mpcontrol->streams; i++ ) {
-		gtk_list_store_insert_with_values (store, &iter, -1, 0, ">", 1, mpcontrol->sname[i], 2, -(i+1), -1 );
-	}
-
-	list=gtk_tree_view_new_with_model( GTK_TREE_MODEL( store ) );
-	g_object_unref( G_OBJECT(store));
-
-	tselect = gtk_tree_view_get_selection( GTK_TREE_VIEW( list ) );
-	gtk_tree_selection_set_mode( tselect, GTK_SELECTION_BROWSE );
-	g_signal_connect( G_OBJECT( tselect ), "changed", G_CALLBACK( activeSelect_cb), NULL );
-
-	renderer = gtk_cell_renderer_text_new ();
-	column = gtk_tree_view_column_new_with_attributes ("Type", renderer, "text", 0, NULL);
-	gtk_tree_view_append_column (GTK_TREE_VIEW (list), column);
-	column = gtk_tree_view_column_new_with_attributes ("Name", renderer, "text", 1, NULL);
-	gtk_tree_view_append_column (GTK_TREE_VIEW (list), column);
-
-	gtk_container_add( GTK_CONTAINER(msgArea), list );
 	gtk_widget_show_all(  dialog );
 
     reply=gtk_dialog_run( GTK_DIALOG( dialog ) );

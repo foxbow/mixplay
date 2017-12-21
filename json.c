@@ -11,10 +11,12 @@
 #include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 
 static size_t jsonWriteObj( jsonObject *jo, char *json );
+static size_t jsonWriteArr( jsonObject *jo, char *json );
 static int jsonFetchObject( char *json, jsonObject **jo );
 
 static int jsonFail( const char *func, char c, const int i, const int state ) {
@@ -201,24 +203,24 @@ static int jsonFetchKeyVal( char *json, jsonObject **jo ) {
 				jpos++;
 				break;
 			case '"':
-				(*jo)->type=string;
+				(*jo)->type=json_string;
 				jpos+=jsonFetchString( &json[jpos], (char **)&((*jo)->val) );
 				return jpos;
 				break;
 			case '{':
-				(*jo)->type=object;
+				(*jo)->type=json_object;
 				(*jo)->val=jsonInit();
 				jpos+=jsonFetchObject( &json[jpos], (jsonObject **)&((*jo)->val) );
 				return jpos;
 				break;
 			case '[':
-				(*jo)->type=array;
+				(*jo)->type=json_array;
 				fail( F_FAIL, "JSON Arrays are not yet supported.." );
 				return jpos;
 				break;
 			default:
 				if( isdigit( json[jpos] ) || json[jpos]=='-' ) {
-					(*jo)->type=number;
+					(*jo)->type=json_number;
 					jpos+=jsonFetchNum( &json[jpos], (char **)&((*jo)->val) );
 					return jpos;
 				}
@@ -312,7 +314,7 @@ int jsonGetInt( jsonObject *jo, const char *key ) {
 	jsonObject *pos=jo;
 
 	pos=jsonFollowPath( jo, key );
-	if( ( pos != NULL ) && ( pos->type == number ) ) {
+	if( ( pos != NULL ) && ( pos->type == json_number ) ) {
 		return atoi( pos->val );
 	}
 
@@ -323,7 +325,7 @@ const char *jsonGetStr( jsonObject *jo, const char *key ) {
 	jsonObject *pos=jo;
 
 	pos=jsonFollowPath( jo, key );
-	if( ( pos != NULL ) && ( pos->type == string ) ) {
+	if( ( pos != NULL ) && ( pos->type == json_string ) ) {
 		return pos->val;
 	}
 
@@ -336,11 +338,52 @@ int jsonCopyStr( jsonObject *jo, const char *key, char *buf ) {
 	return strlen(buf);
 }
 
+static void *jsonFetchIndex( jsonObject *jo, int i ) {
+	char buf[20];
+	jsonObject *val=NULL;
+
+	sprintf( buf, "%i", i );
+	val=jsonFollowPath( jo, buf );
+	if( val != NULL ) {
+		return val->val;
+	}
+
+	return NULL;
+}
+
+/**
+ * copy the array of strings into the vals pointer
+ */
+int jsonCopyStrs( jsonObject *jo, const char *key, char ***vals, const int num ) {
+	int i;
+	char *val;
+	jsonObject *pos=NULL;
+
+	if( *vals != NULL ) {
+		fail( F_FAIL, "array target for %s is not empty!", key );
+	}
+
+	pos=jsonFollowPath( jo, key );
+	if( (pos != NULL ) && ( pos->type == json_array ) ) {
+		*vals=falloc( num, sizeof( char * ) );
+
+		for( i=0; i<num; i++ ) {
+			val=(char *)jsonFetchIndex( jo, i );
+			(*vals)[i]=falloc( strlen(val)+1, sizeof( char ) );
+			strcpy( (*vals)[i], val );
+		}
+
+		return num;
+	}
+	addMessage( 1, "No array value for %s", key );
+	return -1;
+}
+
 jsonObject *jsonGetObj( jsonObject *jo, const char *key ) {
 	jsonObject *pos=jo;
 
 	pos=jsonFollowPath( jo, key );
-	if( ( pos != NULL ) && ( pos->type == object ) ) {
+	if( ( pos != NULL ) && ( pos->type == json_object ) ) {
 		return pos->val;
 	}
 
@@ -368,9 +411,33 @@ static jsonObject *jsonAppend( jsonObject *jo, const char *key ) {
 jsonObject *jsonAddStr( jsonObject *jo, const char *key, const char *val ) {
 	jo=jsonAppend( jo, key );
 	jo->val=falloc( strlen(val)+1, sizeof(char) );
-	jo->type=string;
+	jo->type=json_string;
 	strcpy( jo->val, val );
 	return jo;
+}
+
+jsonObject *jsonAddArr( jsonObject *jo, const char *key, jsonObject *val ) {
+	jo=jsonAppend( jo, key );
+	jo->type=json_array;
+	jo->val=val;
+	return jo;
+}
+
+jsonObject *jsonAddStrs( jsonObject *jo, const char *key, char **vals, const int num ) {
+	jsonObject *buf=NULL;
+	jsonObject *val=NULL;
+	char buffer[20];
+	int i;
+
+	for( i=0; i<num; i++ ) {
+		sprintf( buffer, "%i", i );
+		buf=jsonAddStr( buf, buffer, vals[i] );
+		if( i == 0 ) {
+			val=buf;
+		}
+	}
+
+	return jsonAddArr( jo, key, val );
 }
 
 jsonObject *jsonAddInt( jsonObject *jo, const char *key, const int val ) {
@@ -379,13 +446,13 @@ jsonObject *jsonAddInt( jsonObject *jo, const char *key, const int val ) {
 	sprintf( buf, "%i", val );
 	jo->val=falloc( strlen(buf)+1, sizeof(char) );
 	strcpy( jo->val, buf );
-	jo->type=number;
+	jo->type=json_number;
 	return jo;
 }
 
 jsonObject *jsonAddObj( jsonObject *jo, const char *key, jsonObject *val ) {
 	jo=jsonAppend( jo, key );
-	jo->type=object;
+	jo->type=json_object;
 	jo->val=val;
 	return jo;
 }
@@ -400,34 +467,54 @@ jsonObject *jsonParse( char *json ) {
 	}
 }
 
+static size_t jsonWriteVal( jsonObject *jo, char *json ) {
+	switch( jo->type ) {
+	case json_string:
+		strcat( json, "\"" );
+		strcat( json, jo->val );
+		strcat( json, "\"" );
+		break;
+	case json_number:
+		strcat( json, jo->val );
+		break;
+	case json_object:
+		jsonWriteObj( jo->val, json );
+		break;
+	case json_array:
+		jsonWriteArr( jo->val, json );
+		break;
+	case json_none:
+		return -1;
+		break;
+	}
+	return strlen( json );
+}
+
 static size_t jsonWriteKeyVal( jsonObject *jo, char *json ) {
 	strcat( json, "\"" );
 	strcat( json, jo->key );
 	strcat( json, "\":" );
-	switch( jo->type ) {
-	case string:
-		strcat( json, "\"" );
-		strcat( json, jo->val );
-		strcat( json, "\"" );
-		break;
-	case number:
-		strcat( json, jo->val );
-		break;
-	case object:
-		jsonWriteObj( jo->val, json );
-		break;
-	case array:
-		fail( F_FAIL, "No array support!" );
-		break;
-	case none:
-		return -1;
-		break;
-	}
+
+	jsonWriteVal( jo, json );
+
 	if( jo->next != NULL ) {
 		strcat( json, "," );
 		jsonWriteKeyVal( jo->next, json );
 	}
 
+	return strlen( json );
+}
+
+static size_t jsonWriteArr( jsonObject *jo, char *json ) {
+	strcat( json, "[" );
+	while( jo != NULL ) {
+		jsonWriteVal( jo, json );
+		jo=jo->next;
+		if( jo != NULL ) {
+			strcat( json, "," );
+		}
+	}
+	strcat( json, "]" );
 	return strlen( json );
 }
 
@@ -447,7 +534,7 @@ void jsonDiscard( jsonObject *jo, int all ) {
 	jsonObject *pos=jo;
 
 	while( jo != NULL ) {
-		if( jo->type == object ) {
+		if( jo->type == json_object ) {
 			jsonDiscard( pos->val, all );
 			pos->val=NULL;
 		}

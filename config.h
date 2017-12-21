@@ -93,6 +93,7 @@ mpconfig *writeConfig( const char *musicpath );
 mpconfig *readConfig( void );
 mpconfig *getConfig( void );
 void freeConfig( void );
+void freeConfigContents( mpconfig *config );
 
 void incDebug( void );
 int getDebug( void );

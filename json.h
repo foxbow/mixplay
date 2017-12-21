@@ -9,11 +9,11 @@
 #define _JSON_H_
 
 enum jsonTypes_t {
-	none,
-	string,
-	number,
-	object,
-	array
+	json_none,
+	json_string,
+	json_number,
+	json_object,
+	json_array
 };
 
 typedef enum jsonTypes_t jsonType;
@@ -31,9 +31,11 @@ jsonObject *jsonParse( char *json );
 int   jsonGetInt( jsonObject *jo, const char *key );
 const char *jsonGetStr( jsonObject *jo, const char *key );
 int jsonCopyStr( jsonObject *jo, const char *key, char *buf );
+int jsonCopyStrs( jsonObject *jo, const char *key, char ***vals, const int num );
 jsonObject *jsonGetObj( jsonObject *jo, const char *key );
 
 jsonObject *jsonAddStr( jsonObject *jo, const char *key, const char *val );
+jsonObject *jsonAddStrs( jsonObject *jo, const char *key, char **vals, const int num );
 jsonObject *jsonAddInt( jsonObject *jo, const char *key, const int val );
 jsonObject *jsonAddObj( jsonObject *jo, const char *key, jsonObject *val );
 size_t jsonWrite( jsonObject *jo, char *json );

@@ -64,16 +64,20 @@ static jsonObject *appTitle( jsonObject *jo, const char *key, const struct entry
 	jsonObject *val=NULL;
 
 	if( title != NULL ) {
-		val=jsonAddStr( val, "artist", title->artist );
+		val=jsonAddStr( NULL, "artist", title->artist );
 		jsonAddStr( val, "album", title->album );
 		jsonAddStr( val, "title", title->title );
 		jsonAddInt( val, "flags", title->flags );
+		jsonAddInt( val, "playcount", title->playcount );
+		jsonAddInt( val, "skipcount", title->skipcount );
 	}
 	else {
-		val=jsonAddStr( val, "artist", "---" );
+		val=jsonAddStr( NULL, "artist", "---" );
 		jsonAddStr( val, ",album", "---" );
 		jsonAddStr( val, ",title", "---" );
 		jsonAddInt( val, ",flags", 0 );
+		jsonAddInt( val, "playcount", 0 );
+		jsonAddInt( val, "skipcount", 0 );
 	}
 	return jsonAddObj(jo, key, val);
 }
@@ -87,6 +91,8 @@ static void getTitle( jsonObject *jo, const char *key, struct entry_t *title ) {
 		jsonCopyStr(to, "album", title->album);
 		jsonCopyStr(to, "title", title->title);
 		title->flags=jsonGetInt( to, "flags" );
+		title->playcount=jsonGetInt( to, "playcount" );
+		title->skipcount=jsonGetInt( to, "skipcount" );
 		sprintf( title->display, "%s - %s", title->artist, title->title );
 	}
 	else {
@@ -99,36 +105,36 @@ static void getTitle( jsonObject *jo, const char *key, struct entry_t *title ) {
  * put data to be sent over into the buff
  * adds messages only if any are available for the client
 **/
-size_t serialize( const mpconfig *data, char *buff, long *count, int clientid ) {
-	jsonObject *joroot=NULL;
+size_t serializeStatus( const mpconfig *data, char *buff, long *count, int clientid ) {
 	jsonObject *jo=NULL;
 
 	buff[0]=0;
 
-	jo=jsonAddInt( jo, "version", MP_COMVER );
-	joroot=jo;
+	jo=jsonAddInt( NULL, "version", MP_COMVER );
+	jsonAddInt( jo, "type", 1 );
+
 	if( data->current != NULL ) {
-		jo=appTitle( jo, "prev", data->current->plprev );
-		jo=appTitle( jo, "current", data->current );
-		jo=appTitle( jo, "next", data->current->plnext );
+		appTitle( jo, "prev", data->current->plprev );
+		appTitle( jo, "current", data->current );
+		appTitle( jo, "next", data->current->plnext );
 	}
 	else {
-		jo=appTitle( jo, "prev", NULL );
-		jo=appTitle( jo, "current", NULL );
-		jo=appTitle( jo, "next", NULL );
+		appTitle( jo, "prev", NULL );
+		appTitle( jo, "current", NULL );
+		appTitle( jo, "next", NULL );
 	}
-	jo=jsonAddStr( jo, "playtime", data->playtime );
-	jo=jsonAddStr( jo, "remtime", data->remtime );
-	jo=jsonAddInt( jo, "percent", data->percent );
-	jo=jsonAddInt( jo, "volume", data->volume );
-	jo=jsonAddInt( jo, "status", data->status );
-	jo=jsonAddInt( jo, "playstream", data->playstream );
+	jsonAddStr( jo, "playtime", data->playtime );
+	jsonAddStr( jo, "remtime", data->remtime );
+	jsonAddInt( jo, "percent", data->percent );
+	jsonAddInt( jo, "volume", data->volume );
+	jsonAddInt( jo, "status", data->status );
+	jsonAddInt( jo, "playstream", data->playstream );
 	if( *count < data->msg->count ) {
 		if ( testClient( clientid ) ){
-			jo=jsonAddStr( jo, "msg", msgBuffPeek( data->msg, *count ) );
+			jsonAddStr( jo, "msg", msgBuffPeek( data->msg, *count ) );
 		}
 		else {
-			jo=jsonAddStr( jo, "msg", "" );
+			jsonAddStr( jo, "msg", "" );
 		}
 		(*count)++;
 	}
@@ -137,8 +143,41 @@ size_t serialize( const mpconfig *data, char *buff, long *count, int clientid ) 
 			(*count)=_lastmsg;
 			unlockClient( clientid );
 		}
-		jo=jsonAddStr( jo, "msg", "" );
+		jsonAddStr( jo, "msg", "" );
 	}
+
+	jsonWrite(jo, buff);
+	jsonDiscard( jo, 1 );
+
+	return strlen(buff);
+}
+
+/**
+ * global/static part of the config
+ */
+size_t serializeConfig( mpconfig *config, char *buff ) {
+	jsonObject *joroot=NULL;
+	jsonObject *jo=NULL;
+
+	buff[0]=0;
+
+	/* start with version */
+	joroot=jsonAddInt( NULL, "version", MP_COMVER );
+	jsonAddInt( joroot, "type", 2 );
+
+	/* dump config into JSON object */
+	jo=jsonAddInt( NULL, "active", config->active );
+	jsonAddInt( jo, "fade", config->fade );
+	jsonAddStr( jo, "musicdir", config->musicdir );
+	jsonAddInt( jo, "profiles", config->profiles );
+	jsonAddStrs( jo, "profile", config->profile, config->profiles );
+	jsonAddInt( jo, "skipdnp", config->skipdnp );
+	jsonAddInt( jo, "streams", config->streams );
+	jsonAddStrs( jo, "stream", config->stream, config->streams );
+	jsonAddStrs( jo, "sname", config->sname, config->streams );
+
+	/* add config object to the root object */
+	jsonAddObj( joroot, "config", jo );
 
 	jsonWrite(joroot, buff);
 	jsonDiscard( joroot, 1 );
@@ -146,13 +185,65 @@ size_t serialize( const mpconfig *data, char *buff, long *count, int clientid ) 
 	return strlen(buff);
 }
 
+static int deserializeConfig( mpconfig *config, jsonObject *jo ) {
+	jsonObject *joconf=NULL;
+
+	joconf=jsonGetObj( jo, "config" );
+	if( joconf == NULL ) {
+		addMessage( 0, "No config in reply!" );
+		return -1;
+	}
+
+	freeConfigContents( config );
+
+	config->active=jsonGetInt( joconf, "active");
+	config->fade=jsonGetInt( joconf, "fade");
+	jsonCopyStr( joconf, "musicdir", config->musicdir );
+	config->profiles=jsonGetInt( joconf, "profiles" );
+	jsonCopyStrs( joconf, "profile", &(config->profile), config->profiles );
+	config->skipdnp=jsonGetInt( joconf, "skipdnp" );
+	config->streams=jsonGetInt( joconf, "streams" );
+	jsonCopyStrs( joconf, "stream", &(config->stream), config->streams );
+	jsonCopyStrs( joconf, "sname", &(config->sname), config->streams );
+
+	return 0;
+}
+
+static int deserializeStatus( mpconfig *data, jsonObject *jo ) {
+	char msgline[128];
+
+	if( data->current == NULL ) {
+		/* dummy path to fill artist, album, title */
+		data->current=insertTitle( data->current, "server/mixplayd/title" );
+		data->root=data->current;
+		addToPL( data->current, data->current );
+		addToPL( insertTitle( data->current, "server/mixplayd/title" ), data->current );
+		addToPL( insertTitle( data->current, "server/mixplayd/title" ), data->current );
+	}
+
+	getTitle( jo, "prev", data->current->plprev );
+	getTitle( jo, "current", data->current );
+	getTitle( jo, "next", data->current->plnext );
+	jsonCopyStr( jo, "playtime", data->playtime );
+	jsonCopyStr( jo, "remtime", data->remtime );
+	data->percent=jsonGetInt( jo, "percent" );
+	data->volume=jsonGetInt( jo, "volume" );
+	data->status=jsonGetInt( jo, "status" );
+	data->playstream=jsonGetInt( jo, "playstream" );
+	jsonCopyStr( jo, "msg", msgline );
+	if( strlen( msgline ) > 0 ){
+		addMessage( 0, msgline );
+	}
+
+	return 0;
+}
 /*
  * sort data from buff into the current configuration
  */
-size_t deserialize( mpconfig *data, char *json ) {
+static int deserialize( mpconfig *data, char *json ) {
 	int ver;
-	char msgline[128];
 	jsonObject *jo;
+	int retval=-1;
 
 	jo=jsonParse( json );
 	if( jo != NULL ) {
@@ -161,34 +252,23 @@ size_t deserialize( mpconfig *data, char *json ) {
 			fail( F_FAIL, "mixplayd protocol mismatch!\nServer has version %i, we have version %i!", ver, MP_COMVER );
 			return -1;
 		}
-		if( data->current == NULL ) {
-			/* dummy path to fill artist, album, title */
-			data->current=insertTitle( data->current, "server/mixplayd/title" );
-			data->root=data->current;
-			addToPL( data->current, data->current );
-			addToPL( insertTitle( data->current, "server/mixplayd/title" ), data->current );
-			addToPL( insertTitle( data->current, "server/mixplayd/title" ), data->current );
-		}
 
-		getTitle( jo, "prev", data->current->plprev );
-		getTitle( jo, "current", data->current );
-		getTitle( jo, "next", data->current->plnext );
-		jsonCopyStr( jo, "playtime", data->playtime );
-		jsonCopyStr( jo, "remtime", data->remtime );
-		data->percent=jsonGetInt( jo, "percent" );
-		data->volume=jsonGetInt( jo, "volume" );
-		data->status=jsonGetInt( jo, "status" );
-		data->playstream=jsonGetInt( jo, "playstream" );
-		jsonCopyStr( jo, "msg", msgline );
-		if( strlen( msgline ) > 0 ){
-			addMessage( 0, msgline );
-		}
-		jsonDiscard( jo, 0 );
+		switch( jsonGetInt( jo, "type" ) ) {
+		case 1: /* status */
+			retval=deserializeStatus( data, jo );
+			break;
 
-		return 0;
+		case 2: /* config */
+			retval=deserializeConfig( data, jo );
+			break;
+
+		default:
+			addMessage( 1, "Unknown reply type!" );
+		}
 	}
+	jsonDiscard( jo, 0 );
 
-	return -1;
+	return retval;
 }
 
 static int recFromMixplayd( mpconfig *config, char *data ) {

@@ -311,29 +311,36 @@ static void sfree( void *ptr ) {
 }
 
 /**
+ * frees the static parts of the config
+ */
+void freeConfigContents( mpconfig *config ) {
+	int i;
+
+    sfree( config->dbname );
+    sfree( config->dnpname );
+    sfree( config->favname );
+    sfree( config->musicdir );
+    for( i=0; i<config->profiles; i++ ) {
+    	sfree( config->profile[i] );
+    }
+    config->profiles=0;
+    sfree( config->profile );
+
+    for( i=0; i<config->streams; i++ ) {
+    	sfree( config->stream[i] );
+    	sfree( config->sname[i] );
+    }
+    config->streams=0;
+    sfree( config->stream );
+    sfree( config->sname );
+}
+
+/**
  * recursive free() to clean up all of the configuration
  */
 void freeConfig( ) {
-	int i;
-
 	assert( c_config != NULL );
-
-    sfree( c_config->dbname );
-    sfree( c_config->dnpname );
-    sfree( c_config->favname );
-    sfree( c_config->musicdir );
-    for( i=0; i<c_config->profiles; i++ ) {
-    	sfree( c_config->profile[i] );
-    }
-    sfree( c_config->profile );
-
-    for( i=0; i<c_config->streams; i++ ) {
-    	sfree( c_config->stream[i] );
-    	sfree( c_config->sname[i] );
-    }
-    sfree( c_config->stream );
-    sfree( c_config->sname );
-
+	freeConfigContents( c_config );
     c_config->root=cleanTitles( c_config->root );
     sfree( c_config );
     c_config=NULL;

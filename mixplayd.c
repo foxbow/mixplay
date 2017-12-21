@@ -153,6 +153,9 @@ static void *clientHandler(void *args )
 								mtype="Content-Type: application/javascript; charset=utf-8";
 								state=5;
 							}
+							else if( strcmp( pos, "/config") == 0 ) {
+								state=6;
+							}
 							else {
 								addMessage( 1, "Illegal get %s", pos );
 								send(sock , "HTTP/1.0 404 NOT FOUND\015\012\015\012", 25, 0);
@@ -184,7 +187,7 @@ static void *clientHandler(void *args )
     		case 11: /* get update */
     			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012\015\012" );
     			len=strlen( commdata );
-    			serialize( config, commdata+len, &curmsg, sock );
+    			serializeStatus( config, commdata+len, &curmsg, sock );
     			strcat( commdata, "\015\012" );
     			len=strlen(commdata);
     			break;
@@ -222,6 +225,13 @@ static void *clientHandler(void *args )
     			len=0;
     			state=0;
     			running=0;
+    			break;
+    		case 61: /* get config */
+    			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012\015\012" );
+    			len=strlen( commdata );
+    			serializeConfig( config, commdata+len );
+    			strcat( commdata, "\015\012" );
+    			len=strlen(commdata);
     			break;
     		default:
     			len=0;
