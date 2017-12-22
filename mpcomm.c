@@ -127,6 +127,7 @@ size_t serializeStatus( const mpconfig *data, char *buff, long *count, int clien
 	jsonAddStr( jo, "remtime", data->remtime );
 	jsonAddInt( jo, "percent", data->percent );
 	jsonAddInt( jo, "volume", data->volume );
+	jsonAddInt( jo, "active", data->active );
 	jsonAddInt( jo, "status", data->status );
 	jsonAddInt( jo, "playstream", data->playstream );
 	if( *count < data->msg->count ) {
@@ -166,8 +167,7 @@ size_t serializeConfig( mpconfig *config, char *buff ) {
 	jsonAddInt( joroot, "type", 2 );
 
 	/* dump config into JSON object */
-	jo=jsonAddInt( NULL, "active", config->active );
-	jsonAddInt( jo, "fade", config->fade );
+	jo=jsonAddInt( NULL, "fade", config->fade );
 	jsonAddStr( jo, "musicdir", config->musicdir );
 	jsonAddInt( jo, "profiles", config->profiles );
 	jsonAddStrs( jo, "profile", config->profile, config->profiles );
@@ -195,7 +195,6 @@ static int deserializeConfig( mpconfig *config, jsonObject *jo ) {
 
 	freeConfigContents( config );
 
-	config->active=jsonGetInt( joconf, "active");
 	config->fade=jsonGetInt( joconf, "fade");
 	jsonCopyStr( joconf, "musicdir", &(config->musicdir) );
 	config->profiles=jsonGetInt( joconf, "profiles" );
@@ -219,7 +218,7 @@ static int deserializeStatus( mpconfig *data, jsonObject *jo ) {
 		addToPL( insertTitle( data->current, "server/mixplayd/title" ), data->current );
 		addToPL( insertTitle( data->current, "server/mixplayd/title" ), data->current );
 	}
-
+	data->active=jsonGetInt( jo, "active");
 	getTitle( jo, "prev", data->current->plprev );
 	getTitle( jo, "current", data->current );
 	getTitle( jo, "next", data->current->plnext );
