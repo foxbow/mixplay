@@ -302,37 +302,28 @@ mpconfig *writeConfig( const char *musicpath ) {
 }
 
 /**
- * just free something if it actually exists
- */
-static void sfree( void *ptr ) {
-	if( ptr != NULL ) {
-		free( ptr );
-	}
-}
-
-/**
  * frees the static parts of the config
  */
 void freeConfigContents( mpconfig *config ) {
 	int i;
 
-    sfree( config->dbname );
-    sfree( config->dnpname );
-    sfree( config->favname );
-    sfree( config->musicdir );
+    sfree( &(config->dbname) );
+    sfree( &(config->dnpname) );
+    sfree( &(config->favname) );
+    sfree( &(config->musicdir) );
     for( i=0; i<config->profiles; i++ ) {
-    	sfree( config->profile[i] );
+    	sfree( &(config->profile[i]) );
     }
     config->profiles=0;
-    sfree( config->profile );
+    sfree( (char **)&(config->profile) );
 
     for( i=0; i<config->streams; i++ ) {
-    	sfree( config->stream[i] );
-    	sfree( config->sname[i] );
+    	sfree( &(config->stream[i]) );
+    	sfree( &(config->sname[i]) );
     }
     config->streams=0;
-    sfree( config->stream );
-    sfree( config->sname );
+    sfree( (char **)&(config->stream) );
+    sfree( (char **)&(config->sname) );
 }
 
 /**
@@ -342,7 +333,7 @@ void freeConfig( ) {
 	assert( c_config != NULL );
 	freeConfigContents( c_config );
     c_config->root=cleanTitles( c_config->root );
-    sfree( c_config );
+    sfree( (char **)c_config );
     c_config=NULL;
 }
 

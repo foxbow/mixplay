@@ -73,6 +73,7 @@ int readline( char *line, size_t len, int fd );
 char *abspath( char *path, const char *basedir, int len );
 int checkMatch( const char* name, const char* pat );
 void *falloc( size_t num, size_t size );
+void sfree( char **ptr );
 void dumpbin( const void *data, size_t len );
 char *toLower( char *text );
 

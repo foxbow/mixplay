@@ -1,5 +1,6 @@
 doUpdate=1;
 data=null;
+mpver=7;
 
 function playPause() {
 	if( data != null ) {
@@ -48,9 +49,9 @@ function updateUI( ){
   			if( xmlhttp.status==200 ) {
 	  			data=JSON.parse(xmlhttp.responseText);
 	  			if( data !== undefined ) {
-	  				if( data.version != 6 ) {
+	  				if( data.version != mpver ) {
 	  					doUpdate=0;
-	  					alert("Version clash, expected 5 and got "+data.version );
+	  					alert("Version clash, expected "+mpver+" and got "+data.version );
 	  					return;
 	  				}
 	  				document.title=data.current.artist+" - "+data.current.title;

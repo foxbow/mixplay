@@ -18,9 +18,10 @@
 static size_t jsonWriteObj( jsonObject *jo, char *json );
 static size_t jsonWriteArr( jsonObject *jo, char *json );
 static int jsonFetchObject( char *json, jsonObject **jo );
+static int jsonFetchArray( char *json, jsonObject **jo );
 
-static int jsonFail( const char *func, char c, const int i, const int state ) {
-	addMessage( 0, "%s#%i: Found invalid '%c' in JSON pos %i", func, state, c, i );
+static int jsonFail( const char *func, char *str, const int i, const int state ) {
+	addMessage( 0, "%s#%i: Found invalid '%c' in JSON pos %i\n%s", func, state, str[i], i, str );
 	return -1;
 }
 
@@ -61,7 +62,7 @@ static int jsonFetchNum( char *json, char **val ) {
 					state=1;
 				}
 				else {
-					return jsonFail( __func__, json[i], i, state );
+					return jsonFail( __func__, json, i, state );
 				}
 			}
 			break;
@@ -95,7 +96,7 @@ static int jsonFetchNum( char *json, char **val ) {
 				state=3;
 			}
 			else {
-				return jsonFail( __func__, json[i], i, state );
+				return jsonFail( __func__, json, i, state );
 			}
 			break;
 		}
@@ -122,7 +123,7 @@ static int jsonFetchString( char *json, char **val ) {
 			case ' ':
 				break;
 			default:
-				return jsonFail( __func__, json[i], i, state );
+				return jsonFail( __func__, json, i, state );
 			}
 			break;
 		case 1: /* in quotes */
@@ -152,13 +153,51 @@ static int jsonFetchString( char *json, char **val ) {
 				state=1;
 				break;
 			default:
-				return jsonFail( __func__, json[i], i, state );
+				return jsonFail( __func__, json, i, state );
 			}
 			break;
 		}
 		i++;
 	}
 
+	return -1;
+}
+
+static int jsonFetchValue( char *json, jsonObject *jo ) {
+	int jpos=0;
+	int state=0;
+
+	switch( json[jpos] ) {
+	case ' ':
+		jpos++;
+		break;
+	case '"':
+		jo->type=json_string;
+		jpos+=jsonFetchString( &json[jpos], (char **)&(jo->val) );
+		return jpos;
+		break;
+	case '{':
+		jo->type=json_object;
+		jo->val=jsonInit();
+		jpos+=jsonFetchObject( &json[jpos], (jsonObject **)&(jo->val) );
+		return jpos;
+		break;
+	case '[':
+		jo->type=json_array;
+		jo->val=jsonInit();
+		jpos+=jsonFetchArray( &json[jpos], (jsonObject **)&(jo->val) );
+		return jpos;
+		break;
+	default:
+		if( isdigit( json[jpos] ) || json[jpos]=='-' ) {
+			jo->type=json_number;
+			jpos+=jsonFetchNum( &json[jpos], (char **)&(jo->val) );
+			return jpos;
+		}
+		else {
+			jsonFail( __func__, json, jpos, state );
+		}
+	}
 	return -1;
 }
 
@@ -181,7 +220,7 @@ static int jsonFetchKeyVal( char *json, jsonObject **jo ) {
 				state=1;
 				break;
 			default:
-				return jsonFail( __func__, json[jpos], jpos, state );
+				return jsonFail( __func__, json, jpos, state );
 			}
 			break;
 		case 1: /* got key */
@@ -194,44 +233,77 @@ static int jsonFetchKeyVal( char *json, jsonObject **jo ) {
 				jpos++;
 				break;
 			default:
-				return jsonFail( __func__, json[jpos], jpos, state );
+				return jsonFail( __func__, json, jpos, state );
 			}
 			break;
 		case 2: /* get value */
-			switch( json[jpos] ) {
-			case ' ':
-				jpos++;
-				break;
-			case '"':
-				(*jo)->type=json_string;
-				jpos+=jsonFetchString( &json[jpos], (char **)&((*jo)->val) );
-				return jpos;
-				break;
-			case '{':
-				(*jo)->type=json_object;
-				(*jo)->val=jsonInit();
-				jpos+=jsonFetchObject( &json[jpos], (jsonObject **)&((*jo)->val) );
-				return jpos;
-				break;
-			case '[':
-				(*jo)->type=json_array;
-				fail( F_FAIL, "JSON Arrays are not yet supported.." );
-				return jpos;
-				break;
-			default:
-				if( isdigit( json[jpos] ) || json[jpos]=='-' ) {
-					(*jo)->type=json_number;
-					jpos+=jsonFetchNum( &json[jpos], (char **)&((*jo)->val) );
-					return jpos;
-				}
-				else {
-					jsonFail( __func__, json[jpos], jpos, state );
-				}
-			}
+			jpos+=jsonFetchValue( &json[jpos], *jo );
+			return jpos;
 		}
 	}
 
 	return -1;
+}
+
+static int setIndex( jsonObject *jo, int i ) {
+	char buf[20];
+	sprintf( buf, "%i", i );
+	jo->key=falloc( strlen(buf)+1, sizeof(char) );
+	strcpy( jo->key, buf );
+	return i+1;
+}
+
+static int jsonFetchArray( char *json, jsonObject **jo ) {
+	int jpos=0;
+	int state=0;
+	int len=strlen(json);
+	int index=0;
+	jsonObject **current=jo;
+
+	while( jpos < len ) {
+		switch( state ) {
+		case 0: /* fetch first value */
+			switch( json[jpos] ) {
+			case '[':
+				jpos++;
+				*current=jsonInit();
+				index=setIndex( *current, index );
+				jpos+=jsonFetchValue( json+jpos, *current );
+				state=1;
+				break;
+			case ' ':
+				jpos++;
+				break;
+			default:
+				return jsonFail( __func__, json, jpos, state );
+			}
+			break;
+		case 1: /* next value? */
+			switch( json[jpos] ){
+			case ' ':
+				json[jpos]=0;
+				jpos++;
+				break;
+			case ']':
+				json[jpos]=0;
+				return jpos+1;
+				break;
+			case ',':
+				json[jpos]=0;
+				jpos++;
+				(*current)->next=jsonInit();
+				current=&((*current)->next);
+				index=setIndex( *current, index );
+				jpos+=jsonFetchValue( json+jpos, *current );
+				break;
+			default:
+				return jsonFail( __func__, json, jpos, state );
+			}
+			break;
+		}
+	}
+
+	return jpos;
 }
 
 static int jsonFetchObject( char *json, jsonObject **jo ) {
@@ -253,7 +325,7 @@ static int jsonFetchObject( char *json, jsonObject **jo ) {
 				jpos++;
 				break;
 			default:
-				return jsonFail( __func__, json[jpos], jpos, state );
+				return jsonFail( __func__, json, jpos, state );
 			}
 			break;
 		case 1: /* next value? */
@@ -273,7 +345,7 @@ static int jsonFetchObject( char *json, jsonObject **jo ) {
 				current=&((*current)->next);
 				break;
 			default:
-				return jsonFail( __func__, json[jpos], jpos, state );
+				return jsonFail( __func__, json, jpos, state );
 			}
 			break;
 		}
@@ -333,7 +405,14 @@ const char *jsonGetStr( jsonObject *jo, const char *key ) {
 	return "";
 }
 
-int jsonCopyStr( jsonObject *jo, const char *key, char *buf ) {
+int jsonCopyStr( jsonObject *jo, const char *key, char **buf ) {
+	const char *val=jsonGetStr(jo, key);
+	*buf=falloc( strlen( val )+1, sizeof( char ) );
+	strcpy( *buf, val );
+	return strlen( val );
+}
+
+int jsonCopyChars( jsonObject *jo, const char *key, char buf[] ) {
 	strcpy( buf, jsonGetStr(jo, key) );
 	return strlen(buf);
 }
@@ -343,11 +422,13 @@ static void *jsonFetchIndex( jsonObject *jo, int i ) {
 	jsonObject *val=NULL;
 
 	sprintf( buf, "%i", i );
-	val=jsonFollowPath( jo, buf );
+	val=jsonFollowPath( jo->val, buf );
 	if( val != NULL ) {
 		return val->val;
 	}
-
+	else {
+		addMessage( 1, "No index %i in %s", i, jo->key );
+	}
 	return NULL;
 }
 
@@ -368,7 +449,7 @@ int jsonCopyStrs( jsonObject *jo, const char *key, char ***vals, const int num )
 		*vals=falloc( num, sizeof( char * ) );
 
 		for( i=0; i<num; i++ ) {
-			val=(char *)jsonFetchIndex( jo, i );
+			val=(char *)jsonFetchIndex( pos, i );
 			(*vals)[i]=falloc( strlen(val)+1, sizeof( char ) );
 			strcpy( (*vals)[i], val );
 		}
@@ -530,22 +611,34 @@ size_t jsonWrite( jsonObject *jo, char *json ) {
 	return jsonWriteObj( jo, json );
 }
 
-void jsonDiscard( jsonObject *jo, int all ) {
+/**
+ * cleans up a tree of json objects. Range controls if keys and/or values need to be free'd as well
+ * Applications should only use 0 and -1
+ *  0 - free none
+ *  1 - free keys	(needed for arrays)
+ * 	2 - free values
+ * -1 - free all
+ */
+void jsonDiscard( jsonObject *jo, int range ) {
 	jsonObject *pos=jo;
 
 	while( jo != NULL ) {
 		if( jo->type == json_object ) {
-			jsonDiscard( pos->val, all );
-			pos->val=NULL;
+			jsonDiscard( jo->val, range );
+			jo->val=NULL;
+		}
+		/* array keys are always free'd */
+		if( jo->type == json_array ) {
+			jsonDiscard( jo->val, range|1 );
 		}
 		pos=jo->next;
-		if( all ) {
-			free( jo->key );
-			if( jo->val != NULL ) {
-				free( jo->val );
-			}
+		if( range & 1 ) {
+			sfree( &(jo->key) );
 		}
-		free( jo );
+		if( range & 2 ) {
+			sfree( jo->val );
+		}
+		sfree( (char **)&jo );
 		jo=pos;
 	}
 }

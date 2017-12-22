@@ -2,7 +2,7 @@
 VERSION=$(shell git describe --tags --abbrev=1 --dirty=-dev --always)
 
 CCFLAGS=-DVERSION=\"${VERSION}\"
-CCFLAGS+=-Wall -g -pedantic
+CCFLAGS+=-Wall -g -pedantic -Werror
 LDFLAGS_GLADE=`pkg-config --libs gtk+-3.0 gmodule-2.0` `pkg-config --cflags --libs x11`
 CCFLAGS_GLADE=$(CCFLAGS) `pkg-config --cflags gtk+-3.0 gmodule-2.0`
 
@@ -18,8 +18,8 @@ all: dep.d $(EXES)
 clean:
 	rm -f *.o
 	rm -f *.gch
-	rm -f $(EXES)
-	rm -f dep.d
+	rm -f bin/*
+	touch bin/KEEPDIR
 	
 distclean: clean	
 	rm -f gmixplay_app.h

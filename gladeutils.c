@@ -329,7 +329,10 @@ static int g_updateUI( void *data ) {
         gtk_widget_set_sensitive( MP_GLDATA->widgets->button_fav, ( !( control->current->flags & MP_FAV ) ) );
 
     	if( 0 != control->remote ) {
-    		setButtonLabel( MP_GLDATA->widgets->button_profile, control->host );
+    	    snprintf( buff, MAXPATHLEN, "%s@%s",
+    	    		(control->active < 0)?control->sname[-control->active-1]:control->profile[control->active-1],
+    	    				control->host );
+        	setButtonLabel( MP_GLDATA->widgets->button_profile, buff );
     	}
     	else if( 0 == control->active ) {
         	if( control->playstream ) {
@@ -343,7 +346,8 @@ static int g_updateUI( void *data ) {
         }
         else {
     	    gtk_widget_set_visible( MP_GLDATA->widgets->remain, -1 );
-    	    snprintf( buff, MAXPATHLEN, "Playing \n%s", (control->active < 0)?control->sname[-control->active-1]:control->profile[control->active-1] );
+    	    snprintf( buff, MAXPATHLEN, "Playing \n%s",
+    	    		(control->active < 0)?control->sname[-control->active-1]:control->profile[control->active-1] );
         	setButtonLabel( MP_GLDATA->widgets->button_profile, buff );
         }
 

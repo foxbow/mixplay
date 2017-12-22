@@ -87,9 +87,9 @@ static void getTitle( jsonObject *jo, const char *key, struct entry_t *title ) {
 	to=jsonGetObj( jo, key);
 
 	if( to != NULL ) {
-		jsonCopyStr(to, "artist", title->artist);
-		jsonCopyStr(to, "album", title->album);
-		jsonCopyStr(to, "title", title->title);
+		jsonCopyChars(to, "artist", title->artist);
+		jsonCopyChars(to, "album", title->album);
+		jsonCopyChars(to, "title", title->title);
 		title->flags=jsonGetInt( to, "flags" );
 		title->playcount=jsonGetInt( to, "playcount" );
 		title->skipcount=jsonGetInt( to, "skipcount" );
@@ -147,7 +147,7 @@ size_t serializeStatus( const mpconfig *data, char *buff, long *count, int clien
 	}
 
 	jsonWrite(jo, buff);
-	jsonDiscard( jo, 1 );
+	jsonDiscard( jo, -1 );
 
 	return strlen(buff);
 }
@@ -180,14 +180,13 @@ size_t serializeConfig( mpconfig *config, char *buff ) {
 	jsonAddObj( joroot, "config", jo );
 
 	jsonWrite(joroot, buff);
-	jsonDiscard( joroot, 1 );
+	jsonDiscard( joroot, -1 );
 
 	return strlen(buff);
 }
 
 static int deserializeConfig( mpconfig *config, jsonObject *jo ) {
 	jsonObject *joconf=NULL;
-
 	joconf=jsonGetObj( jo, "config" );
 	if( joconf == NULL ) {
 		addMessage( 0, "No config in reply!" );
@@ -198,7 +197,7 @@ static int deserializeConfig( mpconfig *config, jsonObject *jo ) {
 
 	config->active=jsonGetInt( joconf, "active");
 	config->fade=jsonGetInt( joconf, "fade");
-	jsonCopyStr( joconf, "musicdir", config->musicdir );
+	jsonCopyStr( joconf, "musicdir", &(config->musicdir) );
 	config->profiles=jsonGetInt( joconf, "profiles" );
 	jsonCopyStrs( joconf, "profile", &(config->profile), config->profiles );
 	config->skipdnp=jsonGetInt( joconf, "skipdnp" );
@@ -224,13 +223,13 @@ static int deserializeStatus( mpconfig *data, jsonObject *jo ) {
 	getTitle( jo, "prev", data->current->plprev );
 	getTitle( jo, "current", data->current );
 	getTitle( jo, "next", data->current->plnext );
-	jsonCopyStr( jo, "playtime", data->playtime );
-	jsonCopyStr( jo, "remtime", data->remtime );
+	jsonCopyChars( jo, "playtime", data->playtime );
+	jsonCopyChars( jo, "remtime", data->remtime );
 	data->percent=jsonGetInt( jo, "percent" );
 	data->volume=jsonGetInt( jo, "volume" );
 	data->status=jsonGetInt( jo, "status" );
 	data->playstream=jsonGetInt( jo, "playstream" );
-	jsonCopyStr( jo, "msg", msgline );
+	jsonCopyChars( jo, "msg", msgline );
 	if( strlen( msgline ) > 0 ){
 		addMessage( 0, msgline );
 	}
@@ -306,7 +305,7 @@ void *netreader( void *control ) {
     struct timeval to;
     fd_set fds;
     size_t len;
-    int state=0;
+    int state=-1;
 
     commdata=falloc( MP_MAXCOMLEN, sizeof( char ) );
     config=(mpconfig*)control;
@@ -332,7 +331,7 @@ void *netreader( void *control ) {
     	FD_SET( sock, &fds );
 
     	to.tv_sec=0;
-    	to.tv_usec=500000; /* 1/2 second */
+    	to.tv_usec=250000; /* 1/4 second */
     	select( FD_SETSIZE, &fds, NULL, NULL, &to );
 
     	if( FD_ISSET( sock, &fds ) ) {
@@ -356,15 +355,21 @@ void *netreader( void *control ) {
 
         pthread_mutex_trylock( &cmdlock );
         len=0;
-        if( config->command != mpc_idle ) {
-        	sprintf( commdata, "get /cmd/%s HTTP/1.1\015\012xmixplay: 1\015\012\015\012", mpcString( config->command ) );
+        if( config->command == mpc_quit ) {
+        	config->status=mpc_quit;
+        }
+        else if( config->command != mpc_idle ) {
+        	if( config->command == mpc_profile ) {
+            	sprintf( commdata, "get /cmd/%s?%i HTTP/1.1\015\012xmixplay: 1\015\012\015\012",
+            			mpcString( config->command ), config->active );
+        	}
+        	else {
+        		sprintf( commdata, "get /cmd/%s HTTP/1.1\015\012xmixplay: 1\015\012\015\012", mpcString( config->command ) );
+        	}
         	while( len < strlen( commdata ) ) {
         		len+=send( sock , &commdata[len], strlen( commdata )-len, 0 );
         	}
             config->command=mpc_idle;
-        }
-        else if( config->command == mpc_quit ) {
-        	config->status=mpc_quit;
         }
         else if( state == 0 ){
            	sprintf( commdata, "get /status HTTP/1.1\015\012xmixplay: 1\015\012\015\012" );
@@ -372,6 +377,13 @@ void *netreader( void *control ) {
            		len+=send( sock , &commdata[len], strlen( commdata )-len, 0 );
            	}
            	state=1;
+        }
+        else if( state == -1 ) {
+           	sprintf( commdata, "get /config HTTP/1.1\015\012xmixplay: 1\015\012\015\012" );
+           	while( len < strlen( commdata ) ) {
+           		len+=send( sock , &commdata[len], strlen( commdata )-len, 0 );
+           	}
+           	state=0;
         }
 
         if( state== 2){

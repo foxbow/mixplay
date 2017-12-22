@@ -30,7 +30,8 @@ typedef struct tupel_t jsonObject;
 jsonObject *jsonParse( char *json );
 int   jsonGetInt( jsonObject *jo, const char *key );
 const char *jsonGetStr( jsonObject *jo, const char *key );
-int jsonCopyStr( jsonObject *jo, const char *key, char *buf );
+int jsonCopyChars( jsonObject *jo, const char *key, char *buf );
+int jsonCopyStr( jsonObject *jo, const char *key, char **buf );
 int jsonCopyStrs( jsonObject *jo, const char *key, char ***vals, const int num );
 jsonObject *jsonGetObj( jsonObject *jo, const char *key );
 

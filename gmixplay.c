@@ -159,22 +159,23 @@ int main( int argc, char **argv ) {
         	break;
 
         case 'h':
-        	if( strcmp( control->host, optarg ) ) {
-        		control->changed=-1;
-            	control->host=falloc( strlen(optarg)+1, sizeof(char) );
-            	strcpy( control->host, optarg );
-        	}
+        	sfree( &(control->host) );
+            control->host=falloc( strlen(optarg)+1, sizeof(char) );
+            strcpy( control->host, optarg );
         	control->remote=1;
         	break;
 
         case 'p':
-        	if( control->port != atoi(optarg) ) {
-				control->changed=-1;
-				control->port=atoi(optarg);
-        	}
+			control->port=atoi(optarg);
 			control->remote=1;
         	break;
         }
+    }
+
+    /* write config if parameters have been changed */
+    if( control->changed ) {
+    	control->changed=0;
+    	writeConfig( NULL );
     }
 
     buildUI( control );
@@ -201,7 +202,7 @@ int main( int argc, char **argv ) {
     control->inUI=0;
     addMessage( 2, "Dropped out of the gtk_main loop" );
     control->status=mpc_quit;
-    if( control->changed ) {
+    if( ( control->remote != 0 ) && control->changed ) {
     	writeConfig(NULL);
     }
 

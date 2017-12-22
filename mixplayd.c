@@ -129,6 +129,10 @@ static void *clientHandler(void *args )
 								state=1;
 							}
 							else if( strstr( pos, "/cmd/" ) == pos ) {
+								if( strstr( pos+5, "mpc_profile?" ) == pos+5 ) {
+									*(pos+16)=0;
+									config->active=atoi( pos+17);
+								}
 								cmd=mpcCommand(pos+5);
 								state=2;
 							}
@@ -403,7 +407,7 @@ int main( int argc, char **argv ) {
     	       	return 0;
     		}
     		break;
-    	case 4: // playlist
+    	case 4: /* playlist */
     		break;
     	default:
             fail( F_FAIL, "Unknown argument!\n", argv[optind] );

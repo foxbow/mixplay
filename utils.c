@@ -391,6 +391,16 @@ void *falloc( size_t num, size_t size ) {
     return result;
 }
 
+/**
+ * just free something if it actually exists
+ */
+void sfree( char **ptr ) {
+	if( *ptr != NULL ) {
+		free( *ptr );
+	}
+	*ptr=NULL;
+}
+
 msgbuf *msgBuffInit() {
 	msgbuf *msgBuf=falloc( 1, sizeof( msgbuf ) );
 	msgBuf->msgLock=falloc( 1, sizeof( pthread_mutex_t ) );
