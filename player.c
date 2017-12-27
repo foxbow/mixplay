@@ -141,7 +141,7 @@ int setArgument( const char *arg ) {
     else if( isDir( arg ) ) {
     	control->root=cleanTitles( control->root );
         strncpy( line, arg, MAXPATHLEN );
-        control->root=recurse( line, NULL, arg );
+        control->root=recurse( line, NULL );
         if( control->root != NULL ) {
 			control->current=control->root;
 			do {
@@ -653,7 +653,7 @@ void *reader( void *cont ) {
                 } /* case line[1] */
             } /* if line starts with '@' */
             else {
-            	addMessage( 0, "MPG123: %s", line );
+            	addMessage( 1, "MPG123: %s", line );
             }
         } /* fgets() > 0 */
 

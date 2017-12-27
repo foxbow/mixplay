@@ -21,6 +21,18 @@
 #include <fcntl.h>
 
 /**
+ * compares two strings
+ */
+static int checkSim( const char *txt1, const char *txt2 ) {
+	if( strlen( txt1 )> strlen( txt2 ) ) {
+		return checkMatch( txt1, txt2 );
+	}
+	else {
+		return checkMatch( txt2, txt1 );
+	}
+}
+
+/**
  * always resets the marked flag and
  * resets the counted and skipped flag on all titles if at least 50% of the titles have been counted
  */
@@ -229,6 +241,7 @@ static int matchTitle( struct entry_t *title, const char* pat ) {
 
         default:
             fail( F_FAIL, "Unknown range %c in %s!", pat[0], pat );
+            break;
         }
     }
     else {
@@ -624,6 +637,7 @@ struct entry_t *removeByPattern( struct entry_t *entry, const char *pat ) {
 
     default:
     	fail( F_FAIL, "Unknown pattern %s!", pat );
+    	break;
 	}
 
 	return removeByPatLine( entry, pattern );
@@ -826,7 +840,7 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
                 guard=runner;
                 strlncpy( name, runner->artist, NAMELEN );
 
-                while( checkMatch( name, lastname ) ) {
+                while( checkSim( name, lastname ) ) {
                     activity( "Nameskipping " );
                     runner=runner->dbnext;
                     runner=skipOver( runner );
@@ -913,8 +927,8 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
             guard=skipTitles( end, RANDOM( num ), 0 );
             /* @todo: where is the logic error here? */
 /*			while( ( guard->plnext != guard ) */
-/*				&& !checkMatch( guard->artist, runner->artist ) */
-/*				&& !checkMatch( guard->plnext->artist, runner->artist ) ) { */
+/*				&& !checkSim( guard->artist, runner->artist ) */
+/*				&& !checkSim( guard->plnext->artist, runner->artist ) ) { */
 /*				guard=guard->plnext; */
 /*				activity("badend"); */
 /*			} */
@@ -1060,7 +1074,7 @@ int markFavourite( struct entry_t *title, int range ) {
  * files:  the list to store filenames in
  * returns the LAST entry of the list. So the next item is the first in the list
  */
-struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedir ) {
+struct entry_t *recurse( char *curdir, struct entry_t *files ) {
     char dirbuff[2*MAXPATHLEN];
     struct dirent **entry;
     int num, i;
@@ -1096,7 +1110,7 @@ struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedi
 
     for( i=0; i<num; i++ ) {
         sprintf( dirbuff, "%s/%s", curdir, entry[i]->d_name );
-        files=recurse( dirbuff, files, basedir );
+        files=recurse( dirbuff, files );
         free( entry[i] );
     }
 

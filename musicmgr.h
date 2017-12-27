@@ -54,7 +54,7 @@ struct marklist_t {
 void addToFile( const char *path, const char *line, const char* prefix );
 
 struct entry_t *addToPL( struct entry_t *title, struct entry_t *target );
-struct entry_t *recurse( char *curdir, struct entry_t *files, const char *basedir );
+struct entry_t *recurse( char *curdir, struct entry_t *files );
 struct entry_t *shuffleTitles( struct entry_t *base );
 struct entry_t *rewindTitles( struct entry_t *base );
 struct entry_t *removeByPattern( struct entry_t *base, const char *pat );

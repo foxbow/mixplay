@@ -322,7 +322,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 
     /* scan directory */
     addMessage( 1, "Scanning..." );
-    fsroot=recurse( basedir, NULL, basedir );
+    fsroot=recurse( basedir, NULL );
     fsroot=fsroot->dbnext;
 
     addMessage( 1, "Adding titles..." );
@@ -375,6 +375,7 @@ static int checkPath( struct entry_t *entry, int range ) {
 		break;
 	default:
 		fail( F_FAIL, "checkPath() range %i not implemented!\n", range );
+		break;
 	}
 	return( strstr( path, check ) != NULL );
 }
@@ -455,6 +456,7 @@ int dbNameCheck( const char *dbname ) {
 							break;
 						default:
 							fail( F_FAIL, "Incorrect match: %i\n", match );
+							break;
 						}
 					}
 				}

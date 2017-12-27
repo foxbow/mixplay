@@ -213,7 +213,7 @@ void infoStart( GtkButton *button, gpointer data ) {
 	    gtk_widget_destroy( dialog );
     }
     else {
-    	reply=1;
+    	reply=mpc_idle+1;
     }
 
     switch( reply ) {
@@ -321,8 +321,22 @@ void profileStart( GtkButton *button, gpointer data ) {
         }
 	}
     if( mpcontrol->remote == 0) {
+    	if( mpcontrol->root->key == 0 ) {
+    		gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
+    								"_Add", 1,
+    								NULL );
+    	}
+    	else {
+    		gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
+    								"_Browse", 1,
+    								NULL );
+    	}
+    	if( mpcontrol->playstream == 0 ) {
+    		gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
+    								"_Shuffle", mpc_shuffle,
+    								NULL );
+    	}
 		gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
-								"_Browse", 1,
 								"_URL", 2,
 								"_Remote", 5,
 								NULL );
@@ -386,11 +400,15 @@ void profileStart( GtkButton *button, gpointer data ) {
 
         selected=gtk_dialog_run( GTK_DIALOG ( dialog ) );
         if ( ( selected == GTK_RESPONSE_ACCEPT ) || ( selected == 1 ) ){
-        	/* Set minimum defaults to let mixplay work */
         	path=falloc( MAXPATHLEN, sizeof( char ) );
             strncpy( path, gtk_file_chooser_get_filename( GTK_FILE_CHOOSER( dialog ) ), MAXPATHLEN );
         }
         gtk_widget_destroy ( dialog );
+        if( mpcontrol->root->key == 0 ) {
+        	mpcontrol->root=recurse( path, mpcontrol->root );
+        	sfree( &path );
+        }
+		mpcontrol->active = profile;
     	break;
     case 2: /* Enter URL */
         dialog = gtk_message_dialog_new(
@@ -532,7 +550,10 @@ void profileStart( GtkButton *button, gpointer data ) {
     		mpcontrol->active = profile;
     	}
     	break;
-
+    case mpc_shuffle:
+    	setCommand( mpc_shuffle );
+		mpcontrol->active = profile;
+    	break;
     default:
 		mpcontrol->active = profile;
     }
