@@ -630,13 +630,14 @@ void jsonDiscard( jsonObject *jo, int range ) {
 		/* array keys are always free'd */
 		if( jo->type == json_array ) {
 			jsonDiscard( jo->val, range|1 );
+			jo->val=NULL;
 		}
 		pos=jo->next;
 		if( range & 1 ) {
 			sfree( &(jo->key) );
 		}
 		if( range & 2 ) {
-			sfree( jo->val );
+			sfree( (char **)&(jo->val) );
 		}
 		sfree( (char **)&jo );
 		jo=pos;

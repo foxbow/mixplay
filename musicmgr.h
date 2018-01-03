@@ -80,4 +80,6 @@ struct marklist_t *addToList( const char *line, struct marklist_t **list );
 void dumpTitles( struct entry_t *root, const int pl );
 void dumpInfo( struct entry_t *root, int db, int skip );
 int fillstick( struct entry_t *root, const char *target, int fav );
+int writePlaylist( struct entry_t *root, const char *path );
+
 #endif /* MUSICMGR_H_ */

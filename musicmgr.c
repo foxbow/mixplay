@@ -22,6 +22,9 @@
 
 /**
  * compares two strings
+ * uses the shorter string as pattern and the longer as the matchset.
+ * Used to make sure that a remix is still considered a match, be it original artist or mixer.
+ * returns -1 (true) on match and 0 on mismatch
  */
 static int checkSim( const char *txt1, const char *txt2 ) {
 	if( strlen( txt1 )> strlen( txt2 ) ) {
@@ -129,7 +132,8 @@ void addToFile( const char *path, const char *line, const char* prefix ) {
  */
 struct entry_t *addToPL( struct entry_t *title, struct entry_t *target ) {
     if( title->flags & MP_MARK ) {
-        fail( F_FAIL, "Trying to add %s twice! (%i)", title->display, title->flags );
+        addMessage( 0, "Trying to add %s twice! (%i)", title->display, title->flags );
+        return target;
     }
 
     if( NULL == target ) {
@@ -784,12 +788,11 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
     struct entry_t *runner=base;
     struct entry_t *guard=NULL;
     unsigned int num=0;
-    int skipguard=-1;
     unsigned int i;
     unsigned int nameskip=0;
     unsigned int playskip=0;
-    unsigned int insskip=0;
     unsigned int added=0;
+    unsigned int stuffed=0;
     unsigned int cycles=0, maxcycles=0;
     struct timeval tv;
     unsigned long pcount=0;
@@ -800,6 +803,7 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
        1 - namecheck okay
        2 - playcount okay
        3 - all okay
+      -1 - stuffing
     */
 
     /* improve 'randomization' */
@@ -813,6 +817,7 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
     for( i=0; i<num; i++ ) {
         unsigned long skip;
         activity( "Shuffling " );
+
         /* select a random title from the database */
         skip=RANDOM( num-i );
         runner=skipTitles( runner, skip, -1 );
@@ -821,8 +826,6 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
             fail( F_FAIL, "%s is marked %i %i/%i!", runner->display, skip, i, num );
         }
 
-        /* skip forward until a title is found the is neither DNP nor MARK */
-        valid=0; /* title has not passed any tests */
 
         if( cycles>maxcycles ) {
             maxcycles=cycles;
@@ -830,12 +833,18 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
 
         cycles=0;
 
-        while( skipguard && ( valid != 3 ) ) {
+        /* skip forward until a title is found the is neither DNP nor MARK */
+        if( valid != -1 ) {
+        	valid=0; /* title has not passed any tests */
+        }
+
+        while( ( valid & 3 ) != 3 ) {
             /* First title? That name is valid by default */
             if( 0 == strlen( lastname ) ) {
                 valid=3;
             }
 
+            /* title did not pass namecheck */
             if( !( valid&1 ) ) {
                 guard=runner;
                 strlncpy( name, runner->artist, NAMELEN );
@@ -848,69 +857,62 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
                     if( guard==runner ) {
                         addMessage( 2, "Stopped nameskipping at %i/%i", i, num );
                         addMessage( 2, runner->display );
-                        skipguard=0; /* No more alternatives */
+                        valid=-1; /* No more alternatives */
                         break;
                     }
 
                     strlncpy( name, runner->artist, NAMELEN );
                 }
 
-                if( skipguard ) {
-                    if( guard != runner ) {
-                        nameskip++;
-                        valid=1; /* we skipped and need to check playcount */
-                    }
-                    else {
-                        valid |= 1; /* we did not skip, so if playcount was fine it's still fine */
-                    }
+                if( ( valid != -1 ) && ( guard != runner ) ) {
+                	nameskip++;
+                    valid=1; /* we skipped and need to check playcount */
+                }
+                else {
+                    valid |= 1; /* we did not skip, so if playcount was fine it's still fine */
                 }
             }
 
-            /* check for playcount */
             guard=runner;
 
-            if( !( valid & 2 ) ) {
-                while( 1 ) {
-                    if( runner->flags & MP_FAV ) {
-                        if ( runner-> playcount <= 2*pcount ) {
-                            valid|=2;
-                            break;
-                        }
-                    }
-                    else {
-                        if ( runner->playcount <= pcount ) {
-                            valid|=2;
-                            break;
-                        }
-                    }
+            /* title did not pass playcountcheck and we are not in stuffing mode */
+			while( !(valid & 2 ) ) {
+				if( runner->flags & MP_FAV ) {
+					if ( runner-> playcount <= 2*pcount ) {
+						valid|=2;
+					}
+				}
+				else {
+					if ( runner->playcount <= pcount ) {
+						valid|=2;
+					}
+				}
 
-                    if( !( valid & 2 ) ) {
-                        activity( "Playcountskipping " );
-                        runner=runner->dbnext;
-                        runner=skipOver( runner );
-                        valid=0;
+				if( !( valid & 2 ) ) {
+					activity( "Playcountskipping " );
+					runner=runner->dbnext;
+					runner=skipOver( runner );
+					valid=0;
 
-                        if( guard == runner ) {
-                        	valid=1;    /* we're back where we started and this one is valid by name */
-                            pcount++;   /* allow more replays */
-                            addMessage( 2, "Increasing maxplaycount to %li at %i", pcount, i );
-                        }
-                    }
-                }
+					if( guard == runner ) {
+						valid=1;    /* we're back where we started and this one is valid by name */
+						pcount++;   /* allow more replays */
+						addMessage( 2, "Increasing maxplaycount to %li at %i", pcount, i );
+					}
+				}
+            }
 
-                if( runner != guard ) {
-                    playskip++;    /* we needed to skip */
-                }
+			if( runner != guard ) {
+                playskip++;    /* we needed to skip */
             }
 
             if( ++cycles > 10 ) {
                 addMessage( 2, "Looks like we ran into a loop in round %i/%i", i, num );
                 cycles=0;
-                /* skipguard=0; */
                 pcount++;   /* allow replays */
                 addMessage( 2, "Increasing maxplaycount to %li", pcount );
             }
-        } /* while( skipguard && ( valid != 3 ) ) */
+        } /* while( valid != 3 ) */
 
         /* title passed all tests */
         if( valid == 3 ) {
@@ -920,30 +922,21 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
             added++;
         }
 
-        /* title can't pass tests */
-        if( !skipguard ) {
-            /* find a random position */
-            activity( "Stuffing" );
-            guard=skipTitles( end, RANDOM( num ), 0 );
-            /* @todo: where is the logic error here? */
-/*			while( ( guard->plnext != guard ) */
-/*				&& !checkSim( guard->artist, runner->artist ) */
-/*				&& !checkSim( guard->plnext->artist, runner->artist ) ) { */
-/*				guard=guard->plnext; */
-/*				activity("badend"); */
-/*			} */
-            insskip++;
-            addMessage( 3, "[*] (%i/%li) %s [%s]", runner->playcount, pcount, runner->display, guard->display );
-            guard=addToPL( runner, guard );
-            added++;
+        /* runner needs to be stuffed into the playlist */
+        if( valid == -1 ) {
+        	skip=RANDOM( i );
+        	guard=skipTitles( end, skip, 0 );
+            addMessage( 2, "[*] (%i/%li/%3s) %s", runner->playcount, pcount, ONOFF( runner->flags&MP_FAV ), runner->display );
+            addToPL( runner, guard );
+        	stuffed++;
         }
     }
 
-    addMessage( 2, "Added %i titles                          ", added );
-    addMessage( 2, "Skipped %i titles to avoid artist repeats", nameskip );
-    addMessage( 2, "Skipped %i titles to keep playrate even (max=%i)", playskip, pcount );
-    addMessage( 2, "Stuffed %i titles into playlist", insskip );
-    addMessage( 2, "Had a maximum of %i cycles", maxcycles );
+    addMessage( 1, "Added %i titles                          ", added );
+    addMessage( 1, "Skipped %i titles to avoid artist repeats", nameskip );
+    addMessage( 1, "Skipped %i titles to keep playrate even (max=%i)", playskip, pcount );
+    addMessage( 1, "Stuffed %i titles into playlist", stuffed );
+    addMessage( 1, "Had a maximum of %i cycles", maxcycles );
 
     /* Make sure something valid is returned */
     if( NULL == end ) {
@@ -1300,4 +1293,29 @@ int fillstick( struct entry_t *root, const char *target, int fav ) {
 
 	addMessage( 1, "Copied %i titles to %s", index, target );
 	return index;
+}
+
+/*
+ * writes the current titles as playlist
+ */
+int writePlaylist( struct entry_t *root, const char *path ) {
+	struct entry_t *current=root;
+	FILE *fp;
+	int count=0;
+
+	fp=fopen( path, "w" );
+	if( fp == NULL ) {
+		addMessage( 0, "Could not access %s\n%s", path, strerror( errno ) );
+		return -1;
+	}
+
+	do {
+		fprintf( fp, "%s\n", current->path );
+		current=current->plnext;
+		count++;
+	} while( current != root );
+
+	fclose( fp );
+
+	return count;
 }
