@@ -549,7 +549,7 @@ void *reader( void *cont ) {
                         control->percent=( 100*intime )/( rem+intime );
                         sprintf( control->remtime, "%02i:%02i", (int)rem/60, (int)rem%60 );
 
-                        if( rem <= fade ) {
+                        if( ( control->fade ) && ( rem <= fade ) ){
                             /* should the playcount be increased? */
                             playCount( control );
 

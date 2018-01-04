@@ -59,14 +59,12 @@ install: all
 	desktop-file-install --dir=$(HOME)/.local/share/applications -m 0755 --set-key=Exec --set-value="$(HOME)/bin/gmixplay %u" --set-icon=$(HOME)/.local/share/icons/mixplay.svg --rebuild-mime-info-cache static/gmixplay.desktop
 
 # disabled until static pages are internal part of mixplayd	
-#install-global: all
-#	install -s -m 0755 bin/cmixplay /usr/bin/
-#	install -s -m 0755 bin/gmixplay /usr/bin/
-#	install -s -m 0755 bin/mixplayd /usr/bin/
-#	install -m 0644 static/mixplay.svg /usr/share/pixmaps/
-#	desktop-file-install -m 0755 --rebuild-mime-info-cache static/gmixplay.desktop 
-#	install -d /usr/share/mixplay
-#	install -s -m 0555 static/* /usr/share/mixplay
+install-global: all
+	install -s -m 0755 bin/cmixplay /usr/bin/
+	install -s -m 0755 bin/gmixplay /usr/bin/
+	install -s -m 0755 bin/mixplayd /usr/bin/
+	install -m 0644 static/mixplay.svg /usr/share/pixmaps/
+	desktop-file-install -m 0755 --rebuild-mime-info-cache static/gmixplay.desktop 
 
 mixplayd_html.h: static/mixplay.html
 	xxd -i static/mixplay.html > mixplayd_html.h

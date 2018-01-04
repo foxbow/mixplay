@@ -463,10 +463,10 @@ int main( int argc, char **argv ) {
 	addMessage( 1, "bind() done");
 
 	listen(mainsocket , 3);
+	control->inUI=-1;
 	addMessage( 0, "Listening on port %i", port );
 
 	alen = sizeof(struct sockaddr_in);
-	control->inUI=-1;
     /* Start main loop */
     while( control->status != mpc_quit ){
         FD_ZERO( &fds );
@@ -493,11 +493,8 @@ int main( int argc, char **argv ) {
             }
         }
     }
+    addMessage( 0, "Dropped out of the main loop" );
     control->inUI=0;
-    if( _isDaemon ) {
-    	syslog (LOG_NOTICE, "Dropped out of the main loop");
-    }
-    addMessage( 1, "Dropped out of the main loop" );
 
     freeConfig( );
 
