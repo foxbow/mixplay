@@ -552,13 +552,12 @@ void *reader( void *cont ) {
                         if( rem <= fade ) {
                             /* should the playcount be increased? */
                             playCount( control );
-                            next=control->current->plnext;
 
-                            if( next == control->current ) {
-                            	control->status=mpc_idle; /* STOP */
+                            if( control->current->plnext == control->current ) {
+                            	control->status=mpc_idle; /* Single song: STOP */
                             }
                             else {
-                                control->current=next;
+                                control->current=control->current->plnext;
                                 /* swap player if we want to fade */
                                 if( control->fade ) {
                                 	fdset=fdset?0:1;
@@ -591,7 +590,7 @@ void *reader( void *cont ) {
                 			sendplay( p_command[fdset][1], control );
                     	}
                         /* should the playcount be increased? */
-                    	else if( control->playstream == 0 ) {
+                    	else if (( control->playstream == 0 ) && ( control->fade == 0 ) ){
 							playCount( control );
 							next = skipTitles( control->current, order, 0 );
 
@@ -602,7 +601,9 @@ void *reader( void *cont ) {
 							}
 							else {
 								if( ( order==1 ) && ( next == control->root ) ) {
+									progressStart( "Reshuffling" );
 									control->root=shuffleTitles( control->root );
+									progressEnd( "Done." );
 									next=control->root;
 								}
 
@@ -611,7 +612,7 @@ void *reader( void *cont ) {
 							}
 
 							order=1;
-                    	}
+						}
                     	else {
                     		control->status=mpc_idle;
                     	}
@@ -823,9 +824,6 @@ void *reader( void *cont ) {
         case mpc_QUIT:
         case mpc_quit:
             control->status=mpc_quit;
-        	if( control->changed != 0 ) {
-        		writeConfig( NULL );
-        	}
             /* The player does not know about the main App so anything setting mcp_quit
              * MUST make sure that the main app terminates as well ! */
             break;

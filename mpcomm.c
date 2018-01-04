@@ -246,7 +246,7 @@ static int deserialize( mpconfig *data, char *json ) {
 	jo=jsonParse( json );
 	if( jo != NULL ) {
 		ver=jsonGetInt(jo, "version" );
-		if( ver != MP_COMVER ) {
+		if( ver < MP_COMVER ) {
 			fail( F_FAIL, "mixplayd protocol mismatch!\nServer has version %i, we have version %i!", ver, MP_COMVER );
 			return -1;
 		}

@@ -337,7 +337,7 @@ void progressEnd( char *msg ) {
 
 void updateUI( mpconfig *data ) {
 	if( curmsg < data->msg->count ) {
-		syslog( LOG_INFO, "%s", msgBuffPeek( data->msg, curmsg ) );
+		syslog( LOG_NOTICE, "%s", msgBuffPeek( data->msg, curmsg ) );
 		curmsg++;
 	}
 }
@@ -358,7 +358,7 @@ int main( int argc, char **argv ) {
 
     /* parse command line options */
     /* using unsigned char c to work around getopt quirk on ARM */
-    while ( ( c = getopt( argc, argv, "dFp:D" ) ) != 255 ) {
+    while ( ( c = getopt( argc, argv, "dFp:DW" ) ) != 255 ) {
         switch ( c ) {
         case 'D':
         	_isDaemon=0;
@@ -379,6 +379,9 @@ int main( int argc, char **argv ) {
 
         case 'p':
         	port=atoi( optarg );
+        	break;
+        case 'W':
+        	control->changed=-1;
         	break;
         }
     }
@@ -477,7 +480,7 @@ int main( int argc, char **argv ) {
                 fail( errno, "accept() failed!" );
                 control->status=mpc_quit;
             }
-            addMessage( 1, "Connection accepted" );
+            addMessage( 2, "Connection accepted" );
 
             new_sock = falloc( sizeof(int), 1 );
             *new_sock = client_sock;

@@ -225,14 +225,25 @@ static void setButtonLabel( GtkWidget *button, const char *text ) {
  * gather interesting stuff about a title, kind of a title.toString()
  */
 static int infoLine( char *line, const struct entry_t *title, const int len ) {
-	return snprintf( line, len, "%s\nKey: %04i - Fav: %s\nplaycount: %i (%s)\nskipcount: %i (%s)",
-          title->path,
-          title->key,
-		  ONOFF( title->flags & MP_FAV ),
-		  title->playcount,
-		  ONOFF( ~( title->flags )&MP_CNTD ),
-          title->skipcount,
-          ONOFF( ~( title->flags )&MP_SKPD ) );
+	if( title->key != 0 ) {
+		return snprintf( line, len, "%s\nKey: %04i - Fav: %s\nplaycount: %i (%s)\nskipcount: %i (%s)",
+			  title->path,
+			  title->key,
+			  ONOFF( title->flags & MP_FAV ),
+			  title->playcount,
+			  ONOFF( ~( title->flags )&MP_CNTD ),
+			  title->skipcount,
+			  ONOFF( ~( title->flags )&MP_SKPD ) );
+	}
+	else {
+		return snprintf( line, len, "%s\nFav: %s\nplaycount: %i (%s)\nskipcount: %i (%s)",
+			  title->path,
+			  ONOFF( title->flags & MP_FAV ),
+			  title->playcount,
+			  ONOFF( ~( title->flags )&MP_CNTD ),
+			  title->skipcount,
+			  ONOFF( ~( title->flags )&MP_SKPD ) );
+	}
 }
 
 /**
@@ -280,15 +291,18 @@ static int g_updateUI( void *data ) {
 		gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->title_current ),
 								control->current->title );
 
-        if( control->root->key != 0 ) {
+        if( usedb ) {
         	infoLine( buff, control->current->plprev, MAXPATHLEN );
             gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_prev, buff );
         	infoLine( buff, control->current, MAXPATHLEN );
             gtk_widget_set_tooltip_text( MP_GLDATA->widgets->title_current, buff );
+        	infoLine( buff, control->current->plnext, MAXPATHLEN );
+            gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_next, buff );
         }
         else {
        		gtk_widget_set_tooltip_text( MP_GLDATA->widgets->title_current, control->current->path );
            	gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_prev, NULL );
+           	gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_next, NULL );
         }
 
         runner=control->current->plnext->plnext;
@@ -303,9 +317,6 @@ static int g_updateUI( void *data ) {
         }
         if( strlen(buff) > 0 ) {
         	gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_next, buff );
-        }
-        else {
-        	gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_next, NULL );
         }
 
         gtk_widget_set_sensitive( MP_GLDATA->widgets->title_current, ( control->status == mpc_play ) );
