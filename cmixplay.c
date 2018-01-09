@@ -2,7 +2,6 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
-#include <getopt.h>
 #include <ncurses.h>
 
 #include "utils.h"
@@ -14,7 +13,6 @@
 #include "mpcomm.h"
 
 int main( int argc, char **argv ) {
-    unsigned char	c;
     mpconfig    *config;
     int 		db=0;
     fd_set fds;
@@ -52,93 +50,12 @@ int main( int argc, char **argv ) {
 
     setVerbosity(1);
 
-    /* parse command line options */
-    /* using unsigned char c to work around getopt bug on ARM */
-    while ( ( c = getopt( argc, argv, "vfldFrh:p:" ) ) != 255 ) {
-        switch ( c ) {
-        case 'v': /* increase debug message level to display */
-            incVerbosity();
-            break;
+    if( ( getArgs( argc, argv ) != 0 ) && ( config->remote ) ) {
+		addMessage( 0, "Disabling remote connection" );
+		config->remote=0;
+	}
 
-        case 'd': /* increase debug message level to display on console */
-            incDebug();
-            break;
-
-        case 'f': /* single channel - disable fading */
-        	if( config->fade == 1 ) {
-        		config->fade=0;
-        		config->changed=-1;
-        	}
-        	break;
-
-        case 'F': /* enable fading */
-        	if( config->fade == 0 ) {
-        		config->fade=1;
-        		config->changed=-1;
-        	}
-        	break;
-
-        case 'r':
-        	if( config->remote == 0 ) {
-        		config->remote=1;
-        		config->changed=-1;
-        	}
-        	break;
-
-        case 'l':
-        	if( config->remote == 1 ) {
-        		config->remote=0;
-        		config->changed=-1;
-        	}
-        	break;
-
-        case 'h':
-        	if( strcmp( config->host, optarg ) ) {
-        		config->changed=-1;
-        		config->remote=1;
-        		config->host=falloc( strlen(optarg)+1, sizeof(char) );
-        		strcpy( config->host, optarg );
-        	}
-        	break;
-
-        case 'p':
-        	if( config->port != atoi(optarg) ) {
-				config->changed=-1;
-				config->remote=1;
-				config->port=atoi(optarg);
-        	}
-        	break;
-        }
-    }
-
-    if ( optind < argc ) {
-    	if( config->remote ) {
-    		addMessage( 1, "Disabling remote connection" );
-    		config->remote=0;
-    	}
-    	if( 0 == setArgument( argv[optind] ) ) {
-            fail( F_FAIL, "Unknown argument!\n", argv[optind] );
-            return -1;
-        }
-    }
-
-    if ( !config->remote ) {
-		/* start the actual player */
-		pthread_create( &config->rtid, NULL, reader, (void *)config );
-
-		if( config->root == NULL ) {
-			setProfile( config );
-		}
-		else {
-			config->active=0;
-			config->dbname[0]=0;
-			setCommand( mpc_play );
-		}
-    }
-    else {
-		pthread_create( &config->rtid, NULL, netreader, (void*)config );
-		config->playstream=0;
-    }
+    initAll( 0 );
 
     /* Start curses mode */
     config->inUI=-1;

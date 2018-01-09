@@ -14,12 +14,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-
+/* forward definitions of cyclic dependencies in static functions */
 static size_t jsonWriteObj( jsonObject *jo, char *json );
 static size_t jsonWriteArr( jsonObject *jo, char *json );
-static int jsonFetchObject( char *json, jsonObject **jo );
-static int jsonFetchArray( char *json, jsonObject **jo );
+static int jsonParseObject( char *json, jsonObject **jo );
+static int jsonParseArray( char *json, jsonObject **jo );
 
+/*
+ * error handling function
+ * todo: make this generic so the json functions can be used outside of mixplay
+ */
 static int jsonFail( const char *func, char *str, const int i, const int state ) {
 	addMessage( 0, "%s#%i: Found invalid '%c' in JSON pos %i\n%s", func, state, str[i], i, str );
 	return -1;
@@ -34,14 +38,15 @@ static jsonObject *jsonInit() {
 	jo->key=NULL;
 	jo->next=NULL;
 	jo->val=NULL;
-	jo->type=0;
+	jo->type=json_none;
 	return jo;
 }
 
 /*
+ * parses a number into an int value
  * we allow leading zeroes, even if JSON forbids that
  */
-static int jsonFetchNum( char *json, char **val ) {
+static int jsonParseNum( char *json, char **val ) {
 	int len=strlen(json);
 	int i=0;
 	int state=0;
@@ -106,7 +111,10 @@ static int jsonFetchNum( char *json, char **val ) {
 	return -1;
 }
 
-static int jsonFetchString( char *json, char **val ) {
+/*
+ * parses a string value
+ */
+static int jsonParseString( char *json, char **val ) {
 	int len=strlen(json);
 	int i=0;
 	int state=0;
@@ -163,7 +171,14 @@ static int jsonFetchString( char *json, char **val ) {
 	return -1;
 }
 
-static int jsonFetchValue( char *json, jsonObject *jo ) {
+/*
+ * parses a JSON value and decides the value according to the JSON definition
+ * " starts a string
+ * { starts an object
+ * [ starts an array
+ * everything else is either a number or illegal.
+ */
+static int jsonParseValue( char *json, jsonObject *jo ) {
 	int jpos=0;
 	int state=0;
 
@@ -173,25 +188,25 @@ static int jsonFetchValue( char *json, jsonObject *jo ) {
 		break;
 	case '"':
 		jo->type=json_string;
-		jpos+=jsonFetchString( &json[jpos], (char **)&(jo->val) );
+		jpos+=jsonParseString( &json[jpos], (char **)&(jo->val) );
 		return jpos;
 		break;
 	case '{':
 		jo->type=json_object;
 		jo->val=jsonInit();
-		jpos+=jsonFetchObject( &json[jpos], (jsonObject **)&(jo->val) );
+		jpos+=jsonParseObject( &json[jpos], (jsonObject **)&(jo->val) );
 		return jpos;
 		break;
 	case '[':
 		jo->type=json_array;
 		jo->val=jsonInit();
-		jpos+=jsonFetchArray( &json[jpos], (jsonObject **)&(jo->val) );
+		jpos+=jsonParseArray( &json[jpos], (jsonObject **)&(jo->val) );
 		return jpos;
 		break;
 	default:
 		if( isdigit( json[jpos] ) || json[jpos]=='-' ) {
 			jo->type=json_number;
-			jpos+=jsonFetchNum( &json[jpos], (char **)&(jo->val) );
+			jpos+=jsonParseNum( &json[jpos], (char **)&(jo->val) );
 			return jpos;
 		}
 		else {
@@ -201,7 +216,10 @@ static int jsonFetchValue( char *json, jsonObject *jo ) {
 	return -1;
 }
 
-static int jsonFetchKeyVal( char *json, jsonObject **jo ) {
+/*
+ * parses a JSON key,value tupel
+ */
+static int jsonParseKeyVal( char *json, jsonObject **jo ) {
 	int jpos=0;
 	int state=0;
 	int len=strlen(json);
@@ -216,7 +234,7 @@ static int jsonFetchKeyVal( char *json, jsonObject **jo ) {
 				jpos++;
 				break;
 			case '"':
-				jpos+=jsonFetchString( &json[jpos], &((*jo)->key) );
+				jpos+=jsonParseString( &json[jpos], &((*jo)->key) );
 				state=1;
 				break;
 			default:
@@ -237,7 +255,7 @@ static int jsonFetchKeyVal( char *json, jsonObject **jo ) {
 			}
 			break;
 		case 2: /* get value */
-			jpos+=jsonFetchValue( &json[jpos], *jo );
+			jpos+=jsonParseValue( &json[jpos], *jo );
 			return jpos;
 		}
 	}
@@ -245,6 +263,9 @@ static int jsonFetchKeyVal( char *json, jsonObject **jo ) {
 	return -1;
 }
 
+/*
+ * helperfunction to set numeric indices on array objects
+ */
 static int setIndex( jsonObject *jo, int i ) {
 	char buf[20];
 	sprintf( buf, "%i", i );
@@ -253,7 +274,10 @@ static int setIndex( jsonObject *jo, int i ) {
 	return i+1;
 }
 
-static int jsonFetchArray( char *json, jsonObject **jo ) {
+/*
+ * parses a JSON array
+ */
+static int jsonParseArray( char *json, jsonObject **jo ) {
 	int jpos=0;
 	int state=0;
 	int len=strlen(json);
@@ -262,13 +286,13 @@ static int jsonFetchArray( char *json, jsonObject **jo ) {
 
 	while( jpos < len ) {
 		switch( state ) {
-		case 0: /* fetch first value */
+		case 0: /* Parse first value */
 			switch( json[jpos] ) {
 			case '[':
 				jpos++;
 				*current=jsonInit();
 				index=setIndex( *current, index );
-				jpos+=jsonFetchValue( json+jpos, *current );
+				jpos+=jsonParseValue( json+jpos, *current );
 				state=1;
 				break;
 			case ' ':
@@ -294,7 +318,7 @@ static int jsonFetchArray( char *json, jsonObject **jo ) {
 				(*current)->next=jsonInit();
 				current=&((*current)->next);
 				index=setIndex( *current, index );
-				jpos+=jsonFetchValue( json+jpos, *current );
+				jpos+=jsonParseValue( json+jpos, *current );
 				break;
 			default:
 				return jsonFail( __func__, json, jpos, state );
@@ -306,7 +330,10 @@ static int jsonFetchArray( char *json, jsonObject **jo ) {
 	return jpos;
 }
 
-static int jsonFetchObject( char *json, jsonObject **jo ) {
+/*
+ * parses a JSON object
+ */
+static int jsonParseObject( char *json, jsonObject **jo ) {
 	int jpos=0;
 	int state=0;
 	int len=strlen(json);
@@ -314,11 +341,11 @@ static int jsonFetchObject( char *json, jsonObject **jo ) {
 
 	while( jpos < len ) {
 		switch( state ) {
-		case 0: /* fetch first value */
+		case 0: /* Parse first value */
 			switch( json[jpos] ) {
 			case '{':
 				jpos++;
-				jpos+=jsonFetchKeyVal( json+jpos, current );
+				jpos+=jsonParseKeyVal( json+jpos, current );
 				state=1;
 				break;
 			case ' ':
@@ -341,7 +368,7 @@ static int jsonFetchObject( char *json, jsonObject **jo ) {
 			case ',':
 				json[jpos]=0;
 				jpos++;
-				jpos+=jsonFetchKeyVal(json+jpos, &((*current)->next));
+				jpos+=jsonParseKeyVal(json+jpos, &((*current)->next));
 				current=&((*current)->next);
 				break;
 			default:
@@ -354,6 +381,9 @@ static int jsonFetchObject( char *json, jsonObject **jo ) {
 	return jpos;
 }
 
+/*
+ * resolves a JSON key path in dot notation
+ */
 static jsonObject *jsonFollowPath( jsonObject *jo, const char *key ) {
 	jsonObject *target=jo;
 	char *path;
@@ -382,6 +412,9 @@ static jsonObject *jsonFollowPath( jsonObject *jo, const char *key ) {
 	return target;
 }
 
+/*
+ * returns the int value of key
+ */
 int jsonGetInt( jsonObject *jo, const char *key ) {
 	jsonObject *pos=jo;
 
@@ -393,6 +426,10 @@ int jsonGetInt( jsonObject *jo, const char *key ) {
 	return 0;
 }
 
+/*
+ * returns the string value of key
+ * this is a pointer to the string, do *not* free or change!
+ */
 const char *jsonGetStr( jsonObject *jo, const char *key ) {
 	jsonObject *pos=jo;
 
@@ -405,6 +442,10 @@ const char *jsonGetStr( jsonObject *jo, const char *key ) {
 	return "";
 }
 
+/**
+ * copies the value of key into the char* given by buf
+ * the memory will be allocated so make sure that *buf is free'd after use
+ */
 int jsonCopyStr( jsonObject *jo, const char *key, char **buf ) {
 	const char *val=jsonGetStr(jo, key);
 	*buf=falloc( strlen( val )+1, sizeof( char ) );
@@ -412,12 +453,19 @@ int jsonCopyStr( jsonObject *jo, const char *key, char **buf ) {
 	return strlen( val );
 }
 
+/*
+ * copies the value for key into buf.
+ * Caveat: absolutely no range checking happens here!
+ */
 int jsonCopyChars( jsonObject *jo, const char *key, char buf[] ) {
 	strcpy( buf, jsonGetStr(jo, key) );
 	return strlen(buf);
 }
 
-static void *jsonFetchIndex( jsonObject *jo, int i ) {
+/*
+ * helper function to resolve a JSON array index
+ */
+static void *jsonGetByIndex( jsonObject *jo, int i ) {
 	char buf[20];
 	jsonObject *val=NULL;
 
@@ -449,7 +497,7 @@ int jsonCopyStrs( jsonObject *jo, const char *key, char ***vals, const int num )
 		*vals=falloc( num, sizeof( char * ) );
 
 		for( i=0; i<num; i++ ) {
-			val=(char *)jsonFetchIndex( pos, i );
+			val=(char *)jsonGetByIndex( pos, i );
 			(*vals)[i]=falloc( strlen(val)+1, sizeof( char ) );
 			strcpy( (*vals)[i], val );
 		}
@@ -460,6 +508,10 @@ int jsonCopyStrs( jsonObject *jo, const char *key, char ***vals, const int num )
 	return -1;
 }
 
+/*
+ * returns the jsonObject at the path key
+ * The path follows the dot notation, array elements are numbered sub-elements
+ */
 jsonObject *jsonGetObj( jsonObject *jo, const char *key ) {
 	jsonObject *pos=jo;
 
@@ -471,6 +523,11 @@ jsonObject *jsonGetObj( jsonObject *jo, const char *key ) {
 	return NULL;
 }
 
+/*
+ * helperfunction to append a new jsonObject to jo
+ * if jo==NULL then a new root object will be created
+ * used by the the jsonAdd*() functions
+ */
 static jsonObject *jsonAppend( jsonObject *jo, const char *key ) {
 	if( jo == NULL ) {
 		jo=jsonInit();
@@ -489,6 +546,9 @@ static jsonObject *jsonAppend( jsonObject *jo, const char *key ) {
 	return jo;
 }
 
+/**
+ * creates a new JSON string object and appends it to the end of the given root object chain
+ */
 jsonObject *jsonAddStr( jsonObject *jo, const char *key, const char *val ) {
 	jo=jsonAppend( jo, key );
 	jo->val=falloc( strlen(val)+1, sizeof(char) );
@@ -497,6 +557,9 @@ jsonObject *jsonAddStr( jsonObject *jo, const char *key, const char *val ) {
 	return jo;
 }
 
+/**
+ * creates a new JSON array object with the values in val and appends it to the end of the given root object chain
+ */
 jsonObject *jsonAddArr( jsonObject *jo, const char *key, jsonObject *val ) {
 	jo=jsonAppend( jo, key );
 	jo->type=json_array;
@@ -504,6 +567,9 @@ jsonObject *jsonAddArr( jsonObject *jo, const char *key, jsonObject *val ) {
 	return jo;
 }
 
+/**
+ * creates a new JSON (string) array object and appends it to the end of the given root object chain
+ */
 jsonObject *jsonAddStrs( jsonObject *jo, const char *key, char **vals, const int num ) {
 	jsonObject *buf=NULL;
 	jsonObject *val=NULL;
@@ -521,6 +587,9 @@ jsonObject *jsonAddStrs( jsonObject *jo, const char *key, char **vals, const int
 	return jsonAddArr( jo, key, val );
 }
 
+/**
+ * creates a new JSON integer (number) object and appends it to the end of the given root object chain
+ */
 jsonObject *jsonAddInt( jsonObject *jo, const char *key, const int val ) {
 	char buf[64];
 	jo=jsonAppend( jo, key );
@@ -531,6 +600,9 @@ jsonObject *jsonAddInt( jsonObject *jo, const char *key, const int val ) {
 	return jo;
 }
 
+/**
+ * creates a new JSON object object and appends it to the end of the given root object chain
+ */
 jsonObject *jsonAddObj( jsonObject *jo, const char *key, jsonObject *val ) {
 	jo=jsonAppend( jo, key );
 	jo->type=json_object;
@@ -538,9 +610,12 @@ jsonObject *jsonAddObj( jsonObject *jo, const char *key, jsonObject *val ) {
 	return jo;
 }
 
+/**
+ * parses the given JSON string into a tree of jsonObjects
+ */
 jsonObject *jsonParse( char *json ) {
 	jsonObject *jo=NULL;
-	if( jsonFetchObject( json, &jo ) >= 0 ){
+	if( jsonParseObject( json, &jo ) >= 0 ){
 		return jo;
 	}
 	else {
@@ -548,6 +623,10 @@ jsonObject *jsonParse( char *json ) {
 	}
 }
 
+/**
+ * encodes a value into JSON notation
+ * "strval"|numval|{objval}|[arr],[val]
+ */
 static size_t jsonWriteVal( jsonObject *jo, char *json ) {
 	switch( jo->type ) {
 	case json_string:
@@ -571,6 +650,10 @@ static size_t jsonWriteVal( jsonObject *jo, char *json ) {
 	return strlen( json );
 }
 
+/**
+ * encodes a key,value tupel into JSON notation
+ * "key",value
+ */
 static size_t jsonWriteKeyVal( jsonObject *jo, char *json ) {
 	strcat( json, "\"" );
 	strcat( json, jo->key );
@@ -586,6 +669,10 @@ static size_t jsonWriteKeyVal( jsonObject *jo, char *json ) {
 	return strlen( json );
 }
 
+/**
+ * encodes an array into JSON notation
+ * [val],[val],...
+ */
 static size_t jsonWriteArr( jsonObject *jo, char *json ) {
 	strcat( json, "[" );
 	while( jo != NULL ) {
@@ -599,6 +686,10 @@ static size_t jsonWriteArr( jsonObject *jo, char *json ) {
 	return strlen( json );
 }
 
+/**
+ * encodes an object into JSON notation
+ * {key,value}
+ */
 static size_t jsonWriteObj( jsonObject *jo, char *json ) {
 	strcat( json, "{" );
 	jsonWriteKeyVal( jo, json );
@@ -606,6 +697,10 @@ static size_t jsonWriteObj( jsonObject *jo, char *json ) {
 	return strlen( json );
 }
 
+/**
+ * writes the jsonObject as JSON string into the given character buffer
+ * Caveat: this does no range checking!
+ */
 size_t jsonWrite( jsonObject *jo, char *json ) {
 	json[0]=0;
 	return jsonWriteObj( jo, json );

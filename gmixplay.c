@@ -14,38 +14,6 @@
 #include "mpcomm.h"
 
 /**
- * the control thread to communicate with the mpg123 processes
- * should be triggered after the app window is realized
- */
-static int initAll( void *data ) {
-    mpconfig *control;
-    pthread_t tid;
-
-    control=getConfig();
-
-    if ( !control->remote ) {
-		/* start the actual player */
-		pthread_create( &control->rtid, NULL, reader, (void *)control );
-
-	    if( NULL == control->root ) {
-	        /* Runs as thread to have updates in the UI */
-	        pthread_create( &tid, NULL, setProfile, ( void * )control );
-	    }
-	    else {
-	    	control->active=0;
-	        control->dbname[0]=0;
-	        setCommand( mpc_play );
-	    }
-    }
-    else {
-		pthread_create( &control->rtid, NULL, netreader, (void *)control );
-		control->playstream=0;
-    }
-
-    return 0;
-}
-
-/**
  * sets up the UI by glade definitions
  */
 static void buildUI( struct mpcontrol_t * control ) {
@@ -91,7 +59,6 @@ static void buildUI( struct mpcontrol_t * control ) {
 }
 
 int main( int argc, char **argv ) {
-    unsigned char	c;
     struct 		mpcontrol_t *control;
     struct		glcontrol_t glcontrol;
     int 		db=0;
@@ -114,87 +81,17 @@ int main( int argc, char **argv ) {
     control->fade=1;
     glcontrol.fullscreen=0;
 
-    /* parse command line options */
-    /* using unsigned char c to work around getopt bug on ARM */
-    while ( ( c = getopt( argc, argv, "vfldFSrh:p:" ) ) != 255 ) {
-        switch ( c ) {
-        case 'v': /* increase debug message level to display */
-            incVerbosity();
-            break;
-
-        case 'S':
-            glcontrol.fullscreen=1;
-            break;
-
-        case 'd': /* increase debug message level to display on console */
-            incDebug();
-            break;
-
-        case 'f': /* single channel - disable fading */
-        	if( control->fade == 1 ) {
-        		control->changed=-1;
-        	}
-    		control->fade=0;
-        	break;
-
-        case 'F': /* enable fading */
-        	if( control->fade == 0 ) {
-        		control->changed=-1;
-        	}
-    		control->fade=1;
-        	break;
-
-        case 'r':
-        	if( control->remote == 0 ) {
-        		control->changed=-1;
-        	}
-    		control->remote=1;
-        	break;
-
-        case 'l':
-        	if( control->remote == 1 ) {
-        		control->changed=-1;
-        	}
-    		control->remote=0;
-        	break;
-
-        case 'h':
-        	sfree( &(control->host) );
-            control->host=falloc( strlen(optarg)+1, sizeof(char) );
-            strcpy( control->host, optarg );
-        	control->remote=1;
-        	break;
-
-        case 'p':
-			control->port=atoi(optarg);
-			control->remote=1;
-        	break;
-        }
-    }
-
-    /* write config if parameters have been changed */
-    if( control->changed ) {
-    	control->changed=0;
-    	writeConfig( NULL );
-    }
+    if( ( getArgs( argc, argv ) != 0 ) && ( control->remote ) ) {
+		addMessage( 0, "Disabling remote connection" );
+		control->remote=0;
+	}
 
     buildUI( control );
 
     control->root=NULL;
     control->playstream=0;
 
-    if ( optind < argc ) {
-    	if( control->remote ) {
-    		addMessage( 1, "Disabling remote connection" );
-    		control->remote=0;
-    	}
-    	if( 0 == setArgument( argv[optind] ) ) {
-            fail( F_FAIL, "Unknown argument!\n", argv[optind] );
-            return -1;
-        }
-    }
-
-    initAll( &control );
+    initAll( 1 );
 
     /* Start main loop */
     control->inUI=-1;
@@ -202,7 +99,7 @@ int main( int argc, char **argv ) {
     control->inUI=0;
     addMessage( 2, "Dropped out of the gtk_main loop" );
     control->status=mpc_quit;
-    if( ( control->remote != 0 ) && control->changed ) {
+    if( control->changed ) {
     	writeConfig(NULL);
     }
 

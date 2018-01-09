@@ -108,5 +108,6 @@ int getMessage( char *msg );
 const char *mpcString( mpcmd cmd );
 const mpcmd mpcCommand( const char *val );
 void setCommand( mpcmd cmd );
-
+int getArgs( int argc, char ** argv );
+int initAll( int );
 #endif /* _CONFIG_H_ */

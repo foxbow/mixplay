@@ -16,10 +16,14 @@
 #include <errno.h>
 #include <assert.h>
 #include <sys/stat.h>
+#include <getopt.h>
 
 #include "utils.h"
 #include "musicmgr.h"
 #include "config.h"
+
+#include <unistd.h>
+
 #include "mpcomm.h"
 #include "player.h"
 
@@ -55,16 +59,23 @@ static const char *mpc_command[] = {
 };
 
 const char *mpcString( mpcmd cmd ) {
-	return mpc_command[cmd];
+	if( ( cmd >= 0 ) && ( cmd <= mpc_idle ) ) {
+		return mpc_command[cmd];
+	}
+	else {
+		addMessage( 0, "Unknown command code %i", cmd );
+		return "mpc_idle";
+	}
 }
 
 const mpcmd mpcCommand( const char *name ) {
-	int i=0;
+	int i;
 	for( i=0; i<= mpc_idle; i++ ) {
 		if( strstr( name, mpc_command[i] ) ) break;
 	}
 	if( i>mpc_idle ) {
-		fail( F_FAIL, "Unknown command code %i for >%s<!", i, name );
+		addMessage( 0, "Unknown command %s!", name );
+		return mpc_idle;
 	}
 	return i;
 }
@@ -92,6 +103,137 @@ void setCommand( mpcmd cmd ) {
 	else {
 		setPCommand( cmd );
 	}
+}
+
+static void printUsage( char *name ) {
+	addMessage( 0, "USAGE: %s [args] [resource]\n", name );
+ 	addMessage( 0, " -v : increase debug message level to display in app\n" );
+/*	addMessage( 0, " -S : run in fullscreen mode (gmixplay)\n" );*/
+   	addMessage( 0, " -d : increase debug message level to display on console\n" );
+    addMessage( 0, " -f : single channel - disable fading\n" );
+    addMessage( 0, " -F : enable fading\n");
+    addMessage( 0, " -r : control remote mixplayd (see -p and -h)\n" );
+    addMessage( 0, " -l : play local music\n" );
+    addMessage( 0, " -h <addr> : set remote host\n" );
+    addMessage( 0, " -p <port> : set remote port [2347]\n" );
+    addMessage( 0, " -W': write changed config\n" );
+    addMessage( 0, " resource: resource to play\n" );
+    addMessage( 0, "           URL, path, mp3 file, playlist\n" );
+}
+
+int getArgs( int argc, char ** argv ){
+	mpconfig *config=getConfig();
+	int c;
+
+    /* parse command line options */
+    /* using unsigned char c to work around getopt quirk on ARM */
+    while ( ( c = getopt( argc, argv, "vfldFrh:p:W" ) ) != 255 ) {
+        switch ( c ) {
+
+        case 'v': /* increase debug message level to display */
+            incVerbosity();
+            break;
+
+/*        case 'S':
+        	if( strcmp( argv[0], "gmixplay" ) == 0 ) {
+        		glcontrol.fullscreen=1;
+        	}
+        	else {
+        		addMessage( 0, "-S not supported for %s!", argv[0] );
+        	}
+            break;
+*/
+        case 'd': /* increase debug message level to display on console */
+            incDebug();
+            break;
+
+        case 'f': /* single channel - disable fading */
+    		config->fade=0;
+        	break;
+
+        case 'F': /* enable fading */
+    		config->fade=1;
+        	break;
+
+        case 'r':
+    		config->remote=1;
+        	break;
+
+        case 'l':
+    		config->remote=0;
+        	break;
+
+        case 'h':
+        	sfree( &(config->host) );
+            config->host=falloc( strlen(optarg)+1, sizeof(char) );
+            strcpy( config->host, optarg );
+        	config->remote=1;
+        	break;
+
+        case 'p':
+			config->port=atoi(optarg);
+			config->remote=1;
+        	break;
+
+        case 'W':
+        	config->changed=-1;
+        	break;
+
+        default:
+        	addMessage( 0, "Unknown option -%c\n", c );
+        	printUsage( argv[0] );
+        	return -1;
+        }
+    }
+
+    if ( optind < argc ) {
+    	return setArgument( argv[optind] );
+    }
+
+    return 0;
+}
+
+/**
+ * the control thread to communicate with the mpg123 processes
+ * should be triggered after the app window is realized
+ *
+ * if dispatch is != 0, the profile will be set in a separate thread.
+ * this is handy if the main thread is used to display messages e.g.:
+ * gmixplay
+ */
+int initAll( int dispatch ) {
+    mpconfig *control;
+    pthread_t tid;
+
+    control=getConfig();
+
+    if ( !control->remote ) {
+		/* start the actual player */
+		pthread_create( &control->rtid, NULL, reader, (void *)control );
+		/* make sure the mpg123 instances have a chance to start up */
+		sleep( 1 );
+	    if( NULL == control->root ) {
+	    	if( dispatch ) {
+		        /* Runs as thread to have updates in the UI */
+	    		pthread_create( &tid, NULL, setProfile, ( void * )control );
+	    	}
+	    	else {
+	    		/* todo: would it hurt to run this as thread every time? */
+	    		setProfile( control );
+	    	}
+	    }
+	    else {
+	    	control->active=0;
+	        control->dbname[0]=0;
+	        setCommand( mpc_play );
+	    }
+    }
+    else {
+		pthread_create( &control->rtid, NULL, netreader, (void *)control );
+		control->playstream=0;
+    }
+
+    return 0;
 }
 
 /**

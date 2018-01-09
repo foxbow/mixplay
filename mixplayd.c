@@ -11,7 +11,6 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
-#include <getopt.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -23,6 +22,7 @@
 #include <sys/sendfile.h>
 #include <sys/stat.h>
 #include <syslog.h>
+
 #include "utils.h"
 #include "musicmgr.h"
 #include "database.h"
@@ -343,7 +343,6 @@ void updateUI( mpconfig *data ) {
 }
 
 int main( int argc, char **argv ) {
-    unsigned char	c;
     mpconfig    *control;
     int 		port=MP_PORT;
     fd_set				fds;
@@ -356,71 +355,48 @@ int main( int argc, char **argv ) {
     control->remote=0;
     muteVerbosity();
 
-    /* parse command line options */
-    /* using unsigned char c to work around getopt quirk on ARM */
-    while ( ( c = getopt( argc, argv, "dFp:DW" ) ) != 255 ) {
-        switch ( c ) {
-        case 'D':
-        	_isDaemon=0;
-        	incDebug();
-        	break;
+    switch( getArgs( argc, argv ) ) {
+	case 0: /* no arguments given */
+		break;
 
-        case 'd':
-        	incDebug();
-        	break;
+	case 1: /* stream - does this even make sense? */
+		break;
 
-        case 'v': /* increase debug message level to display in console output */
-            incVerbosity();
-            break;
+	case 2: /* single file */
+		break;
 
-        case 'F': /* single channel - disable fading */
-        	control->fade=0;
-        	break;
+	case 3: /* directory */
+		/* if no default directory is set, use the one given */
+		if( control->musicdir == NULL ) {
+			_isDaemon=0;
+			incDebug();
+			addMessage( 0, "Setting default configuration values and initializing..." );
+			setProfile( control );
+			if( control->root == NULL ) {
+				fail( F_FAIL, "No music found at %s!", control->musicdir );
+			}
+			addMessage( 0, "Initialization successful!" );
+			writeConfig( argv[optind] );
+			freeConfig( );
+			return 0;
+		}
+		break;
+	case 4: /* playlist */
+		break;
+	default:
+		fail( F_FAIL, "Unknown argument!\n", argv[optind] );
+		return -1;
+	}
 
-        case 'p':
-        	port=atoi( optarg );
-        	break;
-        case 'W':
-        	control->changed=-1;
-        	break;
-        }
-    }
+    /* we are never ever remote */
+    control->remote=0;
 
-    if ( optind < argc ) {
-    	switch( setArgument( argv[optind] ) ) {
-    	case 1: /* stream - does this even make sense? */
-    		break;
-
-    	case 2: /* single file */
-    		break;
-
-    	case 3: /* directory */
-    		/* if no default directory is set, use the one given */
-    		if( control->musicdir == NULL ) {
-            	_isDaemon=0;
-            	incDebug();
-    			addMessage( 0, "Setting default configuration values and initializing..." );
-    	        setProfile( control );
-    	        if( control->root == NULL ) {
-    	        	fail( F_FAIL, "No music found at %s!", control->musicdir );
-    	        }
-    	       	addMessage( 0, "Initialization successful!" );
-    			writeConfig( argv[optind] );
-    	        freeConfig( );
-    	       	return 0;
-    		}
-    		break;
-    	case 4: /* playlist */
-    		break;
-    	default:
-            fail( F_FAIL, "Unknown argument!\n", argv[optind] );
-            return -1;
-        }
-    }
-
-    if( _isDaemon ) {
+    if( getDebug() > 0 ) {
+    	_isDaemon=-1;
     	daemon( 0, 0 );
     	openlog ("mixplayd", LOG_PID, LOG_DAEMON);
+    	/* Make sure that messages end up in the log */
+        control->inUI=-1;
     }
 
    	pthread_create( &(control->rtid), NULL, reader, control );
@@ -463,9 +439,10 @@ int main( int argc, char **argv ) {
 	addMessage( 1, "bind() done");
 
 	listen(mainsocket , 3);
-	control->inUI=-1;
 	addMessage( 0, "Listening on port %i", port );
 
+	/* enable inUI even when not in daemon mode */
+	control->inUI=-1;
 	alen = sizeof(struct sockaddr_in);
     /* Start main loop */
     while( control->status != mpc_quit ){
