@@ -465,41 +465,17 @@ void profileStart( GtkButton *button, gpointer data ) {
         if( selected != GTK_RESPONSE_CANCEL ) {
         	path=falloc( MAXPATHLEN, sizeof( char ) );
         	snprintf( path, MAXPATHLEN, "%c*%s", selected, gtk_entry_get_text( GTK_ENTRY( urlLine ) ) );
-        	gtk_widget_destroy( dialog );
-        	if( strlen( path ) < 5 ) {
+        	if( strlen( path ) < 3 ) {
         		addMessage( 0, "Need at least three characters!\nSucks to be you U2!" );
         	}
         	else {
-        		/* create selection requester */
-        		/* search for t, a, l and add the results to the tree headers */
-        		/* allow selection */
-        		/* if something was selected: */
-        		/* - stop player */
-        		/* - move titles after the current title */
-        		/* - start player */
-        		/* */
-        		/* close requester */
-        		if( mpcontrol->status == mpc_play ) {
-        			setCommand( mpc_stop);
-        		}
-        		i=searchPlay( mpcontrol->current, path );
-        		addMessage( 0, "Found %i titles\n", i );
-        		if( i > 0) {
-        			setCommand( mpc_play );
-        		}
-        		else {
-        			setCommand( mpc_start );
-        		}
+        		mpcontrol->argument=path;
+        		setCommand( mpc_search );
+        		path=NULL; /* is free'd in player! */
         	}
         }
-        else {
-        	gtk_widget_destroy( dialog );
-        }
+       	gtk_widget_destroy( dialog );
 
-        if( NULL != path ) {
-        	free(path);
-        	path=NULL;
-        }
     	break;
     case 4: /* Fillstick */
     	dialog = gtk_file_chooser_dialog_new ( "Select Target",
@@ -528,10 +504,7 @@ void profileStart( GtkButton *button, gpointer data ) {
         fillstick( mpcontrol->current, path, ( selected == GTK_RESPONSE_ACCEPT ) );
     	progressEnd( "Done." );
 
-        if( NULL != path ) {
-        	free(path);
-        	path=NULL;
-        }
+    	sfree( &path );
     	break;
 
     case 5:

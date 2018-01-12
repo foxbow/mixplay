@@ -19,7 +19,7 @@
  * changes here need to be reflected in the reader() code, namely in
  * char *mpc_command[]
  */
-enum mpcmd_t {
+enum _mpcmd_t {
     mpc_play,
     mpc_stop,
     mpc_prev,
@@ -44,15 +44,16 @@ enum mpcmd_t {
 	mpc_bskip,
 	mpc_QUIT,
 	mpc_dbinfo,
+	mpc_search,
     mpc_idle
 };
-
-typedef enum mpcmd_t mpcmd;
+typedef enum _mpcmd_t mpcmd;
 
 /**
  * holds the widgets and pipes for communication
  */
-struct mpcontrol_t {
+typedef struct _mpcontrol_t mpconfig;
+struct _mpcontrol_t {
     char *musicdir;				/* path to the music */
     int profiles;				/* number of profiles */
     int active;		        	/* active >0 = profile / 0=none / <0 = stream */
@@ -70,6 +71,7 @@ struct mpcontrol_t {
     int percent;				/* how many percent of the song have been played */
     int playstream;				/* profile or stream */
     mpcmd command;				/* command to the player */
+    char *argument;				/* arguments to command */
     int status;					/* status of the player/system */
     pthread_t rtid;				/* thread ID of the reader */
     int skipdnp;				/* how many skips mean dnp? */
@@ -86,8 +88,6 @@ struct mpcontrol_t {
     int remote;
     int changed;
 };
-
-typedef struct mpcontrol_t mpconfig;
 
 mpconfig *writeConfig( const char *musicpath );
 mpconfig *readConfig( void );

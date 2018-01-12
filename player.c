@@ -84,7 +84,7 @@ static long adjustVolume( long volume ) {
 /**
  * sets the given stream
  */
-static void setStream( struct mpcontrol_t *control, const char* stream, const char *name ) {
+static void setStream( mpconfig *control, const char* stream, const char *name ) {
 	control->root=cleanTitles( control->root );
     control->root=insertTitle( NULL, stream );
     strncpy( control->root->title, name, NAMELEN );
@@ -178,7 +178,7 @@ int setArgument( const char *arg ) {
 /**
  * make mpeg123 play the given title
  */
-static void sendplay( int fdset, struct mpcontrol_t *control ) {
+static void sendplay( int fdset, mpconfig *control ) {
     char line[MAXPATHLEN]="load ";
     assert( control->current != NULL );
 
@@ -204,7 +204,7 @@ void *setProfile( void *data ) {
     int num;
     int lastver;
     int64_t active;
-    struct mpcontrol_t *control=( struct mpcontrol_t * )data ;
+    mpconfig *control=( mpconfig * )data ;
 
     active=control->active;
 
@@ -303,7 +303,7 @@ void *setProfile( void *data ) {
  * needs to be decreased. In both cases the updated information is written
  * back into the db.
  */
-static void playCount( struct mpcontrol_t *control ) {
+static void playCount( mpconfig *control ) {
     int db;
 
     if( control->playstream ) {
@@ -333,14 +333,13 @@ static void playCount( struct mpcontrol_t *control ) {
  * in mixplay, gmixplay and probably other GUI variants (ie: web)
  */
 void *reader( void *cont ) {
-    struct mpcontrol_t	*control;
+    mpconfig	*control;
     struct entry_t 		*next;
     fd_set				fds;
     struct timeval		to;
     int64_t	i, key;
     int		invol=80;
     int		outvol=80;
-    int 	redraw=0;
     int 	fdset=0;
     char 	line[MAXPATHLEN];
     char 	*a, *t;
@@ -351,7 +350,7 @@ void *reader( void *cont ) {
     int 	p_command[2][2];		/* command pipes to mpg123 */
     pid_t	pid[2];
 
-    control=( struct mpcontrol_t * )cont;
+    control=( mpconfig * )cont;
     assert( control->fade < 2 );
 
     addMessage( 2, "Reader starting" );
@@ -410,14 +409,12 @@ void *reader( void *cont ) {
     	addMessage(  1, "Hardware volume level is %i%%", control->volume );
     }
     else {
-    	/* control mpg123 volume instead - not recommended */
     	addMessage( 0, "No hardware volume control!" );
     	control->channel=NULL;
     }
 
     /* main loop */
     do {
-    	redraw=0;
         FD_ZERO( &fds );
         for( i=0; i<=control->fade; i++ ) {
         	FD_SET( p_status[i][0], &fds );
@@ -425,10 +422,6 @@ void *reader( void *cont ) {
         to.tv_sec=0;
         to.tv_usec=100000; /* 1/10 second */
         i=select( FD_SETSIZE, &fds, NULL, NULL, &to );
-
-        if( i > 0 ) {
-        	redraw=1;
-        }
 
         /* drain inactive player */
         if( control->fade && FD_ISSET( p_status[fdset?0:1][0], &fds ) ) {
@@ -519,11 +512,9 @@ void *reader( void *cont ) {
                     break;
 
                 case 'J': /* JUMP reply */
-                    redraw=0;
                     break;
 
                 case 'S': /* Status message after loading a song (stream info) */
-                    redraw=0;
                     break;
 
                 case 'F': /* Status message during playing (frame info) */
@@ -576,8 +567,6 @@ void *reader( void *cont ) {
                         }
 
                     }
-
-                    redraw=1;
                     break;
 
                 case 'P': /* Player status */
@@ -589,9 +578,16 @@ void *reader( void *cont ) {
                     	if( control->status == mpc_start ) {
                 			sendplay( p_command[fdset][1], control );
                     	}
-                        /* should the playcount be increased? */
-                    	else if (( control->playstream == 0 ) && ( control->fade == 0 ) ){
-							playCount( control );
+                    	/* stream stopped playing? */
+                    	else if( control->playstream != 0 ) {
+                    		control->status=mpc_idle;
+                    	}
+                    	/* we're playing a playlist */
+                    	else {
+                            /* should the playcount be increased? */
+                    		if( control->fade == 0 ) {
+                    			playCount( control );
+                    		}
 							next = skipTitles( control->current, order, 0 );
 
 							if ( ( next == control->current ) ||
@@ -613,10 +609,8 @@ void *reader( void *cont ) {
 
 							order=1;
 						}
-                    	else {
-                    		control->status=mpc_idle;
-                    	}
-                        break;
+
+                    	break;
 
                     case 1: /* PAUSE */
                     	control->status=mpc_idle;
@@ -633,12 +627,9 @@ void *reader( void *cont ) {
                         addMessage( 0, "Unknown status %i!\n%s", cmd, line );
                         break;
                     }
-
-                    redraw=1;
                     break;
 
                 case 'V': /* volume reply */
-                    redraw=0;
                     break;
 
                 case 'E':
@@ -654,14 +645,10 @@ void *reader( void *cont ) {
                 } /* case line[1] */
             } /* if line starts with '@' */
             else {
+            	/* verbosity 1 as sometimes tags appear here which confuses on level 0 */
             	addMessage( 1, "MPG123: %s", line );
             }
         } /* fgets() > 0 */
-
-        /* notify UI that something has changed */
-        if( redraw ) {
-            updateUI( control );
-        }
 
         pthread_mutex_trylock( &cmdlock );
 
@@ -869,8 +856,27 @@ void *reader( void *cont ) {
            	addMessage( 0, "Music dir: %s", control->musicdir );
            	dumpInfo( control->root, -1, control->skipdnp );
            	progressEnd( "End Database info." );
-        break;
-  			break;
+           	break;
+
+        case mpc_search:
+			if( control->argument == NULL ) {
+				addMessage( 0, "Nothing to search for!" );
+			}
+			else {
+				addMessage( 1, "Looking for %s", control->argument );
+				i=searchPlay( control->current, control->argument );
+				if( i > 0) {
+					addMessage( 0, "Found %i titles matching %s", i, control->argument );
+		            order=1;
+		            write( p_command[fdset][1], "STOP\n", 6 );
+				}
+				else {
+					addMessage( 0, "Nothing found =(" );
+				}
+				sfree( &(control->argument) );
+			}
+        	break;
+
         case mpc_idle:
         	adjustVolume( 0 );
             break;
@@ -878,6 +884,9 @@ void *reader( void *cont ) {
 
         control->command=mpc_idle;
         pthread_mutex_unlock( &cmdlock );
+
+        /* notify UI that something has changed */
+        updateUI( control );
     }
     while ( control->status != mpc_quit );
 

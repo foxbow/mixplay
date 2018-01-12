@@ -19,8 +19,8 @@
 #define MP_GLDATA ((struct glcontrol_t *)getConfig()->data)
 
 /* Main data structure definition */
-typedef struct _MpData MpData;
-struct _MpData {
+typedef struct _MpData_t MpData;
+struct _MpData_t {
     /* Widgets */
     GtkWidget *mixplay_main;
     GtkWidget *button_prev;

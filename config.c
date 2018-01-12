@@ -55,6 +55,7 @@ static const char *mpc_command[] = {
 		"mpc_fskip",
 		"mpc_QUIT",
 		"mpc_dbinfo",
+		"mpc_search",
 	    "mpc_idle"
 };
 
@@ -106,24 +107,24 @@ void setCommand( mpcmd cmd ) {
 }
 
 static void printUsage( char *name ) {
-	addMessage( 0, "USAGE: %s [args] [resource]\n", name );
- 	addMessage( 0, " -v : increase debug message level to display in app\n" );
-/*	addMessage( 0, " -S : run in fullscreen mode (gmixplay)\n" );*/
-   	addMessage( 0, " -d : increase debug message level to display on console\n" );
-    addMessage( 0, " -f : single channel - disable fading\n" );
-    addMessage( 0, " -F : enable fading\n");
-    addMessage( 0, " -r : control remote mixplayd (see -p and -h)\n" );
-    addMessage( 0, " -l : play local music\n" );
-    addMessage( 0, " -h <addr> : set remote host\n" );
-    addMessage( 0, " -p <port> : set remote port [2347]\n" );
-    addMessage( 0, " -W': write changed config\n" );
-    addMessage( 0, " resource: resource to play\n" );
+	addMessage( 0, "USAGE: %s [args] [resource]", name );
+ 	addMessage( 0, " -v : increase debug message level to display in app" );
+/*	addMessage( 0, " -S : run in fullscreen mode (gmixplay)" );*/
+   	addMessage( 0, " -d : increase debug message level to display on console" );
+    addMessage( 0, " -f : single channel - disable fading" );
+    addMessage( 0, " -F : enable fading");
+    addMessage( 0, " -r : control remote mixplayd (see -p and -h)" );
+    addMessage( 0, " -l : play local music" );
+    addMessage( 0, " -h <addr> : set remote host" );
+    addMessage( 0, " -p <port> : set remote port [2347]" );
+    addMessage( 0, " -W': write changed config" );
+    addMessage( 0, " resource: resource to play" );
     addMessage( 0, "           URL, path, mp3 file, playlist\n" );
 }
 
 int getArgs( int argc, char ** argv ){
 	mpconfig *config=getConfig();
-	int c;
+	unsigned char c;
 
     /* parse command line options */
     /* using unsigned char c to work around getopt quirk on ARM */
@@ -180,9 +181,9 @@ int getArgs( int argc, char ** argv ){
         	break;
 
         default:
-        	addMessage( 0, "Unknown option -%c\n", c );
+        	addMessage( 0, "Unknown option -%c %i\n", c, c );
         	printUsage( argv[0] );
-        	return -1;
+        	exit( EXIT_FAILURE );
         }
     }
 
@@ -499,7 +500,7 @@ void addMessage( int v, char *msg, ... ) {
 	va_end( args );
 
 	if( c_config == NULL ) {
-		fprintf( stderr, "*%i %s\n", v, line );
+		fprintf( stderr, "* %s\n", line );
 		free(line);
     	pthread_mutex_unlock( &msglock );
 		return;
@@ -509,15 +510,15 @@ void addMessage( int v, char *msg, ... ) {
     	if( c_config->inUI ) {
 			msgBuffAdd( c_config->msg, line );
 			if( v < getDebug() ) {
-				fprintf( stderr, "D%i %s\n", v, line );
+				fprintf( stderr, "D %s\n", line );
 			}
     	}
     	else {
-    		printf( "V%i %s\n", v, line );
+    		printf( "%s\n", line );
     	}
     }
 	else if( v < getDebug() ) {
-		fprintf( stderr, "D%i %s\n", v, line );
+		fprintf( stderr, "D %s\n", line );
     }
 
 	free(line);

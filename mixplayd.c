@@ -133,6 +133,16 @@ static void *clientHandler(void *args )
 									*(pos+16)=0;
 									config->active=atoi( pos+17);
 								}
+								else if( strstr( pos+5, "mpc_search?" ) == pos+5 ) {
+									*(pos+15)=0;
+									/* this should NEVER happen and is assert() worthy */
+									if( config->argument != NULL ) {
+										addMessage( 0, "Stray argument: %s!", config->argument );
+										sfree( &(config->argument) );
+									}
+									config->argument=falloc( sizeof( char ), strlen( pos+16 )+1 );
+									strcpy( config->argument, pos+16 );
+								}
 								cmd=mpcCommand(pos+5);
 								state=2;
 							}

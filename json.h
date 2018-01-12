@@ -8,7 +8,7 @@
 #ifndef _JSON_H_
 #define _JSON_H_
 
-enum jsonTypes_t {
+enum _jsonTypes_t {
 	json_none,
 	json_string,
 	json_number,
@@ -16,18 +16,18 @@ enum jsonTypes_t {
 	json_array
 };
 
-typedef enum jsonTypes_t jsonType;
+typedef enum _jsonTypes_t jsonType;
 
-struct tupel_t {
+typedef struct _jsonObject_t jsonObject;
+
+struct _jsonObject_t {
 	char *key;
 	void *val;
 	jsonType type;
-	struct tupel_t *next;
+	jsonObject *next;
 };
 
-typedef struct tupel_t jsonObject;
 
-jsonObject *jsonParse( char *json );
 int   jsonGetInt( jsonObject *jo, const char *key );
 const char *jsonGetStr( jsonObject *jo, const char *key );
 int jsonCopyChars( jsonObject *jo, const char *key, char *buf );
@@ -39,6 +39,8 @@ jsonObject *jsonAddStr( jsonObject *jo, const char *key, const char *val );
 jsonObject *jsonAddStrs( jsonObject *jo, const char *key, char **vals, const int num );
 jsonObject *jsonAddInt( jsonObject *jo, const char *key, const int val );
 jsonObject *jsonAddObj( jsonObject *jo, const char *key, jsonObject *val );
+
+jsonObject *jsonRead( char *json );
 size_t jsonWrite( jsonObject *jo, char *json );
 
 void jsonDiscard( jsonObject *jo, int all );

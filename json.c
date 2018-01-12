@@ -613,7 +613,7 @@ jsonObject *jsonAddObj( jsonObject *jo, const char *key, jsonObject *val ) {
 /**
  * parses the given JSON string into a tree of jsonObjects
  */
-jsonObject *jsonParse( char *json ) {
+jsonObject *jsonRead( char *json ) {
 	jsonObject *jo=NULL;
 	if( jsonParseObject( json, &jo ) >= 0 ){
 		return jo;

@@ -16,7 +16,7 @@
 /**
  * sets up the UI by glade definitions
  */
-static void buildUI( struct mpcontrol_t * control ) {
+static void buildUI( mpconfig *control ) {
     GtkBuilder *builder;
 
     builder=gtk_builder_new_from_string( ( const char * )static_gmixplay_app_glade, static_gmixplay_app_glade_len );
@@ -59,7 +59,7 @@ static void buildUI( struct mpcontrol_t * control ) {
 }
 
 int main( int argc, char **argv ) {
-    struct 		mpcontrol_t *control;
+    mpconfig *control;
     struct		glcontrol_t glcontrol;
     int 		db=0;
 

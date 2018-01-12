@@ -251,12 +251,12 @@ static int infoLine( char *line, const struct entry_t *title, const int len ) {
  * work in multithreaded environments.
  */
 static int g_updateUI( void *data ) {
-    struct	mpcontrol_t *control;
+    mpconfig *control;
     struct entry_t *runner;
     int i=0;
     char	buff[2*MAXPATHLEN];
     gboolean	usedb;
-    control=( struct mpcontrol_t* )data;
+    control=( mpconfig * )data;
 
     if( mpc_quit == control->command ) {
         addMessage( 2, "Already closing.." );

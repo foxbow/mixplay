@@ -243,7 +243,7 @@ static int deserialize( mpconfig *data, char *json ) {
 	jsonObject *jo;
 	int retval=-1;
 
-	jo=jsonParse( json );
+	jo=jsonRead( json );
 	if( jo != NULL ) {
 		ver=jsonGetInt(jo, "version" );
 		if( ver < MP_COMVER ) {
@@ -333,8 +333,9 @@ void *netreader( void *control ) {
     	to.tv_usec=250000; /* 1/4 second */
     	select( FD_SETSIZE, &fds, NULL, NULL, &to );
 
-    	if( FD_ISSET( sock, &fds ) ) {
-    		memset( commdata, 0, MP_MAXCOMLEN );
+		memset( commdata, 0, MP_MAXCOMLEN );
+
+		if( FD_ISSET( sock, &fds ) ) {
 			switch( recv(sock , commdata , MP_MAXCOMLEN , 0) ) {
 			case -1:
 				addMessage( 0, "Read error on socket!\n%s", strerror( errno ) );
@@ -361,6 +362,15 @@ void *netreader( void *control ) {
         	if( config->command == mpc_profile ) {
             	sprintf( commdata, "get /cmd/%s?%i HTTP/1.1\015\012xmixplay: 1\015\012\015\012",
             			mpcString( config->command ), config->active );
+        	}
+        	else if( config->command == mpc_search ) {
+        		if( config->argument != NULL ) {
+        			sprintf( commdata, "get /cmd/%s?%s HTTP/1.1\015\012xmixplay: 1\015\012\015\012",
+        					mpcString( config->command ), config->argument );
+        		}
+        		else {
+        			addMessage( 0, "No searchterm given!" );
+        		}
         	}
         	else {
         		sprintf( commdata, "get /cmd/%s HTTP/1.1\015\012xmixplay: 1\015\012\015\012", mpcString( config->command ) );
