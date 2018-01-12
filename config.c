@@ -383,7 +383,7 @@ mpconfig *writeConfig( const char *musicpath ) {
     int		i;
     FILE    *fp;
 
-    addMessage( 1, "Writing config" );
+    addMessage( 0, "Saving config" );
     assert( c_config != NULL );
 
     if( musicpath != NULL ) {

@@ -67,6 +67,7 @@ void fail( int error, const char* msg, ... ) {
     vsnprintf( line, 1024, msg, args );
     va_end( args );
 
+    setCommand(mpc_quit);
 	fprintf( stderr, "FAIL: %s\n", line );
 	if( getConfig()->inUI ) {
 		if( F_FAIL == error ) {
@@ -82,6 +83,9 @@ void fail( int error, const char* msg, ... ) {
 
 		gtk_dialog_run ( GTK_DIALOG ( dialog ) );
 	    gtk_main_quit();
+	}
+	else {
+		exit( EXIT_FAILURE );
 	}
 
     return;
