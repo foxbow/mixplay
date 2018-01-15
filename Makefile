@@ -3,15 +3,30 @@ VERSION=$(shell git describe --tags --abbrev=1 --dirty=-dev --always)
 
 CCFLAGS=-DVERSION=\"${VERSION}\"
 CCFLAGS+=-Wall -g -pedantic -Werror
-LDFLAGS_GLADE=`pkg-config --libs gtk+-3.0 gmodule-2.0` `pkg-config --cflags --libs x11`
-CCFLAGS_GLADE=$(CCFLAGS) `pkg-config --cflags gtk+-3.0 gmodule-2.0`
 
 OBJS=utils.o musicmgr.o database.o mpgutils.o player.o config.o player.o mpcomm.o json.o
 NCOBJS=cmixplay.o ncbox.o
 GLOBJS=gladeutils.o gcallbacks.o gmixplay.o  
-LIBS=-lmpg123 -lasound -lpthread
+LIBS=-lmpg123 -lpthread
+REFS=alsa 
+EXES=bin/cmixplay bin/mixplayd 
 
-EXES=bin/cmixplay bin/mixplayd bin/gmixplay
+ifeq ("$(shell pkg-config --exists  gtk+-3.0 gmodule-2.0 x11; echo $$?)","0")
+EXES+=bin/gmixplay
+REFS+=gtk+-3.0 gmodule-2.0 x11
+else
+$(info GTK is not installed, not building gmixplay )
+endif
+
+ifeq ("$(shell pkg-config --exists  ncurses; echo $$?)","0")
+EXES+=bin/cmixplay
+REFS+=ncurses
+else
+$(info ncurses is not installed, not building cmixplay )
+endif
+
+LIBS+=$(shell pkg-config --libs $(REFS))
+CCFLAGS+=$(shell pkg-config --cflags $(REFS))
 
 all: dep.d $(EXES)
 
@@ -31,20 +46,15 @@ distclean: clean
 
 new: clean all
 
-bin/cmixplay: cmixplay.o $(OBJS) $(NCOBJS) 
-	$(CC) $^ -o $@ -lncurses $(LIBS)
-
 bin/mixplayd: mixplayd.o $(OBJS) 
 	$(CC) $^ -o $@ $(LIBS)
 
+bin/cmixplay: cmixplay.o $(OBJS) $(NCOBJS) 
+	$(CC) $^ -o $@ $(LIBS)
+
 bin/gmixplay: $(OBJS) $(GLOBJS)
-	$(CC) $^ -o $@ $(LDFLAGS_GLADE) $(LIBS)
+	$(CC) $^ -o $@ $(LIBS)
 
-# rules for GTK/GLADE
-g%.o: g%.c
-	$(CC) $(CCFLAGS_GLADE) -c $<
-
-# default
 %.o: %.c
 	$(CC) $(CCFLAGS) -c $<
 	
