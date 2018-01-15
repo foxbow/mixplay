@@ -401,7 +401,7 @@ int main( int argc, char **argv ) {
     /* we are never ever remote */
     control->remote=0;
 
-    if( getDebug() > 0 ) {
+    if( getDebug() == 0 ) {
     	_isDaemon=-1;
     	daemon( 0, 0 );
     	openlog ("mixplayd", LOG_PID, LOG_DAEMON);

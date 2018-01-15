@@ -130,7 +130,6 @@ int getArgs( int argc, char ** argv ){
     /* using unsigned char c to work around getopt quirk on ARM */
     while ( ( c = getopt( argc, argv, "vfldFrh:p:W" ) ) != 255 ) {
         switch ( c ) {
-
         case 'v': /* increase debug message level to display */
             incVerbosity();
             break;
@@ -180,8 +179,18 @@ int getArgs( int argc, char ** argv ){
         	config->changed=-1;
         	break;
 
+        case '?':
+        	switch( optopt )  {
+        	case 'h':
+        	case 'p':
+                fprintf (stderr, "Option -%c requires an argument!\n", optopt);
+                break;
+        	default:
+            	addMessage( 0, "Unknown option -%c %i\n", c, c );
+        	}
+        	/* no break */
+
         default:
-        	addMessage( 0, "Unknown option -%c %i\n", c, c );
         	printUsage( argv[0] );
         	exit( EXIT_FAILURE );
         }
