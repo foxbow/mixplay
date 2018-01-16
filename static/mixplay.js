@@ -1,6 +1,6 @@
 doUpdate=1;
 data=null;
-mpver=7;
+mpver=8;
 
 function playPause() {
 	if( data != null ) {
@@ -94,6 +94,13 @@ function updateUI( ){
 		xmlhttp.open("GET", "/status", true);
 		xmlhttp.send();
 		setTimeout("updateUI()",500);
+	}
+}
+
+function search() {
+	term=window.prompt("Search for:")
+	if( term != "" ) {
+		sendCMD( "mpc_search?d="+term );
 	}
 }
 

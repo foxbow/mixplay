@@ -8,9 +8,11 @@ OBJS=utils.o musicmgr.o database.o mpgutils.o player.o config.o player.o mpcomm.
 NCOBJS=cmixplay.o ncbox.o
 GLOBJS=gladeutils.o gcallbacks.o gmixplay.o  
 LIBS=-lmpg123 -lpthread
-REFS=alsa 
-EXES=bin/cmixplay bin/mixplayd 
+REFS=alsa
+# daemon is always being built 
+EXES=bin/mixplayd 
 
+# build GTK client?
 ifeq ("$(shell pkg-config --exists  gtk+-3.0 gmodule-2.0 x11; echo $$?)","0")
 EXES+=bin/gmixplay
 REFS+=gtk+-3.0 gmodule-2.0 x11
@@ -18,6 +20,7 @@ else
 $(info GTK is not installed, not building gmixplay )
 endif
 
+# build ncurses client?
 ifeq ("$(shell pkg-config --exists  ncurses; echo $$?)","0")
 EXES+=bin/cmixplay
 REFS+=ncurses

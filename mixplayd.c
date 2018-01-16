@@ -33,7 +33,7 @@
 #include "mixplayd_css.h"
 
 static int _ftrpos=0;
-static int _isDaemon=1;
+static int _isDaemon=0;
 
 long curmsg=0;
 
@@ -47,6 +47,9 @@ static int filePost( int sock, const char *fname ) {
 		sendfile( sock, fd, 0, 4096 );
 		close(fd);
 		return 0;
+	}
+	else {
+		addMessage( 0, "%s not found!", fname );
 	}
 	return -1;
 }
@@ -147,7 +150,7 @@ static void *clientHandler(void *args )
 								state=2;
 							}
 							else if( ( strcmp( pos, "/") == 0 ) || ( strcmp( pos, "/index.html" ) == 0 ) ) {
-								fname="static/.html";
+								fname="static/mixplay.html";
 								fdata=static_mixplay_html;
 								flen=static_mixplay_html_len;
 								mtype="Content-Type: text/html; charset=utf-8";
@@ -167,12 +170,17 @@ static void *clientHandler(void *args )
 								mtype="Content-Type: application/javascript; charset=utf-8";
 								state=5;
 							}
+							else if( strcmp( pos, "/favicon.ico" ) == 0 ) {
+								/* ignore for now */
+								send( sock, "HTTP/1.1 204 No Content\015\012\015\012", 28, 0 );
+								pos=0;
+							}
 							else if( strcmp( pos, "/config") == 0 ) {
 								state=6;
 							}
 							else {
 								addMessage( 1, "Illegal get %s", pos );
-								send(sock , "HTTP/1.0 404 NOT FOUND\015\012\015\012", 25, 0);
+								send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
 								pos=NULL;
 							}
 							pos=end+1;
@@ -207,7 +215,7 @@ static void *clientHandler(void *args )
     			break;
     		case 21: /* set command */
     			if( cmd != mpc_idle ) {
-    				sprintf( commdata, "HTTP/1.1 204 OK\015\012\015\012" );
+    				sprintf( commdata, "HTTP/1.1 204 No Content\015\012\015\012" );
     				len=strlen( commdata );
     				if( ( cmd == mpc_dbinfo ) || ( cmd == mpc_dbclean) ||
     						( cmd == mpc_doublets ) || ( cmd == mpc_shuffle ) ) {
@@ -218,19 +226,22 @@ static void *clientHandler(void *args )
         			setCommand(cmd);
     			}
     			else {
-    				sprintf( commdata, "HTTP/1.1 400 INVALID COMMAND\015\012\015\012" );
+    				sprintf( commdata, "HTTP/1.1 400 Invalid Command\015\012\015\012" );
     				len=strlen( commdata );
     			}
     			break;
     		case 31: /* unknown command */
-    			sprintf( commdata, "HTTP/1.1 501 NOT IMPLEMENTED\015\012\015\012" );
+    			sprintf( commdata, "HTTP/1.1 501 Not Implemented\015\012\015\012" );
 				len=strlen( commdata );
     			break;
     		case 51: /* send file */
     			sprintf( commdata, "HTTP/1.1 200 OK\015\012%s\015\012\015\012", mtype );
     			len=strlen( commdata );
     			send(sock , commdata, strlen(commdata), 0);
-    			if( _isDaemon || ( filePost( sock, fname ) == -1 ) ){
+    			if( _isDaemon == 0 ) {
+    				filePost( sock, fname );
+    			}
+    			else {
 					len=0;
 					while( len < flen ) {
 						len+=send( sock, &fdata[len], flen-len, 0 );
@@ -378,7 +389,6 @@ int main( int argc, char **argv ) {
 	case 3: /* directory */
 		/* if no default directory is set, use the one given */
 		if( control->musicdir == NULL ) {
-			_isDaemon=0;
 			incDebug();
 			addMessage( 0, "Setting default configuration values and initializing..." );
 			setProfile( control );
