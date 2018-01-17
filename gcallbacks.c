@@ -249,6 +249,7 @@ void infoStart( GtkButton *button, gpointer data ) {
         }
         setCommand( mpc_doublets );
         break;
+
     case mpc_QUIT:
     	setCommand( mpc_QUIT );
     	/* make sure the message is sent.. */
@@ -256,7 +257,7 @@ void infoStart( GtkButton *button, gpointer data ) {
     	gtk_main_quit();
     	break;
     default:
-    	if( reply >= 0 ) {
+    	if( ( reply >= 0 ) && (reply < mpc_idle ) ) {
     		setCommand( reply );
     	}
 		break;
@@ -502,7 +503,7 @@ void profileStart( GtkButton *button, gpointer data ) {
     	progressStart( "Fillstick" );
     	addMessage( 0, "Copying to %s", path );
         fillstick( mpcontrol->current, path, ( selected == GTK_RESPONSE_ACCEPT ) );
-    	progressEnd( "Done." );
+    	progressEnd( );
 
     	sfree( &path );
     	break;

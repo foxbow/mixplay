@@ -1,6 +1,7 @@
-doUpdate=1;
-data=null;
-mpver=8;
+var doUpdate=1;
+var data=null;
+var mpver=8;
+var msgline="";
 
 function playPause() {
 	if( data != null ) {
@@ -67,9 +68,16 @@ function updateUI( ){
 		  			setElement( 'next', data.next.artist+" - "+data.next.title );
 		  			setElement( 'playtime', data.playtime+" / "+data.remtime );
 		  			setElement( 'volume', data.volume+"%" );
-//		  			if( data.msg != "" ) {
-//		  				alert( data.msg );
-//		  			}
+		  			if( data.msg != "" ) {
+		  				msgline=msgline+"\n"+data.msg;
+		  			}
+		  			else {
+		  				if( msgline!= "" ) {
+			  				document.body.style.cursor='auto';
+		  					alert(msgline);
+		  					msgline="";
+		  				}
+		  			}
 		  			if( data.current.flags & 1 )  {
 			  			document.getElementById( 'fav' ).disabled=true;
 		  			}
@@ -98,9 +106,21 @@ function updateUI( ){
 }
 
 function search() {
-	term=window.prompt("Search for:")
-	if( term != "" ) {
-		sendCMD( "mpc_search?d="+term );
+	var e=document.getElementById('range');
+	var term=e.options[e.selectedIndex].value;
+	if(document.getElementById('fuzzy').checked ) {
+		term=term+"*";
+	}
+	else {
+		term=term+"=";
+	}
+	term=term+document.getElementById('text').value;
+	if( term.length > 4 ) {
+		document.body.style.cursor='progress';
+		sendCMD( "mpc_search?"+term );
+	}
+	else {
+		alert("Need at least two letters to saearch!");
 	}
 }
 

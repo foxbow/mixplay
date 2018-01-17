@@ -90,14 +90,10 @@ void setCommand( mpcmd cmd ) {
 	}
 
 	if( config->remote ) {
-		switch( cmd ) {
-		case mpc_quit:
+		if( cmd == mpc_quit ) {
 			config->status = mpc_quit;
-			break;
-		case mpc_QUIT:
-			setSCommand( mpc_quit );
-			break;
-		default:
+		}
+		else {
 			setSCommand( cmd );
 		}
 	}
@@ -523,7 +519,7 @@ void addMessage( int v, char *msg, ... ) {
 			}
     	}
     	else {
-    		printf( "%s\n", line );
+    		printf( "V %s\n", line );
     	}
     }
 	else if( v < getDebug() ) {

@@ -350,8 +350,8 @@ void progressStart( char *msg, ... ) {
 	addMessage( 0, msg );
 }
 
-void progressEnd( char *msg ) {
-	addMessage( 0, msg );
+void progressEnd( ) {
+	addMessage( 0, "Done." );
 	/* do null */
 }
 

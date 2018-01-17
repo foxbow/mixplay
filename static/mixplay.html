@@ -26,6 +26,13 @@
          <div id='volume'>100%</div>
          <input id='ivol' type='button' onclick='sendCMD("mpc_ivol")' value='+' >
        </div> <!-- volpack -->
+       <select label='Range' id='range'>
+         <option value='t'>Title</option>
+         <option value='a'>Artist</option>
+         <option value='l'>Album</option>
+       </select>
+       <input id='text' type='text'>
+       <input id='fuzzy' title='Fuzzy' type='checkbox'>
        <input id='search' type='button' onclick='search()' value='Search' >       
     </div> <!-- main -->
   </body>

@@ -202,8 +202,8 @@ static int g_progressEnd( void *data ) {
 /**
  * enables closing of the info requester
  */
-void progressEnd( char *line ) {
-	addMessage( 0, line );
+void progressEnd( ) {
+	addMessage( 0, "Done." );
 
     if( getConfig()->inUI ) {
 		gdk_threads_add_idle( g_progressEnd, NULL );

@@ -16,19 +16,19 @@
 #include <errno.h>
 #include <unistd.h>
 
-static pthread_mutex_t cmdlock=PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t clientlock=PTHREAD_MUTEX_INITIALIZER;
-static int _curclient;
+static pthread_mutex_t _cmdlock=PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t _clientlock=PTHREAD_MUTEX_INITIALIZER;
+static int _curclient=-1;
 static unsigned long _lastmsg=-1;
 
 void setCurClient( int client ) {
-	pthread_mutex_lock( &clientlock );
+	pthread_mutex_lock( &_clientlock );
 	_curclient=client;
-	_lastmsg=-1;
+	_lastmsg=getConfig()->msg->count;
 }
 
 int testClient( int client ) {
-	if( ( client == -1 ) || ( client == _curclient ) ){
+	if( ( _curclient == -1 ) || ( client == _curclient ) ){
 		return -1;
 	}
 	return 0;
@@ -37,7 +37,7 @@ int testClient( int client ) {
 void unlockClient( int client ) {
 	if( client == _curclient ) {
 		_curclient=-1;
-		pthread_mutex_unlock( &clientlock );
+		pthread_mutex_unlock( &_clientlock );
 	}
 }
 
@@ -45,18 +45,17 @@ void setUnlockClient( unsigned long msgno ) {
 	_lastmsg=msgno;
 }
 
-static int lastMessage() {
-	if( getConfig()->msg->count == _lastmsg ) {
-		return -1;
-	}
-	return 0;
+void setLastMessage() {
+	pthread_mutex_lock( &_clientlock );
+	_lastmsg=getConfig()->msg->count;
+	pthread_mutex_unlock( &_clientlock );
 }
 
 /*
  * sets the command to be sent to mixplayd
  */
 void setSCommand( mpcmd cmd ) {
-    pthread_mutex_lock( &cmdlock );
+    pthread_mutex_lock( &_cmdlock );
     getConfig()->command=cmd;
 }
 
@@ -130,20 +129,42 @@ size_t serializeStatus( const mpconfig *data, char *buff, long *count, int clien
 	jsonAddInt( jo, "active", data->active );
 	jsonAddInt( jo, "status", data->status );
 	jsonAddInt( jo, "playstream", data->playstream );
-	if( *count < data->msg->count ) {
-		if ( testClient( clientid ) ){
+
+	/* broadcast */
+	if( _curclient == -1 ) {
+		/* standard client */
+		if( *count < data->msg->count ) {
 			jsonAddStr( jo, "msg", msgBuffPeek( data->msg, *count ) );
+			(*count)++;
+		}
+		/* web client */
+		else if( ( clientid == 0 ) &&
+				( _lastmsg != -1 ) &&
+				( _lastmsg < data->msg->count ) ){
+			jsonAddStr( jo, "msg", msgBuffPeek( data->msg, _lastmsg ) );
+			_lastmsg++;
 		}
 		else {
 			jsonAddStr( jo, "msg", "" );
 		}
-		(*count)++;
 	}
-	else {
-		if( testClient( clientid ) && lastMessage() ) {
+	/* direct send */
+	else if( clientid == _curclient ) {
+		if( _lastmsg < data->msg->count ) {
+			if( strcmp( "Done.", msgBuffPeek( data->msg, _lastmsg ) ) == 0 ) {
+				unlockClient( clientid );
+			}
+			jsonAddStr( jo, "msg", msgBuffPeek( data->msg, _lastmsg ) );
+			_lastmsg++;
 			(*count)=_lastmsg;
-			unlockClient( clientid );
 		}
+		else {
+			jsonAddStr( jo, "msg", "" );
+		}
+	}
+	/* not for the current client */
+	else {
+		(*count)=getConfig()->msg->count;
 		jsonAddStr( jo, "msg", "" );
 	}
 
@@ -353,7 +374,7 @@ void *netreader( void *control ) {
 			}
 		}
 
-        pthread_mutex_trylock( &cmdlock );
+        pthread_mutex_trylock( &_cmdlock );
         len=0;
         if( config->command == mpc_quit ) {
         	config->status=mpc_quit;
@@ -398,7 +419,7 @@ void *netreader( void *control ) {
         if( state== 2){
         	state=0;
         }
-        pthread_mutex_unlock( &cmdlock );
+        pthread_mutex_unlock( &_cmdlock );
     }
 
     addMessage( 1, "Disconnected");

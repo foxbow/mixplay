@@ -45,7 +45,7 @@ typedef struct msgbuf_t msgbuf;
 void fail( int error, const char* msg, ... );
 void activity( const char *msg, ... );
 void progressStart( char *msg, ... );
-void progressEnd( char *msg );
+void progressEnd( void );
 void updateUI( mpconfig *data );
 
 /**

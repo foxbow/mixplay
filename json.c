@@ -547,13 +547,30 @@ static jsonObject *jsonAppend( jsonObject *jo, const char *key ) {
 }
 
 /**
+ * filters out double quotes
+ * todo: Proper encoding of special chars!
+ */
+static char *fixstr( char *target, const char *src ) {
+	int i, j;
+	for( i=0, j=0; i<strlen( src ); i++ ) {
+		if( src[i] != '"' ) {
+			target[j]=src[i];
+			j++;
+		}
+	}
+	target[j]=0;
+	return target;
+}
+
+/**
  * creates a new JSON string object and appends it to the end of the given root object chain
  */
 jsonObject *jsonAddStr( jsonObject *jo, const char *key, const char *val ) {
 	jo=jsonAppend( jo, key );
 	jo->val=falloc( strlen(val)+1, sizeof(char) );
 	jo->type=json_string;
-	strcpy( jo->val, val );
+//	strcpy( jo->val, val );
+	fixstr( jo->val, val );
 	return jo;
 }
 

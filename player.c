@@ -599,7 +599,7 @@ void *reader( void *cont ) {
 								if( ( order==1 ) && ( next == control->root ) ) {
 									progressStart( "Reshuffling" );
 									control->root=shuffleTitles( control->root );
-									progressEnd( "Done." );
+									progressEnd();
 									next=control->root;
 								}
 
@@ -713,7 +713,7 @@ void *reader( void *cont ) {
             else {
             	addMessage( 0, "No titles deleted" );
             }
-            progressEnd( "Finished Cleanup." );
+            progressEnd( );
             sendplay( p_command[fdset][1], control );
 
             break;
@@ -752,7 +752,7 @@ void *reader( void *cont ) {
                 control->current = control->root;
             }
 
-            progressEnd( "Finished Cleanup." );
+            progressEnd( );
             sendplay( p_command[fdset][1], control );
             break;
 
@@ -855,7 +855,7 @@ void *reader( void *cont ) {
           	progressStart( "Database Info" );
            	addMessage( 0, "Music dir: %s", control->musicdir );
            	dumpInfo( control->root, -1, control->skipdnp );
-           	progressEnd( "End Database info." );
+           	progressEnd();
            	break;
 
         case mpc_search:
@@ -863,7 +863,7 @@ void *reader( void *cont ) {
 				addMessage( 0, "Nothing to search for!" );
 			}
 			else {
-				addMessage( 1, "Looking for %s", control->argument );
+				progressStart( "Looking for %s", control->argument );
 				i=searchPlay( control->current, control->argument );
 				if( i > 0) {
 					addMessage( 0, "Found %i titles matching %s", i, control->argument );
@@ -875,6 +875,7 @@ void *reader( void *cont ) {
 				}
 				sfree( &(control->argument) );
 			}
+			progressEnd( );
         	break;
 
         case mpc_idle:

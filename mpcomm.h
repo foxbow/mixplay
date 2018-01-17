@@ -21,5 +21,6 @@ size_t serializeConfig( mpconfig *config, char *buff );
 void setCurClient( int client );
 void unlockClient( int client );
 void setUnlockClient( unsigned long msgno );
+void setLastMessage( void );
 
 #endif /* MPCOMM_H_ */

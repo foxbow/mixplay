@@ -34,8 +34,7 @@
 
 static int _ftrpos=0;
 static int _isDaemon=0;
-
-long curmsg=0;
+static long _curmsg=0;
 
 /**
  * send a static file
@@ -54,9 +53,62 @@ static int filePost( int sock, const char *fname ) {
 	return -1;
 }
 
-/*
+/**
+ * treats a single character as a hex value
+ */
+static char hexval( const char c ) {
+	if( ( c-'0' >= 0 ) && ( c-'9' <= 9 ) ) {
+		return c-'0';
+	}
+
+	if( ( c >= 'a') && ( c <= 'f' ) ) {
+		return 10+(c-'a');
+	}
+
+	addMessage( 0, "Invalid hex character %i - '%c'!", c, c );
+	return -1;
+}
+
+/**
+ * decodes parts in the form of %xx in fact I only expect to see %20
+ * in search strings but who knows.. and it WILL break soon too..
+ */
+static char *strdec( char *target, const char *src ) {
+	int i,j;
+	char buf;
+	int state=0;
+
+	for( i=0, j=0; i<strlen(src); i++ ) {
+		switch( state ) {
+		case 0:
+			if( src[i] != '%' ) {
+				target[j]=src[i];
+				j++;
+			}
+			else {
+				buf=0;
+				state=1;
+			}
+			break;
+		case 1:
+			buf=16*hexval(src[i]);
+			state=2;
+			break;
+		case 2:
+			buf=buf+hexval(src[i]);
+			target[j]=buf;
+			j++;
+			state=0;
+			break;
+		}
+	}
+
+	return target;
+}
+
+/**
  * This will handle connection for each client
- * */
+ */
 static void *clientHandler(void *args )
 {
     int sock=*(int*)args;
@@ -66,11 +118,12 @@ static void *clientHandler(void *args )
     char *commdata;
     fd_set fds;
     mpconfig *config;
-    long curmsg;
+    long clmsg;
     int state=0;
     char *pos, *end;
     mpcmd cmd=mpc_idle;
     static char *mtype;
+    int clid=0;
 
     const char *fname;
     const unsigned char *fdata;
@@ -78,7 +131,7 @@ static void *clientHandler(void *args )
 
     commdata=falloc( MP_MAXCOMLEN, sizeof( char ) );
     config = getConfig();
-    curmsg = config->msg->count;
+    clmsg = config->msg->count;
 
     pthread_detach(pthread_self());
 
@@ -117,8 +170,11 @@ static void *clientHandler(void *args )
 						}
 						pos=NULL;
 					}
-					else if( strstr( pos, "xmixplay: 1" ) == pos ) {
-						running=-1;
+					else if( strstr( pos, "xmixplay:" ) == pos ) {
+						clid=sock;
+						if( strstr( pos, "xmixplay: 1" ) == pos ) {
+							running=-1;
+						}
 					}
 					else if( strstr( pos, "get" ) == pos ) {
 						pos=pos+4;
@@ -144,7 +200,7 @@ static void *clientHandler(void *args )
 										sfree( &(config->argument) );
 									}
 									config->argument=falloc( sizeof( char ), strlen( pos+16 )+1 );
-									strcpy( config->argument, pos+16 );
+									strdec( config->argument, pos+16 );
 								}
 								cmd=mpcCommand(pos+5);
 								state=2;
@@ -154,6 +210,8 @@ static void *clientHandler(void *args )
 								fdata=static_mixplay_html;
 								flen=static_mixplay_html_len;
 								mtype="Content-Type: text/html; charset=utf-8";
+				    			/* init message mechanism for web clients */
+				    			setLastMessage();
 								state=5;
 							}
 							else if( strcmp( pos, "/mixplay.css" ) == 0 ) {
@@ -209,7 +267,7 @@ static void *clientHandler(void *args )
     		case 11: /* get update */
     			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012\015\012" );
     			len=strlen( commdata );
-    			serializeStatus( config, commdata+len, &curmsg, sock );
+    			serializeStatus( config, commdata+len, &clmsg, clid );
     			strcat( commdata, "\015\012" );
     			len=strlen(commdata);
     			break;
@@ -218,10 +276,11 @@ static void *clientHandler(void *args )
     				sprintf( commdata, "HTTP/1.1 204 No Content\015\012\015\012" );
     				len=strlen( commdata );
     				if( ( cmd == mpc_dbinfo ) || ( cmd == mpc_dbclean) ||
-    						( cmd == mpc_doublets ) || ( cmd == mpc_shuffle ) ) {
-    					setCurClient( sock );
+    						( cmd == mpc_doublets ) || ( cmd == mpc_shuffle ) ||
+							( cmd == mpc_search ) ) {
+    					setCurClient( clid );
     					/* setCurClient may block so we need to skip messages */
-    					curmsg=config->msg->count;
+    					clmsg=config->msg->count;
     				}
         			setCommand(cmd);
     			}
@@ -282,7 +341,9 @@ static void *clientHandler(void *args )
     	}
 	}
     addMessage( 2, "Client handler exited" );
-    unlockClient( sock );
+    if( clid != 0 ) {
+    	unlockClient( clid );
+    }
 	close(sock);
     free( args );
     free( commdata );
@@ -345,21 +406,25 @@ void fail( int error, const char* msg, ... ) {
 
 void progressStart( char* msg, ... ) {
     va_list args;
+    char *line;
+    line=falloc( 512, sizeof( char ) );
 
     va_start( args, msg );
-	addMessage( 0, msg );
+    vsnprintf( line, 512, msg, args );
+	addMessage( 0, line );
     va_end( args );
 }
 
-void progressEnd( char *msg ) {
-	addMessage( 0, msg );
-	setUnlockClient( getConfig()->msg->count );
+void progressEnd( ) {
+	addMessage( 0, "Done." );
 }
 
 void updateUI( mpconfig *data ) {
-	if( curmsg < data->msg->count ) {
-		syslog( LOG_NOTICE, "%s", msgBuffPeek( data->msg, curmsg ) );
-		curmsg++;
+	if( _curmsg < data->msg->count ) {
+		if( getDebug() == 0 ) {
+			syslog( LOG_NOTICE, "%s", msgBuffPeek( data->msg, _curmsg ) );
+		}
+		_curmsg++;
 	}
 }
 
