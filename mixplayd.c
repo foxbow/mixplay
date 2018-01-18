@@ -114,8 +114,9 @@ static void *clientHandler(void *args )
     int sock=*(int*)args;
     size_t len, sent, msglen;
     struct timeval to;
-    int running=1;
+    int running=-1; /* test */
     char *commdata;
+    char *jsonLine;
     fd_set fds;
     mpconfig *config;
     long clmsg;
@@ -123,13 +124,14 @@ static void *clientHandler(void *args )
     char *pos, *end;
     mpcmd cmd=mpc_idle;
     static char *mtype;
-    int clid=0;
 
     const char *fname;
     const unsigned char *fdata;
     unsigned int flen;
 
     commdata=falloc( MP_MAXCOMLEN, sizeof( char ) );
+    jsonLine=falloc( MP_MAXCOMLEN-256, sizeof( char ) );
+
     config = getConfig();
     clmsg = config->msg->count;
 
@@ -170,11 +172,9 @@ static void *clientHandler(void *args )
 						}
 						pos=NULL;
 					}
-					else if( strstr( pos, "xmixplay:" ) == pos ) {
-						clid=sock;
-						if( strstr( pos, "xmixplay: 1" ) == pos ) {
-							running=-1;
-						}
+					/* legacy entry */
+					else if( strstr( pos, "xmixplay: 0" ) == pos ) {
+						running=1;
 					}
 					else if( strstr( pos, "get" ) == pos ) {
 						pos=pos+4;
@@ -210,8 +210,6 @@ static void *clientHandler(void *args )
 								fdata=static_mixplay_html;
 								flen=static_mixplay_html_len;
 								mtype="Content-Type: text/html; charset=utf-8";
-				    			/* init message mechanism for web clients */
-				    			setLastMessage();
 								state=5;
 							}
 							else if( strcmp( pos, "/mixplay.css" ) == 0 ) {
@@ -265,10 +263,11 @@ static void *clientHandler(void *args )
     		memset( commdata, 0, MP_MAXCOMLEN );
     		switch( state ) {
     		case 11: /* get update */
-    			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012\015\012" );
-    			len=strlen( commdata );
-    			serializeStatus( config, commdata+len, &clmsg, clid );
-    			strcat( commdata, "\015\012" );
+        		memset( jsonLine, 0, MP_MAXCOMLEN-512 );
+    			serializeStatus( config, jsonLine, &clmsg, sock );
+    			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i;\015\012\015\012", (int)strlen(jsonLine)+1 );
+    			strcat( commdata, jsonLine );
+    			strcat( commdata, "\015\012\015\012" );
     			len=strlen(commdata);
     			break;
     		case 21: /* set command */
@@ -278,7 +277,7 @@ static void *clientHandler(void *args )
     				if( ( cmd == mpc_dbinfo ) || ( cmd == mpc_dbclean) ||
     						( cmd == mpc_doublets ) || ( cmd == mpc_shuffle ) ||
 							( cmd == mpc_search ) ) {
-    					setCurClient( clid );
+    					setCurClient( sock );
     					/* setCurClient may block so we need to skip messages */
     					clmsg=config->msg->count;
     				}
@@ -311,10 +310,11 @@ static void *clientHandler(void *args )
     			running=0;
     			break;
     		case 61: /* get config */
-    			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012\015\012" );
-    			len=strlen( commdata );
-    			serializeConfig( config, commdata+len );
-    			strcat( commdata, "\015\012" );
+        		memset( jsonLine, 0, MP_MAXCOMLEN-512 );
+    			serializeConfig( config, jsonLine );
+    			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i;\015\012\015\012", (int)strlen(jsonLine)+1 );
+    			strcat( commdata, jsonLine );
+    			strcat( commdata, "\015\012\015\012" );
     			len=strlen(commdata);
     			break;
     		default:
@@ -341,12 +341,11 @@ static void *clientHandler(void *args )
     	}
 	}
     addMessage( 2, "Client handler exited" );
-    if( clid != 0 ) {
-    	unlockClient( clid );
-    }
+   	unlockClient( sock );
 	close(sock);
     free( args );
     free( commdata );
+    free( jsonLine );
 
     return 0;
 }

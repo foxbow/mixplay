@@ -569,7 +569,6 @@ jsonObject *jsonAddStr( jsonObject *jo, const char *key, const char *val ) {
 	jo=jsonAppend( jo, key );
 	jo->val=falloc( strlen(val)+1, sizeof(char) );
 	jo->type=json_string;
-//	strcpy( jo->val, val );
 	fixstr( jo->val, val );
 	return jo;
 }
