@@ -112,10 +112,6 @@ void playPause( GtkButton *button, gpointer data ) {
 
         switch( reply ) {
         case mpc_dnptitle:
-            if( mpcontrol->status == mpc_play ) {
-                setCommand( mpc_play );
-            }
-
             dialog = gtk_message_dialog_new(
                          GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
                          GTK_DIALOG_DESTROY_WITH_PARENT,
@@ -139,7 +135,9 @@ void playPause( GtkButton *button, gpointer data ) {
                 setCommand( reply );
             }
             else {
-                setCommand( mpc_play );
+				if( mpcontrol->status != mpc_play ) {
+					setCommand( mpc_play );
+				}
             }
 
             break;
@@ -157,7 +155,9 @@ void playPause( GtkButton *button, gpointer data ) {
             /* no break */
 
         default:
-            setCommand( mpc_play );
+            if( mpcontrol->status != mpc_play ) {
+                setCommand( mpc_play );
+            }
         }
     }
     else { /* someone else paused the player */
