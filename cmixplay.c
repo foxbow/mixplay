@@ -42,7 +42,8 @@ int main( int argc, char **argv ) {
             }
         }
 
-        config=writeConfig( path );
+        writeConfig( path );
+        config=readConfig();
         if( config == NULL ) {
         	fail( F_FAIL, "Could not create config file!" );
         }

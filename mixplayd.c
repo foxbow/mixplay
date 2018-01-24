@@ -264,7 +264,7 @@ static void *clientHandler(void *args )
     		switch( state ) {
     		case 11: /* get update */
         		memset( jsonLine, 0, MP_MAXCOMLEN-512 );
-    			serializeStatus( config, jsonLine, &clmsg, sock );
+    			serializeStatus( jsonLine, &clmsg, sock );
     			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i;\015\012\015\012", (int)strlen(jsonLine)+1 );
     			strcat( commdata, jsonLine );
     			strcat( commdata, "\015\012\015\012" );
@@ -311,7 +311,7 @@ static void *clientHandler(void *args )
     			break;
     		case 61: /* get config */
         		memset( jsonLine, 0, MP_MAXCOMLEN-512 );
-    			serializeConfig( config, jsonLine );
+    			serializeConfig( jsonLine );
     			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i;\015\012\015\012", (int)strlen(jsonLine)+1 );
     			strcat( commdata, jsonLine );
     			strcat( commdata, "\015\012\015\012" );
@@ -418,7 +418,8 @@ void progressEnd( ) {
 	addMessage( 0, "Done." );
 }
 
-void updateUI( mpconfig *data ) {
+void updateUI( ) {
+	mpconfig *data=getConfig();
 	if( _curmsg < data->msg->count ) {
 		if( getDebug() == 0 ) {
 			syslog( LOG_NOTICE, "%s", msgBuffPeek( data->msg, _curmsg ) );

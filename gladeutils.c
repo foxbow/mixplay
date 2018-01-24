@@ -392,7 +392,8 @@ static int g_updateUI( void *data ) {
  *
  * needed to keep updateUI() GUI independent
  */
-void updateUI( mpconfig *control ) {
+void updateUI( ) {
+	mpconfig *control=getConfig();
 	if( control->inUI ) {
 		if( control->status == mpc_quit ) {
 			gtk_main_quit();

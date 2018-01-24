@@ -65,8 +65,11 @@ int main( int argc, char **argv ) {
 
     control=readConfig();
     if( NULL == control ) {
-    	control=writeConfig( NULL );
+    	/* todo: get default music dir! */
+    	writeConfig( NULL );
+        control=readConfig();
     }
+
     memset( &glcontrol, 0, sizeof( struct glcontrol_t ) );
     control->data=&glcontrol;
 

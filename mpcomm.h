@@ -16,8 +16,8 @@
 
 void *netreader( void *control );
 void setSCommand( mpcmd cmd );
-size_t serializeStatus( const mpconfig *data, char *buff, long *count, int clientid );
-size_t serializeConfig( mpconfig *config, char *buff );
+size_t serializeStatus( char *buff, long *count, int clientid );
+size_t serializeConfig( char *buff );
 void setCurClient( int client );
 void unlockClient( int client );
 

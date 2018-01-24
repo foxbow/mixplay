@@ -887,7 +887,7 @@ void *reader( void *cont ) {
         pthread_mutex_unlock( &cmdlock );
 
         /* notify UI that something has changed */
-        updateUI( control );
+        updateUI( );
     }
     while ( control->status != mpc_quit );
 

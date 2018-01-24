@@ -20,15 +20,27 @@ static pthread_mutex_t _cmdlock=PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t _clientlock=PTHREAD_MUTEX_INITIALIZER;
 static int _curclient=-1;
 
+/*
+ * all of the next messages will only be sent to this client
+ * other requests to set an exclusive client will be blocked
+ * until the current client is unlocked
+ */
 void setCurClient( int client ) {
 	pthread_mutex_lock( &_clientlock );
 	_curclient=client;
 }
 
+/*
+ * sends all next messages to every client and allows other clients
+ * to lock the messages
+ */
 void unlockClient( int client ) {
 	if( client == _curclient ) {
 		_curclient=-1;
 		pthread_mutex_unlock( &_clientlock );
+	}
+	else {
+		fail( F_FAIL, "Client %i tried to unlock client %i!", client, _curclient );
 	}
 }
 
@@ -40,6 +52,9 @@ void setSCommand( mpcmd cmd ) {
     getConfig()->command=cmd;
 }
 
+/*
+ * helperfunction to add a title to the given jsonOblect
+ */
 static jsonObject *appTitle( jsonObject *jo, const char *key, const struct entry_t *title ) {
 	jsonObject *val=NULL;
 
@@ -62,6 +77,9 @@ static jsonObject *appTitle( jsonObject *jo, const char *key, const struct entry
 	return jsonAddObj(jo, key, val);
 }
 
+/*
+ * helperfunction to retrieve a title from the given jsonOblect
+ */
 static void getTitle( jsonObject *jo, const char *key, struct entry_t *title ) {
 	jsonObject *to;
 	to=jsonGetObj( jo, key);
@@ -85,7 +103,8 @@ static void getTitle( jsonObject *jo, const char *key, struct entry_t *title ) {
  * put data to be sent over into the buff
  * adds messages only if any are available for the client
 **/
-size_t serializeStatus( const mpconfig *data, char *buff, long *count, int clientid ) {
+size_t serializeStatus( char *buff, long *count, int clientid ) {
+	mpconfig *data=getConfig();
 	jsonObject *jo=NULL;
 
 	buff[0]=0;
@@ -147,9 +166,10 @@ size_t serializeStatus( const mpconfig *data, char *buff, long *count, int clien
 }
 
 /**
- * global/static part of the config
+ * global/static part of the given config
  */
-size_t serializeConfig( mpconfig *config, char *buff ) {
+size_t serializeConfig( char *buff ) {
+	mpconfig *config=getConfig();
 	jsonObject *joroot=NULL;
 	jsonObject *jo=NULL;
 
@@ -178,7 +198,12 @@ size_t serializeConfig( mpconfig *config, char *buff ) {
 	return strlen(buff);
 }
 
-static int deserializeConfig( mpconfig *config, jsonObject *jo ) {
+/*
+ * store the global/static configuration from the given jsonObject in the
+ * given config
+ */
+static int deserializeConfig( jsonObject *jo ) {
+	mpconfig *config=getConfig();
 	jsonObject *joconf=NULL;
 	joconf=jsonGetObj( jo, "config" );
 	if( joconf == NULL ) {
@@ -186,7 +211,7 @@ static int deserializeConfig( mpconfig *config, jsonObject *jo ) {
 		return -1;
 	}
 
-	freeConfigContents( config );
+	freeConfigContents( );
 
 	config->fade=jsonGetInt( joconf, "fade");
 	jsonCopyStr( joconf, "musicdir", &(config->musicdir) );
@@ -200,7 +225,11 @@ static int deserializeConfig( mpconfig *config, jsonObject *jo ) {
 	return 0;
 }
 
-static int deserializeStatus( mpconfig *data, jsonObject *jo ) {
+/**
+ * reads the status into the global configuration
+ */
+static int deserializeStatus( jsonObject *jo ) {
+	mpconfig *data=getConfig();
 	char msgline[128];
 
 	if( data->current == NULL ) {
@@ -231,7 +260,7 @@ static int deserializeStatus( mpconfig *data, jsonObject *jo ) {
 /*
  * sort data from buff into the current configuration
  */
-static int deserialize( mpconfig *data, char *json ) {
+static int deserialize( char *json ) {
 	int ver;
 	jsonObject *jo;
 	int retval=-1;
@@ -246,11 +275,11 @@ static int deserialize( mpconfig *data, char *json ) {
 
 		switch( jsonGetInt( jo, "type" ) ) {
 		case 1: /* status */
-			retval=deserializeStatus( data, jo );
+			retval=deserializeStatus( jo );
 			break;
 
 		case 2: /* config */
-			retval=deserializeConfig( data, jo );
+			retval=deserializeConfig( jo );
 			break;
 
 		default:
@@ -262,7 +291,7 @@ static int deserialize( mpconfig *data, char *json ) {
 	return retval;
 }
 
-static int recFromMixplayd( mpconfig *config, char *data ) {
+static int recFromMixplayd( char *data ) {
 	char *pos=data;
 	int empty=1;
 	while( pos[1] != 0 ) {
@@ -283,7 +312,7 @@ static int recFromMixplayd( mpconfig *config, char *data ) {
 	if( pos[1] == 0 ) {
 		return -1;
 	}
-	return deserialize( config, &pos[2] );
+	return deserialize( &pos[2] );
 }
 
 /**
@@ -296,8 +325,7 @@ void *netreader( void *control ) {
     mpconfig *config;
     struct timeval to;
     fd_set fds;
-    size_t len;
-    int state=-1;
+    size_t len=0;
 
     commdata=falloc( MP_MAXCOMLEN, sizeof( char ) );
     config=(mpconfig*)control;
@@ -318,17 +346,22 @@ void *netreader( void *control ) {
 
     addMessage( 1, "Connected" );
 
+	sprintf( commdata, "get /config HTTP/1.1\015\012xmixplay: 1\015\012\015\012" );
+	while( len < strlen( commdata ) ) {
+		len+=send( sock , &commdata[len], strlen( commdata )-len, 0 );
+	}
+
     while( config->status != mpc_quit ) {
+        len=0;
     	FD_ZERO( &fds );
     	FD_SET( sock, &fds );
-
     	to.tv_sec=0;
     	to.tv_usec=250000; /* 1/4 second */
     	select( FD_SETSIZE, &fds, NULL, NULL, &to );
 
-		memset( commdata, 0, MP_MAXCOMLEN );
-
+		/* is data available */
 		if( FD_ISSET( sock, &fds ) ) {
+			memset( commdata, 0, MP_MAXCOMLEN );
 			switch( recv(sock , commdata , MP_MAXCOMLEN , 0) ) {
 			case -1:
 				addMessage( 0, "Read error on socket!\n%s", strerror( errno ) );
@@ -339,63 +372,52 @@ void *netreader( void *control ) {
 				config->status=mpc_quit;
 				break;
 			default:
-				if( recFromMixplayd(config, commdata) == 0 ) {
-					state = 2;
-					updateUI( config );
+				if( recFromMixplayd( commdata ) == 0 ) {
+					updateUI( );
 				}
 			}
 		}
 
-        pthread_mutex_trylock( &_cmdlock );
-        len=0;
-        if( config->command == mpc_quit ) {
-        	config->status=mpc_quit;
-        }
-        else if( config->command != mpc_idle ) {
-        	if( config->command == mpc_profile ) {
-            	sprintf( commdata, "get /cmd/%s?%i HTTP/1.1\015\012xmixplay: 1\015\012\015\012",
-            			mpcString( config->command ), config->active );
-        	}
-        	else if( config->command == mpc_search ) {
-        		if( config->argument != NULL ) {
-        			sprintf( commdata, "get /cmd/%s?%s HTTP/1.1\015\012xmixplay: 1\015\012\015\012",
-        					mpcString( config->command ), config->argument );
-        		}
-        		else {
-        			addMessage( 0, "No searchterm given!" );
-        		}
-        	}
-        	else {
-        		sprintf( commdata, "get /cmd/%s HTTP/1.1\015\012xmixplay: 1\015\012\015\012", mpcString( config->command ) );
-        	}
-        	while( len < strlen( commdata ) ) {
-        		len+=send( sock , &commdata[len], strlen( commdata )-len, 0 );
-        	}
-            config->command=mpc_idle;
-        }
-        else if( state == 0 ){
+        /* check current command */
+		pthread_mutex_trylock( &_cmdlock );
+		if( config->command == mpc_quit ) {
+			config->status=mpc_quit;
+		}
+		else if( config->command != mpc_idle ) {
+			if( config->command == mpc_profile ) {
+				sprintf( commdata, "get /cmd/%s?%i HTTP/1.1\015\012xmixplay: 1\015\012\015\012",
+						mpcString( config->command ), config->active );
+			}
+			else if( config->command == mpc_search ) {
+				if( config->argument != NULL ) {
+					sprintf( commdata, "get /cmd/%s?%s HTTP/1.1\015\012xmixplay: 1\015\012\015\012",
+							mpcString( config->command ), config->argument );
+				}
+				else {
+					addMessage( 0, "No searchterm given!" );
+				}
+			}
+			else {
+				sprintf( commdata, "get /cmd/%s HTTP/1.1\015\012xmixplay: 1\015\012\015\012", mpcString( config->command ) );
+			}
+			while( len < strlen( commdata ) ) {
+				len+=send( sock , &commdata[len], strlen( commdata )-len, 0 );
+			}
+			config->command=mpc_idle;
+		}
+		pthread_mutex_unlock( &_cmdlock );
+
+		/* if no command was sent, fetch an update */
+		if( len == 0 ) {
            	sprintf( commdata, "get /status HTTP/1.1\015\012xmixplay: 1\015\012\015\012" );
            	while( len < strlen( commdata ) ) {
            		len+=send( sock , &commdata[len], strlen( commdata )-len, 0 );
            	}
-           	state=1;
         }
-        else if( state == -1 ) {
-           	sprintf( commdata, "get /config HTTP/1.1\015\012xmixplay: 1\015\012\015\012" );
-           	while( len < strlen( commdata ) ) {
-           		len+=send( sock , &commdata[len], strlen( commdata )-len, 0 );
-           	}
-           	state=0;
-        }
-
-        if( state== 2){
-        	state=0;
-        }
-        pthread_mutex_unlock( &_cmdlock );
     }
 
     addMessage( 1, "Disconnected");
-    updateUI(config);
+    updateUI( );
     free( commdata );
     close(sock);
     config->rtid=0;

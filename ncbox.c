@@ -355,7 +355,8 @@ void progressEnd( ) {
 	/* do null */
 }
 
-void updateUI( mpconfig *control ) {
+void updateUI( ) {
+	mpconfig *control=getConfig();
     char status[MP_MSGLEN];
     int i;
 

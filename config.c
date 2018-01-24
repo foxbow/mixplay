@@ -383,7 +383,7 @@ mpconfig *readConfig( ) {
  * writes the configuration from the given control structure into the file at
  * $HOME/.mixplay/mixplay.conf
  */
-mpconfig *writeConfig( const char *musicpath ) {
+void writeConfig( const char *musicpath ) {
     char	conffile[MAXPATHLEN]; /*  = "mixplay.conf"; */
     int		i;
     FILE    *fp;
@@ -445,33 +445,32 @@ mpconfig *writeConfig( const char *musicpath ) {
     else {
         fail( errno, "Could not open %s", conffile );
     }
-
-    return c_config;
 }
 
 /**
  * frees the static parts of the config
  */
-void freeConfigContents( mpconfig *config ) {
+void freeConfigContents() {
 	int i;
+	assert( c_config != NULL );
 
-    sfree( &(config->dbname) );
-    sfree( &(config->dnpname) );
-    sfree( &(config->favname) );
-    sfree( &(config->musicdir) );
-    for( i=0; i<config->profiles; i++ ) {
-    	sfree( &(config->profile[i]) );
+    sfree( &(c_config->dbname) );
+    sfree( &(c_config->dnpname) );
+    sfree( &(c_config->favname) );
+    sfree( &(c_config->musicdir) );
+    for( i=0; i<c_config->profiles; i++ ) {
+    	sfree( &(c_config->profile[i]) );
     }
-    config->profiles=0;
-    sfree( (char **)&(config->profile) );
+    c_config->profiles=0;
+    sfree( (char **)&(c_config->profile) );
 
-    for( i=0; i<config->streams; i++ ) {
-    	sfree( &(config->stream[i]) );
-    	sfree( &(config->sname[i]) );
+    for( i=0; i<c_config->streams; i++ ) {
+    	sfree( &(c_config->stream[i]) );
+    	sfree( &(c_config->sname[i]) );
     }
-    config->streams=0;
-    sfree( (char **)&(config->stream) );
-    sfree( (char **)&(config->sname) );
+    c_config->streams=0;
+    sfree( (char **)&(c_config->stream) );
+    sfree( (char **)&(c_config->sname) );
 }
 
 /**
@@ -479,7 +478,7 @@ void freeConfigContents( mpconfig *config ) {
  */
 void freeConfig( ) {
 	assert( c_config != NULL );
-	freeConfigContents( c_config );
+	freeConfigContents( );
     c_config->root=cleanTitles( c_config->root );
     sfree( (char **)c_config );
     c_config=NULL;

@@ -16,7 +16,4 @@ void *reader( void *control );
 void *setProfile( void *control );
 int  setArgument( const char *arg );
 
-/* must be implemented by the calling app */
-void updateUI( mpconfig *control );
-
 #endif /* __PLAYER_H__ */

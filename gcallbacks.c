@@ -409,7 +409,8 @@ void profileStart( GtkButton *button, gpointer data ) {
         	mpcontrol->root=recurse( path, mpcontrol->root );
         	sfree( &path );
         }
-		mpcontrol->active = profile;
+
+		mpcontrol->active = 0;
     	break;
     case 2: /* Enter URL */
         dialog = gtk_message_dialog_new(
@@ -433,6 +434,8 @@ void profileStart( GtkButton *button, gpointer data ) {
             strncpy( path, gtk_entry_get_text( GTK_ENTRY( urlLine ) ), MAXPATHLEN );
         }
         gtk_widget_destroy( dialog );
+
+		mpcontrol->active = 0;
     	break;
     	/*
     	 * turn this into a general search. So a term will be entered and all searches
@@ -443,7 +446,6 @@ void profileStart( GtkButton *button, gpointer data ) {
     	 * Genre remains a special case though
     	 */
     case 3: /* search */
-		mpcontrol->active = profile;
         dialog = gtk_message_dialog_new(
                      GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
                      GTK_DIALOG_DESTROY_WITH_PARENT,
@@ -477,6 +479,7 @@ void profileStart( GtkButton *button, gpointer data ) {
         }
        	gtk_widget_destroy( dialog );
 
+		mpcontrol->active = profile;
     	break;
     case 4: /* Fillstick */
     	dialog = gtk_file_chooser_dialog_new ( "Select Target",
@@ -506,22 +509,23 @@ void profileStart( GtkButton *button, gpointer data ) {
     	progressEnd( );
 
     	sfree( &path );
+
+		mpcontrol->active = profile;
     	break;
 
-    case 5:
-    case 6:
+    case 5: /* remote */
+    case 6: /* locale */
     	addMessage( 0, "Not supported yet.." );
+		mpcontrol->active = profile;
     	break;
 
     case GTK_RESPONSE_OK:
     	if( mpcontrol->active == 0 ) {
-    		addMessage( 0, "No profile active" );
+    		addMessage( 0, "No profile selected!" );
+    		mpcontrol->active = profile;
     	}
     	else if( mpcontrol->active != profile ) {
     		setCommand( mpc_profile );
-    	}
-    	else {
-    		mpcontrol->active = profile;
     	}
     	break;
     case mpc_shuffle:

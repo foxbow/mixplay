@@ -42,7 +42,7 @@ struct _MpData_t {
 };
 
 /**
- * extension of mpcontrol->data
+ * extension of mpconfig->data
  */
 struct glcontrol_t {
 	MpData *widgets;			/* all (accessible) widgets */
