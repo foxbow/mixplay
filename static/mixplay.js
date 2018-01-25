@@ -3,18 +3,6 @@ var data=null;
 var mpver=8;
 var msgline="";
 
-function playPause() {
-	if( data != null ) {
-		sendCMD( "mpc_play" );
-		if( data.status == 0 ) {
-			if( confirm( "Replay?" ) ) {
-				sendCMD( "mpc_repl" )
-			}
-			sendCMD( "mpc_play" )
-		}
-	}
-}
-
 /**
  * used cmd's so far are:
  *  mpc_play,
