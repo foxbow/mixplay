@@ -39,8 +39,11 @@ void unlockClient( int client ) {
 		_curclient=-1;
 		pthread_mutex_unlock( &_clientlock );
 	}
-	else {
+	else if ( _curclient != -1 ){
 		fail( F_FAIL, "Client %i tried to unlock client %i!", client, _curclient );
+	}
+	else {
+		addMessage( 0, "Client %i tried to unlock broadcast!", client, _curclient );
 	}
 }
 
