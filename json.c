@@ -31,14 +31,20 @@ static int jsonFail( const char *func, char *str, const int i, const int state )
 
 /**
  * creates an empty json node
+ * if ref is 0 this means the content is owned by the node if not
+ * it's a reference and must not be free'd
+ * ref: 0 - neither key nor val are to be free'd
+ *      1 - only key needs to be free'd
+ *      2 - key and val are to be free'd
  */
-static jsonObject *jsonInit() {
+static jsonObject *jsonInit( int ref ) {
 	jsonObject *jo;
 	jo=falloc(1, sizeof(jsonObject));
 	jo->key=NULL;
 	jo->next=NULL;
 	jo->val=NULL;
 	jo->type=json_none;
+	jo->ref=ref;
 	return jo;
 }
 
@@ -193,13 +199,13 @@ static int jsonParseValue( char *json, jsonObject *jo ) {
 		break;
 	case '{':
 		jo->type=json_object;
-		jo->val=jsonInit();
+		jo->val=jsonInit(0);
 		jpos+=jsonParseObject( &json[jpos], (jsonObject **)&(jo->val) );
 		return jpos;
 		break;
 	case '[':
 		jo->type=json_array;
-		jo->val=jsonInit();
+		jo->val=jsonInit(0);
 		jpos+=jsonParseArray( &json[jpos], (jsonObject **)&(jo->val) );
 		return jpos;
 		break;
@@ -224,7 +230,7 @@ static int jsonParseKeyVal( char *json, jsonObject **jo ) {
 	int state=0;
 	int len=strlen(json);
 
-	*jo=jsonInit();
+	*jo=jsonInit(0);
 
 	while( jpos < len ) {
 		switch( state ) {
@@ -290,7 +296,7 @@ static int jsonParseArray( char *json, jsonObject **jo ) {
 			switch( json[jpos] ) {
 			case '[':
 				jpos++;
-				*current=jsonInit();
+				*current=jsonInit(1);
 				index=setIndex( *current, index );
 				jpos+=jsonParseValue( json+jpos, *current );
 				state=1;
@@ -315,7 +321,7 @@ static int jsonParseArray( char *json, jsonObject **jo ) {
 			case ',':
 				json[jpos]=0;
 				jpos++;
-				(*current)->next=jsonInit();
+				(*current)->next=jsonInit(1);
 				current=&((*current)->next);
 				index=setIndex( *current, index );
 				jpos+=jsonParseValue( json+jpos, *current );
@@ -446,11 +452,12 @@ const char *jsonGetStr( jsonObject *jo, const char *key ) {
  * copies the value of key into the char* given by buf
  * the memory will be allocated so make sure that *buf is free'd after use
  */
-int jsonCopyStr( jsonObject *jo, const char *key, char **buf ) {
+char *jsonCopyStr( jsonObject *jo, const char *key ) {
+	char *buf=NULL;
 	const char *val=jsonGetStr(jo, key);
-	*buf=falloc( strlen( val )+1, sizeof( char ) );
-	strcpy( *buf, val );
-	return strlen( val );
+	buf=falloc( strlen( val )+1, sizeof( char ) );
+	strcpy( buf, val );
+	return buf;
 }
 
 /*
@@ -483,29 +490,24 @@ static void *jsonGetByIndex( jsonObject *jo, int i ) {
 /**
  * copy the array of strings into the vals pointer
  */
-int jsonCopyStrs( jsonObject *jo, const char *key, char ***vals, const int num ) {
+char **jsonCopyStrs( jsonObject *jo, const char *key, const int num ) {
 	int i;
+	char **vals=NULL;
 	char *val;
 	jsonObject *pos=NULL;
 
-	if( *vals != NULL ) {
-		fail( F_FAIL, "array target for %s is not empty!", key );
-	}
-
 	pos=jsonFollowPath( jo, key );
 	if( (pos != NULL ) && ( pos->type == json_array ) ) {
-		*vals=falloc( num, sizeof( char * ) );
+		vals=falloc( num, sizeof( char * ) );
 
 		for( i=0; i<num; i++ ) {
 			val=(char *)jsonGetByIndex( pos, i );
-			(*vals)[i]=falloc( strlen(val)+1, sizeof( char ) );
-			strcpy( (*vals)[i], val );
+			vals[i]=falloc( strlen(val)+1, sizeof( char ) );
+			strcpy( vals[i], val );
 		}
-
-		return num;
 	}
 	addMessage( 1, "No array value for %s", key );
-	return -1;
+	return vals;
 }
 
 /*
@@ -530,13 +532,13 @@ jsonObject *jsonGetObj( jsonObject *jo, const char *key ) {
  */
 static jsonObject *jsonAppend( jsonObject *jo, const char *key ) {
 	if( jo == NULL ) {
-		jo=jsonInit();
+		jo=jsonInit(2);
 	}
 	else {
 		while( jo->next != NULL ) {
 			jo=jo->next;
 		}
-		jo->next=jsonInit();
+		jo->next=jsonInit(2);
 		jo=jo->next;
 	}
 
@@ -723,34 +725,31 @@ size_t jsonWrite( jsonObject *jo, char *json ) {
 }
 
 /**
- * cleans up a tree of json objects. Range controls if keys and/or values need to be free'd as well
- * Applications should only use 0 and -1
- *  0 - free none
- *  1 - free keys	(needed for arrays)
- * 	2 - free values
- * -1 - free all
+ * cleans up a tree of json objects.
  */
-void jsonDiscard( jsonObject *jo, int range ) {
+void jsonDiscard( jsonObject *jo ) {
 	jsonObject *pos=jo;
 
 	while( jo != NULL ) {
 		if( jo->type == json_object ) {
-			jsonDiscard( jo->val, range );
+			jsonDiscard( jo->val );
 			jo->val=NULL;
 		}
 		/* array keys are always free'd */
 		if( jo->type == json_array ) {
-			jsonDiscard( jo->val, range|1 );
+			jsonDiscard( jo->val );
 			jo->val=NULL;
 		}
 		pos=jo->next;
-		if( range & 1 ) {
+		if( jo->ref == 0 ) {
 			sfree( &(jo->key) );
-		}
-		if( range & 2 ) {
 			sfree( (char **)&(jo->val) );
 		}
+		else if( jo->ref == 2 ) {
+			sfree( &(jo->key) );
+		}
 		sfree( (char **)&jo );
+
 		jo=pos;
 	}
 }

@@ -24,15 +24,16 @@ struct _jsonObject_t {
 	char *key;
 	void *val;
 	jsonType type;
+	int ref;
 	jsonObject *next;
 };
 
 
-int   jsonGetInt( jsonObject *jo, const char *key );
+int    jsonGetInt( jsonObject *jo, const char *key );
 const char *jsonGetStr( jsonObject *jo, const char *key );
-int jsonCopyChars( jsonObject *jo, const char *key, char *buf );
-int jsonCopyStr( jsonObject *jo, const char *key, char **buf );
-int jsonCopyStrs( jsonObject *jo, const char *key, char ***vals, const int num );
+int    jsonCopyChars( jsonObject *jo, const char *key, char *buf );
+char  *jsonCopyStr( jsonObject *jo, const char *key );
+char **jsonCopyStrs( jsonObject *jo, const char *key, const int num );
 jsonObject *jsonGetObj( jsonObject *jo, const char *key );
 
 jsonObject *jsonAddStr( jsonObject *jo, const char *key, const char *val );
@@ -43,5 +44,5 @@ jsonObject *jsonAddObj( jsonObject *jo, const char *key, jsonObject *val );
 jsonObject *jsonRead( char *json );
 size_t jsonWrite( jsonObject *jo, char *json );
 
-void jsonDiscard( jsonObject *jo, int all );
+void jsonDiscard( jsonObject *jo );
 #endif /* _JSON_H_ */

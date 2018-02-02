@@ -1,5 +1,5 @@
 /*
- * comm.c
+ * mpcomm.c
  *
  *  Created on: 29.11.2017
  *      Author: bweber
@@ -161,7 +161,7 @@ size_t serializeStatus( char *buff, long *count, int clientid ) {
 	}
 
 	jsonWrite(jo, buff);
-	jsonDiscard( jo, -1 );
+	jsonDiscard( jo );
 
 	return strlen(buff);
 }
@@ -194,7 +194,7 @@ size_t serializeConfig( char *buff ) {
 	jsonAddObj( joroot, "config", jo );
 
 	jsonWrite(joroot, buff);
-	jsonDiscard( joroot, -1 );
+	jsonDiscard( joroot );
 
 	return strlen(buff);
 }
@@ -215,13 +215,13 @@ static int deserializeConfig( jsonObject *jo ) {
 	freeConfigContents( );
 
 	config->fade=jsonGetInt( joconf, "fade");
-	jsonCopyStr( joconf, "musicdir", &(config->musicdir) );
+	config->musicdir=jsonCopyStr( joconf, "musicdir" );
 	config->profiles=jsonGetInt( joconf, "profiles" );
-	jsonCopyStrs( joconf, "profile", &(config->profile), config->profiles );
+	config->profile=jsonCopyStrs( joconf, "profile", config->profiles );
 	config->skipdnp=jsonGetInt( joconf, "skipdnp" );
 	config->streams=jsonGetInt( joconf, "streams" );
-	jsonCopyStrs( joconf, "stream", &(config->stream), config->streams );
-	jsonCopyStrs( joconf, "sname", &(config->sname), config->streams );
+	config->stream=jsonCopyStrs( joconf, "stream", config->streams );
+	config->sname=jsonCopyStrs( joconf, "sname", config->streams );
 
 	return 0;
 }
@@ -287,7 +287,7 @@ static int deserialize( char *json ) {
 			addMessage( 1, "Unknown reply type!" );
 		}
 	}
-	jsonDiscard( jo, 0 );
+	jsonDiscard( jo );
 
 	return retval;
 }
