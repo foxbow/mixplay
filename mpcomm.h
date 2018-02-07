@@ -8,7 +8,7 @@
 #ifndef MPCOMM_H_
 #define MPCOMM_H_
 
-#define MP_COMVER 8
+#define MP_COMVER 9
 #include "config.h"
 
 #define MP_MAXCOMLEN 4096
