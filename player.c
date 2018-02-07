@@ -858,24 +858,37 @@ void *reader( void *cont ) {
            	progressEnd();
            	break;
 
+        case mpc_longsearch:
+			if( control->argument == NULL ) {
+				addMessage( 0, "Nothing to search for!" );
+			}
+			else {
+				progressStart( "Looking for %s", control->argument );
+				i=searchPlay( control->current, control->argument, -1 );
+				if( i > 0) {
+					addMessage( 0, "Found %i titles", i );
+				}
+				else {
+					addMessage( 0, "Nothing found =(" );
+				}
+				sfree( &(control->argument) );
+				progressEnd( );
+			}
+        	break;
+
         case mpc_search:
 			if( control->argument == NULL ) {
 				addMessage( 0, "Nothing to search for!" );
 			}
 			else {
 				progressStart( "Looking for %s", control->argument );
-				i=searchPlay( control->current, control->argument );
-				if( i > 0) {
-					addMessage( 0, "Found %i titles matching %s", i, control->argument );
-		            order=1;
-		            write( p_command[fdset][1], "STOP\n", 6 );
-				}
-				else {
+				i=searchPlay( control->current, control->argument, 1 );
+				if( i == 0) {
 					addMessage( 0, "Nothing found =(" );
 				}
 				sfree( &(control->argument) );
+				progressEnd( );
 			}
-			progressEnd( );
         	break;
 
         case mpc_idle:

@@ -30,7 +30,7 @@
 static pthread_mutex_t msglock=PTHREAD_MUTEX_INITIALIZER;
 static mpconfig *c_config=NULL;
 
-static const char *mpc_command[] = {
+static const char const *mpc_command[] = {
 	    "mpc_play",
 	    "mpc_stop",
 	    "mpc_prev",
@@ -56,6 +56,7 @@ static const char *mpc_command[] = {
 		"mpc_QUIT",
 		"mpc_dbinfo",
 		"mpc_search",
+		"mpc_longsearch",
 	    "mpc_idle"
 };
 

@@ -265,13 +265,13 @@ static int matchTitle( struct entry_t *title, const char* pat ) {
 /**
  * play the search results next
  */
-int searchPlay( struct entry_t *root, const char *pat ) {
+int searchPlay( struct entry_t *root, const char *pat, unsigned num ) {
 	struct entry_t *runner=root;
 	struct entry_t *pos=root;
 	struct entry_t *next=root->dbnext;
 	int cnt=0;
 
-	while( next != root ) {
+	while( ( next != root ) && ( cnt < num ) ) {
 		if( ( runner->flags & MP_MARK ) && matchTitle( runner, pat) ) {
 			moveEntry( runner, pos );
 			pos=runner;

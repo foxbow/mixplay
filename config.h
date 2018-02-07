@@ -16,8 +16,7 @@
 
 /*
  * commands and states
- * changes here need to be reflected in the reader() code, namely in
- * char *mpc_command[]
+ * caveat: when changing this check *mpc_command[] in config.c too!
  */
 enum _mpcmd_t {
     mpc_play,
@@ -45,6 +44,7 @@ enum _mpcmd_t {
 	mpc_QUIT,
 	mpc_dbinfo,
 	mpc_search,
+	mpc_longsearch,
     mpc_idle
 };
 typedef enum _mpcmd_t mpcmd;
