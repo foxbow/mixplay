@@ -860,7 +860,8 @@ void *reader( void *cont ) {
 
         case mpc_longsearch:
 			if( control->argument == NULL ) {
-				addMessage( 0, "Nothing to search for!" );
+				progressStart( "Nothing to search for!" );
+				progressEnd();
 			}
 			else {
 				progressStart( "Looking for %s", control->argument );
@@ -878,16 +879,16 @@ void *reader( void *cont ) {
 
         case mpc_search:
 			if( control->argument == NULL ) {
-				addMessage( 0, "Nothing to search for!" );
+				progressStart( "Nothing to search for!" );
+				progressEnd();
 			}
 			else {
-				progressStart( "Looking for %s", control->argument );
 				i=searchPlay( control->current, control->argument, 1 );
 				if( i == 0) {
-					addMessage( 0, "Nothing found =(" );
+					progressStart( "Nothing found =(" );
+					progressEnd( );
 				}
 				sfree( &(control->argument) );
-				progressEnd( );
 			}
         	break;
 

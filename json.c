@@ -506,7 +506,9 @@ char **jsonCopyStrs( jsonObject *jo, const char *key, const int num ) {
 			strcpy( vals[i], val );
 		}
 	}
-	addMessage( 1, "No array value for %s", key );
+	else {
+		addMessage( 1, "No array value for %s", key );
+	}
 	return vals;
 }
 
@@ -731,21 +733,21 @@ void jsonDiscard( jsonObject *jo ) {
 	jsonObject *pos=jo;
 
 	while( jo != NULL ) {
-		if( jo->type == json_object ) {
+		/* clean up values of complex types first */
+		if( ( jo->type == json_object ) || ( jo->type == json_array ) ) {
 			jsonDiscard( jo->val );
 			jo->val=NULL;
 		}
-		/* array keys are always free'd */
-		if( jo->type == json_array ) {
-			jsonDiscard( jo->val );
-			jo->val=NULL;
-		}
+
 		pos=jo->next;
-		if( jo->ref == 0 ) {
+
+		/* key and value can be free'd */
+		if( jo->ref == 2 ) {
 			sfree( &(jo->key) );
 			sfree( (char **)&(jo->val) );
 		}
-		else if( jo->ref == 2 ) {
+		/* only key can be free'd */
+		else if( jo->ref == 1 ) {
 			sfree( &(jo->key) );
 		}
 		sfree( (char **)&jo );

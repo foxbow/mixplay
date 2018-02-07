@@ -8,6 +8,9 @@
 #ifndef _JSON_H_
 #define _JSON_H_
 
+/*
+ * JSON defined datatypes
+ */
 enum _jsonTypes_t {
 	json_none,
 	json_string,
@@ -20,6 +23,14 @@ typedef enum _jsonTypes_t jsonType;
 
 typedef struct _jsonObject_t jsonObject;
 
+/*
+ * key, val - the JSON key and value pair
+ * type     - JSON type of val
+ * ref      - 0 - key and val may be free'd
+ *            1 - only key can be free'd
+ *            2 - neither key nor val shall be free'd
+ * next     - next json pair
+ */
 struct _jsonObject_t {
 	char *key;
 	void *val;
