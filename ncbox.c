@@ -224,12 +224,12 @@ void drawbox( int r0, int c0, int r1, int c1 ) {
     mvvline( r0 + 1, c1, VER, r1 - r0 - 1 );
 }
 
-void drawframe( struct entry_t *current, const char *status, int stream ) {
+void drawframe( mptitle *current, const char *status, int stream ) {
     int i, maxlen, pos;
     int row, col;
     int middle;
     char buff[MAXPATHLEN];
-    struct entry_t *runner;
+    mptitle *runner;
 
     if( popUpActive() ) {
         return;

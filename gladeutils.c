@@ -228,7 +228,7 @@ static void setButtonLabel( GtkWidget *button, const char *text ) {
 /**
  * gather interesting stuff about a title, kind of a title.toString()
  */
-static int infoLine( char *line, const struct entry_t *title, const int len ) {
+static int infoLine( char *line, const mptitle *title, const int len ) {
 	if( title->key != 0 ) {
 		return snprintf( line, len, "%s\nKey: %04i - Fav: %s\nplaycount: %i (%s)\nskipcount: %i (%s)",
 			  title->path,
@@ -256,7 +256,7 @@ static int infoLine( char *line, const struct entry_t *title, const int len ) {
  */
 static int g_updateUI( void *data ) {
     mpconfig *control;
-    struct entry_t *runner;
+    mptitle *runner;
     int i=0;
     char	buff[2*MAXPATHLEN];
     gboolean	usedb;

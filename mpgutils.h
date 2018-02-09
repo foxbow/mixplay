@@ -10,7 +10,6 @@
 
 #include "musicmgr.h"
 
-int fillTagInfo( const char *basedir, struct entry_t *title );
-/* int tagRun( const char *basedir, struct entry_t *base ); */
+int fillTagInfo( const char *basedir, mptitle *title );
 
 #endif /* MPGUTILS_H_ */

@@ -15,8 +15,8 @@
 /**
  * 	searches for a given path in the mixplay entry list
  */
-static struct entry_t *findTitle( struct entry_t *base, const char *path ) {
-    struct entry_t *runner;
+static mptitle *findTitle( mptitle *base, const char *path ) {
+    mptitle *runner;
 
     if( NULL == base ) {
         return NULL;
@@ -40,10 +40,10 @@ static struct entry_t *findTitle( struct entry_t *base, const char *path ) {
  * Creates a backup of the current database file and dumps the
  * current reindexed database in a new file
  */
-static void dbDump( const char *dbname, struct entry_t *root ) {
+static void dbDump( const char *dbname, mptitle *root ) {
     int db;
     unsigned int index=1;
-    struct entry_t *runner=root;
+    mptitle *runner=root;
 
     if( NULL == root ) {
         fail( F_FAIL, "Not dumping an empty database!" );
@@ -66,7 +66,7 @@ static void dbDump( const char *dbname, struct entry_t *root ) {
 /**
  * checks if a given title still exists on the filesystem
  */
-static int mp3Exists( const struct entry_t *title ) {
+static int mp3Exists( const mptitle *title ) {
     return( access( title->path, F_OK ) == 0 );
 }
 
@@ -74,8 +74,8 @@ static int mp3Exists( const struct entry_t *title ) {
  * deletes an entry from the database list
  * This should only be used on a database cleanup!
  */
-static struct entry_t *removeTitle( struct entry_t *entry ) {
-    struct entry_t *next=NULL;
+static mptitle *removeTitle( mptitle *entry ) {
+    mptitle *next=NULL;
 
     if( entry->plnext != entry ) {
         entry->plnext->plprev=entry->plprev;
@@ -96,7 +96,7 @@ static struct entry_t *removeTitle( struct entry_t *entry ) {
 /**
  * turn a database entry into a mixplay structure
  */
-static int db2entry( struct dbentry_t *dbentry, struct entry_t *entry ) {
+static int db2entry( struct dbentry_t *dbentry, mptitle *entry ) {
     memset( entry, 0, ESIZE );
     strcpy( entry->path, dbentry->path );
     strcpy( entry->artist, dbentry->artist );
@@ -112,7 +112,7 @@ static int db2entry( struct dbentry_t *dbentry, struct entry_t *entry ) {
 /**
  * pack a mixplay entry into a database structure
  */
-static int entry2db( struct entry_t *entry, struct dbentry_t *dbentry ) {
+static int entry2db( mptitle *entry, struct dbentry_t *dbentry ) {
     memset( dbentry, 0, DBESIZE );
     strcpy( dbentry->path, entry->path );
     strcpy( dbentry->artist, entry->artist );
@@ -142,7 +142,7 @@ int dbOpen( const char *path ) {
 /**
  * adds/overwrites a title to/in the database
  */
-int dbPutTitle( int db, struct entry_t *title ) {
+int dbPutTitle( int db, mptitle *title ) {
     struct dbentry_t dbentry;
 
     if( 0 == db ) {
@@ -171,9 +171,9 @@ int dbPutTitle( int db, struct entry_t *title ) {
  * takes a database entry and adds it to a mixplay entry list
  * if there is no list, a new one will be created
  */
-static struct entry_t *addDBTitle( struct dbentry_t dbentry, struct entry_t *root, unsigned int index ) {
-    struct entry_t *entry;
-    entry=malloc( sizeof( struct entry_t ) );
+static mptitle *addDBTitle( struct dbentry_t dbentry, mptitle *root, unsigned int index ) {
+    mptitle *entry;
+    entry=malloc( sizeof( mptitle ) );
 
     if( NULL == entry ) {
         fail( errno, " %s - Could not create new entry", __func__ );
@@ -220,10 +220,10 @@ void dbBackup( const char *dbname ) {
 /**
  * gets all titles from the database and returns them as a mixplay entry list
  */
-struct entry_t *dbGetMusic( const char *dbname ) {
+mptitle *dbGetMusic( const char *dbname ) {
     struct dbentry_t dbentry;
     unsigned int index = 1; /* index 0 is reserved for titles not in the db! */
-    struct entry_t *dbroot=NULL;
+    mptitle *dbroot=NULL;
     int db;
     size_t len;
     db=dbOpen( dbname );
@@ -249,8 +249,8 @@ struct entry_t *dbGetMusic( const char *dbname ) {
  * i.e. titles that are in the database but no longer on the medium
  */
 int dbCheckExist( const char *dbname ) {
-    struct entry_t *root;
-    struct entry_t *runner;
+    mptitle *root;
+    mptitle *runner;
     int num=0;
 
     root=dbGetMusic( dbname );
@@ -292,9 +292,9 @@ int dbCheckExist( const char *dbname ) {
  * the new titles will have a playcount set to blend into the mix
  */
 int dbAddTitles( const char *dbname, char *basedir ) {
-    struct entry_t *fsroot;
-    struct entry_t *dbroot;
-    struct entry_t *dbrunner;
+    mptitle *fsroot;
+    mptitle *dbroot;
+    mptitle *dbrunner;
     unsigned int count=0, mean=0;
 
     int num=0;
@@ -355,7 +355,7 @@ static int streql( const char *str1, const char *str2 ) {
 	return -1;
 }
 
-static int checkPath( struct entry_t *entry, int range ) {
+static int checkPath( mptitle *entry, int range ) {
 	char	path[MAXPATHLEN];
 	char	check[NAMELEN];
 	char *pos;
@@ -382,9 +382,9 @@ static int checkPath( struct entry_t *entry, int range ) {
 
 
 int dbNameCheck( const char *dbname ) {
-	struct entry_t	*root;
-	struct entry_t	*currentEntry;
-	struct entry_t	*runner;
+	mptitle	*root;
+	mptitle	*currentEntry;
+	mptitle	*runner;
 	int				count=0;
     FILE 			*fp;
     int				match;

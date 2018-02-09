@@ -56,7 +56,7 @@ void setSCommand( mpcmd cmd ) {
 /*
  * helperfunction to add a title to the given jsonOblect
  */
-static jsonObject *appTitle( jsonObject *jo, const char *key, const struct entry_t *title ) {
+static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mptitle *title ) {
 	jsonObject *val=NULL;
 
 	if( title != NULL ) {
@@ -81,7 +81,7 @@ static jsonObject *appTitle( jsonObject *jo, const char *key, const struct entry
 /*
  * helperfunction to retrieve a title from the given jsonOblect
  */
-static void getTitle( jsonObject *jo, const char *key, struct entry_t *title ) {
+static void getTitle( jsonObject *jo, const char *key, mptitle *title ) {
 	jsonObject *to;
 	to=jsonGetObj( jo, key);
 
@@ -101,35 +101,68 @@ static void getTitle( jsonObject *jo, const char *key, struct entry_t *title ) {
 }
 
 /**
+ * turns a list of titles into a jsonObject.
+ */
+jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mptitle *root ) {
+	jsonObject *title;
+	mptitle *cur=root;
+	char ikey[20];
+	int index=0;
+
+	jo=jsonInitArr( jo, key );
+	while( cur != NULL ) {
+		sprintf( ikey, "%i", index );
+		title=jsonAddTitle( title, ikey, cur );
+		if( index == 0 ) {
+			jo=jsonAddArr( NULL, key, title );
+		}
+		if( cur->plnext == root ) {
+			cur=NULL;
+		}
+		else {
+			cur=cur->plnext;
+		}
+		index++;
+	}
+
+	return jo;
+}
+
+/**
  * put data to be sent over into the buff
  * adds messages only if any are available for the client
 **/
-size_t serializeStatus( char *buff, long *count, int clientid ) {
+size_t serializeStatus( char *buff, long *count, int clientid, int fullstat ) {
 	mpconfig *data=getConfig();
 	jsonObject *jo=NULL;
 
 	buff[0]=0;
 
-	jo=jsonAddInt( NULL, "version", MP_COMVER );
-	jsonAddInt( jo, "type", 1 );
+	jo=jsonAddInt( NULL, "version", MPCOMM_VER );
 
-	if( data->current != NULL ) {
-		appTitle( jo, "prev", data->current->plprev );
-		appTitle( jo, "current", data->current );
-		appTitle( jo, "next", data->current->plnext );
+	if( fullstat ) {
+		jsonAddInt( jo, "type", MPCOMM_FULLSTAT );
+		jsonAddInt( jo, "playstream", data->playstream );
+		jsonAddInt( jo, "active", data->active );
+		if( data->current != NULL ) {
+			jsonAddTitle( jo, "prev", data->current->plprev );
+			jsonAddTitle( jo, "current", data->current );
+			jsonAddTitle( jo, "next", data->current->plnext );
+		}
+		else {
+			jsonAddTitle( jo, "prev", NULL );
+			jsonAddTitle( jo, "current", NULL );
+			jsonAddTitle( jo, "next", NULL );
+		}
 	}
 	else {
-		appTitle( jo, "prev", NULL );
-		appTitle( jo, "current", NULL );
-		appTitle( jo, "next", NULL );
+		jsonAddInt( jo, "type", MPCOMM_STAT );
 	}
 	jsonAddStr( jo, "playtime", data->playtime );
 	jsonAddStr( jo, "remtime", data->remtime );
 	jsonAddInt( jo, "percent", data->percent );
 	jsonAddInt( jo, "volume", data->volume );
-	jsonAddInt( jo, "active", data->active );
 	jsonAddInt( jo, "status", data->status );
-	jsonAddInt( jo, "playstream", data->playstream );
 
 	/* broadcast */
 	if( _curclient == -1 ) {
@@ -177,8 +210,8 @@ size_t serializeConfig( char *buff ) {
 	buff[0]=0;
 
 	/* start with version */
-	joroot=jsonAddInt( NULL, "version", MP_COMVER );
-	jsonAddInt( joroot, "type", 2 );
+	joroot=jsonAddInt( NULL, "version", MPCOMM_VER );
+	jsonAddInt( joroot, "type", MPCOMM_CONFIG );
 
 	/* dump config into JSON object */
 	jo=jsonAddInt( NULL, "fade", config->fade );
@@ -241,16 +274,18 @@ static int deserializeStatus( jsonObject *jo ) {
 		addToPL( insertTitle( data->current, "server/mixplayd/title" ), data->current );
 		addToPL( insertTitle( data->current, "server/mixplayd/title" ), data->current );
 	}
-	data->active=jsonGetInt( jo, "active");
-	getTitle( jo, "prev", data->current->plprev );
-	getTitle( jo, "current", data->current );
-	getTitle( jo, "next", data->current->plnext );
+	if( jsonGetInt(jo, "type" ) == MPCOMM_FULLSTAT ) {
+		data->active=jsonGetInt( jo, "active");
+		data->playstream=jsonGetInt( jo, "playstream" );
+		getTitle( jo, "prev", data->current->plprev );
+		getTitle( jo, "current", data->current );
+		getTitle( jo, "next", data->current->plnext );
+	}
 	jsonCopyChars( jo, "playtime", data->playtime );
 	jsonCopyChars( jo, "remtime", data->remtime );
 	data->percent=jsonGetInt( jo, "percent" );
 	data->volume=jsonGetInt( jo, "volume" );
 	data->status=jsonGetInt( jo, "status" );
-	data->playstream=jsonGetInt( jo, "playstream" );
 	jsonCopyChars( jo, "msg", msgline );
 	if( strlen( msgline ) > 0 ){
 		addMessage( 0, msgline );
@@ -269,17 +304,18 @@ static int deserialize( char *json ) {
 	jo=jsonRead( json );
 	if( jo != NULL ) {
 		ver=jsonGetInt(jo, "version" );
-		if( ver < MP_COMVER ) {
-			fail( F_FAIL, "mixplayd protocol mismatch!\nServer has version %i, we have version %i!", ver, MP_COMVER );
+		if( ver < MPCOMM_VER ) {
+			fail( F_FAIL, "mixplayd protocol mismatch!\nServer has version %i, we have version %i!", ver, MPCOMM_VER );
 			return -1;
 		}
 
 		switch( jsonGetInt( jo, "type" ) ) {
-		case 1: /* status */
+		case MPCOMM_STAT:
+		case MPCOMM_FULLSTAT: /* status */
 			retval=deserializeStatus( jo );
 			break;
 
-		case 2: /* config */
+		case MPCOMM_CONFIG: /* config */
 			retval=deserializeConfig( jo );
 			break;
 

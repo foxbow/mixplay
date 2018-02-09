@@ -61,8 +61,8 @@ struct _mpcontrol_t {
     int streams;				/* number of streams */
     char **stream;				/* stream URLs */
     char **sname;				/* stream names */
-    struct entry_t *root;		/* the root title */
-    struct entry_t *current;	/* the current title */
+    mptitle *root;		/* the root title */
+    mptitle *current;	/* the current title */
     char *dbname;				/* path to the database */
     char *favname;				/* path to the favourites */
     char *dnpname;				/* path to the DNPlist */

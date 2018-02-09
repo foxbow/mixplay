@@ -630,6 +630,54 @@ jsonObject *jsonAddObj( jsonObject *jo, const char *key, jsonObject *val ) {
 	return jo;
 }
 
+/*
+ * Adds a new element to a jsonArray chain.
+ */
+jsonObject *jsonAddArrElement( jsonObject *jo, jsonType type, void *val ) {
+	char key[20];
+	int index=0;
+
+	/* if the root object is the array object, switch to the values */
+	if( jo->type == json_array ) {
+		jo=jo->val;
+	}
+
+	if( jo != NULL ) {
+		/* forward top the last element to get the highest index */
+		while( jo->next != NULL ) {
+			jo=jo->next;
+		}
+		index=atoi(jo->key)+1;
+	}
+	sprintf( key, "%i", index );
+
+	switch( type ) {
+	case json_array:
+		jo=jsonAddArr(jo, key, val );
+		break;
+	case json_number:
+		jo=jsonAddInt(jo, key, atoi(val));
+		break;
+	case json_object:
+		jo=jsonAddObj(jo, key, val);
+		break;
+	case json_string:
+		jo=jsonAddStr( jo, key, val );
+		break;
+	default:
+		return jo;
+		/* error */
+	}
+
+	return jo;
+}
+
+jsonObject *jsonInitArr( jsonObject *jo, const char *key ) {
+	jo=jsonAppend( jo, key );
+	jo->type=json_array;
+	return jo;
+}
+
 /**
  * parses the given JSON string into a tree of jsonObjects
  */

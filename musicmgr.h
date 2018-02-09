@@ -26,7 +26,8 @@
 #define SL_PATH   16
 #define SL_DISPLAY 32
 
-struct entry_t {
+typedef struct mptitle_t mptitle;
+struct mptitle_t {
     char path[MAXPATHLEN];		/* path on the filesystem to the file */
     char artist[NAMELEN];		/* Artist info */
     char title[NAMELEN];		/* Title info (from mp3) */
@@ -34,13 +35,13 @@ struct entry_t {
     unsigned int playcount;		/* play counter */
     unsigned int skipcount;		/* skip counter */
     char genre[NAMELEN];
-    struct entry_t *plprev;		/* playlist pointer */
+    mptitle *plprev;		/* playlist pointer */
     unsigned int key;			/* DB key/index  - internal */
     char display[MAXPATHLEN];	/* Title display - internal */
     unsigned int flags;			/* 1=favourite   - internal */
-    struct entry_t *plnext;
-    struct entry_t *dbprev;		/* database pointer */
-    struct entry_t *dbnext;
+    mptitle *plnext;
+    mptitle *dbprev;		/* database pointer */
+    mptitle *dbnext;
 };
 
 struct marklist_t {
@@ -53,33 +54,33 @@ struct marklist_t {
  */
 void addToFile( const char *path, const char *line, const char* prefix );
 
-struct entry_t *addToPL( struct entry_t *title, struct entry_t *target );
-struct entry_t *recurse( char *curdir, struct entry_t *files );
-struct entry_t *shuffleTitles( struct entry_t *base );
-struct entry_t *rewindTitles( struct entry_t *base );
-struct entry_t *removeByPattern( struct entry_t *base, const char *pat );
-struct entry_t *loadPlaylist( const char *path );
-struct entry_t *insertTitle( struct entry_t *base, const char *path );
-struct entry_t *skipTitles( struct entry_t *current, int num, const int global );
-struct entry_t *searchList( struct entry_t *base, struct marklist_t *term );
-int DNPSkip( struct entry_t *base, const unsigned int level );
-int applyDNPlist( struct entry_t *base, struct marklist_t *list );
-int applyFavourites( struct entry_t *root, struct marklist_t *list );
-int markFavourite( struct entry_t *title, int range );
-int searchPlay( struct entry_t *root, const char *pat, unsigned num );
+mptitle *addToPL( mptitle *title, mptitle *target );
+mptitle *recurse( char *curdir, mptitle *files );
+mptitle *shuffleTitles( mptitle *base );
+mptitle *rewindTitles( mptitle *base );
+mptitle *removeByPattern( mptitle *base, const char *pat );
+mptitle *loadPlaylist( const char *path );
+mptitle *insertTitle( mptitle *base, const char *path );
+mptitle *skipTitles( mptitle *current, int num, const int global );
+mptitle *searchList( mptitle *base, struct marklist_t *term );
+int DNPSkip( mptitle *base, const unsigned int level );
+int applyDNPlist( mptitle *base, struct marklist_t *list );
+int applyFavourites( mptitle *root, struct marklist_t *list );
+int markFavourite( mptitle *title, int range );
+int searchPlay( mptitle *root, const char *pat, unsigned num );
 
-struct entry_t *cleanTitles( struct entry_t *root );
+mptitle *cleanTitles( mptitle *root );
 struct marklist_t *cleanList( struct marklist_t *root );
 
-void moveEntry( struct entry_t *entry, struct entry_t *pos );
-void newCount( struct entry_t * root );
-unsigned int getLowestPlaycount( struct entry_t *base, const int global );
+void moveEntry( mptitle *entry, mptitle *pos );
+void newCount( mptitle * root );
+unsigned int getLowestPlaycount( mptitle *base, const int global );
 struct marklist_t *loadList( const char *path );
 int isMusic( const char *name );
 struct marklist_t *addToList( const char *line, struct marklist_t **list );
-void dumpTitles( struct entry_t *root, const int pl );
-void dumpInfo( struct entry_t *root, int db, int skip );
-int fillstick( struct entry_t *root, const char *target, int fav );
-int writePlaylist( struct entry_t *root, const char *path );
+void dumpTitles( mptitle *root, const int pl );
+void dumpInfo( mptitle *root, int db, int skip );
+int fillstick( mptitle *root, const char *target, int fav );
+int writePlaylist( mptitle *root, const char *path );
 
 #endif /* MUSICMGR_H_ */

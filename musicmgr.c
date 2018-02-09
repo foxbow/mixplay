@@ -39,9 +39,9 @@ static int checkSim( const char *txt1, const char *txt2 ) {
  * always resets the marked flag and
  * resets the counted and skipped flag on all titles if at least 50% of the titles have been counted
  */
-void newCount( struct entry_t *root ) {
+void newCount( mptitle *root ) {
     unsigned int num=0, count=0;
-    struct entry_t *runner = root;
+    mptitle *runner = root;
 
     do {
         num++;
@@ -69,8 +69,8 @@ void newCount( struct entry_t *root ) {
  * discards a list of titles and frees the memory
  * returns NULL for intuitive calling
  */
-struct entry_t *cleanTitles( struct entry_t *root ) {
-    struct entry_t *runner=root;
+mptitle *cleanTitles( mptitle *root ) {
+    mptitle *runner=root;
 
     if( NULL != root ) {
         root->dbprev->dbnext=NULL;
@@ -130,7 +130,7 @@ void addToFile( const char *path, const char *line, const char* prefix ) {
  * inserts a title into the playlist chain. Creates a new playlist
  * startpoint if no target is set.
  */
-struct entry_t *addToPL( struct entry_t *title, struct entry_t *target ) {
+mptitle *addToPL( mptitle *title, mptitle *target ) {
     if( title->flags & MP_MARK ) {
         addMessage( 0, "Trying to add %s twice! (%i)", title->display, title->flags );
         return target;
@@ -206,7 +206,7 @@ static int getDirs( const char *cd, struct dirent ***dirlist ) {
  * the second character notes if the search should be
  * exact or fuzzy (=*)
  */
-static int matchTitle( struct entry_t *title, const char* pat ) {
+static int matchTitle( mptitle *title, const char* pat ) {
     int fuzzy=0;
     char loname[1024];
     char lopat[1024];
@@ -265,10 +265,10 @@ static int matchTitle( struct entry_t *title, const char* pat ) {
 /**
  * play the search results next
  */
-int searchPlay( struct entry_t *root, const char *pat, unsigned num ) {
-	struct entry_t *runner=root;
-	struct entry_t *pos=root;
-	struct entry_t *next=root->dbnext;
+int searchPlay( mptitle *root, const char *pat, unsigned num ) {
+	mptitle *runner=root;
+	mptitle *pos=root;
+	mptitle *next=root->dbnext;
 	int cnt=0;
 
 	while( ( next != root ) && ( cnt < num ) ) {
@@ -291,8 +291,8 @@ int searchPlay( struct entry_t *root, const char *pat, unsigned num ) {
  *
  * if the second char is anything else, the default (p=) is used.
  */
-static int matchList( struct entry_t **result, struct entry_t **base, struct marklist_t *term ) {
-    struct entry_t  *runner=*base;
+static int matchList( mptitle **result, mptitle **base, struct marklist_t *term ) {
+    mptitle  *runner=*base;
     int cnt=0;
 
     if( NULL == *base ) {
@@ -328,9 +328,9 @@ static int matchList( struct entry_t **result, struct entry_t **base, struct mar
  *
  * return the first entry in the playlist
  */
-struct entry_t *searchList( struct entry_t *base, struct marklist_t *term ) {
-    struct entry_t  *result=NULL;
-    struct entry_t  *runner=NULL;
+mptitle *searchList( mptitle *base, struct marklist_t *term ) {
+    mptitle  *result=NULL;
+    mptitle  *runner=NULL;
     int cnt=0;
 
     if( NULL == base ) {
@@ -364,8 +364,8 @@ struct entry_t *searchList( struct entry_t *base, struct marklist_t *term ) {
 /**
  * applies the dnplist on a list of titles and marks matching titles
  */
-int applyDNPlist( struct entry_t *base, struct marklist_t *list ) {
-    struct entry_t  *pos = base;
+int applyDNPlist( mptitle *base, struct marklist_t *list ) {
+    mptitle  *pos = base;
     struct marklist_t *ptr = list;
     int cnt=0;
 
@@ -458,7 +458,7 @@ struct marklist_t *loadList( const char *path ) {
 /**
  * moves an entry in the playlist
  */
-void moveEntry( struct entry_t *entry, struct entry_t *pos ) {
+void moveEntry( mptitle *entry, mptitle *pos ) {
     if( pos->plnext == entry ) {
         return;
     }
@@ -519,10 +519,10 @@ struct marklist_t *addToList( const char *line, struct marklist_t **list ) {
 /**
  * load a standard m3u playlist into a list of titles that the tools can handle
  */
-struct entry_t *loadPlaylist( const char *path ) {
+mptitle *loadPlaylist( const char *path ) {
     FILE *fp;
     int cnt=0;
-    struct entry_t *current=NULL;
+    mptitle *current=NULL;
     char *buff;
     char titlePath[MAXPATHLEN];
 
@@ -563,8 +563,8 @@ struct entry_t *loadPlaylist( const char *path ) {
  * will return the previous title on success. Will do nothing
  * if the title is the last on in the playlist.
  */
-static struct entry_t *plRemove( struct entry_t *entry ) {
-    struct entry_t *next=entry;
+static mptitle *plRemove( mptitle *entry ) {
+    mptitle *next=entry;
 
     if( NULL == entry ) {
         fail( F_FAIL, "plRemove() called with NULL!" );
@@ -584,8 +584,8 @@ static struct entry_t *plRemove( struct entry_t *entry ) {
     return next;
 }
 
-static struct entry_t *removeByPatLine( struct entry_t *base, const char *pattern ) {
-    struct entry_t *runner=base;
+static mptitle *removeByPatLine( mptitle *base, const char *pattern ) {
+    mptitle *runner=base;
     runner=base->plprev;
 
     addMessage( 1, "Rule: %s", pattern );
@@ -609,7 +609,7 @@ static struct entry_t *removeByPatLine( struct entry_t *base, const char *patter
  * item will be returned. If entry was the last item in the list NULL will be
  * returned.
  */
-struct entry_t *removeByPattern( struct entry_t *entry, const char *pat ) {
+mptitle *removeByPattern( mptitle *entry, const char *pat ) {
 	char pattern[NAMELEN+2];
 	strncpy( pattern, pat, 2 );
 
@@ -650,10 +650,10 @@ struct entry_t *removeByPattern( struct entry_t *entry, const char *pat ) {
 /**
  * Insert an entry into the database list
  */
-struct entry_t *insertTitle( struct entry_t *base, const char *path ) {
-    struct entry_t *root;
+mptitle *insertTitle( mptitle *base, const char *path ) {
+    mptitle *root;
 
-    root = ( struct entry_t* ) falloc( 1, sizeof( struct entry_t ) );
+    root = ( mptitle* ) falloc( 1, sizeof( mptitle ) );
 
     if( NULL == base ) {
         base=root;
@@ -686,9 +686,9 @@ struct entry_t *insertTitle( struct entry_t *base, const char *path ) {
  *
  * MP_DNP|MP_FAV will match any title where either flag is set
  */
-static int countTitles( struct entry_t *base, const unsigned int inc, const unsigned int exc ) {
+static int countTitles( mptitle *base, const unsigned int inc, const unsigned int exc ) {
     int cnt=0;
-    struct entry_t *runner=base;
+    mptitle *runner=base;
 
     if( NULL == base ) {
         return 0;
@@ -714,8 +714,8 @@ static int countTitles( struct entry_t *base, const unsigned int inc, const unsi
  *
  * global: 0 - ignore titles marked as MP_DNP, -1 - check all titles
  */
-unsigned int getLowestPlaycount( struct entry_t *base, const int global ) {
-    struct entry_t *runner=base;
+unsigned int getLowestPlaycount( mptitle *base, const int global ) {
+    mptitle *runner=base;
     unsigned int min=-1;
 
     do {
@@ -736,8 +736,8 @@ unsigned int getLowestPlaycount( struct entry_t *base, const int global ) {
  * skips the global list until a title is found that has not been marked
  * and is not marked as DNP
  */
-static struct entry_t *skipOver( struct entry_t *current ) {
-    struct entry_t *marker=current;
+static mptitle *skipOver( mptitle *current ) {
+    mptitle *marker=current;
 
     while( marker->flags & ( MP_DNP|MP_MARK ) ) {
         marker=marker->dbnext;
@@ -754,8 +754,8 @@ static struct entry_t *skipOver( struct entry_t *current ) {
  * marks titles that have been skipped for at least level times
  * as DNP so they will not end up in a mix.
  */
-int DNPSkip( struct entry_t *base, const unsigned int level ) {
-    struct entry_t *runner=base;
+int DNPSkip( mptitle *base, const unsigned int level ) {
+    mptitle *runner=base;
     unsigned int skipskip=0;
 
 /* Sort out skipped titles */
@@ -783,10 +783,10 @@ int DNPSkip( struct entry_t *base, const unsigned int level ) {
  * - does not play the same artist twice in a row
  * - prefers titles with lower playcount
  */
-struct entry_t *shuffleTitles( struct entry_t *base ) {
-    struct entry_t *end=NULL;
-    struct entry_t *runner=base;
-    struct entry_t *guard=NULL;
+mptitle *shuffleTitles( mptitle *base ) {
+    mptitle *end=NULL;
+    mptitle *runner=base;
+    mptitle *guard=NULL;
     unsigned int num=0;
     unsigned int i;
     unsigned int nameskip=0;
@@ -950,7 +950,7 @@ struct entry_t *shuffleTitles( struct entry_t *base ) {
  * skips the given number of titles
  * global - select if titles should be skipped in the playlist or the database
  */
-struct entry_t *skipTitles( struct entry_t *current, int num, const int global ) {
+mptitle *skipTitles( mptitle *current, int num, const int global ) {
     int dir=num;
     num=abs( num );
 
@@ -994,9 +994,9 @@ struct entry_t *skipTitles( struct entry_t *current, int num, const int global )
 /**
  * This function sets the favourite bit on titles found in the given list
  */
-int applyFavourites( struct entry_t *root, struct marklist_t *favourites ) {
+int applyFavourites( mptitle *root, struct marklist_t *favourites ) {
     struct marklist_t *ptr = NULL;
-    struct entry_t *runner=root;
+    mptitle *runner=root;
     int cnt=0;
 
     do {
@@ -1027,7 +1027,7 @@ int applyFavourites( struct entry_t *root, struct marklist_t *favourites ) {
  * marks the current title as favourite and uses range to check
  * if more favourites need to be included
  */
-int markFavourite( struct entry_t *title, int range ) {
+int markFavourite( mptitle *title, int range ) {
     struct marklist_t buff;
     buff.next=NULL;
 
@@ -1067,7 +1067,7 @@ int markFavourite( struct entry_t *title, int range ) {
  * files:  the list to store filenames in
  * returns the LAST entry of the list. So the next item is the first in the list
  */
-struct entry_t *recurse( char *curdir, struct entry_t *files ) {
+mptitle *recurse( char *curdir, mptitle *files ) {
     char dirbuff[2*MAXPATHLEN];
     struct dirent **entry;
     int num, i;
@@ -1115,8 +1115,8 @@ struct entry_t *recurse( char *curdir, struct entry_t *files ) {
 /**
  * just for debugging purposes!
  */
-void dumpTitles( struct entry_t *root, const int pl ) {
-    struct entry_t *ptr=root;
+void dumpTitles( mptitle *root, const int pl ) {
+    mptitle *ptr=root;
 
     if( NULL==root ) {
         fail( F_FAIL, "NO LIST" );
@@ -1141,8 +1141,8 @@ void dumpTitles( struct entry_t *root, const int pl ) {
  * does a database scan and dumps information about playrate
  * favourites and DNPs
  */
-void dumpInfo( struct entry_t *root, int global, int skip ) {
-    struct entry_t *current=root;
+void dumpInfo( mptitle *root, int global, int skip ) {
+    mptitle *current=root;
     unsigned int maxplayed=0;
     unsigned int minplayed=-1; /* UINT_MAX; */
     unsigned int pl=0;
@@ -1232,7 +1232,7 @@ void dumpInfo( struct entry_t *root, int global, int skip ) {
  * Copies the given title to the target and turns the name into 'track###.mp3' with ### being the index.
  * Returns -1 when the target runs out of space.
  */
-static int copyTitle( struct entry_t *title, const char* target, const unsigned int index ) {
+static int copyTitle( mptitle *title, const char* target, const unsigned int index ) {
 	int in, out;
 	size_t len;
 	char filename[MAXPATHLEN];
@@ -1274,9 +1274,9 @@ static int copyTitle( struct entry_t *title, const char* target, const unsigned 
  * copies the titles in the current playlist onto the target
  * if fav is true, only favourites are copied
  */
-int fillstick( struct entry_t *root, const char *target, int fav ) {
+int fillstick( mptitle *root, const char *target, int fav ) {
 	unsigned int index=0;
-	struct entry_t *current;
+	mptitle *current;
 
 	current=root;
 
@@ -1298,8 +1298,8 @@ int fillstick( struct entry_t *root, const char *target, int fav ) {
 /*
  * writes the current titles as playlist
  */
-int writePlaylist( struct entry_t *root, const char *path ) {
-	struct entry_t *current=root;
+int writePlaylist( mptitle *root, const char *path ) {
+	mptitle *current=root;
 	FILE *fp;
 	int count=0;
 

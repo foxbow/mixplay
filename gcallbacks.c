@@ -39,7 +39,7 @@ void playnext( GtkButton *button, gpointer data ) {
  */
 void markfav( GtkButton *button, gpointer data ) {
     GtkWidget *dialog;
-    struct entry_t *title;
+    mptitle *title;
     int reply;
     mpconfig *mpcontrol=getConfig();
 

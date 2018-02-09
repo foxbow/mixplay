@@ -124,6 +124,7 @@ static void *clientHandler(void *args )
     char *pos, *end;
     mpcmd cmd=mpc_idle;
     static char *mtype;
+    mptitle *playing=NULL;
 
     const char *fname;
     const unsigned char *fdata;
@@ -264,7 +265,8 @@ static void *clientHandler(void *args )
     		switch( state ) {
     		case 11: /* get update */
         		memset( jsonLine, 0, MP_MAXCOMLEN-512 );
-    			serializeStatus( jsonLine, &clmsg, sock );
+    			serializeStatus( jsonLine, &clmsg, sock, (config->current->plnext != playing ) );
+    			playing=config->current->plnext;
     			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i;\015\012\015\012", (int)strlen(jsonLine)+1 );
     			strcat( commdata, jsonLine );
     			strcat( commdata, "\015\012\015\012" );

@@ -334,7 +334,7 @@ static void playCount( mpconfig *control ) {
  */
 void *reader( void *cont ) {
     mpconfig	*control;
-    struct entry_t 		*next;
+    mptitle 		*next;
     fd_set				fds;
     struct timeval		to;
     int64_t	i, key;
