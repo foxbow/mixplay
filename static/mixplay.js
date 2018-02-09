@@ -1,6 +1,6 @@
 var doUpdate=1;
 var data=null;
-var mpver=9;
+var mpver=10;
 var msgline="";
 
 /**
