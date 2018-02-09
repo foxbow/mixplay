@@ -43,17 +43,21 @@ function updateUI( ){
 	  					alert("Version clash, expected "+mpver+" and got "+data.version );
 	  					return;
 	  				}
-	  				document.title=data.current.artist+" - "+data.current.title;
-		  			setElement( 'prev', data.prev.artist+" - "+data.prev.title );
-		  			setElement( 'artist', data.current.artist );
+	  				if( data.type == 3 ) {
+		  				document.title=data.current.artist+" - "+data.current.title;
+		  				setElement( 'title', data.current.title );
+			  			setElement( 'prev', data.prev.artist+" - "+data.prev.title );
+			  			setElement( 'artist', data.current.artist );
+			  			setElement( 'album', data.current.album );
+			  			setElement( 'next', data.next.artist+" - "+data.next.title );
+			  		}
 		  			if( data.status == 0 ) {
-			  			setElement( 'title', data.current.title );
+			  			document.getElementById('current').style.backgroundColor="#ddd";
 			  		}
 			  		else {
-			  			setElement( 'title', "<i>"+data.current.title+"</i>" );
+			  			document.getElementById('current').style.backgroundColor="#daa";
 			  		}	
-		  			setElement( 'album', data.current.album );
-		  			setElement( 'next', data.next.artist+" - "+data.next.title );
+			  		
 		  			setElement( 'playtime', data.playtime+" / "+data.remtime );
 		  			setElement( 'volume', data.volume+"%" );
 		  			if( data.msg != "" ) {

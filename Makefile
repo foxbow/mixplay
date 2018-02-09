@@ -93,8 +93,8 @@ mixplayd_html.h: static/mixplay.html
 mixplayd_css.h: static/mixplay.css
 	xxd -i static/mixplay.css > mixplayd_css.h
 
-static/mixplay.js:
-	sed -e 's/~~MPCOMM_VER~~/'${MPCOMM_VER}'/g'  static/mixplay.js.tmpl > static/mixplay.js
+static/mixplay.js: static/mixplay_js.tmpl
+	sed -e 's/~~MPCOMM_VER~~/'${MPCOMM_VER}'/g'  static/mixplay_js.tmpl > static/mixplay.js
 	
 mixplayd_js.h: static/mixplay.js
 	xxd -i static/mixplay.js > mixplayd_js.h

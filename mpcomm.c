@@ -356,7 +356,7 @@ static int recFromMixplayd( char *data ) {
  * analog to the reader() in player.c
  */
 void *netreader( void *control ) {
-    int sock;
+    int sock, intr;
     struct sockaddr_in server;
     char *commdata;
     mpconfig *config;
@@ -394,7 +394,7 @@ void *netreader( void *control ) {
     	FD_SET( sock, &fds );
     	to.tv_sec=0;
     	to.tv_usec=250000; /* 1/4 second */
-    	select( FD_SETSIZE, &fds, NULL, NULL, &to );
+    	intr=select( FD_SETSIZE, &fds, NULL, NULL, &to );
 
 		/* is data available */
 		if( FD_ISSET( sock, &fds ) ) {
@@ -442,15 +442,13 @@ void *netreader( void *control ) {
 			}
 			config->command=mpc_idle;
 		}
-		pthread_mutex_unlock( &_cmdlock );
-
-		/* if no command was sent, fetch an update */
-		if( len == 0 ) {
+		else if( intr == 0) {
            	sprintf( commdata, "get /status HTTP/1.1\015\012xmixplay: 1\015\012\015\012" );
            	while( len < strlen( commdata ) ) {
            		len+=send( sock , &commdata[len], strlen( commdata )-len, 0 );
            	}
-        }
+		}
+		pthread_mutex_unlock( &_cmdlock );
     }
 
     addMessage( 1, "Disconnected");
