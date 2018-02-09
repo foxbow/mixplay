@@ -1,7 +1,8 @@
 # CC=/usr/bin/gcc
 VERSION=$(shell git describe --tags --abbrev=1 --dirty=-dev --always)
-
-CCFLAGS=-DVERSION=\"${VERSION}\"
+MPCOMM_VER=10
+CCFLAGS=-DMPCOMM_VER="${MPCOMM_VER}"
+CCFLAGS+=-DVERSION=\"${VERSION}\"
 CCFLAGS+=-Wall -g -pedantic -Werror
 
 OBJS=utils.o musicmgr.o database.o mpgutils.o player.o config.o player.o mpcomm.o json.o
@@ -28,18 +29,25 @@ else
 $(info ncurses is not installed, not building cmixplay )
 endif
 
+ifneq ("$(shell cat static/CURVER)","${MPCOMM_VER}")
+$(shell rm static/mixplay.js)
+$(shell echo ${MPCOMM_VER} > static/CURVER)
+endif
+
 LIBS+=$(shell pkg-config --libs $(REFS))
 CCFLAGS+=$(shell pkg-config --cflags $(REFS))
 
 all: dep.d $(EXES)
-
+	
 clean:
 	rm -f *.o
 	rm -f *.gch
 	rm -f bin/*
 	touch bin/KEEPDIR
 	
-distclean: clean	
+distclean: clean
+	rm static/CURVER	
+	rm static/mixplay.js
 	rm -f gmixplay_app.h
 	rm -f mixplayd_*.h
 	rm -f *~
@@ -85,6 +93,9 @@ mixplayd_html.h: static/mixplay.html
 mixplayd_css.h: static/mixplay.css
 	xxd -i static/mixplay.css > mixplayd_css.h
 
+static/mixplay.js:
+	sed -e 's/~~MPCOMM_VER~~/'${MPCOMM_VER}'/g'  static/mixplay.js.tmpl > static/mixplay.js
+	
 mixplayd_js.h: static/mixplay.js
 	xxd -i static/mixplay.js > mixplayd_js.h
 

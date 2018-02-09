@@ -8,7 +8,6 @@
 #ifndef MPCOMM_H_
 #define MPCOMM_H_
 
-#define MPCOMM_VER 10
 #include "config.h"
 
 #define MPCOMM_STAT 1
