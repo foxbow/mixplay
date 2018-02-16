@@ -8,6 +8,11 @@
 #ifndef _JSON_H_
 #define _JSON_H_
 
+/* if less than JSON_LOWATER bytes are unused in the string it will be
+ * increased by JSON_INCBUFF bytes
+ */
+#define JSON_LOWATER 128
+#define JSON_INCBUFF 512
 /*
  * JSON defined datatypes
  */
@@ -57,7 +62,7 @@ jsonObject *jsonInitArr( jsonObject *jo, const char *key );
 jsonObject *jsonAddArrElement( jsonObject *jo, jsonType type, void *element );
 
 jsonObject *jsonRead( char *json );
-size_t jsonWrite( jsonObject *jo, char *json );
+char *jsonToString( jsonObject *jo );
 
 void jsonDiscard( jsonObject *jo );
 #endif /* _JSON_H_ */

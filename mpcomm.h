@@ -14,13 +14,14 @@
 #define MPCOMM_CONFIG 2
 #define MPCOMM_FULLSTAT 3
 
-#define MP_MAXCOMLEN 4096
+
+#define MP_BLKSIZE 512
 #define MP_PORT 2347
 
 void *netreader( void *control );
 void setSCommand( mpcmd cmd );
-size_t serializeStatus( char *buff, long *count, int clientid, int fullstat );
-size_t serializeConfig( char *buff );
+char *serializeStatus( long *count, int clientid, int fullstat );
+char *serializeConfig( void );
 void setCurClient( int client );
 void unlockClient( int client );
 

@@ -115,8 +115,8 @@ static void *clientHandler(void *args )
     size_t len, sent, msglen;
     struct timeval to;
     int running=-1; /* test */
-    char *commdata;
-    char *jsonLine;
+    char *commdata=NULL;
+    char *jsonLine=NULL;
     fd_set fds;
     mpconfig *config;
     long clmsg;
@@ -125,13 +125,15 @@ static void *clientHandler(void *args )
     mpcmd cmd=mpc_idle;
     static char *mtype;
     mptitle *playing=NULL;
-
+    size_t commsize=MP_BLKSIZE;
+    ssize_t retval=0;
+    ssize_t recvd=0;
     const char *fname;
     const unsigned char *fdata;
     unsigned int flen;
+    int fullstat=-1;
 
-    commdata=falloc( MP_MAXCOMLEN, sizeof( char ) );
-    jsonLine=falloc( MP_MAXCOMLEN-256, sizeof( char ) );
+    commdata=falloc( commsize, sizeof( char ) );
 
     config = getConfig();
     clmsg = config->msg->count;
@@ -148,8 +150,15 @@ static void *clientHandler(void *args )
     	select( FD_SETSIZE, &fds, NULL, NULL, &to );
 
     	if( FD_ISSET( sock, &fds ) ) {
-    		memset( commdata, 0, MP_MAXCOMLEN );
-			switch( recv(sock, commdata, MP_MAXCOMLEN, 0 ) ) {
+    		memset( commdata, 0, commsize );
+    		recvd=0;
+    		while( ( retval=recv( sock, commdata+recvd, commsize-recvd, 0 ) ) == commsize-recvd ) {
+    			recvd=commsize;
+    			commsize+=MP_BLKSIZE;
+    			commdata=frealloc( commdata, commsize );
+    			memset( commdata+recvd, 0, MP_BLKSIZE );
+    		}
+			switch( retval ) {
 			case -1:
 				addMessage( 1, "Read error on socket!\n%s", strerror( errno ) );
 				running=0;
@@ -204,6 +213,15 @@ static void *clientHandler(void *args )
 									strdec( config->argument, pos+16 );
 								}
 								cmd=mpcCommand(pos+5);
+								switch( cmd ) {
+								case mpc_favalbum:
+								case mpc_favartist:
+								case mpc_favtitle:
+									fullstat=-1;
+									break;
+								default:
+									break;
+								}
 								state=2;
 							}
 							else if( ( strcmp( pos, "/") == 0 ) || ( strcmp( pos, "/index.html" ) == 0 ) ) {
@@ -261,16 +279,24 @@ static void *clientHandler(void *args )
 		}
 
     	if( running && ( config->status != mpc_start ) ) {
-    		memset( commdata, 0, MP_MAXCOMLEN );
+    		memset( commdata, 0, commsize );
     		switch( state ) {
     		case 11: /* get update */
-        		memset( jsonLine, 0, MP_MAXCOMLEN-512 );
-    			serializeStatus( jsonLine, &clmsg, sock, (config->current->plnext != playing ) );
+    			if( config->current->plnext != playing ) {
+    				fullstat=-1;
+    			}
+    			jsonLine=serializeStatus( &clmsg, sock, fullstat );
     			playing=config->current->plnext;
-    			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i;\015\012\015\012", (int)strlen(jsonLine)+1 );
+    			fullstat=0;
+    			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i;\015\012\015\012", (int)strlen(jsonLine) );
+    			while( ( strlen(jsonLine) + strlen(commdata) + 8 ) < commsize ) {
+    				commsize+=MP_BLKSIZE;
+    				commdata=frealloc( commdata, commsize );
+    			}
     			strcat( commdata, jsonLine );
     			strcat( commdata, "\015\012\015\012" );
     			len=strlen(commdata);
+    			sfree( &jsonLine );
     			break;
     		case 21: /* set command */
     			if( cmd != mpc_idle ) {
@@ -312,12 +338,16 @@ static void *clientHandler(void *args )
     			running=0;
     			break;
     		case 61: /* get config */
-        		memset( jsonLine, 0, MP_MAXCOMLEN-512 );
-    			serializeConfig( jsonLine );
-    			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i;\015\012\015\012", (int)strlen(jsonLine)+1 );
+    			jsonLine=serializeConfig( );
+    			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i;\015\012\015\012", (int)strlen(jsonLine) );
+    			while( ( strlen(jsonLine) + strlen(commdata) + 8 ) < commsize ) {
+    				commsize+=MP_BLKSIZE;
+    				commdata=frealloc( commdata, commsize );
+    			}
     			strcat( commdata, jsonLine );
     			strcat( commdata, "\015\012\015\012" );
     			len=strlen(commdata);
+    			sfree( &jsonLine );
     			break;
     		default:
     			len=0;
@@ -346,8 +376,8 @@ static void *clientHandler(void *args )
    	unlockClient( sock );
 	close(sock);
     free( args );
-    free( commdata );
-    free( jsonLine );
+    sfree( &commdata );
+    sfree( &jsonLine );
 
     return 0;
 }

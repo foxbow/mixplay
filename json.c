@@ -15,8 +15,8 @@
 #include <string.h>
 
 /* forward definitions of cyclic dependencies in static functions */
-static size_t jsonWriteObj( jsonObject *jo, char *json );
-static size_t jsonWriteArr( jsonObject *jo, char *json );
+static char *jsonWriteObj( jsonObject *jo, char *json, int len );
+static char *jsonWriteArr( jsonObject *jo, char *json, int len );
 static int jsonParseObject( char *json, jsonObject **jo );
 static int jsonParseArray( char *json, jsonObject **jo );
 
@@ -691,13 +691,22 @@ jsonObject *jsonRead( char *json ) {
 	}
 }
 
+static char *sizeCheck( char *json, int *len ) {
+	if( strlen( json ) > *len-JSON_LOWATER ) {
+		*len=*len+JSON_INCBUFF;
+		json=frealloc( json, *len );
+	}
+	return json;
+}
+
 /**
  * encodes a value into JSON notation
  * "strval"|numval|{objval}|[arr],[val]
  */
-static size_t jsonWriteVal( jsonObject *jo, char *json ) {
+static char *jsonWriteVal( jsonObject *jo, char *json, int len ) {
 	switch( jo->type ) {
 	case json_string:
+		json=sizeCheck( json, &len );
 		strcat( json, "\"" );
 		strcat( json, jo->val );
 		strcat( json, "\"" );
@@ -706,72 +715,77 @@ static size_t jsonWriteVal( jsonObject *jo, char *json ) {
 		strcat( json, jo->val );
 		break;
 	case json_object:
-		jsonWriteObj( jo->val, json );
+		json=jsonWriteObj( jo->val, json, len );
 		break;
 	case json_array:
-		jsonWriteArr( jo->val, json );
+		json=jsonWriteArr( jo->val, json, len );
 		break;
 	case json_none:
-		return -1;
 		break;
 	}
-	return strlen( json );
+	return json;
 }
 
 /**
  * encodes a key,value tupel into JSON notation
  * "key",value
  */
-static size_t jsonWriteKeyVal( jsonObject *jo, char *json ) {
+static char *jsonWriteKeyVal( jsonObject *jo, char *json, int len ) {
+	json=sizeCheck( json, &len );
 	strcat( json, "\"" );
 	strcat( json, jo->key );
 	strcat( json, "\":" );
 
-	jsonWriteVal( jo, json );
+	json=jsonWriteVal( jo, json, len );
 
 	if( jo->next != NULL ) {
 		strcat( json, "," );
-		jsonWriteKeyVal( jo->next, json );
+		json=jsonWriteKeyVal( jo->next, json, len );
 	}
 
-	return strlen( json );
+	return json;
 }
 
 /**
  * encodes an array into JSON notation
  * [val],[val],...
  */
-static size_t jsonWriteArr( jsonObject *jo, char *json ) {
+static char *jsonWriteArr( jsonObject *jo, char *json, int len ) {
+	json=sizeCheck( json, &len );
 	strcat( json, "[" );
 	while( jo != NULL ) {
-		jsonWriteVal( jo, json );
+		jsonWriteVal( jo, json, len );
 		jo=jo->next;
 		if( jo != NULL ) {
 			strcat( json, "," );
 		}
 	}
 	strcat( json, "]" );
-	return strlen( json );
+	return json;
 }
 
 /**
  * encodes an object into JSON notation
  * {key,value}
  */
-static size_t jsonWriteObj( jsonObject *jo, char *json ) {
+static char *jsonWriteObj( jsonObject *jo, char *json, int len ) {
+	json=sizeCheck( json, &len );
 	strcat( json, "{" );
-	jsonWriteKeyVal( jo, json );
+	jsonWriteKeyVal( jo, json, len );
 	strcat( json, "}" );
-	return strlen( json );
+	return json;
 }
 
-/**
- * writes the jsonObject as JSON string into the given character buffer
- * Caveat: this does no range checking!
+/*
+ * turns the jsonObject tree into a json string and disposes of the jsonObject tree
  */
-size_t jsonWrite( jsonObject *jo, char *json ) {
-	json[0]=0;
-	return jsonWriteObj( jo, json );
+char *jsonToString( jsonObject *jo ) {
+	char *json=NULL;
+	int len=JSON_INCBUFF;
+	json=falloc( len, sizeof( char ) );
+	jsonWriteObj( jo, json, len );
+	jsonDiscard( jo );
+	return json;
 }
 
 /**

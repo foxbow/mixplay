@@ -391,6 +391,15 @@ void *falloc( size_t num, size_t size ) {
     return result;
 }
 
+void *frealloc( void *old, size_t size ) {
+	void *new=NULL;
+	new=realloc( old, size );
+	if( new == NULL ) {
+        fail( errno, "Sorry.." );
+	}
+	return new;
+}
+
 /**
  * just free something if it actually exists
  */

@@ -81,7 +81,7 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mptitle 
 /*
  * helperfunction to retrieve a title from the given jsonOblect
  */
-static void getTitle( jsonObject *jo, const char *key, mptitle *title ) {
+static void jsonGetTitle( jsonObject *jo, const char *key, mptitle *title ) {
 	jsonObject *to;
 	to=jsonGetObj( jo, key);
 
@@ -132,11 +132,9 @@ jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mptitle *root ) {
  * put data to be sent over into the buff
  * adds messages only if any are available for the client
 **/
-size_t serializeStatus( char *buff, long *count, int clientid, int fullstat ) {
+char *serializeStatus( long *count, int clientid, int fullstat ) {
 	mpconfig *data=getConfig();
 	jsonObject *jo=NULL;
-
-	buff[0]=0;
 
 	jo=jsonAddInt( NULL, "version", MPCOMM_VER );
 
@@ -193,21 +191,16 @@ size_t serializeStatus( char *buff, long *count, int clientid, int fullstat ) {
 		jsonAddStr( jo, "msg", "" );
 	}
 
-	jsonWrite(jo, buff);
-	jsonDiscard( jo );
-
-	return strlen(buff);
+	return jsonToString( jo );
 }
 
 /**
  * global/static part of the given config
  */
-size_t serializeConfig( char *buff ) {
+char *serializeConfig( ) {
 	mpconfig *config=getConfig();
 	jsonObject *joroot=NULL;
 	jsonObject *jo=NULL;
-
-	buff[0]=0;
 
 	/* start with version */
 	joroot=jsonAddInt( NULL, "version", MPCOMM_VER );
@@ -226,10 +219,7 @@ size_t serializeConfig( char *buff ) {
 	/* add config object to the root object */
 	jsonAddObj( joroot, "config", jo );
 
-	jsonWrite(joroot, buff);
-	jsonDiscard( joroot );
-
-	return strlen(buff);
+	return jsonToString( joroot );
 }
 
 /*
@@ -277,9 +267,9 @@ static int deserializeStatus( jsonObject *jo ) {
 	if( jsonGetInt(jo, "type" ) == MPCOMM_FULLSTAT ) {
 		data->active=jsonGetInt( jo, "active");
 		data->playstream=jsonGetInt( jo, "playstream" );
-		getTitle( jo, "prev", data->current->plprev );
-		getTitle( jo, "current", data->current );
-		getTitle( jo, "next", data->current->plnext );
+		jsonGetTitle( jo, "prev", data->current->plprev );
+		jsonGetTitle( jo, "current", data->current );
+		jsonGetTitle( jo, "next", data->current->plnext );
 	}
 	jsonCopyChars( jo, "playtime", data->playtime );
 	jsonCopyChars( jo, "remtime", data->remtime );
@@ -359,12 +349,14 @@ void *netreader( void *control ) {
     int sock, intr;
     struct sockaddr_in server;
     char *commdata;
+    size_t commsize=MP_BLKSIZE;
     mpconfig *config;
     struct timeval to;
     fd_set fds;
     size_t len=0;
+    ssize_t recvd, retval;
 
-    commdata=falloc( MP_MAXCOMLEN, sizeof( char ) );
+    commdata=falloc( commsize, sizeof( char ) );
     config=(mpconfig*)control;
 
     sock = socket(AF_INET , SOCK_STREAM , 0);
@@ -398,8 +390,15 @@ void *netreader( void *control ) {
 
 		/* is data available */
 		if( FD_ISSET( sock, &fds ) ) {
-			memset( commdata, 0, MP_MAXCOMLEN );
-			switch( recv(sock , commdata , MP_MAXCOMLEN , 0) ) {
+    		memset( commdata, 0, commsize );
+    		recvd=0;
+    		while( ( retval=recv( sock, commdata+recvd, commsize-recvd, 0 ) ) == commsize-recvd ) {
+    			recvd=commsize;
+    			commsize+=MP_BLKSIZE;
+    			commdata=frealloc( commdata, commsize );
+    			memset( commdata+recvd, 0, MP_BLKSIZE );
+    		}
+			switch( retval ) {
 			case -1:
 				addMessage( 0, "Read error on socket!\n%s", strerror( errno ) );
 				config->status=mpc_quit;
@@ -437,17 +436,30 @@ void *netreader( void *control ) {
 			else {
 				sprintf( commdata, "get /cmd/%s HTTP/1.1\015\012xmixplay: 1\015\012\015\012", mpcString( config->command ) );
 			}
-			while( len < strlen( commdata ) ) {
-				len+=send( sock , &commdata[len], strlen( commdata )-len, 0 );
-			}
 			config->command=mpc_idle;
 		}
 		else if( intr == 0) {
            	sprintf( commdata, "get /status HTTP/1.1\015\012xmixplay: 1\015\012\015\012" );
-           	while( len < strlen( commdata ) ) {
-           		len+=send( sock , &commdata[len], strlen( commdata )-len, 0 );
-           	}
 		}
+
+       	while( len < strlen( commdata ) ) {
+       		retval=send( sock , commdata+len, strlen( commdata )-len, 0 );
+       		switch( retval ) {
+			case -1:
+				addMessage( 0, "Write error on socket!\n%s", strerror( errno ) );
+				config->status=mpc_quit;
+				len=strlen( commdata );
+				break;
+			case 0:
+				addMessage( 0, "mixplayd has disconnected the session");
+				config->status=mpc_quit;
+				len=strlen( commdata );
+				break;
+       		default:
+       			len+=retval;
+       		}
+       	}
+
 		pthread_mutex_unlock( &_cmdlock );
     }
 
