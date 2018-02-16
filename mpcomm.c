@@ -136,7 +136,7 @@ char *serializeStatus( long *count, int clientid, int fullstat ) {
 	mpconfig *data=getConfig();
 	jsonObject *jo=NULL;
 
-	jo=jsonAddInt( NULL, "version", MPCOMM_VER );
+	jo=jsonAddInt( jo, "version", MPCOMM_VER );
 
 	if( fullstat ) {
 		jsonAddInt( jo, "type", MPCOMM_FULLSTAT );

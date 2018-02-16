@@ -38,7 +38,7 @@ static int jsonFail( const char *func, char *str, const int i, const int state )
  *      2 - key and val are to be free'd
  */
 static jsonObject *jsonInit( int ref ) {
-	jsonObject *jo;
+	jsonObject *jo=NULL;
 	jo=falloc(1, sizeof(jsonObject));
 	jo->key=NULL;
 	jo->next=NULL;
@@ -692,8 +692,8 @@ jsonObject *jsonRead( char *json ) {
 }
 
 static char *sizeCheck( char *json, int *len ) {
-	if( strlen( json ) > *len-JSON_LOWATER ) {
-		*len=*len+JSON_INCBUFF;
+	if( strlen( json ) > (*len)-JSON_LOWATER ) {
+		*len=(*len)+JSON_INCBUFF;
 		json=frealloc( json, *len );
 	}
 	return json;
@@ -783,7 +783,7 @@ char *jsonToString( jsonObject *jo ) {
 	char *json=NULL;
 	int len=JSON_INCBUFF;
 	json=falloc( len, sizeof( char ) );
-	jsonWriteObj( jo, json, len );
+	json=jsonWriteObj( jo, json, len );
 	jsonDiscard( jo );
 	return json;
 }

@@ -22,7 +22,7 @@ char *abspath( char *path, const char *basedir, int len ) {
     char *buff;
 
     if( path[0] != '/' ) {
-        buff=falloc( sizeof( char ),len );
+        buff=falloc( len, sizeof( char ) );
         snprintf( buff, len, "%s/%s", basedir, path );
         strncpy( path, buff, len );
         free( buff );
@@ -378,11 +378,12 @@ int isDir( const char *path ) {
 }
 
 /**
- * wrapper around calloc that fails in-place with an error
+ * wrapper around malloc/calloc that fails in-place with an error
  */
 void *falloc( size_t num, size_t size ) {
     void *result=NULL;
-    result=calloc( num, size );
+
+   	result=calloc( num, size );
 
     if( NULL == result ) {
         fail( errno, "Sorry.." );
@@ -391,13 +392,16 @@ void *falloc( size_t num, size_t size ) {
     return result;
 }
 
+/**
+ * wrapper around realloc that fails in-place with an error
+ */
 void *frealloc( void *old, size_t size ) {
-	void *new=NULL;
-	new=realloc( old, size );
-	if( new == NULL ) {
+	void *newval=NULL;
+	newval=realloc( old, size );
+	if( newval == NULL ) {
         fail( errno, "Sorry.." );
 	}
-	return new;
+	return newval;
 }
 
 /**

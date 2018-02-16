@@ -209,7 +209,7 @@ static void *clientHandler(void *args )
 										addMessage( 0, "Stray argument: %s!", config->argument );
 										sfree( &(config->argument) );
 									}
-									config->argument=falloc( sizeof( char ), strlen( pos+16 )+1 );
+									config->argument=falloc( strlen( pos+16 )+1, sizeof( char ) );
 									strdec( config->argument, pos+16 );
 								}
 								cmd=mpcCommand(pos+5);
@@ -228,21 +228,21 @@ static void *clientHandler(void *args )
 								fname="static/mixplay.html";
 								fdata=static_mixplay_html;
 								flen=static_mixplay_html_len;
-								mtype="Content-Type: text/html; charset=utf-8";
+								mtype="text/html; charset=utf-8";
 								state=5;
 							}
 							else if( strcmp( pos, "/mixplay.css" ) == 0 ) {
 								fname="static/mixplay.css";
 								fdata=static_mixplay_css;
 								flen=static_mixplay_css_len;
-								mtype="Content-Type: text/css; charset=utf-8";
+								mtype="text/css; charset=utf-8";
 								state=5;
 							}
 							else if( strcmp( pos, "/mixplay.js" ) == 0 ) {
 								fname="static/mixplay.js";
 								fdata=static_mixplay_js;
 								flen=static_mixplay_js_len;
-								mtype="Content-Type: application/javascript; charset=utf-8";
+								mtype="application/javascript; charset=utf-8";
 								state=5;
 							}
 							else if( strcmp( pos, "/favicon.ico" ) == 0 ) {
@@ -289,7 +289,7 @@ static void *clientHandler(void *args )
     			playing=config->current->plnext;
     			fullstat=0;
     			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i;\015\012\015\012", (int)strlen(jsonLine) );
-    			while( ( strlen(jsonLine) + strlen(commdata) + 8 ) < commsize ) {
+    			while( ( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
     				commsize+=MP_BLKSIZE;
     				commdata=frealloc( commdata, commsize );
     			}
@@ -321,7 +321,7 @@ static void *clientHandler(void *args )
 				len=strlen( commdata );
     			break;
     		case 51: /* send file */
-    			sprintf( commdata, "HTTP/1.1 200 OK\015\012%s\015\012\015\012", mtype );
+    			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: %s\015\012Content-Length: %i;\015\012\015\012", mtype, flen );
     			len=strlen( commdata );
     			send(sock , commdata, strlen(commdata), 0);
     			if( _isDaemon == 0 ) {
@@ -340,7 +340,7 @@ static void *clientHandler(void *args )
     		case 61: /* get config */
     			jsonLine=serializeConfig( );
     			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i;\015\012\015\012", (int)strlen(jsonLine) );
-    			while( ( strlen(jsonLine) + strlen(commdata) + 8 ) < commsize ) {
+    			while( ( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
     				commsize+=MP_BLKSIZE;
     				commdata=frealloc( commdata, commsize );
     			}
@@ -576,7 +576,7 @@ int main( int argc, char **argv ) {
             }
             addMessage( 2, "Connection accepted" );
 
-            new_sock = falloc( sizeof(int), 1 );
+            new_sock = falloc( 1, sizeof(int) );
             *new_sock = client_sock;
 
             /* todo collect pids?
