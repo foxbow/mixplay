@@ -29,12 +29,10 @@
 	padding-right: 10px;
 }
 
-#volpack {
-	display: flex;
+#playtime {
+	float: left;
 }
 
-#volume {
-	padding-left: 20px; 
-	padding-right: 20px; 
+#remtime {
+	float: right;
 }
-

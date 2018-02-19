@@ -433,6 +433,10 @@ void *netreader( void *control ) {
 					addMessage( 0, "No searchterm given!" );
 				}
 			}
+			else if( config->command == mpc_setvol ) {
+				sprintf( commdata, "get /cmd/%s?%i HTTP/1.1\015\012xmixplay: 1\015\012\015\012",
+						mpcString( config->command ), config->volume );
+			}
 			else {
 				sprintf( commdata, "get /cmd/%s HTTP/1.1\015\012xmixplay: 1\015\012\015\012", mpcString( config->command ) );
 			}

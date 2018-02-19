@@ -45,6 +45,7 @@ enum _mpcmd_t {
 	mpc_dbinfo,
 	mpc_search,
 	mpc_longsearch,
+	mpc_setvol,
     mpc_idle
 };
 typedef enum _mpcmd_t mpcmd;

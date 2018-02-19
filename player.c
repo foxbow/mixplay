@@ -25,10 +25,11 @@ static pthread_mutex_t cmdlock=PTHREAD_MUTEX_INITIALIZER;
  * adjusts the master volume
  * if volume is 0 the current volume is returned without changing it
  * otherwise it's changed by 'volume'
+ * if abs is 0 'volume' is regarded as a relative value
  * if ALSA does not work or the current card cannot be selected -1 is returned
  */
-static long adjustVolume( long volume ) {
-    long min, max;
+static long controlVolume( long volume, int abs ) {
+	long min, max;
     snd_mixer_t *handle;
     snd_mixer_elem_t *elem;
     snd_mixer_selem_id_t *sid;
@@ -66,19 +67,44 @@ static long adjustVolume( long volume ) {
     }
 
 	snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
-	snd_mixer_selem_get_playback_volume(elem, SND_MIXER_SCHN_MONO, &retval );
-	retval=(( retval * 100 ) / max)+1;
+	if( abs != 0 ) {
+		retval=volume;
+	}
+	else {
+		snd_mixer_selem_get_playback_volume(elem, SND_MIXER_SCHN_MONO, &retval );
+		retval=(( retval * 100 ) / max)+1;
+		retval+=volume;
+	}
 
-	retval+=volume;
 	if( retval < 0 ) retval=0;
 	if( retval > 100 ) retval=100;
-	snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
 	snd_mixer_selem_set_playback_volume_all(elem, ( retval * max ) / 100);
 	config->volume=retval;
 
     snd_mixer_close(handle);
 
     return retval;
+}
+
+/*
+ * naming wrapper for controlVolume
+ */
+static long setVolume( long volume ) {
+	return controlVolume( volume, 1 );
+}
+
+/*
+ * naming wrapper for controlVolume
+ */
+static long getVolume( void ) {
+	return controlVolume( 0, 0 );
+}
+
+/*
+ * naming wrapper for controlVolume
+ */
+static long adjustVolume( long volume ) {
+	return controlVolume( volume, 0 );
 }
 
 /**
@@ -404,7 +430,7 @@ void *reader( void *cont ) {
     }
 
     /* check if we can control the system's volume */
-    control->volume=adjustVolume( 0 );
+    control->volume=getVolume();
     if( control->volume != -1  ) {
     	addMessage(  1, "Hardware volume level is %i%%", control->volume );
     }
@@ -892,8 +918,16 @@ void *reader( void *cont ) {
 			}
         	break;
 
+        case mpc_setvol:
+        	setVolume( atoi(control->argument) );
+        	sfree( &(control->argument) );
+        	break;
+
         case mpc_idle:
-        	adjustVolume( 0 );
+        	/* read current Hardware volume in case it changed externally */
+        	if( (control->argument == NULL) && ( control->volume != -1 ) ) {
+        		control->volume=getVolume( );
+        	}
             break;
         }
 

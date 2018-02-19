@@ -9,23 +9,23 @@
   </head>
   <body>
     <div id='main' onselectstart='return false'>
-       <div id='prev' onclick='sendCMD("mpc_prev")'>prev</div>
-       <div id='current' onclick='sendCMD("mpc_play")'>
-	      <div id='artist'>artist</div>
-    	  <div id='title' >title</div>
-    	  <div id='album' >album</div>
-	   </div>
-       <div id='next' onclick='sendCMD("mpc_next")'>next</div>
-       <div id='ctrl'>
-	       <input id='dnp' type='button' onclick='sendCMD("mpc_dnptitle")' value='DNP' >
-    	   <input id='fav' type='button' onclick='sendCMD("mpc_favtitle")' value='FAV' >
-       </div>
-       <div id='playtime'><pre>00:00 / 00:00</pre></div>
-       <div id='volpack'>
-         <input id='dvol' type='button' onclick='sendCMD("mpc_dvol")' value='-' >
-         <div id='volume'>100%</div>
-         <input id='ivol' type='button' onclick='sendCMD("mpc_ivol")' value='+' >
-       </div> <!-- volpack -->
+      <div id='prev' onclick='sendCMD("mpc_prev")'>prev</div>
+      <div id='current' onclick='sendCMD("mpc_play")'>
+	    <div id='artist'>artist</div>
+    	<div id='title' >title</div>
+    	<div id='album' >album</div>
+	  </div>
+      <div id='next' onclick='sendCMD("mpc_next")'>next</div>
+      <div id='ctrl'>
+	     <input id='dnp' type='button' onclick='sendCMD("mpc_dnptitle")' value='DNP' >
+    	 <input id='fav' type='button' onclick='sendCMD("mpc_favtitle")' value='FAV' >
+      </div>
+      <div id='playpack'>
+        <div id='playtime'>00:00</div> <progress id='progress' value='0' max='100'></progress><div id='remtime'>00:00</div>
+      </div>
+      <div id='volpack'>
+        <input id='vol' type='range' min='0' max='100' step='1' value='0' onchange='setVolume()' >
+      </div>
        <select label='Range' id='range'>
          <option value='t'>Title</option>
          <option value='a'>Artist</option>

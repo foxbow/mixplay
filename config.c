@@ -57,6 +57,7 @@ static const char *mpc_command[] = {
 		"mpc_dbinfo",
 		"mpc_search",
 		"mpc_longsearch",
+		"mpc_setvol",
 	    "mpc_idle"
 };
 

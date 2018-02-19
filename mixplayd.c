@@ -212,6 +212,11 @@ static void *clientHandler(void *args )
 									config->argument=falloc( strlen( pos+16 )+1, sizeof( char ) );
 									strdec( config->argument, pos+16 );
 								}
+								else if( strstr( pos+5, "mpc_setvol?" ) == pos+5 ) {
+									*(pos+15)=0;
+									config->argument=falloc( strlen( pos+16 )+1, sizeof( char ) );
+									strdec( config->argument, pos+16 );
+								}
 								cmd=mpcCommand(pos+5);
 								switch( cmd ) {
 								case mpc_favalbum:
@@ -321,14 +326,15 @@ static void *clientHandler(void *args )
 				len=strlen( commdata );
     			break;
     		case 51: /* send file */
-    			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: %s\015\012Content-Length: %i;\015\012\015\012", mtype, flen );
-    			len=strlen( commdata );
-    			send(sock , commdata, strlen(commdata), 0);
     			if( _isDaemon == 0 ) {
-    				filePost( sock, fname );
+    				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012\015\012", mtype );
+        			send(sock , commdata, strlen(commdata), 0);
+       				filePost( sock, fname );
     			}
     			else {
-					len=0;
+    				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012Content-Length: %i;\015\012\015\012", mtype, flen );
+    				send(sock , commdata, strlen(commdata), 0);
+    				len=0;
 					while( len < flen ) {
 						len+=send( sock, &fdata[len], flen-len, 0 );
 					}
@@ -339,7 +345,7 @@ static void *clientHandler(void *args )
     			break;
     		case 61: /* get config */
     			jsonLine=serializeConfig( );
-    			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i;\015\012\015\012", (int)strlen(jsonLine) );
+    			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012", (int)strlen(jsonLine) );
     			while( ( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
     				commsize+=MP_BLKSIZE;
     				commdata=frealloc( commdata, commsize );
