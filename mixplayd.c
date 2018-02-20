@@ -514,12 +514,21 @@ int main( int argc, char **argv ) {
     /* we are never ever remote */
     control->remote=0;
 
-    /* check if the socket is available before daemon-izing */
-	mainsocket = socket(AF_INET , SOCK_STREAM , 0);
+    mainsocket = socket(AF_INET , SOCK_STREAM , 0);
 	if (mainsocket == -1) {
 		fail( errno, "Could not create socket");
 	}
 	addMessage( 1, "Socket created" );
+
+	server.sin_family = AF_INET;
+	server.sin_addr.s_addr = INADDR_ANY;
+	server.sin_port = htons( port );
+
+	if( bind(mainsocket,(struct sockaddr *)&server , sizeof(server)) < 0) {
+		fail( errno, "bind() failed!" );
+		return 1;
+	}
+	addMessage( 1, "bind() done");
 
     if( getDebug() == 0 ) {
     	_isDaemon=-1;
@@ -551,16 +560,6 @@ int main( int argc, char **argv ) {
     		sleep(1);
     	}
     }
-
-	server.sin_family = AF_INET;
-	server.sin_addr.s_addr = INADDR_ANY;
-	server.sin_port = htons( port );
-
-	if( bind(mainsocket,(struct sockaddr *)&server , sizeof(server)) < 0) {
-		fail( errno, "bind() failed!" );
-		return 1;
-	}
-	addMessage( 1, "bind() done");
 
 	listen(mainsocket , 3);
 	addMessage( 0, "Listening on port %i", port );

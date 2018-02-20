@@ -24,7 +24,7 @@
         <div id='playtime'>00:00</div> <progress id='progress' value='0' max='100'></progress><div id='remtime'>00:00</div>
       </div>
       <div id='volpack'>
-        <input id='vol' type='range' min='0' max='100' step='1' value='0' onchange='setVolume()' >
+        <input id='vol' type='range' min='0' max='100' step='1' value='0' onchange='setVolume( this.value )' >
       </div>
        <select label='Range' id='range'>
          <option value='t'>Title</option>
