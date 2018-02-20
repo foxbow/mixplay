@@ -8,7 +8,7 @@
     <title>Mixplay</title>
   </head>
   <body>
-    <div id='main' onselectstart='return false'>
+    <div id='main' onselectstart='return false' onwheel='volWheel(event)' >
       <div id='prev' onclick='sendCMD("mpc_prev")'>prev</div>
       <div id='current' onclick='sendCMD("mpc_play")'>
 	    <div id='artist'>artist</div>

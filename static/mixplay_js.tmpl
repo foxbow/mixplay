@@ -3,6 +3,7 @@ var data=null;
 var mpver=~~MPCOMM_VER~~;
 var msgline="";
 
+
 /**
  * used cmd's so far are:
  *  mpc_play,
@@ -25,6 +26,18 @@ function sendCMD( cmd ) {
 	
 	xmlhttp.open("GET", "/cmd/"+cmd, true);
 	xmlhttp.send();
+}
+
+/*
+ * use scrollwheel to control volume
+ */
+function volWheel( e ) {
+  if( e.deltaY < 0 ) {
+    sendCMD( "mpc_ivol" );
+  }
+  else if( e.deltaY > 0 ) {
+    sendCMD( "mpc_dvol" );
+  }
 }
 
 function setElement( e, val ) {
@@ -94,7 +107,7 @@ function updateUI( ){
 	if( doUpdate != 0 ) {
 		xmlhttp.open("GET", "/status", true);
 		xmlhttp.send();
-		setTimeout("updateUI()",500);
+		setTimeout("updateUI()",333);
 	}
 }
 
@@ -122,4 +135,3 @@ function search() {
 }
 
 updateUI();
-
