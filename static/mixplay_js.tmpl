@@ -50,6 +50,12 @@ function updateUI( ){
 			  			setElement( 'artist', data.current.artist );
 			  			setElement( 'album', data.current.album );
 			  			setElement( 'next', data.next.artist+" - "+data.next.title );
+			  			if( data.current.flags & 1 )  {
+				  			document.getElementById( 'fav' ).disabled=true;
+			  			}
+			  			else {
+				  			document.getElementById( 'fav' ).disabled=false;		  			
+			  			}
 			  		}
 		  			if( data.status == 0 ) {
 			  			document.getElementById('current').style.backgroundColor="#ddd";
@@ -58,8 +64,9 @@ function updateUI( ){
 			  			document.getElementById('current').style.backgroundColor="#daa";
 			  		}	
 			  		
-		  			setElement( 'playtime', data.playtime+" / "+data.remtime );
-		  			setElement( 'volume', data.volume+"%" );
+		  			setElement( 'playtime', data.playtime );
+		  			setElement( 'remtime', data.remtime );
+		  			getElementById( 'volume' ).value=data.volume;
 		  			if( data.msg != "" ) {
 		  				msgline=msgline+"\n"+data.msg;
 		  			}
@@ -69,12 +76,6 @@ function updateUI( ){
 		  					alert(msgline);
 		  					msgline="";
 		  				}
-		  			}
-		  			if( data.current.flags & 1 )  {
-			  			document.getElementById( 'fav' ).disabled=true;
-		  			}
-		  			else {
-			  			document.getElementById( 'fav' ).disabled=false;		  			
 		  			}
 		  		}
 		  	}
@@ -95,6 +96,10 @@ function updateUI( ){
 		xmlhttp.send();
 		setTimeout("updateUI()",500);
 	}
+}
+
+function setVolume() {
+	sendCMD( "mpc_setvol?"+getElementById('volume').value );
 }
 
 function search() {
