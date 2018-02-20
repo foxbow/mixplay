@@ -79,6 +79,7 @@ function updateUI( ){
 			  		
 		  			setElement( 'playtime', data.playtime );
 		  			setElement( 'remtime', data.remtime );
+		  			document.getElementById( 'progress' ).value=data.percent;
 		  			document.getElementById( 'vol' ).value=data.volume;
 		  			if( data.msg != "" ) {
 		  				msgline=msgline+"\n"+data.msg;

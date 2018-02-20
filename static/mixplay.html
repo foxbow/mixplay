@@ -23,9 +23,6 @@
       <div id='playpack'>
         <div id='playtime'>00:00</div> <progress id='progress' value='0' max='100'></progress><div id='remtime'>00:00</div>
       </div>
-      <div id='volpack'>
-        <input id='vol' type='range' min='0' max='100' step='1' value='0' oninput='setVolume( this.value )' >
-      </div>
        <select label='Range' id='range'>
          <option value='t'>Title</option>
          <option value='a'>Artist</option>
@@ -34,6 +31,9 @@
        <input id='text' type='text'>
        Fuzzy <input id='fuzzy' title='Fuzzy' type='checkbox'>
        <input id='search' type='button' onclick='search()' value='Search' >       
+      <div id='volpack'>
+        <input id='vol' type='range' min='0' max='100' step='1' value='0' oninput='setVolume( this.value )' >
+      </div>
     </div> <!-- main -->
   </body>
 </html>
