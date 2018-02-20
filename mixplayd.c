@@ -514,6 +514,13 @@ int main( int argc, char **argv ) {
     /* we are never ever remote */
     control->remote=0;
 
+    /* check if the socket is available before daemon-izing */
+	mainsocket = socket(AF_INET , SOCK_STREAM , 0);
+	if (mainsocket == -1) {
+		fail( errno, "Could not create socket");
+	}
+	addMessage( 1, "Socket created" );
+
     if( getDebug() == 0 ) {
     	_isDaemon=-1;
     	daemon( 0, 0 );
@@ -544,12 +551,6 @@ int main( int argc, char **argv ) {
     		sleep(1);
     	}
     }
-
-	mainsocket = socket(AF_INET , SOCK_STREAM , 0);
-	if (mainsocket == -1) {
-		fail( errno, "Could not create socket");
-	}
-	addMessage( 1, "Socket created" );
 
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = INADDR_ANY;
