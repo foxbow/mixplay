@@ -919,8 +919,10 @@ void *reader( void *cont ) {
         	break;
 
         case mpc_setvol:
-        	setVolume( atoi(control->argument) );
-        	sfree( &(control->argument) );
+        	if( control->argument != NULL ) {
+        		setVolume( atoi(control->argument) );
+        		sfree( &(control->argument) );
+        	}
         	break;
 
         case mpc_idle:

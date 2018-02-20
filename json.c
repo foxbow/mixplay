@@ -754,7 +754,7 @@ static char *jsonWriteArr( jsonObject *jo, char *json, int len ) {
 	json=sizeCheck( json, &len );
 	strcat( json, "[" );
 	while( jo != NULL ) {
-		jsonWriteVal( jo, json, len );
+		json=jsonWriteVal( jo, json, len );
 		jo=jo->next;
 		if( jo != NULL ) {
 			strcat( json, "," );
@@ -771,7 +771,7 @@ static char *jsonWriteArr( jsonObject *jo, char *json, int len ) {
 static char *jsonWriteObj( jsonObject *jo, char *json, int len ) {
 	json=sizeCheck( json, &len );
 	strcat( json, "{" );
-	jsonWriteKeyVal( jo, json, len );
+	json=jsonWriteKeyVal( jo, json, len );
 	strcat( json, "}" );
 	return json;
 }
