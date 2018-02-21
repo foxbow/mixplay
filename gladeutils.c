@@ -285,7 +285,7 @@ static int g_updateUI( void *data ) {
     gtk_widget_set_visible( MP_GLDATA->widgets->remain, !( control->playstream ) );
 
     /* do we have volume control? */
-    gtk_widget_set_visible( MP_GLDATA->widgets->volctl, !(control->volume == -1) );
+    gtk_widget_set_visible( MP_GLDATA->widgets->volume, (control->volume > -1) );
 
     if( ( NULL != control->current ) && ( 0 != strlen( control->current->path ) ) ) {
         usedb=( control->root->key || control->remote )?TRUE:FALSE;
@@ -370,8 +370,9 @@ static int g_updateUI( void *data ) {
                                control->current->display );
     }
 
-    gtk_progress_bar_set_fraction( GTK_PROGRESS_BAR( MP_GLDATA->widgets->volume ),
-                                   control->volume/100.0 );
+    if( control->argument == NULL ) {
+    	gtk_scale_button_set_value ( GTK_SCALE_BUTTON( MP_GLDATA->widgets->volume ), control->volume/100.0 );
+    }
     gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->played ),
                         control->playtime );
     gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->remain ),

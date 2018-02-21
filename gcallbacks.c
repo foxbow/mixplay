@@ -8,12 +8,20 @@
 #include "gladeutils.h"
 #include "player.h"
 
-void voli( GtkButton *button, gpointer data ) {
-    setCommand( mpc_ivol );
-}
-
-void vold( GtkButton *button, gpointer data ) {
-    setCommand( mpc_dvol );
+/**
+ * callback for the volume button
+ */
+void setvol( GtkButton *button, gpointer data ) {
+	int vol;
+	mpconfig *conf=getConfig();
+	vol = (int)(gtk_scale_button_get_value ( GTK_SCALE_BUTTON( MP_GLDATA->widgets->volume ) )*100);
+	/* make sure a volume command can and needs to be sent */
+	if( ( conf->argument == NULL ) && ( vol != conf->volume ) ) {
+		conf->volume = vol;
+		conf->argument=falloc( 4, sizeof( char ) );
+		sprintf( conf->argument, "%i", vol );
+		setCommand( mpc_setvol );
+	}
 }
 
 /**

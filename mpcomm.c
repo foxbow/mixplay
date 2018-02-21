@@ -434,13 +434,14 @@ void *netreader( void *control ) {
 				}
 			}
 			else if( config->command == mpc_setvol ) {
-				sprintf( commdata, "get /cmd/%s?%i HTTP/1.1\015\012xmixplay: 1\015\012\015\012",
-						mpcString( config->command ), config->volume );
+				sprintf( commdata, "get /cmd/%s?%s HTTP/1.1\015\012xmixplay: 1\015\012\015\012",
+						mpcString( config->command ), config->argument );
 			}
 			else {
 				sprintf( commdata, "get /cmd/%s HTTP/1.1\015\012xmixplay: 1\015\012\015\012", mpcString( config->command ) );
 			}
 			config->command=mpc_idle;
+			sfree( &(config->argument) );
 		}
 		else if( intr == 0) {
            	sprintf( commdata, "get /status HTTP/1.1\015\012xmixplay: 1\015\012\015\012" );

@@ -39,7 +39,6 @@ static void buildUI( mpconfig *control ) {
     GW( remain );
     GW( progress );
     GW( button_profile );
-    GW( volctl );
     GW( volume );
 #undef GW
     MP_GLDATA->widgets->mp_popup = NULL;

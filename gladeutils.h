@@ -37,7 +37,6 @@ struct _MpData_t {
     GtkWidget *button_profile;
     /* popup elements */
     GtkWidget *mp_popup;
-    GtkWidget *volctl;
     GtkWidget *volume;
 };
 
