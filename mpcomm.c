@@ -416,36 +416,42 @@ void *netreader( void *control ) {
 
         /* check current command */
 		pthread_mutex_trylock( &_cmdlock );
-		if( config->command == mpc_quit ) {
+		switch( config->command ) {
+		case mpc_quit:
 			config->status=mpc_quit;
-		}
-		else if( config->command != mpc_idle ) {
-			if( config->command == mpc_profile ) {
-				sprintf( commdata, "get /cmd/%s?%i HTTP/1.1\015\012xmixplay: 1\015\012\015\012",
-						mpcString( config->command ), config->active );
-			}
-			else if( config->command == mpc_search ) {
-				if( config->argument != NULL ) {
-					sprintf( commdata, "get /cmd/%s?%s HTTP/1.1\015\012xmixplay: 1\015\012\015\012",
-							mpcString( config->command ), config->argument );
-				}
-				else {
-					addMessage( 0, "No searchterm given!" );
-				}
-			}
-			else if( config->command == mpc_setvol ) {
+			break;
+		case mpc_profile:
+			sprintf( commdata, "get /cmd/%s?%i HTTP/1.1\015\012xmixplay: 1\015\012\015\012",
+					mpcString( config->command ), config->active );
+			break;
+		/* commands that send an argument */
+		case mpc_search:
+		case mpc_setvol:
+			if( config->argument != NULL ) {
 				sprintf( commdata, "get /cmd/%s?%s HTTP/1.1\015\012xmixplay: 1\015\012\015\012",
 						mpcString( config->command ), config->argument );
 			}
 			else {
-				sprintf( commdata, "get /cmd/%s HTTP/1.1\015\012xmixplay: 1\015\012\015\012", mpcString( config->command ) );
+				addMessage( 0, "No argument for %s!", mpcString( config->command ) );
 			}
-			config->command=mpc_idle;
-			sfree( &(config->argument) );
+			break;
+		case mpc_idle:
+			/* nothing happened? Then ask for the current status
+			 * otherwise an update reply would trigger yet another update and
+			 * turn this into a CPU/network hog loop!
+			 */
+			if( intr == 0) {
+				sprintf( commdata, "get /status HTTP/1.1\015\012xmixplay: 1\015\012\015\012" );
+			}
+			break;
+		/* just forward any other command */
+		default:
+			sprintf( commdata, "get /cmd/%s HTTP/1.1\015\012xmixplay: 1\015\012\015\012", mpcString( config->command ) );
+			break;
 		}
-		else if( intr == 0) {
-           	sprintf( commdata, "get /status HTTP/1.1\015\012xmixplay: 1\015\012\015\012" );
-		}
+
+		config->command=mpc_idle;
+		sfree( &(config->argument) );
 
        	while( len < strlen( commdata ) ) {
        		retval=send( sock , commdata+len, strlen( commdata )-len, 0 );
