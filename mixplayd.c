@@ -132,6 +132,7 @@ static void *clientHandler(void *args )
     const unsigned char *fdata;
     unsigned int flen;
     int fullstat=-1;
+    int okreply=-1;
 
     commdata=falloc( commsize, sizeof( char ) );
 
@@ -182,9 +183,9 @@ static void *clientHandler(void *args )
 						}
 						pos=NULL;
 					}
-					/* legacy entry */
-					else if( strstr( pos, "xmixplay: 0" ) == pos ) {
-						running=1;
+					/* don't send empty replies for non-web clients */
+					else if( strstr( pos, "xmixplay: 1" ) == pos ) {
+						okreply=0;
 					}
 					else if( strstr( pos, "get" ) == pos ) {
 						pos=pos+4;
@@ -305,8 +306,10 @@ static void *clientHandler(void *args )
     			break;
     		case 21: /* set command */
     			if( cmd != mpc_idle ) {
-    				sprintf( commdata, "HTTP/1.1 204 No Content\015\012\015\012" );
-    				len=strlen( commdata );
+    				if( okreply ) {
+    					sprintf( commdata, "HTTP/1.1 204 No Content\015\012\015\012" );
+    					len=strlen( commdata );
+    				}
     				if( ( cmd == mpc_dbinfo ) || ( cmd == mpc_dbclean) ||
     						( cmd == mpc_doublets ) || ( cmd == mpc_shuffle ) ||
 							( cmd == mpc_search ) ) {
