@@ -1,0 +1,36 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mixplay RC</title>
+  </head>
+  <body>
+    <script>
+    function sendCMD( cmd ) {
+	var xmlhttp=new XMLHttpRequest();
+	xmlhttp.onreadystatechange=function() {
+  		if ( xmlhttp.readyState==4 && xmlhttp.status!=204 ) {
+			alert( "Error "+xmlhttp.status );
+  		}
+	}
+	xmlhttp.open("GET", "/cmd/"+cmd, true);
+	xmlhttp.send();
+	}
+    </script>
+    <h1>Mixplay RC</h1>
+    <p>
+    <input id='prev'  type='button' onclick='sendCMD("mpc_prev")' value='PREV' >
+    <input id='next'  type='button' onclick='sendCMD("mpc_next")' value='NEXT' >
+    </p><p>
+    <input id='pause' type='button' onclick='sendCMD("mpc_play")' value='PLAY/PAUSE' >
+    </p><p>
+    <input id='dnp'   type='button' onclick='sendCMD("mpc_dnptitle")' value='DNP' >
+	<input id='fav'   type='button' onclick='sendCMD("mpc_favtitle")' value='FAV' >
+	</p><p>
+	<input id='dvol'  type='button' onclick='sendCMD("mpc_dvol")' value='-' >
+	<input id='ivol'  type='button' onclick='sendCMD("mpc_ivol")' value='+' >
+	</p>
+  </body>
+</html>

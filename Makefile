@@ -90,6 +90,9 @@ install-global: all
 mixplayd_html.h: static/mixplay.html
 	xxd -i static/mixplay.html > mixplayd_html.h
 
+mprc_html.h: static/mprc.html
+	xxd -i static/mprc.html > mprc_html.h
+
 mixplayd_css.h: static/mixplay.css
 	xxd -i static/mixplay.css > mixplayd_css.h
 

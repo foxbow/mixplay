@@ -29,6 +29,7 @@
 #include "player.h"
 #include "mpcomm.h"
 #include "mixplayd_html.h"
+#include "mprc_html.h"
 #include "mixplayd_js.h"
 #include "mixplayd_css.h"
 
@@ -123,13 +124,13 @@ static void *clientHandler(void *args )
     int state=0;
     char *pos, *end;
     mpcmd cmd=mpc_idle;
-    static char *mtype;
+    static const char *mtype;
     mptitle *playing=NULL;
     size_t commsize=MP_BLKSIZE;
     ssize_t retval=0;
     ssize_t recvd=0;
-    const char *fname;
-    const unsigned char *fdata;
+    static const char *fname;
+    static const unsigned char *fdata;
     unsigned int flen;
     int fullstat=-1;
     int okreply=-1;
@@ -236,6 +237,14 @@ static void *clientHandler(void *args )
 								flen=static_mixplay_html_len;
 								mtype="text/html; charset=utf-8";
 								state=5;
+							}
+							else if( strcmp( pos, "/rc.html" ) == 0 ) {
+								fname="static/mprc.html";
+								fdata=static_mprc_html;
+								flen=static_mprc_html_len;
+								mtype="text/html; charset=utf-8";
+								state=5;
+
 							}
 							else if( strcmp( pos, "/mixplay.css" ) == 0 ) {
 								fname="static/mixplay.css";
@@ -591,7 +600,7 @@ int main( int argc, char **argv ) {
             /* todo collect pids?
              * or better use a threadpool */
             if( pthread_create( &pid , NULL ,  clientHandler , (void*) new_sock) < 0) {
-                fail( errno, "Could not create thread!" );
+                fail( errno, "Could not create client handler thread!" );
                 control->status=mpc_quit;
             }
         }
