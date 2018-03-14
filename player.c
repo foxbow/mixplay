@@ -774,6 +774,7 @@ void *reader( void *cont ) {
 
             if( 1 == order ) {
                 addMessage( 0, "Restarting player.." );
+                control->status=mpc_start;
                 setProfile( control );
                 control->current = control->root;
             }
@@ -843,7 +844,7 @@ void *reader( void *cont ) {
 
         case mpc_profile:
             write( p_command[fdset][1], "STOP\n", 6 );
-            control->status=mpc_idle;
+            control->status=mpc_start;
             if( control->dbname[0] == 0 ) {
             	i=control->active;
             	readConfig( );
@@ -855,9 +856,9 @@ void *reader( void *cont ) {
             break;
 
         case mpc_shuffle:
+            control->status=mpc_start;
             control->root=shuffleTitles(control->root);
             control->current=control->root;
-			control->status=mpc_start;
 			sendplay( p_command[fdset][1], control );
         	break;
 

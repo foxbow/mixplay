@@ -9,7 +9,7 @@
 #include "player.h"
 
 /**
- * callback for the volume button
+ * callbacks for the volume button
  */
 void setvol( GtkButton *button, gpointer data ) {
 	int vol;
@@ -22,6 +22,14 @@ void setvol( GtkButton *button, gpointer data ) {
 		sprintf( conf->argument, "%i", vol );
 		setCommand( mpc_setvol );
 	}
+}
+
+void incvol( GtkButton *button, gpointer data ) {
+	setCommand( mpc_ivol );
+}
+
+void decvol( GtkButton *button, gpointer data ) {
+	setCommand( mpc_dvol );
 }
 
 /**

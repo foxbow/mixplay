@@ -150,7 +150,6 @@ static void *clientHandler(void *args )
     	to.tv_sec=0;
     	to.tv_usec=100000; /* 1/2 second */
     	select( FD_SETSIZE, &fds, NULL, NULL, &to );
-
     	if( FD_ISSET( sock, &fds ) ) {
     		memset( commdata, 0, commsize );
     		recvd=0;
@@ -318,6 +317,9 @@ static void *clientHandler(void *args )
     				if( okreply ) {
     					sprintf( commdata, "HTTP/1.1 204 No Content\015\012\015\012" );
     					len=strlen( commdata );
+    				}
+    				else {
+    					state=0;
     				}
     				if( ( cmd == mpc_dbinfo ) || ( cmd == mpc_dbclean) ||
     						( cmd == mpc_doublets ) || ( cmd == mpc_shuffle ) ||
