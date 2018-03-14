@@ -80,8 +80,9 @@ int main( int argc, char **argv ) {
     XInitThreads();
     gtk_init( &argc, &argv );
 
-    control->fade=1;
     glcontrol.fullscreen=0;
+    control->root=NULL;
+    control->playstream=0;
 
     if( ( getArgs( argc, argv ) != 0 ) && ( control->remote ) ) {
 		addMessage( 0, "Disabling remote connection" );
@@ -89,9 +90,6 @@ int main( int argc, char **argv ) {
 	}
 
     buildUI( control );
-
-    control->root=NULL;
-    control->playstream=0;
 
     initAll( 1 );
 

@@ -142,6 +142,7 @@ int setArgument( const char *arg ) {
 
 	control->active=0;
     if( isURL( arg ) ) {
+        addMessage( 1, "URL: %s", arg );
         control->playstream=1;
         line[0]=0;
 
@@ -158,6 +159,7 @@ int setArgument( const char *arg ) {
         return 1;
     }
     else if( endsWith( arg, ".mp3" ) ) {
+        addMessage( 1, "Single file: %s", arg );
         /* play single song... */
     	control->root=cleanTitles( control->root );
         control->root=insertTitle( NULL, arg );
@@ -165,6 +167,7 @@ int setArgument( const char *arg ) {
         return 2;
     }
     else if( isDir( arg ) ) {
+        addMessage( 1, "Directory: %s", arg );
     	control->root=cleanTitles( control->root );
         strncpy( line, arg, MAXPATHLEN );
         control->root=recurse( line, NULL );
@@ -192,13 +195,15 @@ int setArgument( const char *arg ) {
             chdir( line );
         }
 
+        addMessage( 1, "Playlist: %s", arg );
         cleanTitles( control->root );
         control->root=loadPlaylist( arg );
         control->current=control->root;
         return 4;
     }
 
-    return 0;
+    fail( F_FAIL, "Illegal argument '%s'!", arg );
+    return -1;
 }
 
 /**
@@ -307,8 +312,8 @@ void *setProfile( void *data ) {
 
         addMessage( 1, "Profile set to %s.", profile );
     }
-    else {
-    	fail( F_FAIL, "Neither profile nor stream set!" );
+    else if( control->root == NULL ) {
+    	fail( F_FAIL, "No music set!" );
     }
 
     /* if we're not in player context, start playing automatically */
