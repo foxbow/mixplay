@@ -62,6 +62,7 @@ int main( int argc, char **argv ) {
     struct		glcontrol_t glcontrol;
     int 		db=0;
 
+    /* read default configuration */
     control=readConfig();
     if( NULL == control ) {
     	/* todo: get default music dir! */
@@ -69,10 +70,10 @@ int main( int argc, char **argv ) {
         control=readConfig();
     }
 
+    /* add special GTK data */
     memset( &glcontrol, 0, sizeof( struct glcontrol_t ) );
+    glcontrol.msgbuff=msgBuffInit();
     control->data=&glcontrol;
-
-    MP_GLDATA->msgbuff=msgBuffInit();
 
     muteVerbosity();
 
@@ -80,17 +81,13 @@ int main( int argc, char **argv ) {
     XInitThreads();
     gtk_init( &argc, &argv );
 
-    glcontrol.fullscreen=0;
-    control->root=NULL;
-    control->playstream=0;
-
+    /* parse command line */
     if( ( getArgs( argc, argv ) != 0 ) && ( control->remote ) ) {
 		addMessage( 0, "Disabling remote connection" );
 		control->remote=0;
 	}
 
     buildUI( control );
-
     initAll( 1 );
 
     /* Start main loop */
@@ -104,8 +101,6 @@ int main( int argc, char **argv ) {
     }
 
     freeConfig( );
-
     dbClose( db );
-
     return( 0 );
 }

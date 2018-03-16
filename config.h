@@ -104,7 +104,7 @@ int incVerbosity( void );
 void muteVerbosity( void );
 
 void addMessage( int v, char *msg, ... );
-int getMessage( char *msg );
+char *getMessage( void );
 
 const char *mpcString( mpcmd cmd );
 const mpcmd mpcCommand( const char *val );

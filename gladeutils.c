@@ -160,6 +160,8 @@ static int g_progressLog( void *line ) {
     char *msg;
     char *title=NULL;
 
+    if( line == NULL ) return 0;
+
     pthread_mutex_lock( &gmsglock );
     msgBuffAdd( MP_GLDATA->msgbuff, line);
     msg=msgBuffAll( MP_GLDATA->msgbuff );
@@ -185,6 +187,7 @@ static int g_progressLog( void *line ) {
     }
 
     free( msg );
+    free( line );
     pthread_mutex_unlock( &gmsglock );
 
     return 0;
@@ -380,9 +383,7 @@ static int g_updateUI( void *data ) {
     gtk_progress_bar_set_fraction( GTK_PROGRESS_BAR( MP_GLDATA->widgets->progress ),
                                    control->percent/100.0 );
 
-    if( getMessage( buff ) > 0 ) {
-    	g_progressLog( buff );
-    }
+   	g_progressLog( getMessage() );
 
     return 0;
 }

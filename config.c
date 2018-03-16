@@ -3,8 +3,8 @@
  *
  * handles reading and writing the configuration
  *
- * the configuration file mooks like a standard GTK configuration for historical reasons.
- * It should also parse with the gtk_* functions but those are not always avalable in headless
+ * the configuration file looks like a standard GTK configuration for historical reasons.
+ * It should also parse with the gtk_* functions but those are not always available in headless
  * environments.
  *
  *  Created on: 16.11.2017
@@ -17,13 +17,11 @@
 #include <assert.h>
 #include <sys/stat.h>
 #include <getopt.h>
+#include <unistd.h>
 
 #include "utils.h"
 #include "musicmgr.h"
 #include "config.h"
-
-#include <unistd.h>
-
 #include "mpcomm.h"
 #include "player.h"
 
@@ -61,6 +59,9 @@ static const char *mpc_command[] = {
 	    "mpc_idle"
 };
 
+/*
+ * transform an mpcmd value into a string literal
+ */
 const char *mpcString( mpcmd cmd ) {
 	if( ( cmd >= 0 ) && ( cmd <= mpc_idle ) ) {
 		return mpc_command[cmd];
@@ -71,6 +72,9 @@ const char *mpcString( mpcmd cmd ) {
 	}
 }
 
+/*
+ * transform a string literal into an mpcmd value
+ */
 const mpcmd mpcCommand( const char *name ) {
 	int i;
 	for( i=0; i<= mpc_idle; i++ ) {
@@ -83,6 +87,10 @@ const mpcmd mpcCommand( const char *name ) {
 	return i;
 }
 
+/*
+ * sets the current command and decides if it needs to be sent to
+ * a remote player or just be handled locally
+ */
 void setCommand( mpcmd cmd ) {
 	mpconfig *config;
 	config=getConfig();
@@ -104,6 +112,9 @@ void setCommand( mpcmd cmd ) {
 	}
 }
 
+/*
+ * print out the default CLI help text
+ */
 static void printUsage( char *name ) {
 	addMessage( 0, "USAGE: %s [args] [resource]", name );
  	addMessage( 0, " -v : increase debug message level to display in app" );
@@ -120,6 +131,9 @@ static void printUsage( char *name ) {
     addMessage( 0, "           URL, path, mp3 file, playlist\n" );
 }
 
+/*
+ * parses the given flags and arguments
+ */
 int getArgs( int argc, char ** argv ){
 	mpconfig *config=getConfig();
 	unsigned char c;
@@ -532,24 +546,10 @@ void addMessage( int v, char *msg, ... ) {
 }
 
 /**
- * gets the current message removes it from the ring and frees the message buffer
- * returns 0 and makes msg an empty string if no message is in the ring
+ * gets the current message removes it from the ring
  */
-int getMessage( char *msg ) {
-	char *buf;
-
-	assert( c_config != NULL );
-	pthread_mutex_lock( &msglock );
-	buf=msgBuffGet( c_config->msg );
-	if( buf != NULL ) {
-		strcpy( msg, buf );
-		free(buf);
-	}
-	else {
-		msg[0]=0;
-	}
-	pthread_mutex_unlock( &msglock );
-	return strlen( msg );
+char *getMessage() {
+	return msgBuffGet( c_config->msg );
 }
 
 void incDebug( void ) {

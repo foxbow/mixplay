@@ -33,11 +33,10 @@ void setCurClient( int client ) {
 /*
  * sends all next messages to every client and allows other clients
  * to lock the messages
+ * only unlock if we really are the current client. Otherwise this is just a clean-up
+ * call to avoid a deadlock.
  */
 void unlockClient( int client ) {
-	/**
-	 * only unlock if we really are the current client. Otherwise this is just a clean-up call to avoid a deadlock.
-	 */
 	if( client == _curclient ) {
 		_curclient=-1;
 		pthread_mutex_unlock( &_clientlock );
@@ -55,6 +54,7 @@ void setSCommand( mpcmd cmd ) {
 
 /*
  * helperfunction to add a title to the given jsonOblect
+ * if title is NULL an empty title will be created
  */
 static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mptitle *title ) {
 	jsonObject *val=NULL;
@@ -79,7 +79,7 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mptitle 
 }
 
 /*
- * helperfunction to retrieve a title from the given jsonOblect
+ * helperfunction to retrieve title data from the given jsonOblect
  */
 static void jsonGetTitle( jsonObject *jo, const char *key, mptitle *title ) {
 	jsonObject *to;

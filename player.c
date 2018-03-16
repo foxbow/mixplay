@@ -87,25 +87,11 @@ static long controlVolume( long volume, int abs ) {
 }
 
 /*
- * naming wrapper for controlVolume
+ * naming wrappers for controlVolume
  */
-static long setVolume( long volume ) {
-	return controlVolume( volume, 1 );
-}
-
-/*
- * naming wrapper for controlVolume
- */
-static long getVolume( void ) {
-	return controlVolume( 0, 0 );
-}
-
-/*
- * naming wrapper for controlVolume
- */
-static long adjustVolume( long volume ) {
-	return controlVolume( volume, 0 );
-}
+#define setVolume(v)    controlVolume(v,1)
+#define getVolume()     controlVolume(0,0)
+#define adjustVolume(d) controlVolume(d,0)
 
 /**
  * sets the given stream
@@ -133,7 +119,6 @@ void setPCommand(  mpcmd cmd ) {
 /**
  * parse arguments given to the application
  * also handles playing of a single file, a directory, a playlist or an URL
- * returns 0 if nothing was recognized
  */
 int setArgument( const char *arg ) {
     char line [MAXPATHLEN];

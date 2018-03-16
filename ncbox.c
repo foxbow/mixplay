@@ -3,6 +3,8 @@
  */
 
 #include "ncbox.h"
+
+#include <assert.h>
 #include <ncurses.h>
 #include <string.h>
 #include <stdlib.h>
@@ -109,6 +111,8 @@ void popUp( int time, const char *text, ... ) {
     char *p;
     char **lines;
     va_list vargs;
+
+    assert( text != NULL );
 
     va_start( vargs, text );
     vsnprintf( buff, 1024, text, vargs );
@@ -359,6 +363,8 @@ void updateUI( ) {
 	mpconfig *control=getConfig();
     char status[MP_MSGLEN];
     int i;
+    char *msg;
+
 
     if( isendwin() ) {
     	control->status = mpc_quit;
@@ -391,7 +397,9 @@ void updateUI( ) {
 	}
 	drawframe( control->current, status, control->playstream );
 
-	if( getMessage( status ) ) {
-		popUp( 1, status );
-    }
+	msg=getMessage();
+	if( msg != NULL ) {
+		popUp( 1, msg );
+		free(msg);
+	}
 }
