@@ -43,16 +43,16 @@ clean:
 	rm -f *.o
 	rm -f *.gch
 	rm -f bin/*
+	rm -f dep.d
 	touch bin/KEEPDIR
 	
 distclean: clean
 	rm static/CURVER	
 	rm static/mixplay.js
 	rm -f gmixplay_app.h
+	rm -f mprc_html.h
 	rm -f mixplayd_*.h
 	rm -f *~
-	rm -f *.d
-	rm -f *.Td
 	rm -f core
 
 new: clean all

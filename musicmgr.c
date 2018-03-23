@@ -1184,10 +1184,14 @@ void dumpInfo( mptitle *root, int global, int skip ) {
 
     for( pl=minplayed; pl <= maxplayed; pl++ ) {
         unsigned int pcount=0;
+        unsigned int dnpcnt=0;
 
         do {
             if( ( global || !( current->flags & MP_DNP ) ) && ( current->playcount == pl ) ) {
                 pcount++;
+                if( current->flags & MP_DNP ) {
+                	dnpcnt++;
+                }
             }
 
             if( global ) {
@@ -1200,22 +1204,42 @@ void dumpInfo( mptitle *root, int global, int skip ) {
         while( current != root );
 
         if( pcount > 0 ) {
-            switch( pl ) {
-            case 0:
-                addMessage( 0, "Never played:\t%i titles", pcount );
-                break;
+        	if( dnpcnt > 0 ) {
+				switch( pl ) {
+				case 0:
+					addMessage( 0, "Never played:\t%i titles (DNP: %i)", pcount, dnpcnt );
+					break;
 
-            case 1:
-                addMessage( 0, " Once played:\t%i titles", pcount );
-                break;
+				case 1:
+					addMessage( 0, " Once played:\t%i titles (DNP: %i)", pcount, dnpcnt );
+					break;
 
-            case 2:
-                addMessage( 0, "Twice played:\t%i titles", pcount );
-                break;
+				case 2:
+					addMessage( 0, "Twice played:\t%i titles (DNP: %i)", pcount, dnpcnt );
+					break;
 
-            default:
-                addMessage( 0, "%5i\ttimes played:\t%i titles", pl, pcount );
-            }
+				default:
+					addMessage( 0, "%5i\ttimes played:\t%i titles (DNP: %i)", pl, pcount, dnpcnt );
+				}
+        	}
+        	else {
+				switch( pl ) {
+				case 0:
+					addMessage( 0, "Never played:\t%i titles", pcount );
+					break;
+
+				case 1:
+					addMessage( 0, " Once played:\t%i titles", pcount );
+					break;
+
+				case 2:
+					addMessage( 0, "Twice played:\t%i titles", pcount );
+					break;
+
+				default:
+					addMessage( 0, "%5i\ttimes played:\t%i titles", pl, pcount );
+				}
+        	}
         }
     }
 
