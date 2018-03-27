@@ -11,11 +11,23 @@ GLOBJS=gladeutils.o gcallbacks.o gmixplay.o
 LIBS=-lmpg123 -lpthread
 REFS=alsa
 # daemon is always being built 
-EXES=bin/mixplayd 
+EXES=bin/mixplayd
+INST=install-mixplayd
+
+# Install globally when called as root
+ifeq ("$(shell id -un)","root")
+INST+=install-service
+BINDIR=/usr/local/bin
+SHAREDIR=/usr/local/share
+else
+BINDIR=$(HOME)/bin
+SHAREDIR=$(HOME)/.local/share
+endif
 
 # build GTK client?
 ifeq ("$(shell pkg-config --exists  gtk+-3.0 gmodule-2.0 x11; echo $$?)","0")
 EXES+=bin/gmixplay
+INST+=install-gmixplay
 REFS+=gtk+-3.0 gmodule-2.0 x11
 else
 $(info GTK is not installed, not building gmixplay )
@@ -24,6 +36,7 @@ endif
 # build ncurses client?
 ifeq ("$(shell pkg-config --exists  ncurses; echo $$?)","0")
 EXES+=bin/cmixplay
+INST+=install-cmixplay
 REFS+=ncurses
 else
 $(info ncurses is not installed, not building cmixplay )
@@ -69,24 +82,27 @@ bin/gmixplay: $(OBJS) $(GLOBJS)
 %.o: %.c
 	$(CC) $(CCFLAGS) -c $<
 	
-install: all	
+install-mixplayd: bin/mixplayd
+	install -d $(BINDIR)
+	install -s -m 0755 bin/mixplayd $(BINDIR)
+
+install-cmixplay: bin/cmixplay
 	install -d ~/bin/
-	install -s -m 0755 bin/cmixplay ~/bin/
-	install -s -m 0755 bin/gmixplay ~/bin/
-	install -s -m 0755 bin/mixplayd ~/bin/
+	install -s -m 0755 bin/cmixplay $(BINDIR)
+
+install-gmixplay: bin/gmixplay
+	install -d $(BINDIR)
+	install -s -m 0755 bin/gmixplay $(BINDIR)
 	install -d ~/.local/share/icons/
-	install -m 0644 static/mixplay.svg ~/.local/share/icons/
-	install -d ~/.local/share/applications/
-	desktop-file-install --dir=$(HOME)/.local/share/applications -m 0755 --set-key=Exec --set-value="$(HOME)/bin/gmixplay %u" --set-icon=$(HOME)/.local/share/icons/mixplay.svg --rebuild-mime-info-cache static/gmixplay.desktop
+	install -m 0644 static/mixplay.svg $(SHAREDIR)/icons/
+	install -d $(SHAREDIR)/applications/
+	desktop-file-install --dir=$(SHAREDIR)/applications -m 0755 --set-key=Exec --set-value="$(BINDIR)/gmixplay %u" --set-icon=$(SHAREDIR)/icons/mixplay.svg --rebuild-mime-info-cache static/gmixplay.desktop
 
-# disabled until static pages are internal part of mixplayd	
-install-global: all
-	install -s -m 0755 bin/cmixplay /usr/bin/
-	install -s -m 0755 bin/gmixplay /usr/bin/
-	install -s -m 0755 bin/mixplayd /usr/bin/
-	install -m 0644 static/mixplay.svg /usr/share/pixmaps/
-	desktop-file-install -m 0755 --rebuild-mime-info-cache static/gmixplay.desktop 
-
+install-service: install-mixplayd
+	$(info No service support yet!)
+	
+install: $(INST)
+	
 mixplayd_html.h: static/mixplay.html
 	xxd -i static/mixplay.html > mixplayd_html.h
 
