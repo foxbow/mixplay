@@ -876,17 +876,24 @@ void *reader( void *cont ) {
            	break;
 
         case mpc_longsearch:
+        case mpc_search:
 			if( control->argument == NULL ) {
 				progressStart( "Nothing to search for!" );
 				progressEnd();
 			}
 			else {
 				progressStart( "Looking for %s", control->argument );
-				i=searchPlay( control->current, control->argument, -1 );
+				if( control->command == mpc_search ) {
+					i=-1;
+					searchPlay( control->current, control->argument, 1 );
+				}
+				else {
+					i=searchPlay( control->current, control->argument, -1 );
+				}
 				if( i > 0) {
 					addMessage( 0, "Found %i titles", i );
 				}
-				else {
+				else if( i == 0 ){
 					addMessage( 0, "Nothing found =(" );
 				}
 				sfree( &(control->argument) );
@@ -894,20 +901,6 @@ void *reader( void *cont ) {
 			}
         	break;
 
-        case mpc_search:
-			if( control->argument == NULL ) {
-				progressStart( "Nothing to search for!" );
-				progressEnd();
-			}
-			else {
-				i=searchPlay( control->current, control->argument, 1 );
-				if( i == 0) {
-					progressStart( "Nothing found =(" );
-					progressEnd( );
-				}
-				sfree( &(control->argument) );
-			}
-        	break;
 
         case mpc_setvol:
         	if( control->argument != NULL ) {
@@ -917,7 +910,9 @@ void *reader( void *cont ) {
         	break;
 
         case mpc_idle:
-        	/* read current Hardware volume in case it changed externally */
+        	/* read current Hardware volume in case it changed externally
+        	 * don't read before control->argument is NULL as someone may be
+        	 * trying to set the volume right now  */
         	if( (control->argument == NULL) && ( control->volume != -1 ) ) {
         		control->volume=getVolume( );
         	}

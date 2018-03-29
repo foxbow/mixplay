@@ -115,7 +115,7 @@ static void *clientHandler(void *args )
     int sock=*(int*)args;
     size_t len, sent, msglen;
     struct timeval to;
-    int running=-1; /* test */
+    int running=-1;
     char *commdata=NULL;
     char *jsonLine=NULL;
     fd_set fds;
@@ -318,9 +318,6 @@ static void *clientHandler(void *args )
     					sprintf( commdata, "HTTP/1.1 204 No Content\015\012\015\012" );
     					len=strlen( commdata );
     				}
-    				else {
-    					state=0;
-    				}
     				if( ( cmd == mpc_dbinfo ) || ( cmd == mpc_dbclean) ||
     						( cmd == mpc_doublets ) || ( cmd == mpc_shuffle ) ||
 							( cmd == mpc_search ) ) {
@@ -354,7 +351,6 @@ static void *clientHandler(void *args )
 					}
     			}
     			len=0;
-    			state=0;
     			running=0;
     			break;
     		case 61: /* get config */
@@ -372,6 +368,7 @@ static void *clientHandler(void *args )
     		default:
     			len=0;
     		}
+    		state=0;
 
 			if( len>0 ) {
 				sent=0;
@@ -384,10 +381,6 @@ static void *clientHandler(void *args )
 						sent=len;
 						addMessage( 1, "send failed" );
 					}
-				}
-				state=0;
-				if( running == 1 ) {
-					running=0;
 				}
 			}
     	}
