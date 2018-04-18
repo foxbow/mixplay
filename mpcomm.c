@@ -64,6 +64,7 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mptitle 
 		jsonAddStr( val, "album", title->album );
 		jsonAddStr( val, "title", title->title );
 		jsonAddInt( val, "flags", title->flags );
+		jsonAddStr( val, "genre", title->genre );
 		jsonAddInt( val, "playcount", title->playcount );
 		jsonAddInt( val, "skipcount", title->skipcount );
 	}
@@ -72,6 +73,7 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mptitle 
 		jsonAddStr( val, ",album", "---" );
 		jsonAddStr( val, ",title", "---" );
 		jsonAddInt( val, ",flags", 0 );
+		jsonAddStr( val, "genre", "---" );
 		jsonAddInt( val, "playcount", 0 );
 		jsonAddInt( val, "skipcount", 0 );
 	}
@@ -90,6 +92,7 @@ static void jsonGetTitle( jsonObject *jo, const char *key, mptitle *title ) {
 		jsonCopyChars(to, "album", title->album);
 		jsonCopyChars(to, "title", title->title);
 		title->flags=jsonGetInt( to, "flags" );
+		jsonCopyChars(to, "genre", title->genre);
 		title->playcount=jsonGetInt( to, "playcount" );
 		title->skipcount=jsonGetInt( to, "skipcount" );
 		sprintf( title->display, "%s - %s", title->artist, title->title );
@@ -416,20 +419,20 @@ void *netreader( void *control ) {
 
         /* check current command */
 		pthread_mutex_trylock( &_cmdlock );
-		switch( config->command ) {
+		switch( MPC_CMD(config->command) ) {
 		case mpc_quit:
 			config->status=mpc_quit;
 			break;
-		case mpc_profile:
-			sprintf( commdata, "get /cmd/%s?%i HTTP/1.1\015\012xmixplay: 1\015\012\015\012",
-					mpcString( config->command ), config->active );
-			break;
 		/* commands that send an argument */
+		case mpc_profile:
+		case mpc_newprof:
 		case mpc_search:
 		case mpc_setvol:
+		case mpc_fav:
+		case mpc_dnp:
 			if( config->argument != NULL ) {
-				sprintf( commdata, "get /cmd/%s?%s HTTP/1.1\015\012xmixplay: 1\015\012\015\012",
-						mpcString( config->command ), config->argument );
+				sprintf( commdata, "get /cmd/%04x?%s HTTP/1.1\015\012xmixplay: 1\015\012\015\012",
+						config->command, config->argument );
 			}
 			else {
 				addMessage( 0, "No argument for %s!", mpcString( config->command ) );
@@ -446,7 +449,7 @@ void *netreader( void *control ) {
 			break;
 		/* just forward any other command */
 		default:
-			sprintf( commdata, "get /cmd/%s HTTP/1.1\015\012xmixplay: 1\015\012\015\012", mpcString( config->command ) );
+			sprintf( commdata, "get /cmd/%04x HTTP/1.1\015\012xmixplay: 1\015\012\015\012", config->command );
 			break;
 		}
 

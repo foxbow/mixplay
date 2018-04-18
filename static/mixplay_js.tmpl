@@ -3,21 +3,13 @@ var data=null;
 var mpver=~~MPCOMM_VER~~;
 var msgline="";
 
-
-/**
- * used cmd's so far are:
- *  mpc_play,
- *  mpc_prev,
- *  mpc_next,
- *  mpc_favtitle,
- *  mpc_repl,
- *  mpc_dnptitle,
- *	mpc_ivol,
- *	mpc_dvol,
- *  mpc_quit - just terminate pmixplay
- */
-function sendCMD( cmd ) {
+function sendCMD( cmd, arg="" ) {
 	var xmlhttp=new XMLHttpRequest();
+	var code=Number(cmd).toString(16);
+    while (code.length < 4) {
+        code = "0" + code;
+    }
+	
 	xmlhttp.onreadystatechange=function() {
   		if ( xmlhttp.readyState==4 && xmlhttp.status!=204 ) {
   			if( xmlhttp.status == 0 ) {
@@ -25,12 +17,17 @@ function sendCMD( cmd ) {
   				doUpdate=0;
   			}
   			else {
-				alert( "Received Error "+xmlhttp.status+" after sending "+cmd );
+				alert( "Received Error "+xmlhttp.status+" after sending 0x"+code );
 			}
   		}
 	}
 	
-	xmlhttp.open("GET", "/cmd/"+cmd, true);
+	if( arg != "" ) {
+		xmlhttp.open("GET", "/cmd/"+code+"?"+arg, true);
+	}
+	else {
+		xmlhttp.open("GET", "/cmd/"+code, true);
+	}
 	xmlhttp.send();
 }
 
@@ -39,10 +36,10 @@ function sendCMD( cmd ) {
  */
 function volWheel( e ) {
   if( e.deltaY < 0 ) {
-    sendCMD( "mpc_ivol" );
+    sendCMD( 0x0d );
   }
   else if( e.deltaY > 0 ) {
-    sendCMD( "mpc_dvol" );
+    sendCMD( 0x0e );
   }
 }
 
@@ -68,6 +65,7 @@ function updateUI( ){
 			  			setElement( 'prev', data.prev.artist+" - "+data.prev.title );
 			  			setElement( 'artist', data.current.artist );
 			  			setElement( 'album', data.current.album );
+			  			setElement( 'genre', data.current.genre );
 			  			setElement( 'next', data.next.artist+" - "+data.next.title );
 			  			if( data.current.flags & 1 )  {
 				  			document.getElementById( 'fav' ).disabled=true;
@@ -101,7 +99,7 @@ function updateUI( ){
 		  	}
 		  	else if( xmlhttp.status==503 ) {
 		  		if( confirm( "Try to restart?" ) ) {
-		  			sendCMD( "mpc_start" );
+		  			sendCMD( 0x04 );
 		  		}
 		  		else{
 		  			alert( "Stopping updates.." );
@@ -119,22 +117,20 @@ function updateUI( ){
 }
 
 function setVolume( vol ) {
-	sendCMD( "mpc_setvol?"+vol );
+	sendCMD( 0x15, vol );
 }
 
 function search() {
 	var e=document.getElementById('range');
-	var term=e.options[e.selectedIndex].value;
+	var term=document.getElementById('text').value;
+	var cmd=0x0013;
+	cmd|=e.options[e.selectedIndex].value;
 	if(document.getElementById('fuzzy').checked || ( e == 'd' ) ) {
-		term=term+"*";
+		cmd|=0x1000;
 	}
-	else {
-		term=term+"=";
-	}
-	term=term+document.getElementById('text').value;
-	if( term.length > 4 ) {
+	if( term.length > 1 ) {
 		document.body.style.cursor='progress';
-		sendCMD( "mpc_search?"+term );
+		sendCMD( cmd, term );
 	}
 	else {
 		alert("Need at least two letters to search!");

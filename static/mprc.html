@@ -21,16 +21,16 @@
     </script>
     <h1>Mixplay RC</h1>
     <p>
-    <input id='prev'  type='button' onclick='sendCMD("mpc_prev")' value='PREV' >
-    <input id='next'  type='button' onclick='sendCMD("mpc_next")' value='NEXT' >
+    <input id='prev'  type='button' onclick='sendCMD(0x02)' value='PREV' >
+    <input id='next'  type='button' onclick='sendCMD(0x03)' value='NEXT' >
     </p><p>
-    <input id='pause' type='button' onclick='sendCMD("mpc_play")' value='PLAY/PAUSE' >
+    <input id='pause' type='button' onclick='sendCMD(0x00)' value='PLAY/PAUSE' >
     </p><p>
-    <input id='dnp'   type='button' onclick='sendCMD("mpc_dnptitle")' value='DNP' >
-	<input id='fav'   type='button' onclick='sendCMD("mpc_favtitle")' value='FAV' >
+    <input id='dnp'   type='button' onclick='sendCMD(0x010a)' value='DNP' >
+	<input id='fav'   type='button' onclick='sendCMD(0x0109)' value='FAV' >
 	</p><p>
-	<input id='dvol'  type='button' onclick='sendCMD("mpc_dvol")' value='-' >
-	<input id='ivol'  type='button' onclick='sendCMD("mpc_ivol")' value='+' >
+	<input id='dvol'  type='button' onclick='sendCMD(0x0d)' value='-' >
+	<input id='ivol'  type='button' onclick='sendCMD(0x0e)' value='+' >
 	</p>
   </body>
 </html>

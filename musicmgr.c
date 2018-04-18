@@ -107,7 +107,7 @@ struct marklist_t *cleanList( struct marklist_t *root ) {
 /**
  * add a line to a file
  */
-void addToFile( const char *path, const char *line, const char* prefix ) {
+void addToFile( const char *path, const char *line ) {
     FILE *fp;
     fp=fopen( path, "a" );
 
@@ -115,7 +115,6 @@ void addToFile( const char *path, const char *line, const char* prefix ) {
         fail( errno, "Could not open %s for writing ", path );
     }
 
-    fputs( prefix, fp );
     fputs( line, fp );
 
     if( '\n' != line[strlen( line )] ) {
@@ -484,36 +483,6 @@ void moveEntry( mptitle *entry, mptitle *pos ) {
         pos->plnext=entry;
         entry->plnext->plprev=entry;
     }
-}
-
-/**
- * add an entry to a list
- */
-struct marklist_t *addToList( const char *line, struct marklist_t **list ) {
-    struct marklist_t *entry, *runner;
-    entry=falloc( 1, sizeof( struct marklist_t ) );
-
-    if( NULL == entry ) {
-        fail( errno, "Could not add searchterm %s", line );
-    }
-
-    strlncpy( entry->dir, line, MAXPATHLEN );
-    entry->next = NULL;
-
-    if( NULL == *list ) {
-        *list=entry;
-    }
-    else {
-        runner=*list;
-
-        while( runner->next != NULL ) {
-            runner=runner->next;
-        }
-
-        runner->next=entry;
-    }
-
-    return *list;
 }
 
 /**
@@ -994,7 +963,7 @@ mptitle *skipTitles( mptitle *current, int num, const int global ) {
 /**
  * This function sets the favourite bit on titles found in the given list
  */
-int applyFavourites( mptitle *root, struct marklist_t *favourites ) {
+int applyFAVlist( mptitle *root, struct marklist_t *favourites ) {
     struct marklist_t *ptr = NULL;
     mptitle *runner=root;
     int cnt=0;
@@ -1027,38 +996,46 @@ int applyFavourites( mptitle *root, struct marklist_t *favourites ) {
  * marks the current title as favourite and uses range to check
  * if more favourites need to be included
  */
-int markFavourite( mptitle *title, int range ) {
+int markFAV( char *line ) {
+	mpconfig *config=getConfig();
     struct marklist_t buff;
+    addToFile( config->favname, line );
     buff.next=NULL;
+    strcpy( buff.dir, line );
+    return applyFAVlist( config->current, &buff );
+}
 
-    switch( range ) {
-    case SL_ALBUM:
-        snprintf( buff.dir, MAXPATHLEN, "l=%s", title->album );
-        break;
+int markDNP( char *line ) {
+	mpconfig *config=getConfig();
+    struct marklist_t buff;
+    addToFile( config->dnpname, line );
+    buff.next=NULL;
+    strcpy( buff.dir, line );
+    return applyDNPlist( config->current, &buff );
+}
 
-    case SL_ARTIST:
-        snprintf( buff.dir, MAXPATHLEN, "a=%s", title->artist );
-        break;
+/*
+ * returns the title with the given index
+ */
+mptitle *getTitle( unsigned int key ) {
+	mptitle *root=NULL;
+	mptitle *runner=NULL;
 
-    case SL_GENRE:
-        snprintf( buff.dir, MAXPATHLEN, "g*%s", title->genre );
-        break;
+	if( key == 0 ) {
+		return NULL;
+	}
 
-    case SL_PATH:
-        sprintf( buff.dir, "p=%s", title->path );
-        addMessage( 0, "Range path is obsolete!\n%s", title->display );
-        break;
-
-    case SL_TITLE:
-        sprintf( buff.dir, "t=%s", title->title );
-        break;
-
-    case SL_DISPLAY:
-        sprintf( buff.dir, "d=%s", title->display );
-        break;
-    }
-
-    return applyFavourites( title, &buff );
+	root=getConfig()->root;
+	if( root != NULL ) {
+		runner=root;
+		do {
+			if( runner->key == key ) {
+				return runner;
+			}
+			runner=runner->dbnext;
+		} while( runner != root );
+	}
+	return NULL;
 }
 
 /*
@@ -1342,4 +1319,66 @@ int writePlaylist( mptitle *root, const char *path ) {
 	fclose( fp );
 
 	return count;
+}
+
+int addRangePrefix( char *line, mpcmd cmd ) {
+	line[2]=0;
+	line[1]=MPC_ISFUZZY(cmd)?'*':'=';
+	switch( MPC_RANGE(cmd) ) {
+	case mpc_title:
+		line[0]='t';
+		break;
+	case mpc_artist:
+		line[0]='a';
+		break;
+	case mpc_album:
+		line[0]='l';
+		break;
+	case mpc_genre:
+		line[0]='g';
+		break;
+	case mpc_display:
+		line[0]='d';
+		break;
+	default:
+		addMessage( 1, "Unknown range %02x", MPC_RANGE(cmd) >> 8 );
+		return -1;
+	}
+
+	return 0;
+}
+
+/**
+ * wrapper to handle FAV and DNP. Uses the given title and the range definitions in cmd
+ * to create the proper config line and immediately applies it to the current playlist
+ */
+int handleRangeCmd( mptitle *title, mpcmd cmd ) {
+	char line[MAXPATHLEN];
+	if( addRangePrefix(line, cmd) == 0 ) {
+		switch( MPC_RANGE(cmd) ) {
+		case mpc_title:
+			strcat( line, title->title );
+			break;
+		case mpc_artist:
+			strcat( line, title->artist );
+			break;
+		case mpc_album:
+			strcat( line, title->album );
+			break;
+		case mpc_genre:
+			strcat( line, title->genre );
+			break;
+		case mpc_display:
+			strcat( line, title->display );
+			break;
+		}
+
+		if( MPC_CMD(cmd) == mpc_fav ) {
+			return markFAV( line );
+		}
+		else if( MPC_CMD(cmd) == mpc_dnp ) {
+			return markDNP( line );
+		}
+	}
+	return -1;
 }

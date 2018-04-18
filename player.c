@@ -238,7 +238,15 @@ void *setProfile( void *data ) {
     	active=active-1;
 
         if( active > control->profiles ) {
-            fail( F_FAIL, "Profile #%i does no exist!", active );
+        	if( control->argument == NULL ) {
+                addMessage ( 0, "Profile #%i does no exist!", active );
+                return NULL;
+        	}
+        	else {
+        		progressStart( "Creating new profile %s", control->argument );
+        		control->profile=realloc( control->profile, (active+1)*sizeof(char*) );
+        		control->profile[active]=control->argument;
+        	}
         }
 
         if( NULL == control->profile[active] ) {
@@ -261,7 +269,7 @@ void *setProfile( void *data ) {
         control->root=dbGetMusic( control->dbname );
 
         if( NULL == control->root ) {
-            addMessage( 1, "Scanning musicdir" );
+            addMessage( 0, "Scanning musicdir" );
             lastver=getVerbosity();
 
             if( lastver < 1 ) {
@@ -274,7 +282,7 @@ void *setProfile( void *data ) {
                 fail( F_FAIL, "No music found at %s!", control->musicdir );
             }
 
-            addMessage( 1, "Added %i titles.", num );
+            addMessage( 0, "Added %i titles.", num );
             control->root=dbGetMusic( control->dbname );
 
             if( NULL == control->root ) {
@@ -289,13 +297,18 @@ void *setProfile( void *data ) {
         	DNPSkip( control->root, control->skipdnp );
         }
         applyDNPlist( control->root, dnplist );
-        applyFavourites( control->root, favourites );
+        applyFAVlist( control->root, favourites );
         control->root=shuffleTitles( control->root );
         cleanList( dnplist );
         cleanList( favourites );
         control->playstream=0;
 
         addMessage( 1, "Profile set to %s.", profile );
+        if( control->argument != NULL ) {
+        	progressEnd();
+        	/* do not free, the string has become the new profile entry! */
+    		control->argument=NULL;
+        }
     }
     else if( control->root == NULL ) {
     	fail( F_FAIL, "No music set!" );
@@ -350,7 +363,8 @@ static void playCount( mpconfig *control ) {
  */
 void *reader( void *cont ) {
     mpconfig	*control;
-    mptitle 		*next;
+    mptitle 	*next;
+    mptitle		*title=NULL;
     fd_set				fds;
     struct timeval		to;
     int64_t	i, key;
@@ -365,6 +379,7 @@ void *reader( void *cont ) {
     int 	p_status[2][2];			/* status pipes to mpg123 */
     int 	p_command[2][2];		/* command pipes to mpg123 */
     pid_t	pid[2];
+    mpcmd   cmd=mpc_idle;
 
     control=( mpconfig * )cont;
     assert( control->fade < 2 );
@@ -667,11 +682,24 @@ void *reader( void *cont ) {
         } /* fgets() > 0 */
 
         pthread_mutex_trylock( &cmdlock );
+        cmd=MPC_CMD(control->command);
 
-        if( control->command != mpc_idle ) {
-        	addMessage(  2, "MPC %s", mpcString(control->command) );
+        if( cmd != mpc_idle ) {
+        	addMessage(  2, "MPC %s", mpcString(cmd) );
         }
-        switch( control->command ) {
+
+        /* get the target title for fav and dnp commands */
+        title=control->current;
+        if( ( cmd == mpc_fav ) || ( cmd == mpc_dnp ) ) {
+        	if( control->argument != NULL ) {
+        		if( ( title=getTitle( atoi( control->argument ) ) ) == NULL ) {
+            		title=control->current;
+        		}
+                sfree( &(control->argument) );
+        	}
+        }
+
+        switch( cmd ) {
         case mpc_start:
 			control->current = control->root;
         	if( control->status == mpc_start ) {
@@ -778,47 +806,14 @@ void *reader( void *cont ) {
             write( p_command[fdset][1], "STOP\n", 6 );
             break;
 
-        case mpc_dnptitle:
-            addToFile( control->dnpname, control->current->display, "d=" );
-            control->current=removeByPattern( control->current, "d=" );
+        case mpc_dnp:
+        	handleRangeCmd( title, control->command );
             order=1;
             write( p_command[fdset][1], "STOP\n", 6 );
             break;
 
-        case mpc_dnpalbum:
-            addToFile( control->dnpname, control->current->album, "l=" );
-            control->current=removeByPattern( control->current, "l=" );
-            order=1;
-            write( p_command[fdset][1], "STOP\n", 6 );
-            break;
-
-        case mpc_dnpartist:
-            addToFile( control->dnpname, control->current->artist, "a=" );
-            control->current=removeByPattern( control->current, "a=" );
-            order=1;
-            write( p_command[fdset][1], "STOP\n", 6 );
-            break;
-
-        case mpc_dnpgenre:
-            addToFile( control->dnpname, control->current->genre, "g*" );
-            control->current=removeByPattern( control->current, "g*" );
-            order=1;
-            write( p_command[fdset][1], "STOP\n", 6 );
-            break;
-
-        case mpc_favtitle:
-            addToFile( control->favname, control->current->display, "d=" );
-            control->current->flags|=MP_FAV;
-            break;
-
-        case mpc_favalbum:
-            addToFile( control->favname, control->current->album, "l=" );
-            markFavourite( control->current, SL_ALBUM );
-            break;
-
-        case mpc_favartist:
-            addToFile( control->favname, control->current->artist, "a=" );
-            markFavourite( control->current, SL_ARTIST );
+        case mpc_fav:
+        	handleRangeCmd( title, control->command );
             break;
 
         case mpc_repl:
@@ -833,16 +828,28 @@ void *reader( void *cont ) {
             break;
 
         case mpc_profile:
-            write( p_command[fdset][1], "STOP\n", 6 );
-            control->status=mpc_start;
-            if( control->dbname[0] == 0 ) {
-            	i=control->active;
-            	readConfig( );
-            	control->active=i;
-            }
-            setProfile( control );
-            control->current = control->root;
-            sendplay( p_command[fdset][1], control );
+        case mpc_newprof:
+        	if( control->argument == NULL ) {
+				progressStart( "No profile given!" );
+				progressEnd();
+        	}
+        	else {
+				write( p_command[fdset][1], "STOP\n", 6 );
+				control->status=mpc_start;
+				if( control->dbname[0] == 0 ) {
+					readConfig( );
+				}
+				if( cmd == mpc_newprof ) {
+					control->active=control->profiles+2;
+				}
+				else {
+					control->active=atoi( control->argument );
+				}
+				setProfile( control );
+				control->current = control->root;
+				sendplay( p_command[fdset][1], control );
+		        sfree( &(control->argument) );
+        	}
             break;
 
         case mpc_shuffle:
@@ -879,33 +886,29 @@ void *reader( void *cont ) {
         case mpc_search:
 			if( control->argument == NULL ) {
 				progressStart( "Nothing to search for!" );
-				progressEnd();
 			}
-			else {
-				progressStart( "Looking for %s", control->argument );
-				if( control->command == mpc_search ) {
-					i=-1;
-					searchPlay( control->current, control->argument, 1 );
-				}
-				else {
-					i=searchPlay( control->current, control->argument, -1 );
-				}
-				if( i > 0) {
+			else if( addRangePrefix( line, control->command ) == 0 ) {
+				strcat( line, control->argument );
+				if( cmd == mpc_longsearch ) {
+					progressStart( "Looking for %s", control->argument );
+					i=searchPlay(title, line, -1);
 					addMessage( 0, "Found %i titles", i );
 				}
-				else if( i == 0 ){
-					addMessage( 0, "Nothing found =(" );
+				else {
+					if( searchPlay(title, line, 1) == 0 ) {
+						progressStart( "Nothing found for %s", control->argument );
+					}
 				}
 				sfree( &(control->argument) );
-				progressEnd( );
 			}
+			progressEnd();
         	break;
 
 
         case mpc_setvol:
         	if( control->argument != NULL ) {
         		setVolume( atoi(control->argument) );
-        		sfree( &(control->argument) );
+				sfree( &(control->argument) );
         	}
         	break;
 
@@ -917,6 +920,10 @@ void *reader( void *cont ) {
         		control->volume=getVolume( );
         	}
             break;
+
+        default:
+        	/* modifiers are ignored */
+        	break;
         }
 
         control->command=mpc_idle;

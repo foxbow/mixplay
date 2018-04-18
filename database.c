@@ -367,10 +367,10 @@ static int checkPath( mptitle *entry, int range ) {
 	}
 
 	switch( range ) {
-	case SL_ARTIST:
+	case mpc_artist:
 		strlncpy( check,  entry->artist, NAMELEN );
 		break;
-	case SL_ALBUM:
+	case mpc_album:
 		strlncpy( check,  entry->artist, NAMELEN );
 		break;
 	default:
@@ -407,16 +407,16 @@ int dbNameCheck( const char *dbname ) {
 				if( !(runner->flags & MP_MARK ) ) {
 					if( streql( runner->display, currentEntry->display ) ) {
 						match=0;
-						if( checkPath( runner, SL_ARTIST ) ) {
+						if( checkPath( runner, mpc_artist ) ) {
 							match|=1;
 						}
-						if ( checkPath( runner, SL_ALBUM ) ){
+						if ( checkPath( runner, mpc_album ) ){
 							match|=2;
 						}
-						if( checkPath( currentEntry, SL_ARTIST ) ){
+						if( checkPath( currentEntry, mpc_artist ) ){
 							match|=4;
 						}
-						if( checkPath( currentEntry, SL_ALBUM ) ){
+						if( checkPath( currentEntry, mpc_album ) ){
 							match|=8;
 						}
 

@@ -567,3 +567,46 @@ void dumpbin( const void *data, size_t len ) {
 		putchar('\n');
 	}
 }
+
+/**
+ * treats a single character as a hex value
+ */
+char hexval( const char c ) {
+	if( ( c-'0' >= 0 ) && ( c-'9' <= 9 ) ) {
+		return c-'0';
+	}
+
+	if( ( c >= 'a') && ( c <= 'f' ) ) {
+		return 10+(c-'a');
+	}
+
+	if( ( c >= 'A') && ( c <= 'F' ) ) {
+		return 10+(c-'A');
+	}
+
+	addMessage( 1, "Invalid hex character %i - '%c'!", c, c );
+	return -1;
+}
+
+/*
+ * reads a hex number with length len
+ */
+int readHex( const char *txt, int len ) {
+	int val=0;
+	int mult=1;
+	int retval=0;
+
+	if( strlen(txt) < len ) {
+		return -1;
+	}
+
+	while( len > 0 ) {
+		len--;
+		val=hexval(txt[len]);
+		if( val == -1 ) return -1;
+		retval+=mult*val;
+		mult=mult*16;
+	}
+
+	return retval;
+}

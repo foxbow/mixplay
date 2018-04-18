@@ -193,16 +193,37 @@ int main( int argc, char **argv ) {
 
 					case 'd':
 					case 'b':
-						setCommand( mpc_dnptitle );
+				    	if( config->argument != NULL ) {
+				    		addMessage( 0, "Can't mark as DNP, argument is already set! [%s]", config->argument );
+				    	}
+				    	else {
+							config->argument=calloc( sizeof(char), 10);
+							snprintf( config->argument, 9, "%i", config->current->key );
+							setCommand( mpc_dnp|mpc_title );
+				    	}
 						break;
 
 					case 'D':
 					case 'B':
-						setCommand( mpc_dnpalbum );
+				    	if( config->argument != NULL ) {
+				    		addMessage( 0, "Can't mark as DNP, argument is already set! [%s]", config->argument );
+				    	}
+				    	else {
+							config->argument=calloc( sizeof(char), 10);
+							snprintf( config->argument, 9, "%i", config->current->key );
+							setCommand( mpc_dnp|mpc_album );
+				    	}
 						break;
 
-					case 'f': /* toggles the favourite flag on a title */
-						setCommand( mpc_favtitle );
+					case 'f': /* sets the favourite flag to a title */
+				    	if( config->argument != NULL ) {
+				    		addMessage( 0, "Can't mark as DNP, argument is already set! [%s]", config->argument );
+				    	}
+				    	else {
+							config->argument=calloc( sizeof(char), 10);
+							snprintf( config->argument, 9, "%i", config->current->key );
+							setCommand( mpc_fav|mpc_title );
+				    	}
 						break;
 					}
 				}

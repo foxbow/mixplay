@@ -10,7 +10,6 @@
 
 #include <pthread.h>
 #include <sys/types.h>
-#include "musicmgr.h"
 
 #define MP_MSGLEN 512
 
@@ -19,22 +18,17 @@
  * caveat: when changing this check *mpc_command[] in config.c too!
  */
 enum _mpcmd_t {
-    mpc_play,
+    mpc_play=0,
     mpc_stop,
     mpc_prev,
     mpc_next,
     mpc_start,
-    mpc_favtitle,
-    mpc_favartist,
-    mpc_favalbum,
     mpc_repl,
     mpc_profile,
     mpc_quit,
     mpc_dbclean,
-    mpc_dnptitle,
-    mpc_dnpartist,
-    mpc_dnpalbum,
-    mpc_dnpgenre,
+    mpc_fav,
+    mpc_dnp,
 	mpc_doublets,
 	mpc_shuffle,
 	mpc_ivol,
@@ -46,9 +40,34 @@ enum _mpcmd_t {
 	mpc_search,
 	mpc_longsearch,
 	mpc_setvol,
-    mpc_idle
+	mpc_newprof,
+    mpc_idle,
+	mpc_title=1<<8,
+	mpc_artist=2<<8,
+	mpc_album=3<<8,
+	mpc_genre=4<<8,
+	mpc_display=5<<8,
+	mpc_fuzzy=1<<12,
 };
 typedef enum _mpcmd_t mpcmd;
+
+#include "musicmgr.h"
+
+/*
+ * qualifiers for mpc_dnp, mpc_fav and mpc_(long)search
+ * 000F RRRR CCCC CCCC
+ */
+/* extract raw command */
+#define MPC_CMD(x)   (x&0x00ff)
+/* determine range */
+#define MPC_RANGE(x) (x&0x0f00)
+#define MPC_ISTITLE(x) (MPC_RANGE(x)==mpc_title)
+#define MPC_ISARTIST(x) (MPC_RANGE(x)==mpc_artist)
+#define MPC_ISALBUM(x) (MPC_RANGE(x)==mpc_album)
+#define MPC_ISGENRE(x) (MPC_RANGE(x)==mpc_genre)
+#define MPC_ISDISPLAY(x) (MPC_RANGE(x)==mpc_display)
+/* shall it be fuzzy */
+#define MPC_ISFUZZY(x) (x & mpc_fuzzy )
 
 /**
  * holds the widgets and pipes for communication
@@ -106,9 +125,9 @@ void muteVerbosity( void );
 void addMessage( int v, char *msg, ... );
 char *getMessage( void );
 
-const char *mpcString( mpcmd cmd );
+const char *mpcString( mpcmd rawcmd );
 const mpcmd mpcCommand( const char *val );
-void setCommand( mpcmd cmd );
+void setCommand( mpcmd rawcmd );
 int getArgs( int argc, char ** argv );
 int initAll( int );
 #endif /* _CONFIG_H_ */

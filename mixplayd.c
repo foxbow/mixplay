@@ -55,24 +55,9 @@ static int filePost( int sock, const char *fname ) {
 }
 
 /**
- * treats a single character as a hex value
- */
-static char hexval( const char c ) {
-	if( ( c-'0' >= 0 ) && ( c-'9' <= 9 ) ) {
-		return c-'0';
-	}
-
-	if( ( c >= 'a') && ( c <= 'f' ) ) {
-		return 10+(c-'a');
-	}
-
-	addMessage( 0, "Invalid hex character %i - '%c'!", c, c );
-	return -1;
-}
-
-/**
  * decodes parts in the form of %xx in fact I only expect to see %20
  * in search strings but who knows.. and it WILL break soon too..
+ * also considers \n or \r to be line end characters
  */
 static char *strdec( char *target, const char *src ) {
 	int i,j;
@@ -82,13 +67,16 @@ static char *strdec( char *target, const char *src ) {
 	for( i=0, j=0; i<strlen(src); i++ ) {
 		switch( state ) {
 		case 0:
-			if( src[i] != '%' ) {
-				target[j]=src[i];
-				j++;
-			}
-			else {
+			if( src[i] == '%' ) {
 				buf=0;
 				state=1;
+			}
+			if( ( src[i] == 0x0d ) || ( src[i] == 0x0a ) ) {
+				target[j]=0;
+			}
+			else {
+				target[j]=src[i];
+				j++;
 			}
 			break;
 		case 1:
@@ -110,8 +98,7 @@ static char *strdec( char *target, const char *src ) {
 /**
  * This will handle connection for each client
  */
-static void *clientHandler(void *args )
-{
+static void *clientHandler(void *args ) {
     int sock=*(int*)args;
     size_t len, sent, msglen;
     struct timeval to;
@@ -172,6 +159,7 @@ static void *clientHandler(void *args )
 				toLower( commdata );
 				pos=commdata;
 				while( pos != NULL ) {
+					/* empty line means we're done */
 					if( ( pos[0]==0x0d ) && ( pos[1]==0x0a ) ) {
 						switch(state){
 						case 0:
@@ -187,6 +175,7 @@ static void *clientHandler(void *args )
 					else if( strstr( pos, "xmixplay: 1" ) == pos ) {
 						okreply=0;
 					}
+					/* get command */
 					else if( strstr( pos, "get" ) == pos ) {
 						pos=pos+4;
 						end=strchr( pos, ' ' );
@@ -199,35 +188,30 @@ static void *clientHandler(void *args )
 								state=1;
 							}
 							else if( strstr( pos, "/cmd/" ) == pos ) {
-								if( strstr( pos+5, "mpc_profile?" ) == pos+5 ) {
-									*(pos+16)=0;
-									config->active=atoi( pos+17);
+								pos+=5;
+								cmd=readHex(pos,4);
+								if( cmd == -1 ) {
+									addMessage( 0, "Illegal command %s", pos );
+									cmd=mpc_idle;
 								}
-								else if( strstr( pos+5, "mpc_search?" ) == pos+5 ) {
-									*(pos+15)=0;
-									/* this should NEVER happen and is assert() worthy */
+								else {
+									addMessage( 1, "Got command 0x%04x from 0x%s", cmd, pos );
+								}
+								pos+=4;
+								if( *pos == '?' ) {
+									pos++;
 									if( config->argument != NULL ) {
 										addMessage( 0, "Stray argument: %s!", config->argument );
 										sfree( &(config->argument) );
 									}
-									config->argument=falloc( strlen( pos+16 )+1, sizeof( char ) );
-									strdec( config->argument, pos+16 );
+									config->argument=falloc( strlen( pos )+1, sizeof( char ) );
+									strdec( config->argument, pos );
 								}
-								else if( strstr( pos+5, "mpc_setvol?" ) == pos+5 ) {
-									*(pos+15)=0;
-									config->argument=falloc( strlen( pos+16 )+1, sizeof( char ) );
-									strdec( config->argument, pos+16 );
-								}
-								cmd=mpcCommand(pos+5);
-								switch( cmd ) {
-								case mpc_favalbum:
-								case mpc_favartist:
-								case mpc_favtitle:
+
+								if( MPC_CMD(cmd) == mpc_fav ) {
 									fullstat=-1;
-									break;
-								default:
-									break;
 								}
+
 								state=2;
 							}
 							else if( ( strcmp( pos, "/") == 0 ) || ( strcmp( pos, "/index.html" ) == 0 ) ) {
@@ -262,7 +246,7 @@ static void *clientHandler(void *args )
 							else if( strcmp( pos, "/favicon.ico" ) == 0 ) {
 								/* ignore for now */
 								send( sock, "HTTP/1.1 204 No Content\015\012\015\012", 28, 0 );
-								pos=0;
+								pos=NULL;
 							}
 							else if( strcmp( pos, "/config") == 0 ) {
 								state=6;
@@ -270,11 +254,16 @@ static void *clientHandler(void *args )
 							else {
 								addMessage( 1, "Illegal get %s", pos );
 								send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
+								running=0;
 								pos=NULL;
 							}
-							pos=end+1;
+							/* set pos to a sensible position so the next line can be found */
+							if( pos != NULL ) {
+								pos=end+1;
+							}
 						}
-					}
+					} /* /get command */
+
 					/* get next request line */
 					if( pos!=NULL ) {
 						while( pos[1] != 0 ) {
@@ -288,9 +277,9 @@ static void *clientHandler(void *args )
 							pos=NULL;
 						}
 					}
-				}
-			}
-		}
+				} /* while ( pos != NULL ) */
+			} /* switch(retval) */
+		} /* if fd_isset */
 
     	if( running && ( config->status != mpc_start ) ) {
     		memset( commdata, 0, commsize );
@@ -320,7 +309,7 @@ static void *clientHandler(void *args )
     				}
     				if( ( cmd == mpc_dbinfo ) || ( cmd == mpc_dbclean) ||
     						( cmd == mpc_doublets ) || ( cmd == mpc_shuffle ) ||
-							( cmd == mpc_search ) ) {
+							( MPC_CMD(cmd) == mpc_search ) ) {
     					setCurClient( sock );
     					/* setCurClient may block so we need to skip messages */
     					clmsg=config->msg->count;
@@ -383,8 +372,9 @@ static void *clientHandler(void *args )
 					}
 				}
 			}
-    	}
+    	} /* if running & !mpc_start */
 	}
+
     addMessage( 2, "Client handler exited" );
    	unlockClient( sock );
 	close(sock);
@@ -392,7 +382,7 @@ static void *clientHandler(void *args )
     sfree( &commdata );
     sfree( &jsonLine );
 
-    return 0;
+    return NULL;
 }
 
 /**

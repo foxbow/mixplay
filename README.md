@@ -83,3 +83,49 @@ clients. Also has a minimal web server to allow connection with a browser.
 * -v         : increase verbosity
 * [path|URL] : path to the music files [play from db]
 
+# Developer info
+The communication is wrapped simple HTTP request and JSON replies. The command structure looks as follows
+
+cmd = 000F RRRR CCCC CCCC
+
+### F - the 'fuzzy' flag for searching and marking
+
+### R -  the range:
+* 0x1 - title
+* 0x2 - artist
+* 0x3 - album
+* 0x4 - genre
+* 0x5 - display
+	
+### C - the actual commands:
+* 0x00 - play/pause
+* 0x01 - stop
+* 0x02 - previous title
+* 0x03 - next title
+* 0x04 - start*
+* 0x05 - replay
+* 0x06 - change profile +arg [string]
+* 0x07 - quit
+* 0x08 - clean up database
+* 0x09 - mark as favourite according to upper bytes
+* 0x0a - mark as do not play according to upper bytes
+* 0x0b - find double titles*
+* 0x0c - shuffle current playlist
+* 0x0d - increase volume
+* 0x0e - decrease volume
+* 0x0f - fast forward
+* 0x10 - reverse rewind
+* 0x11 - stop server*
+* 0x12 - send database information
+* 0x13 - search title +arg <string>
+* 0x14 - search titles +arg <string>*
+* 0x15 - set volume +arg <0..100>
+* 0x16 - idle / max command*
+
+args are set with the '?' operator. 
+Examples: 
+* set the volume to 50%: <server>:<port>/cmd/0015?50
+* search for a title named like 'lov hurs': <server>:<port>/cmd/1113?love+hurs
+
+
+

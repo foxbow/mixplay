@@ -10,26 +10,28 @@
   </head>
   <body>
     <div id='main' onselectstart='return false' onwheel='volWheel(event)' >
-      <div id='prev' onclick='sendCMD("mpc_prev")'>prev</div>
-      <div id='current' onclick='sendCMD("mpc_play")'>
+      <div id='prev' onclick='sendCMD(0x02)'>prev</div>
+      <div id='current' onclick='sendCMD(0x00)'>
 	    <div id='artist'>artist</div>
     	<div id='title' >title</div>
     	<div id='album' >album</div>
+    	<div id='genre' >genre</div>
 	  </div>
-      <div id='next' onclick='sendCMD("mpc_next")'>next</div>
-      <div id='ctrl'>
-	     <input id='dnp' type='button' onclick='sendCMD("mpc_dnptitle")' value='DNP' >
-    	 <input id='fav' type='button' onclick='sendCMD("mpc_favtitle")' value='FAV' >
-      </div>
-      <div id='playpack' onclick='sendCMD("mpc_repl")'>
+      <div id='next' onclick='sendCMD(0x03)'>next</div>
+      <div id='playpack' onclick='sendCMD(0x05)'>
         <div id='playtime'>00:00</div> <progress id='progress' value='0' max='100'></progress><div id='remtime'>00:00</div>
       </div>
        <select label='Range' id='range'>
-         <option value='t'>Title</option>
-         <option value='a'>Artist</option>
-         <option value='l'>Album</option>
-         <option value='d'>Full</option>
+         <option value='0x0100' selected>Title</option>
+         <option value='0x0200'>Artist</option>
+         <option value='0x0300'>Album</option>
+         <option value='0x0400'>Genre</option>
+         <option value='0x0500'>Full</option>
        </select>
+      <div id='ctrl'>
+	     <input id='dnp' type='button' onclick='sendCMD(0x0a)' value='DNP' >
+    	 <input id='fav' type='button' onclick='sendCMD(0x09)' value='FAV' >
+      </div>
        <input id='text' type='text'>
        Fuzzy <input id='fuzzy' title='Fuzzy' type='checkbox'>
        <input id='search' type='button' onclick='search()' value='Search' >       

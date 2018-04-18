@@ -4,6 +4,7 @@
  *  Created on: 25.04.2017
  *      Author: bweber
  */
+#include <stdlib.h>
 #include <string.h>
 #include "gladeutils.h"
 #include "player.h"
@@ -76,16 +77,63 @@ void markfav( GtkButton *button, gpointer data ) {
                  title->display,
                  title->album );
     gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
-                            "_Title",  mpc_favtitle,
-                            "A_lbum",  mpc_favalbum,
-                            "_Artist", mpc_favartist,
+                            "_Title",  mpc_fav|mpc_title,
+                            "A_lbum",  mpc_fav|mpc_album,
+                            "_Artist", mpc_fav|mpc_artist,
                             "_Cancel", GTK_RESPONSE_CANCEL,
                             NULL );
     reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
     gtk_widget_destroy( dialog );
 
     if( reply != GTK_RESPONSE_CANCEL ) {
-    	setCommand( reply );
+    	if( mpcontrol->argument != NULL ) {
+    		addMessage( 0, "Can't mark as DNP, argument is already set! [%s]", mpcontrol->argument );
+    	}
+    	else {
+			mpcontrol->argument=calloc( sizeof(char), 10);
+			snprintf( mpcontrol->argument, 9, "%i", title->key );
+			setCommand( reply );
+    	}
+    }
+}
+
+/*
+ * handles DNP requests
+ */
+void dnpStart( GtkButton *button, gpointer data ) {
+    GtkWidget *dialog;
+    int reply;
+    mpconfig *mpcontrol=getConfig();
+    mptitle  *current = mpcontrol->current;
+
+    dialog = gtk_message_dialog_new(
+                 GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
+                 GTK_DIALOG_DESTROY_WITH_PARENT,
+                 GTK_MESSAGE_QUESTION,
+                 GTK_BUTTONS_NONE,
+                 "Do not play\n%s\nAlbum: %s\nGenre: %s",
+                 current->display,
+                 current->album,
+                 current->genre );
+    gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
+                            "_Title",  mpc_dnp|mpc_title,
+                            "A_lbum",  mpc_dnp|mpc_album,
+                            "_Artist", mpc_dnp|mpc_artist,
+                            "_Genre",  mpc_dnp|mpc_genre,
+                            "_Cancel", GTK_RESPONSE_CANCEL,
+                            NULL );
+    reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
+    gtk_widget_destroy( dialog );
+
+    if( reply > 0 ) {
+    	if( mpcontrol->argument != NULL ) {
+    		addMessage( 0, "Can't mark as DNP, argument is already set! [%s]", mpcontrol->argument );
+    	}
+    	else {
+			mpcontrol->argument=calloc( sizeof(char), 10);
+			snprintf( mpcontrol->argument, 9, "%i", current->key );
+			setCommand( reply );
+    	}
     }
 }
 
@@ -111,7 +159,7 @@ void playPause( GtkButton *button, gpointer data ) {
 			gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
 									"Play",   mpc_play,
 									"_Replay", mpc_repl,
-									"_DNP",    mpc_dnptitle,
+									"_DNP",    mpc_dnp,
 									"_Shuffle",mpc_shuffle,
 									"_Quit",   mpc_quit,
 									NULL );
@@ -127,35 +175,8 @@ void playPause( GtkButton *button, gpointer data ) {
         gtk_widget_destroy( dialog );
 
         switch( reply ) {
-        case mpc_dnptitle:
-            dialog = gtk_message_dialog_new(
-                         GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
-                         GTK_DIALOG_DESTROY_WITH_PARENT,
-                         GTK_MESSAGE_QUESTION,
-                         GTK_BUTTONS_NONE,
-                         "Do not play\n%s\nAlbum: %s\nGenre: %s",
-                         mpcontrol->current->display,
-                         mpcontrol->current->album,
-                         mpcontrol->current->genre );
-            gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
-                                    "_Title",  mpc_dnptitle,
-                                    "A_lbum",  mpc_dnpalbum,
-                                    "_Artist", mpc_dnpartist,
-                                    "_Genre",  mpc_dnpgenre,
-                                    "_Cancel", GTK_RESPONSE_CANCEL,
-                                    NULL );
-            reply=gtk_dialog_run( GTK_DIALOG( dialog ) );
-            gtk_widget_destroy( dialog );
-
-            if( reply > 0 ) {
-                setCommand( reply );
-            }
-            else {
-				if( mpcontrol->status != mpc_play ) {
-					setCommand( mpc_play );
-				}
-            }
-
+        case mpc_dnp:
+        	dnpStart( button, data );
             break;
 
         case mpc_quit:
@@ -168,12 +189,12 @@ void playPause( GtkButton *button, gpointer data ) {
 
         case mpc_repl:
             setCommand( mpc_repl );
-            /* no break */
+            break;
 
-        default:
-            if( mpcontrol->status != mpc_play ) {
-                setCommand( mpc_play );
-            }
+        }
+
+        if( mpcontrol->status != mpc_play ) {
+            setCommand( mpc_play );
         }
     }
     else { /* someone else paused the player */
@@ -541,7 +562,14 @@ void profileStart( GtkButton *button, gpointer data ) {
     		mpcontrol->active = profile;
     	}
     	else if( mpcontrol->active != profile ) {
-    		setCommand( mpc_profile );
+			if( mpcontrol->argument != NULL ) {
+				addMessage( 0, "Can't change profile, argument is already set! [%s]", mpcontrol->argument );
+			}
+			else {
+				mpcontrol->argument=calloc( sizeof(char), 10);
+				snprintf( mpcontrol->argument, 9, "%i", mpcontrol->active );
+				setCommand( mpc_profile );
+			}
     	}
     	break;
     case mpc_shuffle:

@@ -1,5 +1,5 @@
-#ifndef MUSICMGR_H_
-#define MUSICMGR_H_
+#ifndef _MUSICMGR_H_
+#define _MUSICMGR_H_
 
 #include <dirent.h>
 
@@ -10,21 +10,12 @@
 
 #define RANDOM(x) (abs(rand()%x))
 
-
 #define MP_FAV  1	/* Favourite */
 #define MP_DNP  2   /* do not play */
 #define MP_CNTD 4	/* has been counted */
 #define MP_SKPD 8   /* has been skipped */
 #define MP_MARK 16	/* has been marked */
 #define MP_ALL  31
-
-#define SL_UNSET   0
-#define SL_TITLE   1
-#define SL_ALBUM   2
-#define SL_ARTIST  4
-#define SL_GENRE   8
-#define SL_PATH   16
-#define SL_DISPLAY 32
 
 typedef struct mptitle_t mptitle;
 struct mptitle_t {
@@ -35,12 +26,12 @@ struct mptitle_t {
     unsigned int playcount;		/* play counter */
     unsigned int skipcount;		/* skip counter */
     char genre[NAMELEN];
-    mptitle *plprev;		/* playlist pointer */
+    mptitle *plprev;			/* playlist pointer */
     unsigned int key;			/* DB key/index  - internal */
     char display[MAXPATHLEN];	/* Title display - internal */
     unsigned int flags;			/* 1=favourite   - internal */
     mptitle *plnext;
-    mptitle *dbprev;		/* database pointer */
+    mptitle *dbprev;			/* database pointer */
     mptitle *dbnext;
 };
 
@@ -49,38 +40,42 @@ struct marklist_t {
     struct marklist_t *next;
 };
 
+#include "config.h"
+
 /**
  * Music helper functions
  */
-void addToFile( const char *path, const char *line, const char* prefix );
+void addToFile( const char *path, const char *line );
 
 mptitle *addToPL( mptitle *title, mptitle *target );
 mptitle *recurse( char *curdir, mptitle *files );
 mptitle *shuffleTitles( mptitle *base );
 mptitle *rewindTitles( mptitle *base );
-mptitle *removeByPattern( mptitle *base, const char *pat );
 mptitle *loadPlaylist( const char *path );
 mptitle *insertTitle( mptitle *base, const char *path );
 mptitle *skipTitles( mptitle *current, int num, const int global );
 mptitle *searchList( mptitle *base, struct marklist_t *term );
+mptitle *getTitle( unsigned int key );
+mptitle *cleanTitles( mptitle *root );
+
 int DNPSkip( mptitle *base, const unsigned int level );
 int applyDNPlist( mptitle *base, struct marklist_t *list );
-int applyFavourites( mptitle *root, struct marklist_t *list );
-int markFavourite( mptitle *title, int range );
+int applyFAVlist( mptitle *root, struct marklist_t *list );
 int searchPlay( mptitle *root, const char *pat, unsigned num );
+int handleRangeCmd( mptitle *title, mpcmd cmd );
+int addRangePrefix( char *line, mpcmd cmd );
 
-mptitle *cleanTitles( mptitle *root );
 struct marklist_t *cleanList( struct marklist_t *root );
+struct marklist_t *loadList( const char *path );
+struct marklist_t *addToList( const char *line, struct marklist_t **list );
 
 void moveEntry( mptitle *entry, mptitle *pos );
 void newCount( mptitle * root );
 unsigned int getLowestPlaycount( mptitle *base, const int global );
-struct marklist_t *loadList( const char *path );
 int isMusic( const char *name );
-struct marklist_t *addToList( const char *line, struct marklist_t **list );
 void dumpTitles( mptitle *root, const int pl );
 void dumpInfo( mptitle *root, int db, int skip );
 int fillstick( mptitle *root, const char *target, int fav );
 int writePlaylist( mptitle *root, const char *path );
 
-#endif /* MUSICMGR_H_ */
+#endif /* _MUSICMGR_H_ */

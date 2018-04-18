@@ -34,17 +34,12 @@ static const char *mpc_command[] = {
 	    "mpc_prev",
 	    "mpc_next",
 	    "mpc_start",
-	    "mpc_favtitle",
-	    "mpc_favartist",
-	    "mpc_favalbum",
 	    "mpc_repl",
 	    "mpc_profile",
 	    "mpc_quit",
 	    "mpc_dbclean",
-	    "mpc_dnptitle",
-	    "mpc_dnpartist",
-	    "mpc_dnpalbum",
-	    "mpc_dnpgenre",
+	    "mpc_fav",
+	    "mpc_dnp",
 		"mpc_doublets",
 		"mpc_shuffle",
 		"mpc_ivol",
@@ -56,13 +51,15 @@ static const char *mpc_command[] = {
 		"mpc_search",
 		"mpc_longsearch",
 		"mpc_setvol",
+		"mpc_newprof",
 	    "mpc_idle"
 };
 
 /*
  * transform an mpcmd value into a string literal
  */
-const char *mpcString( mpcmd cmd ) {
+const char *mpcString( mpcmd rawcmd ) {
+	mpcmd cmd=MPC_CMD(rawcmd);
 	if( ( cmd >= 0 ) && ( cmd <= mpc_idle ) ) {
 		return mpc_command[cmd];
 	}
