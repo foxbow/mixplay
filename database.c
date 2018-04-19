@@ -346,15 +346,6 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 	return num;
 }
 
-/**
- * tests two strings on equality
- */
-static int streql( const char *str1, const char *str2 ) {
-	if( strlen( str1 ) != strlen( str2 ) ) return 0;
-	if( NULL == strstr( str1, str2 ) ) return 0;
-	return -1;
-}
-
 static int checkPath( mptitle *entry, int range ) {
 	char	path[MAXPATHLEN];
 	char	check[NAMELEN];
@@ -393,7 +384,7 @@ int dbNameCheck( const char *dbname ) {
 	fprintf( fp, "#!/bin/bash\n" );
 
 	if( NULL == fp ) {
-		fail( errno, "Could not open rmlist.txt for writing " );
+		fail( errno, "Could not open rmlist.sh for writing " );
 	}
 
 	root=dbGetMusic( dbname );
@@ -405,7 +396,7 @@ int dbNameCheck( const char *dbname ) {
 			runner=currentEntry->dbnext;
 			do {
 				if( !(runner->flags & MP_MARK ) ) {
-					if( streql( runner->display, currentEntry->display ) ) {
+					if( strcmp( runner->display, currentEntry->display ) == 0 ) {
 						match=0;
 						if( checkPath( runner, mpc_artist ) ) {
 							match|=1;
@@ -474,7 +465,7 @@ int dbNameCheck( const char *dbname ) {
 
 	fclose( fp );
 
-	addMessage(1, "Marked %i titles as removable", count );
+	addMessage(1, "Removed %i titles", count );
 
 	return count;
 }
