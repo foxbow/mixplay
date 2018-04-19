@@ -13,61 +13,61 @@
 #include "mpcomm.h"
 
 int main( int argc, char **argv ) {
-    mpconfig    *config;
-    int 		db=0;
-    fd_set fds;
-    struct timeval to;
+	mpconfig	*config;
+	int 		db=0;
+	fd_set fds;
+	struct timeval to;
 	char path[MAXPATHLEN];
-    long key;
+	long key;
 
-    config=readConfig();
+	config=readConfig();
 
-    if( config == NULL ) {
-        printf( "music directory needs to be set.\n" );
-        printf( "It will be set up now\n" );
+	if( config == NULL ) {
+		printf( "music directory needs to be set.\n" );
+		printf( "It will be set up now\n" );
 
-        while( 1 ) {
-            printf( "Default music directory:" );
-            fflush( stdout );
-            memset( path, 0, MAXPATHLEN );
-            fgets(path, MAXPATHLEN, stdin );
-            path[strlen( path )-1]=0; /* cut off CR */
-            abspath( path, getenv( "HOME" ), MAXPATHLEN );
+		while( 1 ) {
+			printf( "Default music directory:" );
+			fflush( stdout );
+			memset( path, 0, MAXPATHLEN );
+			fgets(path, MAXPATHLEN, stdin );
+			path[strlen( path )-1]=0; /* cut off CR */
+			abspath( path, getenv( "HOME" ), MAXPATHLEN );
 
-            if( isDir( path ) ) {
-                break;
-            }
-            else {
-                printf( "%s is not a directory!\n", path );
-            }
-        }
+			if( isDir( path ) ) {
+				break;
+			}
+			else {
+				printf( "%s is not a directory!\n", path );
+			}
+		}
 
-        writeConfig( path );
-        config=readConfig();
-        if( config == NULL ) {
-        	fail( F_FAIL, "Could not create config file!" );
-        }
-    }
+		writeConfig( path );
+		config=readConfig();
+		if( config == NULL ) {
+			fail( F_FAIL, "Could not create config file!" );
+		}
+	}
 
-    setVerbosity(1);
+	setVerbosity(1);
 
-    if( ( getArgs( argc, argv ) != 0 ) && ( config->remote ) ) {
+	if( ( getArgs( argc, argv ) != 0 ) && ( config->remote ) ) {
 		addMessage( 0, "Disabling remote connection" );
 		config->remote=0;
 	}
 
-    initAll( 0 );
+	initAll( 0 );
 
-    /* Start curses mode */
-    config->inUI=-1;
-    initscr();
-    curs_set( 0 );
-    cbreak();
-    keypad( stdscr, TRUE );
-    noecho();
-    drawframe( NULL, "INIT", config->playstream );
+	/* Start curses mode */
+	config->inUI=-1;
+	initscr();
+	curs_set( 0 );
+	cbreak();
+	keypad( stdscr, TRUE );
+	noecho();
+	drawframe( NULL, "INIT", config->playstream );
 
-    do {
+	do {
 		FD_ZERO( &fds );
 		FD_SET( fileno( stdin ), &fds );
 
@@ -193,37 +193,37 @@ int main( int argc, char **argv ) {
 
 					case 'd':
 					case 'b':
-				    	if( config->argument != NULL ) {
-				    		addMessage( 0, "Can't mark as DNP, argument is already set! [%s]", config->argument );
-				    	}
-				    	else {
+						if( config->argument != NULL ) {
+							addMessage( 0, "Can't mark as DNP, argument is already set! [%s]", config->argument );
+						}
+						else {
 							config->argument=calloc( sizeof(char), 10);
 							snprintf( config->argument, 9, "%i", config->current->key );
 							setCommand( mpc_dnp|mpc_title );
-				    	}
+						}
 						break;
 
 					case 'D':
 					case 'B':
-				    	if( config->argument != NULL ) {
-				    		addMessage( 0, "Can't mark as DNP, argument is already set! [%s]", config->argument );
-				    	}
-				    	else {
+						if( config->argument != NULL ) {
+							addMessage( 0, "Can't mark as DNP, argument is already set! [%s]", config->argument );
+						}
+						else {
 							config->argument=calloc( sizeof(char), 10);
 							snprintf( config->argument, 9, "%i", config->current->key );
 							setCommand( mpc_dnp|mpc_album );
-				    	}
+						}
 						break;
 
 					case 'f': /* sets the favourite flag to a title */
-				    	if( config->argument != NULL ) {
-				    		addMessage( 0, "Can't mark as DNP, argument is already set! [%s]", config->argument );
-				    	}
-				    	else {
+						if( config->argument != NULL ) {
+							addMessage( 0, "Can't mark as DNP, argument is already set! [%s]", config->argument );
+						}
+						else {
 							config->argument=calloc( sizeof(char), 10);
 							snprintf( config->argument, 9, "%i", config->current->key );
 							setCommand( mpc_fav|mpc_title );
-				    	}
+						}
 						break;
 					}
 				}
@@ -231,21 +231,21 @@ int main( int argc, char **argv ) {
 			}
 		}
 
-    } while( config->status != mpc_quit );
+	} while( config->status != mpc_quit );
 
-    endwin();
-    config->inUI=0;
+	endwin();
+	config->inUI=0;
 
-    addMessage( 2, "Dropped out of the main loop" );
+	addMessage( 2, "Dropped out of the main loop" );
 
-    pthread_join( config->rtid, NULL );
+	pthread_join( config->rtid, NULL );
 
-    if( config->changed ) {
-    	writeConfig( NULL );
-    }
-    freeConfig( );
+	if( config->changed ) {
+		writeConfig( NULL );
+	}
+	freeConfig( );
 
-    dbClose( db );
+	dbClose( db );
 
-    return( 0 );
+	return( 0 );
 }

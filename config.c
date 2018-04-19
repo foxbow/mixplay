@@ -8,7 +8,7 @@
  * environments.
  *
  *  Created on: 16.11.2017
- *      Author: bweber
+ *	  Author: bweber
  */
 #include <stdarg.h>
 #include <string.h>
@@ -29,17 +29,17 @@ static pthread_mutex_t msglock=PTHREAD_MUTEX_INITIALIZER;
 static mpconfig *c_config=NULL;
 
 static const char *mpc_command[] = {
-	    "mpc_play",
-	    "mpc_stop",
-	    "mpc_prev",
-	    "mpc_next",
-	    "mpc_start",
-	    "mpc_repl",
-	    "mpc_profile",
-	    "mpc_quit",
-	    "mpc_dbclean",
-	    "mpc_fav",
-	    "mpc_dnp",
+		"mpc_play",
+		"mpc_stop",
+		"mpc_prev",
+		"mpc_next",
+		"mpc_start",
+		"mpc_repl",
+		"mpc_profile",
+		"mpc_quit",
+		"mpc_dbclean",
+		"mpc_fav",
+		"mpc_dnp",
 		"mpc_doublets",
 		"mpc_shuffle",
 		"mpc_ivol",
@@ -52,7 +52,7 @@ static const char *mpc_command[] = {
 		"mpc_longsearch",
 		"mpc_setvol",
 		"mpc_newprof",
-	    "mpc_idle"
+		"mpc_idle"
 };
 
 /*
@@ -117,15 +117,15 @@ static void printUsage( char *name ) {
  	addMessage( 0, " -v : increase debug message level to display in app" );
 /*	addMessage( 0, " -S : run in fullscreen mode (gmixplay)" );*/
    	addMessage( 0, " -d : increase debug message level to display on console" );
-    addMessage( 0, " -f : single channel - disable fading" );
-    addMessage( 0, " -F : enable fading");
-    addMessage( 0, " -r : control remote mixplayd (see -p and -h)" );
-    addMessage( 0, " -l : play local music" );
-    addMessage( 0, " -h <addr> : set remote host" );
-    addMessage( 0, " -p <port> : set remote port [2347]" );
-    addMessage( 0, " -W': write changed config" );
-    addMessage( 0, " resource: resource to play" );
-    addMessage( 0, "           URL, path, mp3 file, playlist\n" );
+	addMessage( 0, " -f : single channel - disable fading" );
+	addMessage( 0, " -F : enable fading");
+	addMessage( 0, " -r : control remote mixplayd (see -p and -h)" );
+	addMessage( 0, " -l : play local music" );
+	addMessage( 0, " -h <addr> : set remote host" );
+	addMessage( 0, " -p <port> : set remote port [2347]" );
+	addMessage( 0, " -W': write changed config" );
+	addMessage( 0, " resource: resource to play" );
+	addMessage( 0, "		   URL, path, mp3 file, playlist\n" );
 }
 
 /*
@@ -135,81 +135,81 @@ int getArgs( int argc, char ** argv ){
 	mpconfig *config=getConfig();
 	unsigned char c;
 
-    /* parse command line options */
-    /* using unsigned char c to work around getopt quirk on ARM */
-    while ( ( c = getopt( argc, argv, "vfldFrh:p:W" ) ) != 255 ) {
-        switch ( c ) {
-        case 'v': /* increase debug message level to display */
-            incVerbosity();
-            break;
+	/* parse command line options */
+	/* using unsigned char c to work around getopt quirk on ARM */
+	while ( ( c = getopt( argc, argv, "vfldFrh:p:W" ) ) != 255 ) {
+		switch ( c ) {
+		case 'v': /* increase debug message level to display */
+			incVerbosity();
+			break;
 
-/*        case 'S':
-        	if( strcmp( argv[0], "gmixplay" ) == 0 ) {
-        		glcontrol.fullscreen=1;
-        	}
-        	else {
-        		addMessage( 0, "-S not supported for %s!", argv[0] );
-        	}
-            break;
+/*		case 'S':
+			if( strcmp( argv[0], "gmixplay" ) == 0 ) {
+				glcontrol.fullscreen=1;
+			}
+			else {
+				addMessage( 0, "-S not supported for %s!", argv[0] );
+			}
+			break;
 */
-        case 'd': /* increase debug message level to display on console */
-            incDebug();
-            break;
+		case 'd': /* increase debug message level to display on console */
+			incDebug();
+			break;
 
-        case 'f': /* single channel - disable fading */
-    		config->fade=0;
-        	break;
+		case 'f': /* single channel - disable fading */
+			config->fade=0;
+			break;
 
-        case 'F': /* enable fading */
-    		config->fade=1;
-        	break;
+		case 'F': /* enable fading */
+			config->fade=1;
+			break;
 
-        case 'r':
-    		config->remote=1;
-        	break;
+		case 'r':
+			config->remote=1;
+			break;
 
-        case 'l':
-    		config->remote=0;
-        	break;
+		case 'l':
+			config->remote=0;
+			break;
 
-        case 'h':
-        	sfree( &(config->host) );
-            config->host=falloc( strlen(optarg)+1, sizeof(char) );
-            strcpy( config->host, optarg );
-        	config->remote=1;
-        	break;
+		case 'h':
+			sfree( &(config->host) );
+			config->host=falloc( strlen(optarg)+1, sizeof(char) );
+			strcpy( config->host, optarg );
+			config->remote=1;
+			break;
 
-        case 'p':
+		case 'p':
 			config->port=atoi(optarg);
 			config->remote=1;
-        	break;
+			break;
 
-        case 'W':
-        	config->changed=-1;
-        	break;
+		case 'W':
+			config->changed=-1;
+			break;
 
-        case '?':
-        	switch( optopt )  {
-        	case 'h':
-        	case 'p':
-                fprintf (stderr, "Option -%c requires an argument!\n", optopt);
-                break;
-        	default:
-            	addMessage( 0, "Unknown option -%c %i\n", c, c );
-        	}
-        	/* no break */
+		case '?':
+			switch( optopt )  {
+			case 'h':
+			case 'p':
+				fprintf (stderr, "Option -%c requires an argument!\n", optopt);
+				break;
+			default:
+				addMessage( 0, "Unknown option -%c %i\n", c, c );
+			}
+			/* no break */
 
-        default:
-        	printUsage( argv[0] );
-        	exit( EXIT_FAILURE );
-        }
-    }
+		default:
+			printUsage( argv[0] );
+			exit( EXIT_FAILURE );
+		}
+	}
 
-    if ( optind < argc ) {
-    	return setArgument( argv[optind] );
-    }
+	if ( optind < argc ) {
+		return setArgument( argv[optind] );
+	}
 
-    return 0;
+	return 0;
 }
 
 /**
@@ -221,38 +221,38 @@ int getArgs( int argc, char ** argv ){
  * gmixplay
  */
 int initAll( int dispatch ) {
-    mpconfig *control;
-    pthread_t tid;
+	mpconfig *control;
+	pthread_t tid;
 
-    control=getConfig();
+	control=getConfig();
 
-    if ( !control->remote ) {
+	if ( !control->remote ) {
 		/* start the actual player */
 		pthread_create( &control->rtid, NULL, reader, (void *)control );
 		/* make sure the mpg123 instances have a chance to start up */
 		sleep( 1 );
-	    if( NULL == control->root ) {
-	    	if( dispatch ) {
-		        /* Runs as thread to have updates in the UI */
-	    		pthread_create( &tid, NULL, setProfile, ( void * )control );
-	    	}
-	    	else {
-	    		/* todo: would it hurt to run this as thread every time? */
-	    		setProfile( control );
-	    	}
-	    }
-	    else {
-	    	control->active=0;
-	        control->dbname[0]=0;
-	        setCommand( mpc_play );
-	    }
-    }
-    else {
+		if( NULL == control->root ) {
+			if( dispatch ) {
+				/* Runs as thread to have updates in the UI */
+				pthread_create( &tid, NULL, setProfile, ( void * )control );
+			}
+			else {
+				/* todo: would it hurt to run this as thread every time? */
+				setProfile( control );
+			}
+		}
+		else {
+			control->active=0;
+			control->dbname[0]=0;
+			setCommand( mpc_play );
+		}
+	}
+	else {
 		pthread_create( &control->rtid, NULL, netreader, (void *)control );
 		control->playstream=0;
-    }
+	}
 
-    return 0;
+	return 0;
 }
 
 /**
@@ -304,90 +304,90 @@ static int scanparts( char *line, char ***target ) {
  * This function should be called more or less first thing in the application
  */
 mpconfig *readConfig( ) {
-    char	conffile[MAXPATHLEN]; /*  = "mixplay.conf"; */
-    char	line[MAXPATHLEN];
-    char	*pos;
-    FILE    *fp;
+	char	conffile[MAXPATHLEN]; /*  = "mixplay.conf"; */
+	char	line[MAXPATHLEN];
+	char	*pos;
+	FILE	*fp;
 
-    if( c_config == NULL ) {
-    	c_config=falloc( 1, sizeof( mpconfig ) );
-    	c_config->msg=msgBuffInit();
-    }
+	if( c_config == NULL ) {
+		c_config=falloc( 1, sizeof( mpconfig ) );
+		c_config->msg=msgBuffInit();
+	}
 
-    /* Set some default values */
-    c_config->root=NULL;
-    c_config->current=NULL;
-    c_config->playstream=0;
-    c_config->volume=80;
-    strcpy( c_config->playtime, "00:00" );
-    strcpy( c_config->remtime, "00:00" );
-    c_config->percent=0;
-    c_config->status=mpc_idle;
-    c_config->command=mpc_idle;
-    c_config->dbname=falloc( MAXPATHLEN, sizeof( char ) );
-    c_config->verbosity=0;
-    c_config->debug=0;
-    c_config->fade=1;
-    c_config->inUI=0;
-    c_config->msg->lines=0;
-    c_config->msg->current=0;
-    c_config->host="127.0.0.1";
-    c_config->port=MP_PORT;
-    c_config->changed=0;
+	/* Set some default values */
+	c_config->root=NULL;
+	c_config->current=NULL;
+	c_config->playstream=0;
+	c_config->volume=80;
+	strcpy( c_config->playtime, "00:00" );
+	strcpy( c_config->remtime, "00:00" );
+	c_config->percent=0;
+	c_config->status=mpc_idle;
+	c_config->command=mpc_idle;
+	c_config->dbname=falloc( MAXPATHLEN, sizeof( char ) );
+	c_config->verbosity=0;
+	c_config->debug=0;
+	c_config->fade=1;
+	c_config->inUI=0;
+	c_config->msg->lines=0;
+	c_config->msg->current=0;
+	c_config->host="127.0.0.1";
+	c_config->port=MP_PORT;
+	c_config->changed=0;
 
-    snprintf( c_config->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", getenv("HOME") );
+	snprintf( c_config->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", getenv("HOME") );
 
-    snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", getenv( "HOME" ) );
+	snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", getenv( "HOME" ) );
 	fp=fopen( conffile, "r" );
 
-    if( NULL != fp ) {
-        do {
-            fgets( line, MAXPATHLEN, fp );
-            if( line[0]=='#' ) continue;
-            pos=strchr( line, '=' );
-            if( ( NULL == pos ) || ( strlen( ++pos ) == 0 ) ) continue;
-            if( strstr( line, "musicdir=" ) == line ) {
-            	c_config->musicdir=falloc( strlen(pos)+1, sizeof( char ) );
-            	strip( c_config->musicdir, pos, strlen(pos)+1 );
-            }
-            if( strstr( line, "channel=" ) == line ) {
-            	c_config->channel=falloc( strlen(pos)+1, sizeof( char ) );
-            	strip( c_config->channel, pos, strlen(pos)+1 );
-            }
-            if( strstr( line, "profiles=" ) == line ) {
-            	c_config->profiles=scanparts( pos, &c_config->profile );
-            }
-            if( strstr( line, "streams=" ) == line ) {
-            	c_config->streams=scanparts( pos, &c_config->stream );
-            }
-            if( strstr( line, "snames=" ) == line ) {
-            	if( scanparts( pos, &c_config->sname ) != c_config->streams ) {
-            		fail( F_FAIL, "Number of streams and stream names does not match!");
-            	}
-            }
-            if( strstr( line, "active=" ) == line ) {
-            	c_config->active=atoi(pos);
-            }
-            if( strstr( line, "skipdnp=" ) == line ) {
-            	c_config->skipdnp=atoi(pos);
-            }
-            if( strstr( line, "fade=" ) == line ) {
-            	c_config->fade=atoi(pos);
-            }
-            if( strstr( line, "host=" ) == line ) {
-            	c_config->host=falloc( strlen(pos)+1, sizeof( char ) );
-            	strip( c_config->host, pos, strlen(pos)+1 );
-            }
-            if( strstr( line, "port=" ) == line ) {
-            	c_config->port=atoi(pos);
-            }
-            if( strstr( line, "remote=" ) == line ) {
-            	c_config->remote=atoi(pos);
-            }
-        }
-        while( !feof( fp ) );
-    	return c_config;
-    }
+	if( NULL != fp ) {
+		do {
+			fgets( line, MAXPATHLEN, fp );
+			if( line[0]=='#' ) continue;
+			pos=strchr( line, '=' );
+			if( ( NULL == pos ) || ( strlen( ++pos ) == 0 ) ) continue;
+			if( strstr( line, "musicdir=" ) == line ) {
+				c_config->musicdir=falloc( strlen(pos)+1, sizeof( char ) );
+				strip( c_config->musicdir, pos, strlen(pos)+1 );
+			}
+			if( strstr( line, "channel=" ) == line ) {
+				c_config->channel=falloc( strlen(pos)+1, sizeof( char ) );
+				strip( c_config->channel, pos, strlen(pos)+1 );
+			}
+			if( strstr( line, "profiles=" ) == line ) {
+				c_config->profiles=scanparts( pos, &c_config->profile );
+			}
+			if( strstr( line, "streams=" ) == line ) {
+				c_config->streams=scanparts( pos, &c_config->stream );
+			}
+			if( strstr( line, "snames=" ) == line ) {
+				if( scanparts( pos, &c_config->sname ) != c_config->streams ) {
+					fail( F_FAIL, "Number of streams and stream names does not match!");
+				}
+			}
+			if( strstr( line, "active=" ) == line ) {
+				c_config->active=atoi(pos);
+			}
+			if( strstr( line, "skipdnp=" ) == line ) {
+				c_config->skipdnp=atoi(pos);
+			}
+			if( strstr( line, "fade=" ) == line ) {
+				c_config->fade=atoi(pos);
+			}
+			if( strstr( line, "host=" ) == line ) {
+				c_config->host=falloc( strlen(pos)+1, sizeof( char ) );
+				strip( c_config->host, pos, strlen(pos)+1 );
+			}
+			if( strstr( line, "port=" ) == line ) {
+				c_config->port=atoi(pos);
+			}
+			if( strstr( line, "remote=" ) == line ) {
+				c_config->remote=atoi(pos);
+			}
+		}
+		while( !feof( fp ) );
+		return c_config;
+	}
 
    	return NULL;
 }
@@ -397,67 +397,67 @@ mpconfig *readConfig( ) {
  * $HOME/.mixplay/mixplay.conf
  */
 void writeConfig( const char *musicpath ) {
-    char	conffile[MAXPATHLEN]; /*  = "mixplay.conf"; */
-    int		i;
-    FILE    *fp;
+	char	conffile[MAXPATHLEN]; /*  = "mixplay.conf"; */
+	int		i;
+	FILE	*fp;
 
-    addMessage( 0, "Saving config" );
-    assert( c_config != NULL );
+	addMessage( 0, "Saving config" );
+	assert( c_config != NULL );
 
-    if( musicpath != NULL ) {
-        c_config->musicdir=falloc( strlen(musicpath)+1, sizeof( char ) );
-        strip( c_config->musicdir, musicpath, strlen(musicpath)+1 );
-    }
+	if( musicpath != NULL ) {
+		c_config->musicdir=falloc( strlen(musicpath)+1, sizeof( char ) );
+		strip( c_config->musicdir, musicpath, strlen(musicpath)+1 );
+	}
 
-    snprintf( conffile, MAXPATHLEN, "%s/.mixplay", getenv("HOME") );
-    if( mkdir( conffile, 0700 ) == -1 ) {
-    	if( errno != EEXIST ) {
-    		fail( errno, "Could not create config dir %s", conffile );
-    	}
-    }
+	snprintf( conffile, MAXPATHLEN, "%s/.mixplay", getenv("HOME") );
+	if( mkdir( conffile, 0700 ) == -1 ) {
+		if( errno != EEXIST ) {
+			fail( errno, "Could not create config dir %s", conffile );
+		}
+	}
 
-    snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", getenv( "HOME" ) );
+	snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", getenv( "HOME" ) );
 
 	fp=fopen( conffile, "w" );
 
-    if( NULL != fp ) {
-        fprintf( fp, "[mixplay]" );
-        fprintf( fp, "\nmusicdir=%s", c_config->musicdir );
-        fprintf( fp, "\nprofiles=" );
-        for( i=0; i< c_config->profiles; i++ ) {
-        	fprintf( fp, "%s;", c_config->profile[i] );
-        }
-        fprintf( fp, "\nstreams=" );
-        for( i=0; i< c_config->streams; i++ ) {
-        	fprintf( fp, "%s;", c_config->stream[i] );
-        }
-        fprintf( fp, "\nsnames=" );
-        for( i=0; i< c_config->streams; i++ ) {
-        	fprintf( fp, "%s;", c_config->sname[i] );
-        }
-        fprintf( fp, "\nactive=%i", c_config->active );
-        fprintf( fp, "\nskipdnp=%i", c_config->skipdnp );
-        fprintf( fp, "\nfade=%i", c_config->fade );
-        if( c_config->channel != NULL ) {
-            fprintf( fp, "\nchannel=%s", c_config->channel );
-        }
-        else {
-        	fprintf( fp, "channel=Master  for standard installations");
-        	fprintf( fp, "\n# channel=Digital for HifiBerry");
-        	fprintf( fp, "\n# channel=Main");
-        	fprintf( fp, "\n# channel=DAC");
-        }
-        fprintf( fp, "\nhost=%s", c_config->host );
-        if( c_config->port != MP_PORT ) {
-            fprintf( fp, "\nport=%i", c_config->port );
-        }
-        fprintf( fp, "\nremote=%i", c_config->remote );
-        fprintf( fp, "\n" );
-        fclose( fp );
-    }
-    else {
-        fail( errno, "Could not open %s", conffile );
-    }
+	if( NULL != fp ) {
+		fprintf( fp, "[mixplay]" );
+		fprintf( fp, "\nmusicdir=%s", c_config->musicdir );
+		fprintf( fp, "\nprofiles=" );
+		for( i=0; i< c_config->profiles; i++ ) {
+			fprintf( fp, "%s;", c_config->profile[i] );
+		}
+		fprintf( fp, "\nstreams=" );
+		for( i=0; i< c_config->streams; i++ ) {
+			fprintf( fp, "%s;", c_config->stream[i] );
+		}
+		fprintf( fp, "\nsnames=" );
+		for( i=0; i< c_config->streams; i++ ) {
+			fprintf( fp, "%s;", c_config->sname[i] );
+		}
+		fprintf( fp, "\nactive=%i", c_config->active );
+		fprintf( fp, "\nskipdnp=%i", c_config->skipdnp );
+		fprintf( fp, "\nfade=%i", c_config->fade );
+		if( c_config->channel != NULL ) {
+			fprintf( fp, "\nchannel=%s", c_config->channel );
+		}
+		else {
+			fprintf( fp, "channel=Master  for standard installations");
+			fprintf( fp, "\n# channel=Digital for HifiBerry");
+			fprintf( fp, "\n# channel=Main");
+			fprintf( fp, "\n# channel=DAC");
+		}
+		fprintf( fp, "\nhost=%s", c_config->host );
+		if( c_config->port != MP_PORT ) {
+			fprintf( fp, "\nport=%i", c_config->port );
+		}
+		fprintf( fp, "\nremote=%i", c_config->remote );
+		fprintf( fp, "\n" );
+		fclose( fp );
+	}
+	else {
+		fail( errno, "Could not open %s", conffile );
+	}
 }
 
 /**
@@ -467,23 +467,23 @@ void freeConfigContents() {
 	int i;
 	assert( c_config != NULL );
 
-    sfree( &(c_config->dbname) );
-    sfree( &(c_config->dnpname) );
-    sfree( &(c_config->favname) );
-    sfree( &(c_config->musicdir) );
-    for( i=0; i<c_config->profiles; i++ ) {
-    	sfree( &(c_config->profile[i]) );
-    }
-    c_config->profiles=0;
-    sfree( (char **)&(c_config->profile) );
+	sfree( &(c_config->dbname) );
+	sfree( &(c_config->dnpname) );
+	sfree( &(c_config->favname) );
+	sfree( &(c_config->musicdir) );
+	for( i=0; i<c_config->profiles; i++ ) {
+		sfree( &(c_config->profile[i]) );
+	}
+	c_config->profiles=0;
+	sfree( (char **)&(c_config->profile) );
 
-    for( i=0; i<c_config->streams; i++ ) {
-    	sfree( &(c_config->stream[i]) );
-    	sfree( &(c_config->sname[i]) );
-    }
-    c_config->streams=0;
-    sfree( (char **)&(c_config->stream) );
-    sfree( (char **)&(c_config->sname) );
+	for( i=0; i<c_config->streams; i++ ) {
+		sfree( &(c_config->stream[i]) );
+		sfree( &(c_config->sname[i]) );
+	}
+	c_config->streams=0;
+	sfree( (char **)&(c_config->stream) );
+	sfree( (char **)&(c_config->sname) );
 }
 
 /**
@@ -492,9 +492,9 @@ void freeConfigContents() {
 void freeConfig( ) {
 	assert( c_config != NULL );
 	freeConfigContents( );
-    c_config->root=cleanTitles( c_config->root );
-    sfree( (char **)c_config );
-    c_config=NULL;
+	c_config->root=cleanTitles( c_config->root );
+	sfree( (char **)c_config );
+	c_config=NULL;
 }
 
 /**
@@ -507,8 +507,8 @@ void freeConfig( ) {
  * always appear in the debug stream.
  */
 void addMessage( int v, char *msg, ... ) {
-    va_list args;
-    char *line;
+	va_list args;
+	char *line;
 
 	pthread_mutex_lock( &msglock );
 	line = falloc( MP_MSGLEN, sizeof(char) );
@@ -519,24 +519,24 @@ void addMessage( int v, char *msg, ... ) {
 	if( c_config == NULL ) {
 		fprintf( stderr, "* %s\n", line );
 		free(line);
-    	pthread_mutex_unlock( &msglock );
+		pthread_mutex_unlock( &msglock );
 		return;
-    }
+	}
 
 	if( v <= getVerbosity() ) {
-    	if( c_config->inUI ) {
+		if( c_config->inUI ) {
 			msgBuffAdd( c_config->msg, line );
 			if( v < getDebug() ) {
 				fprintf( stderr, "D %s\n", line );
 			}
-    	}
-    	else {
-    		printf( "V %s\n", line );
-    	}
-    }
+		}
+		else {
+			printf( "V %s\n", line );
+		}
+	}
 	else if( v < getDebug() ) {
 		fprintf( stderr, "D %s\n", line );
-    }
+	}
 
 	free(line);
 	pthread_mutex_unlock( &msglock );
@@ -556,24 +556,24 @@ void incDebug( void ) {
 
 int getDebug( void ) {
 	assert( c_config != NULL );
-    return c_config->debug;
+	return c_config->debug;
 }
 
 int setVerbosity( int v ) {
 	assert( c_config != NULL );
-    c_config->verbosity=v;
-    return c_config->verbosity;
+	c_config->verbosity=v;
+	return c_config->verbosity;
 }
 
 int getVerbosity( void ) {
 	assert( c_config != NULL );
-    return c_config->verbosity;
+	return c_config->verbosity;
 }
 
 int incVerbosity() {
 	assert( c_config != NULL );
 	c_config->verbosity++;
-    return c_config->verbosity;
+	return c_config->verbosity;
 }
 
 void muteVerbosity() {

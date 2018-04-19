@@ -104,7 +104,7 @@ cmd = 000F RRRR CCCC CCCC
 * 0x03 - next title
 * 0x04 - start*
 * 0x05 - replay
-* 0x06 - change profile +arg [string]
+* 0x06 - change profile +arg <int>
 * 0x07 - quit
 * 0x08 - clean up database
 * 0x09 - mark as favourite according to upper bytes
@@ -120,7 +120,8 @@ cmd = 000F RRRR CCCC CCCC
 * 0x13 - search title +arg <string>
 * 0x14 - search titles +arg <string>*
 * 0x15 - set volume +arg <0..100>
-* 0x16 - idle / max command*
+* 0x16 - create new profile +arg <string>
+* 0x17 - idle / max command*
 
 args are set with the '?' operator. 
 Examples: 

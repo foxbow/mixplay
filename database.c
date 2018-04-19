@@ -16,24 +16,24 @@
  * 	searches for a given path in the mixplay entry list
  */
 static mptitle *findTitle( mptitle *base, const char *path ) {
-    mptitle *runner;
+	mptitle *runner;
 
-    if( NULL == base ) {
-        return NULL;
-    }
+	if( NULL == base ) {
+		return NULL;
+	}
 
-    runner=base;
+	runner=base;
 
-    do {
-        if( strstr( runner->path, path ) ) {
-            return runner;
-        }
+	do {
+		if( strstr( runner->path, path ) ) {
+			return runner;
+		}
 
-        runner=runner->dbnext;
-    }
-    while ( runner != base );
+		runner=runner->dbnext;
+	}
+	while ( runner != base );
 
-    return NULL;
+	return NULL;
 }
 
 /**
@@ -41,33 +41,33 @@ static mptitle *findTitle( mptitle *base, const char *path ) {
  * current reindexed database in a new file
  */
 static void dbDump( const char *dbname, mptitle *root ) {
-    int db;
-    unsigned int index=1;
-    mptitle *runner=root;
+	int db;
+	unsigned int index=1;
+	mptitle *runner=root;
 
-    if( NULL == root ) {
-        fail( F_FAIL, "Not dumping an empty database!" );
-    }
+	if( NULL == root ) {
+		fail( F_FAIL, "Not dumping an empty database!" );
+	}
 
-    dbBackup( dbname );
-    db=dbOpen( dbname );
+	dbBackup( dbname );
+	db=dbOpen( dbname );
 
-    do {
-        runner->key=index;
-        dbPutTitle( db, runner );
-        index++;
-        runner=runner->dbnext;
-    }
-    while( runner != root );
+	do {
+		runner->key=index;
+		dbPutTitle( db, runner );
+		index++;
+		runner=runner->dbnext;
+	}
+	while( runner != root );
 
-    dbClose( db );
+	dbClose( db );
 }
 
 /**
  * checks if a given title still exists on the filesystem
  */
 static int mp3Exists( const mptitle *title ) {
-    return( access( title->path, F_OK ) == 0 );
+	return( access( title->path, F_OK ) == 0 );
 }
 
 /**
@@ -75,21 +75,21 @@ static int mp3Exists( const mptitle *title ) {
  * This should only be used on a database cleanup!
  */
 static mptitle *removeTitle( mptitle *entry ) {
-    mptitle *next=NULL;
+	mptitle *next=NULL;
 
-    if( entry->plnext != entry ) {
-        entry->plnext->plprev=entry->plprev;
-        entry->plprev->plnext=entry->plnext;
-    }
+	if( entry->plnext != entry ) {
+		entry->plnext->plprev=entry->plprev;
+		entry->plprev->plnext=entry->plnext;
+	}
 
-    if( entry->dbnext != entry ) {
-        next=entry->dbnext;
-        entry->dbnext->dbprev=entry->dbprev;
-        entry->dbprev->dbnext=entry->dbnext;
-    }
+	if( entry->dbnext != entry ) {
+		next=entry->dbnext;
+		entry->dbnext->dbprev=entry->dbprev;
+		entry->dbprev->dbnext=entry->dbnext;
+	}
 
-    free( entry );
-    return next;
+	free( entry );
+	return next;
 }
 
 
@@ -97,74 +97,74 @@ static mptitle *removeTitle( mptitle *entry ) {
  * turn a database entry into a mixplay structure
  */
 static int db2entry( struct dbentry_t *dbentry, mptitle *entry ) {
-    memset( entry, 0, ESIZE );
-    strcpy( entry->path, dbentry->path );
-    strcpy( entry->artist, dbentry->artist );
-    strcpy( entry->title, dbentry->title );
-    strcpy( entry->album, dbentry->album );
-    strcpy( entry->genre, dbentry->genre );
-    snprintf( entry->display, MAXPATHLEN, "%s - %s", entry->artist, entry->title );
-    entry->playcount=dbentry->playcount;
-    entry->skipcount=dbentry->skipcount;
-    return 0;
+	memset( entry, 0, ESIZE );
+	strcpy( entry->path, dbentry->path );
+	strcpy( entry->artist, dbentry->artist );
+	strcpy( entry->title, dbentry->title );
+	strcpy( entry->album, dbentry->album );
+	strcpy( entry->genre, dbentry->genre );
+	snprintf( entry->display, MAXPATHLEN, "%s - %s", entry->artist, entry->title );
+	entry->playcount=dbentry->playcount;
+	entry->skipcount=dbentry->skipcount;
+	return 0;
 }
 
 /**
  * pack a mixplay entry into a database structure
  */
 static int entry2db( mptitle *entry, struct dbentry_t *dbentry ) {
-    memset( dbentry, 0, DBESIZE );
-    strcpy( dbentry->path, entry->path );
-    strcpy( dbentry->artist, entry->artist );
-    strcpy( dbentry->title, entry->title );
-    strcpy( dbentry->album, entry->album );
-    strcpy( dbentry->genre, entry->genre );
-    dbentry->playcount=entry->playcount;
-    dbentry->skipcount=entry->skipcount;
-    return 0;
+	memset( dbentry, 0, DBESIZE );
+	strcpy( dbentry->path, entry->path );
+	strcpy( dbentry->artist, entry->artist );
+	strcpy( dbentry->title, entry->title );
+	strcpy( dbentry->album, entry->album );
+	strcpy( dbentry->genre, entry->genre );
+	dbentry->playcount=entry->playcount;
+	dbentry->skipcount=entry->skipcount;
+	return 0;
 }
 
 /**
  * opens the database file and handles errors
  */
 int dbOpen( const char *path ) {
-    int db=-1;
-    db = open( path, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR );
+	int db=-1;
+	db = open( path, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR );
 
-    if( -1 == db ) {
-        fail( errno, "Could not open database %s", path );
-    }
+	if( -1 == db ) {
+		fail( errno, "Could not open database %s", path );
+	}
 
-    addMessage( 2, "Opened database %s", path );
-    return db;
+	addMessage( 2, "Opened database %s", path );
+	return db;
 }
 
 /**
  * adds/overwrites a title to/in the database
  */
 int dbPutTitle( int db, mptitle *title ) {
-    struct dbentry_t dbentry;
+	struct dbentry_t dbentry;
 
-    if( 0 == db ) {
-        fail( F_FAIL, "%s - Database not open", __func__ );
-    }
+	if( 0 == db ) {
+		fail( F_FAIL, "%s - Database not open", __func__ );
+	}
 
-    if( 0 == title->key ) {
-        lseek( db, 0, SEEK_END );
-    }
-    else {
-        if( -1 == lseek( db, DBESIZE*( title->key-1 ), SEEK_SET ) ) {
-            fail( errno, "Could not skip to title %s", title->path );
-        }
-    }
+	if( 0 == title->key ) {
+		lseek( db, 0, SEEK_END );
+	}
+	else {
+		if( -1 == lseek( db, DBESIZE*( title->key-1 ), SEEK_SET ) ) {
+			fail( errno, "Could not skip to title %s", title->path );
+		}
+	}
 
-    entry2db( title, &dbentry );
+	entry2db( title, &dbentry );
 
-    if( write( db, &dbentry, DBESIZE ) != DBESIZE ) {
-        fail( errno, "Could not write entry %s!", title->path );
-    }
+	if( write( db, &dbentry, DBESIZE ) != DBESIZE ) {
+		fail( errno, "Could not write entry %s!", title->path );
+	}
 
-    return 0;
+	return 0;
 }
 
 /**
@@ -172,33 +172,33 @@ int dbPutTitle( int db, mptitle *title ) {
  * if there is no list, a new one will be created
  */
 static mptitle *addDBTitle( struct dbentry_t dbentry, mptitle *root, unsigned int index ) {
-    mptitle *entry;
-    entry=malloc( sizeof( mptitle ) );
+	mptitle *entry;
+	entry=malloc( sizeof( mptitle ) );
 
-    if( NULL == entry ) {
-        fail( errno, " %s - Could not create new entry", __func__ );
-    }
+	if( NULL == entry ) {
+		fail( errno, " %s - Could not create new entry", __func__ );
+	}
 
-    db2entry( &dbentry, entry );
-    entry->key=index;
+	db2entry( &dbentry, entry );
+	entry->key=index;
 
-    if( NULL == root ) {
-        root=entry;
-        root->dbprev=root;
-        root->dbnext=root;
-        root->plnext=root;
-        root->plprev=root;
-    }
-    else {
-        entry->dbnext=root->dbnext;
-        entry->dbprev=root;
-        root->dbnext->dbprev=entry;
-        root->dbnext=entry;
-        entry->plnext=entry;
-        entry->plprev=entry;
-    }
+	if( NULL == root ) {
+		root=entry;
+		root->dbprev=root;
+		root->dbnext=root;
+		root->plnext=root;
+		root->plprev=root;
+	}
+	else {
+		entry->dbnext=root->dbnext;
+		entry->dbprev=root;
+		root->dbnext->dbprev=entry;
+		root->dbnext=entry;
+		entry->plnext=entry;
+		entry->plprev=entry;
+	}
 
-    return entry;
+	return entry;
 }
 
 /**
@@ -206,42 +206,42 @@ static mptitle *addDBTitle( struct dbentry_t dbentry, mptitle *root, unsigned in
  * tries to delete the backup first
  */
 void dbBackup( const char *dbname ) {
-    char backupname[MAXPATHLEN]="";
-    addMessage( 1, "Backing up database" );
+	char backupname[MAXPATHLEN]="";
+	addMessage( 1, "Backing up database" );
 
-    strncpy( backupname, dbname, MAXPATHLEN );
-    strncat( backupname, ".bak", MAXPATHLEN );
+	strncpy( backupname, dbname, MAXPATHLEN );
+	strncat( backupname, ".bak", MAXPATHLEN );
 
-    if( rename( dbname, backupname ) ) {
-        fail( errno, "Could not rename %s", dbname );
-    }
+	if( rename( dbname, backupname ) ) {
+		fail( errno, "Could not rename %s", dbname );
+	}
 }
 
 /**
  * gets all titles from the database and returns them as a mixplay entry list
  */
 mptitle *dbGetMusic( const char *dbname ) {
-    struct dbentry_t dbentry;
-    unsigned int index = 1; /* index 0 is reserved for titles not in the db! */
-    mptitle *dbroot=NULL;
-    int db;
-    size_t len;
-    db=dbOpen( dbname );
+	struct dbentry_t dbentry;
+	unsigned int index = 1; /* index 0 is reserved for titles not in the db! */
+	mptitle *dbroot=NULL;
+	int db;
+	size_t len;
+	db=dbOpen( dbname );
 
-    while( ( len = read( db, &dbentry, DBESIZE ) ) == DBESIZE ) {
-        dbroot = addDBTitle( dbentry, dbroot, index );
-        index++;
-    }
+	while( ( len = read( db, &dbentry, DBESIZE ) ) == DBESIZE ) {
+		dbroot = addDBTitle( dbentry, dbroot, index );
+		index++;
+	}
 
-    dbClose( db );
+	dbClose( db );
 
-    if( 0 != len ) {
-        fail( F_FAIL, "Database %s is corrupt!\nRun 'mixplay -C' to rescan", dbname );
-    }
+	if( 0 != len ) {
+		fail( F_FAIL, "Database %s is corrupt!\nRun 'mixplay -C' to rescan", dbname );
+	}
 
-    addMessage( 1, "Loaded %i titles from the database", index-1 );
+	addMessage( 1, "Loaded %i titles from the database", index-1 );
 
-    return ( dbroot?dbroot->dbnext:NULL );
+	return ( dbroot?dbroot->dbnext:NULL );
 }
 
 /**
@@ -249,42 +249,42 @@ mptitle *dbGetMusic( const char *dbname ) {
  * i.e. titles that are in the database but no longer on the medium
  */
 int dbCheckExist( const char *dbname ) {
-    mptitle *root;
-    mptitle *runner;
-    int num=0;
+	mptitle *root;
+	mptitle *runner;
+	int num=0;
 
-    root=dbGetMusic( dbname );
-    runner=root;
-    addMessage( 1, "Cleaning database..." );
+	root=dbGetMusic( dbname );
+	runner=root;
+	addMessage( 1, "Cleaning database..." );
 
-    do {
-        activity( "Cleaning" );
+	do {
+		activity( "Cleaning" );
 
-        if( !mp3Exists( runner ) ) {
-            if( root == runner ) {
-                root=runner->dbprev;
-            }
+		if( !mp3Exists( runner ) ) {
+			if( root == runner ) {
+				root=runner->dbprev;
+			}
 
-            runner=removeTitle( runner );
-            num++;
-        }
-        else {
-            runner=runner->dbnext;
-        }
-    }
-    while( ( runner != NULL ) && ( root != runner ) );
+			runner=removeTitle( runner );
+			num++;
+		}
+		else {
+			runner=runner->dbnext;
+		}
+	}
+	while( ( runner != NULL ) && ( root != runner ) );
 
-    if( num > 0 ) {
-        dbDump( dbname, root );
-        addMessage( 1, "Removed %i titles", num );
-    }
-    else {
-        addMessage( 1, "No titles to remove" );
-    }
+	if( num > 0 ) {
+		dbDump( dbname, root );
+		addMessage( 1, "Removed %i titles", num );
+	}
+	else {
+		addMessage( 1, "No titles to remove" );
+	}
 
-    cleanTitles( root );
+	cleanTitles( root );
 
-    return num;
+	return num;
 }
 
 /**
@@ -292,58 +292,58 @@ int dbCheckExist( const char *dbname ) {
  * the new titles will have a playcount set to blend into the mix
  */
 int dbAddTitles( const char *dbname, char *basedir ) {
-    mptitle *fsroot;
-    mptitle *dbroot;
-    mptitle *dbrunner;
-    unsigned int count=0, mean=0;
+	mptitle *fsroot;
+	mptitle *dbroot;
+	mptitle *dbrunner;
+	unsigned int count=0, mean=0;
 
-    int num=0;
-    int db=0;
+	int num=0;
+	int db=0;
 
-    dbroot=dbGetMusic( dbname );
+	dbroot=dbGetMusic( dbname );
 
-    db=dbOpen( dbname );
-    addMessage( 1, "Calculating mean playcount..." );
+	db=dbOpen( dbname );
+	addMessage( 1, "Calculating mean playcount..." );
 
-    if( NULL != dbroot ) {
-        dbrunner=dbroot;
+	if( NULL != dbroot ) {
+		dbrunner=dbroot;
 
-        do {
-            if( !( dbrunner->flags & MP_DNP ) ) {
-            	count++;
-                mean+=dbrunner->playcount;
-            }
-            dbrunner=dbrunner->dbnext;
-        }
-        while( dbrunner != dbroot );
+		do {
+			if( !( dbrunner->flags & MP_DNP ) ) {
+				count++;
+				mean+=dbrunner->playcount;
+			}
+			dbrunner=dbrunner->dbnext;
+		}
+		while( dbrunner != dbroot );
 
-        mean=mean/count;
-    }
+		mean=mean/count;
+	}
 
-    /* scan directory */
-    addMessage( 1, "Scanning..." );
-    fsroot=recurse( basedir, NULL );
-    fsroot=fsroot->dbnext;
+	/* scan directory */
+	addMessage( 1, "Scanning..." );
+	fsroot=recurse( basedir, NULL );
+	fsroot=fsroot->dbnext;
 
-    addMessage( 1, "Adding titles..." );
+	addMessage( 1, "Adding titles..." );
 
-    while( NULL != fsroot ) {
-        activity( "Adding" );
-        dbrunner = findTitle( dbroot, fsroot->path );
+	while( NULL != fsroot ) {
+		activity( "Adding" );
+		dbrunner = findTitle( dbroot, fsroot->path );
 
-        if( NULL == dbrunner ) {
-            fillTagInfo( basedir, fsroot );
-            fsroot->playcount=mean;
-            dbPutTitle( db,fsroot );
-            num++;
-        }
+		if( NULL == dbrunner ) {
+			fillTagInfo( basedir, fsroot );
+			fsroot->playcount=mean;
+			dbPutTitle( db,fsroot );
+			num++;
+		}
 
-        fsroot=removeTitle( fsroot );
-    }
+		fsroot=removeTitle( fsroot );
+	}
 
-    addMessage( 1, "Added %i titles with playcount %i to %s", num, mean, dbname );
-    dbClose( db );
-    return num;
+	addMessage( 1, "Added %i titles with playcount %i to %s", num, mean, dbname );
+	dbClose( db );
+	return num;
 }
 
 /**
@@ -386,17 +386,17 @@ int dbNameCheck( const char *dbname ) {
 	mptitle	*currentEntry;
 	mptitle	*runner;
 	int				count=0;
-    FILE 			*fp;
-    int				match;
+	FILE 			*fp;
+	int				match;
 
-    fp=fopen( "rmlist.sh", "w" );
+	fp=fopen( "rmlist.sh", "w" );
 	fprintf( fp, "#!/bin/bash\n" );
 
-    if( NULL == fp ) {
-        fail( errno, "Could not open rmlist.txt for writing " );
-    }
+	if( NULL == fp ) {
+		fail( errno, "Could not open rmlist.txt for writing " );
+	}
 
-    root=dbGetMusic( dbname );
+	root=dbGetMusic( dbname );
 
 	currentEntry=root;
 	while( currentEntry->dbnext != root ) {
@@ -472,9 +472,9 @@ int dbNameCheck( const char *dbname ) {
 	}
 	fprintf( fp, "\necho Remember to clean the database!\n\n" );
 
-    fclose( fp );
+	fclose( fp );
 
-    addMessage(1, "Marked %i titles as removable", count );
+	addMessage(1, "Marked %i titles as removable", count );
 
 	return count;
 }
@@ -483,6 +483,6 @@ int dbNameCheck( const char *dbname ) {
  * closes the database file
  */
 void dbClose( int db ) {
-    close( db );
-    return;
+	close( db );
+	return;
 }

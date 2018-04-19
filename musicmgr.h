@@ -19,25 +19,25 @@
 
 typedef struct mptitle_t mptitle;
 struct mptitle_t {
-    char path[MAXPATHLEN];		/* path on the filesystem to the file */
-    char artist[NAMELEN];		/* Artist info */
-    char title[NAMELEN];		/* Title info (from mp3) */
-    char album[NAMELEN];		/* Album info (from mp3) */
-    unsigned int playcount;		/* play counter */
-    unsigned int skipcount;		/* skip counter */
-    char genre[NAMELEN];
-    mptitle *plprev;			/* playlist pointer */
-    unsigned int key;			/* DB key/index  - internal */
-    char display[MAXPATHLEN];	/* Title display - internal */
-    unsigned int flags;			/* 1=favourite   - internal */
-    mptitle *plnext;
-    mptitle *dbprev;			/* database pointer */
-    mptitle *dbnext;
+	char path[MAXPATHLEN];		/* path on the filesystem to the file */
+	char artist[NAMELEN];		/* Artist info */
+	char title[NAMELEN];		/* Title info (from mp3) */
+	char album[NAMELEN];		/* Album info (from mp3) */
+	unsigned int playcount;		/* play counter */
+	unsigned int skipcount;		/* skip counter */
+	char genre[NAMELEN];
+	mptitle *plprev;			/* playlist pointer */
+	unsigned int key;			/* DB key/index  - internal */
+	char display[MAXPATHLEN];	/* Title display - internal */
+	unsigned int flags;			/* 1=favourite   - internal */
+	mptitle *plnext;
+	mptitle *dbprev;			/* database pointer */
+	mptitle *dbnext;
 };
 
 struct marklist_t {
-    char dir[MAXPATHLEN+2];
-    struct marklist_t *next;
+	char dir[MAXPATHLEN+2];
+	struct marklist_t *next;
 };
 
 #include "config.h"

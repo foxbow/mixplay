@@ -2,7 +2,7 @@
  * player.h
  *
  *  Created on: 26.04.2017
- *      Author: bweber
+ *	  Author: bweber
  */
 
 #ifndef __PLAYER_H__

@@ -2,7 +2,7 @@
  * json.h
  *
  *  Created on: 08.12.2017
- *      Author: bweber
+ *	  Author: bweber
  */
 
 #ifndef _JSON_H_
@@ -30,11 +30,11 @@ typedef struct _jsonObject_t jsonObject;
 
 /*
  * key, val - the JSON key and value pair
- * type     - JSON type of val
- * ref      - 0 - key and val may be free'd
- *            1 - only key can be free'd
- *            2 - neither key nor val shall be free'd
- * next     - next json pair
+ * type	 - JSON type of val
+ * ref	  - 0 - key and val may be free'd
+ *			1 - only key can be free'd
+ *			2 - neither key nor val shall be free'd
+ * next	 - next json pair
  */
 struct _jsonObject_t {
 	char *key;
@@ -45,9 +45,9 @@ struct _jsonObject_t {
 };
 
 
-int    jsonGetInt( jsonObject *jo, const char *key );
+int	jsonGetInt( jsonObject *jo, const char *key );
 const char *jsonGetStr( jsonObject *jo, const char *key );
-int    jsonCopyChars( jsonObject *jo, const char *key, char *buf );
+int	jsonCopyChars( jsonObject *jo, const char *key, char *buf );
 char  *jsonCopyStr( jsonObject *jo, const char *key );
 char **jsonCopyStrs( jsonObject *jo, const char *key, const int num );
 jsonObject *jsonGetObj( jsonObject *jo, const char *key );

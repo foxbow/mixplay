@@ -2,7 +2,7 @@
  * mpcomm.h
  *
  *  Created on: 29.11.2017
- *      Author: bweber
+ *	  Author: bweber
  */
 
 #ifndef MPCOMM_H_

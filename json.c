@@ -2,7 +2,7 @@
  * json.c
  *
  *  Created on: 08.12.2017
- *      Author: bweber
+ *	  Author: bweber
  */
 #include "config.h"
 #include "utils.h"
@@ -34,8 +34,8 @@ static int jsonFail( const char *func, char *str, const int i, const int state )
  * if ref is 0 this means the content is owned by the node if not
  * it's a reference and must not be free'd
  * ref: 0 - neither key nor val are to be free'd
- *      1 - only key needs to be free'd
- *      2 - key and val are to be free'd
+ *	  1 - only key needs to be free'd
+ *	  2 - key and val are to be free'd
  */
 static jsonObject *jsonInit( int ref ) {
 	jsonObject *jo=NULL;

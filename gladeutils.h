@@ -12,32 +12,32 @@
 
 /* Convenience macros for obtaining objects from UI file */
 #define MP_GET_OBJECT( builder, name, type, data ) \
-    data->name = type( gtk_builder_get_object( builder, #name ) )
+	data->name = type( gtk_builder_get_object( builder, #name ) )
 #define MP_GET_WIDGET( builder, name, data ) \
-    MP_GET_OBJECT( builder, name, GTK_WIDGET, data )
+	MP_GET_OBJECT( builder, name, GTK_WIDGET, data )
 
 #define MP_GLDATA ((struct glcontrol_t *)getConfig()->data)
 
 /* Main data structure definition */
 typedef struct _MpData_t MpData;
 struct _MpData_t {
-    /* Widgets */
-    GtkWidget *mixplay_main;
-    GtkWidget *button_prev;
-    GtkWidget *button_next;
-    GtkWidget *title_current;
-    GtkWidget *artist_current;
-    GtkWidget *album_current;
-    GtkWidget *genre_current;
-    GtkWidget *button_play;
-    GtkWidget *button_fav;
-    GtkWidget *played;
-    GtkWidget *remain;
-    GtkWidget *progress;
-    GtkWidget *button_profile;
-    /* popup elements */
-    GtkWidget *mp_popup;
-    GtkWidget *volume;
+	/* Widgets */
+	GtkWidget *mixplay_main;
+	GtkWidget *button_prev;
+	GtkWidget *button_next;
+	GtkWidget *title_current;
+	GtkWidget *artist_current;
+	GtkWidget *album_current;
+	GtkWidget *genre_current;
+	GtkWidget *button_play;
+	GtkWidget *button_fav;
+	GtkWidget *played;
+	GtkWidget *remain;
+	GtkWidget *progress;
+	GtkWidget *button_profile;
+	/* popup elements */
+	GtkWidget *mp_popup;
+	GtkWidget *volume;
 };
 
 /**
@@ -45,8 +45,8 @@ struct _MpData_t {
  */
 struct glcontrol_t {
 	MpData *widgets;			/* all (accessible) widgets */
-    int fullscreen;				/* run in fullscreen mode */
-    struct msgbuf_t *msgbuff;	/* generic message buffer */
+	int fullscreen;				/* run in fullscreen mode */
+	struct msgbuf_t *msgbuff;	/* generic message buffer */
 };
 
 #endif /* __GLADEUTILS_H__ */

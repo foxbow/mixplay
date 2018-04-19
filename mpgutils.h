@@ -2,7 +2,7 @@
  * mpgutils.h
  *
  *  Created on: 04.10.2016
- *      Author: bweber
+ *	  Author: bweber
  */
 
 #ifndef MPGUTILS_H_

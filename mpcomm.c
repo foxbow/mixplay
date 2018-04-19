@@ -2,7 +2,7 @@
  * mpcomm.c
  *
  *  Created on: 29.11.2017
- *      Author: bweber
+ *	  Author: bweber
  */
 
 #include "mpcomm.h"
@@ -48,8 +48,8 @@ void unlockClient( int client ) {
  * sets the command to be sent to mixplayd
  */
 void setSCommand( mpcmd cmd ) {
-    pthread_mutex_lock( &_cmdlock );
-    getConfig()->command=cmd;
+	pthread_mutex_lock( &_cmdlock );
+	getConfig()->command=cmd;
 }
 
 /*
@@ -349,58 +349,58 @@ static int recFromMixplayd( char *data ) {
  * analog to the reader() in player.c
  */
 void *netreader( void *control ) {
-    int sock, intr;
-    struct sockaddr_in server;
-    char *commdata;
-    size_t commsize=MP_BLKSIZE;
-    mpconfig *config;
-    struct timeval to;
-    fd_set fds;
-    size_t len=0;
-    ssize_t recvd, retval;
+	int sock, intr;
+	struct sockaddr_in server;
+	char *commdata;
+	size_t commsize=MP_BLKSIZE;
+	mpconfig *config;
+	struct timeval to;
+	fd_set fds;
+	size_t len=0;
+	ssize_t recvd, retval;
 
-    commdata=falloc( commsize, sizeof( char ) );
-    config=(mpconfig*)control;
+	commdata=falloc( commsize, sizeof( char ) );
+	config=(mpconfig*)control;
 
-    sock = socket(AF_INET , SOCK_STREAM , 0);
-    if (sock == -1) {
-        fail( errno, "Could not create socket!");
-    }
+	sock = socket(AF_INET , SOCK_STREAM , 0);
+	if (sock == -1) {
+		fail( errno, "Could not create socket!");
+	}
 
-    server.sin_addr.s_addr = inet_addr( config->host );
-    server.sin_family = AF_INET;
-    server.sin_port = htons( config->port );
+	server.sin_addr.s_addr = inet_addr( config->host );
+	server.sin_family = AF_INET;
+	server.sin_port = htons( config->port );
 
-    if (connect(sock , (struct sockaddr *)&server , sizeof(server)) < 0) {
-       fail( errno, "Could not connect to %s on port %i\nIs mixplayd running?",
-    		   config->host, config->port );
-    }
+	if (connect(sock , (struct sockaddr *)&server , sizeof(server)) < 0) {
+		fail( errno, "Could not connect to %s on port %i\nIs mixplayd running?",
+				config->host, config->port );
+	}
 
-    addMessage( 1, "Connected" );
+	addMessage( 1, "Connected" );
 
 	sprintf( commdata, "get /config HTTP/1.1\015\012xmixplay: 1\015\012\015\012" );
 	while( len < strlen( commdata ) ) {
 		len+=send( sock , &commdata[len], strlen( commdata )-len, 0 );
 	}
 
-    while( config->status != mpc_quit ) {
-        len=0;
-    	FD_ZERO( &fds );
-    	FD_SET( sock, &fds );
-    	to.tv_sec=0;
-    	to.tv_usec=250000; /* 1/4 second */
-    	intr=select( FD_SETSIZE, &fds, NULL, NULL, &to );
+	while( config->status != mpc_quit ) {
+		len=0;
+		FD_ZERO( &fds );
+		FD_SET( sock, &fds );
+		to.tv_sec=0;
+		to.tv_usec=250000; /* 1/4 second */
+		intr=select( FD_SETSIZE, &fds, NULL, NULL, &to );
 
 		/* is data available */
 		if( FD_ISSET( sock, &fds ) ) {
-    		memset( commdata, 0, commsize );
-    		recvd=0;
-    		while( ( retval=recv( sock, commdata+recvd, commsize-recvd, 0 ) ) == commsize-recvd ) {
-    			recvd=commsize;
-    			commsize+=MP_BLKSIZE;
-    			commdata=frealloc( commdata, commsize );
-    			memset( commdata+recvd, 0, MP_BLKSIZE );
-    		}
+			memset( commdata, 0, commsize );
+			recvd=0;
+			while( ( retval=recv( sock, commdata+recvd, commsize-recvd, 0 ) ) == commsize-recvd ) {
+				recvd=commsize;
+				commsize+=MP_BLKSIZE;
+				commdata=frealloc( commdata, commsize );
+				memset( commdata+recvd, 0, MP_BLKSIZE );
+			}
 			switch( retval ) {
 			case -1:
 				addMessage( 0, "Read error on socket!\n%s", strerror( errno ) );
@@ -417,7 +417,7 @@ void *netreader( void *control ) {
 			}
 		}
 
-        /* check current command */
+		/* check current command */
 		pthread_mutex_trylock( &_cmdlock );
 		switch( MPC_CMD(config->command) ) {
 		case mpc_quit:
@@ -456,9 +456,9 @@ void *netreader( void *control ) {
 		config->command=mpc_idle;
 		sfree( &(config->argument) );
 
-       	while( len < strlen( commdata ) ) {
-       		retval=send( sock , commdata+len, strlen( commdata )-len, 0 );
-       		switch( retval ) {
+		while( len < strlen( commdata ) ) {
+			retval=send( sock , commdata+len, strlen( commdata )-len, 0 );
+			switch( retval ) {
 			case -1:
 				addMessage( 0, "Write error on socket!\n%s", strerror( errno ) );
 				config->status=mpc_quit;
@@ -469,18 +469,18 @@ void *netreader( void *control ) {
 				config->status=mpc_quit;
 				len=strlen( commdata );
 				break;
-       		default:
-       			len+=retval;
-       		}
-       	}
+			default:
+				len+=retval;
+			}
+		}
 
 		pthread_mutex_unlock( &_cmdlock );
-    }
+	}
 
-    addMessage( 1, "Disconnected");
-    updateUI( );
-    free( commdata );
-    close(sock);
-    config->rtid=0;
+	addMessage( 1, "Disconnected");
+	updateUI( );
+	free( commdata );
+	close(sock);
+	config->rtid=0;
 	return NULL;
 }

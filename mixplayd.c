@@ -5,7 +5,7 @@
  * through an IP socket
  *
  *  Created on: 16.11.2017
- *      Author: bweber
+ *	  Author: bweber
  */
 #include <stdio.h>
 #include <errno.h>
@@ -99,53 +99,53 @@ static char *strdec( char *target, const char *src ) {
  * This will handle connection for each client
  */
 static void *clientHandler(void *args ) {
-    int sock=*(int*)args;
-    size_t len, sent, msglen;
-    struct timeval to;
-    int running=-1;
-    char *commdata=NULL;
-    char *jsonLine=NULL;
-    fd_set fds;
-    mpconfig *config;
-    long clmsg;
-    int state=0;
-    char *pos, *end;
-    mpcmd cmd=mpc_idle;
-    static const char *mtype;
-    mptitle *playing=NULL;
-    size_t commsize=MP_BLKSIZE;
-    ssize_t retval=0;
-    ssize_t recvd=0;
-    static const char *fname;
-    static const unsigned char *fdata;
-    unsigned int flen;
-    int fullstat=-1;
-    int okreply=-1;
+	int sock=*(int*)args;
+	size_t len, sent, msglen;
+	struct timeval to;
+	int running=-1;
+	char *commdata=NULL;
+	char *jsonLine=NULL;
+	fd_set fds;
+	mpconfig *config;
+	long clmsg;
+	int state=0;
+	char *pos, *end;
+	mpcmd cmd=mpc_idle;
+	static const char *mtype;
+	mptitle *playing=NULL;
+	size_t commsize=MP_BLKSIZE;
+	ssize_t retval=0;
+	ssize_t recvd=0;
+	static const char *fname;
+	static const unsigned char *fdata;
+	unsigned int flen;
+	int fullstat=-1;
+	int okreply=-1;
 
-    commdata=falloc( commsize, sizeof( char ) );
+	commdata=falloc( commsize, sizeof( char ) );
 
-    config = getConfig();
-    clmsg = config->msg->count;
+	config = getConfig();
+	clmsg = config->msg->count;
 
-    pthread_detach(pthread_self());
+	pthread_detach(pthread_self());
 
-    addMessage( 2, "Client handler started" );
-    while( running && ( config->status!=mpc_quit ) ) {
-    	FD_ZERO( &fds );
-    	FD_SET( sock, &fds );
+	addMessage( 2, "Client handler started" );
+	while( running && ( config->status!=mpc_quit ) ) {
+		FD_ZERO( &fds );
+		FD_SET( sock, &fds );
 
-    	to.tv_sec=0;
-    	to.tv_usec=100000; /* 1/2 second */
-    	select( FD_SETSIZE, &fds, NULL, NULL, &to );
-    	if( FD_ISSET( sock, &fds ) ) {
-    		memset( commdata, 0, commsize );
-    		recvd=0;
-    		while( ( retval=recv( sock, commdata+recvd, commsize-recvd, 0 ) ) == commsize-recvd ) {
-    			recvd=commsize;
-    			commsize+=MP_BLKSIZE;
-    			commdata=frealloc( commdata, commsize );
-    			memset( commdata+recvd, 0, MP_BLKSIZE );
-    		}
+		to.tv_sec=0;
+		to.tv_usec=100000; /* 1/2 second */
+		select( FD_SETSIZE, &fds, NULL, NULL, &to );
+		if( FD_ISSET( sock, &fds ) ) {
+			memset( commdata, 0, commsize );
+			recvd=0;
+			while( ( retval=recv( sock, commdata+recvd, commsize-recvd, 0 ) ) == commsize-recvd ) {
+				recvd=commsize;
+				commsize+=MP_BLKSIZE;
+				commdata=frealloc( commdata, commsize );
+				memset( commdata+recvd, 0, MP_BLKSIZE );
+			}
 			switch( retval ) {
 			case -1:
 				addMessage( 1, "Read error on socket!\n%s", strerror( errno ) );
@@ -281,83 +281,83 @@ static void *clientHandler(void *args ) {
 			} /* switch(retval) */
 		} /* if fd_isset */
 
-    	if( running && ( config->status != mpc_start ) ) {
-    		memset( commdata, 0, commsize );
-    		switch( state ) {
-    		case 11: /* get update */
-    			if( config->current->plnext != playing ) {
-    				fullstat=-1;
-    			}
-    			jsonLine=serializeStatus( &clmsg, sock, fullstat );
-    			playing=config->current->plnext;
-    			fullstat=0;
-    			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i;\015\012\015\012", (int)strlen(jsonLine) );
-    			while( ( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
-    				commsize+=MP_BLKSIZE;
-    				commdata=frealloc( commdata, commsize );
-    			}
-    			strcat( commdata, jsonLine );
-    			strcat( commdata, "\015\012\015\012" );
-    			len=strlen(commdata);
-    			sfree( &jsonLine );
-    			break;
-    		case 21: /* set command */
-    			if( cmd != mpc_idle ) {
-    				if( okreply ) {
-    					sprintf( commdata, "HTTP/1.1 204 No Content\015\012\015\012" );
-    					len=strlen( commdata );
-    				}
-    				if( ( cmd == mpc_dbinfo ) || ( cmd == mpc_dbclean) ||
-    						( cmd == mpc_doublets ) || ( cmd == mpc_shuffle ) ||
+		if( running && ( config->status != mpc_start ) ) {
+			memset( commdata, 0, commsize );
+			switch( state ) {
+			case 11: /* get update */
+				if( config->current->plnext != playing ) {
+					fullstat=-1;
+				}
+				jsonLine=serializeStatus( &clmsg, sock, fullstat );
+				playing=config->current->plnext;
+				fullstat=0;
+				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i;\015\012\015\012", (int)strlen(jsonLine) );
+				while( ( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
+					commsize+=MP_BLKSIZE;
+					commdata=frealloc( commdata, commsize );
+				}
+				strcat( commdata, jsonLine );
+				strcat( commdata, "\015\012\015\012" );
+				len=strlen(commdata);
+				sfree( &jsonLine );
+				break;
+			case 21: /* set command */
+				if( cmd != mpc_idle ) {
+					if( okreply ) {
+						sprintf( commdata, "HTTP/1.1 204 No Content\015\012\015\012" );
+						len=strlen( commdata );
+					}
+					if( ( cmd == mpc_dbinfo ) || ( cmd == mpc_dbclean) ||
+							( cmd == mpc_doublets ) || ( cmd == mpc_shuffle ) ||
 							( MPC_CMD(cmd) == mpc_search ) ) {
-    					setCurClient( sock );
-    					/* setCurClient may block so we need to skip messages */
-    					clmsg=config->msg->count;
-    				}
-        			setCommand(cmd);
-    			}
-    			else {
-    				sprintf( commdata, "HTTP/1.1 400 Invalid Command\015\012\015\012" );
-    				len=strlen( commdata );
-    			}
-    			break;
-    		case 31: /* unknown command */
-    			sprintf( commdata, "HTTP/1.1 501 Not Implemented\015\012\015\012" );
+						setCurClient( sock );
+						/* setCurClient may block so we need to skip messages */
+						clmsg=config->msg->count;
+					}
+					setCommand(cmd);
+				}
+				else {
+					sprintf( commdata, "HTTP/1.1 400 Invalid Command\015\012\015\012" );
+					len=strlen( commdata );
+				}
+				break;
+			case 31: /* unknown command */
+				sprintf( commdata, "HTTP/1.1 501 Not Implemented\015\012\015\012" );
 				len=strlen( commdata );
-    			break;
-    		case 51: /* send file */
-    			if( _isDaemon == 0 ) {
-    				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012\015\012", mtype );
-        			send(sock , commdata, strlen(commdata), 0);
-       				filePost( sock, fname );
-    			}
-    			else {
-    				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012Content-Length: %i;\015\012\015\012", mtype, flen );
-    				send(sock , commdata, strlen(commdata), 0);
-    				len=0;
+				break;
+			case 51: /* send file */
+				if( _isDaemon == 0 ) {
+					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012\015\012", mtype );
+					send(sock , commdata, strlen(commdata), 0);
+	   				filePost( sock, fname );
+				}
+				else {
+					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012Content-Length: %i;\015\012\015\012", mtype, flen );
+					send(sock , commdata, strlen(commdata), 0);
+					len=0;
 					while( len < flen ) {
 						len+=send( sock, &fdata[len], flen-len, 0 );
 					}
-    			}
-    			len=0;
-    			running=0;
-    			break;
-    		case 61: /* get config */
-    			jsonLine=serializeConfig( );
-    			sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012", (int)strlen(jsonLine) );
-    			while( ( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
-    				commsize+=MP_BLKSIZE;
-    				commdata=frealloc( commdata, commsize );
-    			}
-    			strcat( commdata, jsonLine );
-    			strcat( commdata, "\015\012\015\012" );
-    			len=strlen(commdata);
-    			sfree( &jsonLine );
-    			break;
-    		default:
-    			len=0;
-    		}
-    		state=0;
+				}
+				len=0;
+				running=0;
+				break;
+			case 61: /* get config */
+				jsonLine=serializeConfig( );
+				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012", (int)strlen(jsonLine) );
+				while( ( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
+					commsize+=MP_BLKSIZE;
+					commdata=frealloc( commdata, commsize );
+				}
+				strcat( commdata, jsonLine );
+				strcat( commdata, "\015\012\015\012" );
+				len=strlen(commdata);
+				sfree( &jsonLine );
+				break;
+			default:
+				len=0;
+			}
+			state=0;
 
 			if( len>0 ) {
 				sent=0;
@@ -372,17 +372,17 @@ static void *clientHandler(void *args ) {
 					}
 				}
 			}
-    	} /* if running & !mpc_start */
+		} /* if running & !mpc_start */
 	}
 
-    addMessage( 2, "Client handler exited" );
+	addMessage( 2, "Client handler exited" );
    	unlockClient( sock );
 	close(sock);
-    free( args );
-    sfree( &commdata );
-    sfree( &jsonLine );
+	free( args );
+	sfree( &commdata );
+	sfree( &jsonLine );
 
-    return NULL;
+	return NULL;
 }
 
 /**
@@ -391,23 +391,23 @@ static void *clientHandler(void *args ) {
  * spins faster with increased verbosity
  */
 void activity( const char *msg, ... ) {
-    char roller[5]="|/-\\";
-    char text[256]="";
-    int pos;
-    va_list args;
+	char roller[5]="|/-\\";
+	char text[256]="";
+	int pos;
+	va_list args;
 
-    if( getVerbosity() && ( _ftrpos%( 100/getVerbosity() ) == 0 ) ) {
-        pos=( _ftrpos/( 100/getVerbosity() ) )%4;
-        va_start( args, msg );
-        vsprintf( text, msg, args );
-        printf( "%s %c          \r", text, roller[pos] );
-        fflush( stdout );
-        va_end( args );
-    }
+	if( getVerbosity() && ( _ftrpos%( 100/getVerbosity() ) == 0 ) ) {
+		pos=( _ftrpos/( 100/getVerbosity() ) )%4;
+		va_start( args, msg );
+		vsprintf( text, msg, args );
+		printf( "%s %c		  \r", text, roller[pos] );
+		fflush( stdout );
+		va_end( args );
+	}
 
-    if( getVerbosity() > 0 ) {
-        _ftrpos=( _ftrpos+1 )%( 400/getVerbosity() );
-    }
+	if( getVerbosity() > 0 ) {
+		_ftrpos=( _ftrpos+1 )%( 400/getVerbosity() );
+	}
 }
 
 /*
@@ -415,38 +415,38 @@ void activity( const char *msg, ... ) {
  * msg - Message to print
  * info - second part of the massage, for instance a variable
  * error - errno that was set
- *         F_FAIL = print message w/o errno and exit
+ *		 F_FAIL = print message w/o errno and exit
  */
 void fail( int error, const char* msg, ... ) {
-    va_list args;
-    va_start( args, msg );
+	va_list args;
+	va_start( args, msg );
 
-    if( _isDaemon ) {
-    	vsyslog( LOG_ERR, msg, args );
-    }
+	if( _isDaemon ) {
+		vsyslog( LOG_ERR, msg, args );
+	}
 	fprintf( stdout, "\n" );
 	vfprintf( stdout, msg, args );
 	fprintf( stdout, "\n" );
-    if( error > 0 ) {
-        fprintf( stdout, "ERROR: %i - %s\n", abs( error ), strerror( abs( error ) ) );
-        if( _isDaemon ) {
-        	syslog( LOG_ERR, "ERROR: %i - %s\n", abs( error ), strerror( abs( error ) ) );
-        }
-    }
-    va_end( args );
+	if( error > 0 ) {
+		fprintf( stdout, "ERROR: %i - %s\n", abs( error ), strerror( abs( error ) ) );
+		if( _isDaemon ) {
+			syslog( LOG_ERR, "ERROR: %i - %s\n", abs( error ), strerror( abs( error ) ) );
+		}
+	}
+	va_end( args );
 
-    exit( error );
+	exit( error );
 }
 
 void progressStart( char* msg, ... ) {
-    va_list args;
-    char *line;
-    line=falloc( 512, sizeof( char ) );
+	va_list args;
+	char *line;
+	line=falloc( 512, sizeof( char ) );
 
-    va_start( args, msg );
-    vsnprintf( line, 512, msg, args );
+	va_start( args, msg );
+	vsnprintf( line, 512, msg, args );
 	addMessage( 0, line );
-    va_end( args );
+	va_end( args );
 }
 
 void progressEnd( ) {
@@ -464,19 +464,19 @@ void updateUI( ) {
 }
 
 int main( int argc, char **argv ) {
-    mpconfig    *control;
-    int 		port=MP_PORT;
-    fd_set				fds;
-    struct timeval		to;
+	mpconfig	*control;
+	int 		port=MP_PORT;
+	fd_set				fds;
+	struct timeval		to;
 	int 		mainsocket ,client_sock ,alen ,*new_sock;
 	struct sockaddr_in server , client;
 
-    control=readConfig( );
-    /* mixplayd can never be remote */
-    control->remote=0;
-    muteVerbosity();
+	control=readConfig( );
+	/* mixplayd can never be remote */
+	control->remote=0;
+	muteVerbosity();
 
-    switch( getArgs( argc, argv ) ) {
+	switch( getArgs( argc, argv ) ) {
 	case 0: /* no arguments given */
 		break;
 
@@ -508,10 +508,10 @@ int main( int argc, char **argv ) {
 		return -1;
 	}
 
-    /* we are never ever remote */
-    control->remote=0;
+	/* we are never ever remote */
+	control->remote=0;
 
-    mainsocket = socket(AF_INET , SOCK_STREAM , 0);
+	mainsocket = socket(AF_INET , SOCK_STREAM , 0);
 	if (mainsocket == -1) {
 		fail( errno, "Could not create socket");
 	}
@@ -527,36 +527,36 @@ int main( int argc, char **argv ) {
 	}
 	addMessage( 1, "bind() done");
 
-    if( getDebug() == 0 ) {
-    	_isDaemon=-1;
-    	daemon( 0, 0 );
-    	openlog ("mixplayd", LOG_PID, LOG_DAEMON);
-    	/* Make sure that messages end up in the log */
-        control->inUI=-1;
-    }
+	if( getDebug() == 0 ) {
+		_isDaemon=-1;
+		daemon( 0, 0 );
+		openlog ("mixplayd", LOG_PID, LOG_DAEMON);
+		/* Make sure that messages end up in the log */
+		control->inUI=-1;
+	}
 
    	pthread_create( &(control->rtid), NULL, reader, control );
    	/* wait for the players to start before handling any commands */
    	sleep(1);
 
-    if( NULL == control->root ) {
-        setProfile( control );
-        if( control->root == NULL ) {
-        	fail( F_FAIL, "No music to play!\nStart mixplayd once with a path to set default music directory." );
-        }
-    }
-    else {
-    	control->active=0;
-        control->dbname[0]=0;
-        setPCommand( mpc_play );
-    }
+	if( NULL == control->root ) {
+		setProfile( control );
+		if( control->root == NULL ) {
+			fail( F_FAIL, "No music to play!\nStart mixplayd once with a path to set default music directory." );
+		}
+	}
+	else {
+		control->active=0;
+		control->dbname[0]=0;
+		setPCommand( mpc_play );
+	}
 
-    while( control->status != mpc_play ) {
-    	if( control->command != mpc_play ) {
-    		setCommand( mpc_play );
-    		sleep(1);
-    	}
-    }
+	while( control->status != mpc_play ) {
+		if( control->command != mpc_play ) {
+			setCommand( mpc_play );
+			sleep(1);
+		}
+	}
 
 	listen(mainsocket , 3);
 	addMessage( 0, "Listening on port %i", port );
@@ -564,36 +564,36 @@ int main( int argc, char **argv ) {
 	/* enable inUI even when not in daemon mode */
 	control->inUI=-1;
 	alen = sizeof(struct sockaddr_in);
-    /* Start main loop */
-    while( control->status != mpc_quit ){
-        FD_ZERO( &fds );
-      	FD_SET( mainsocket, &fds );
-        to.tv_sec=0;
-        to.tv_usec=100000; /* 1/10 second */
-        if( select( FD_SETSIZE, &fds, NULL, NULL, &to ) > 0 ) {
-        	pthread_t pid;
-        	client_sock = accept(mainsocket, (struct sockaddr *)&client, (socklen_t*)&alen);
-            if (client_sock < 0) {
-                fail( errno, "accept() failed!" );
-                control->status=mpc_quit;
-            }
-            addMessage( 2, "Connection accepted" );
+	/* Start main loop */
+	while( control->status != mpc_quit ){
+		FD_ZERO( &fds );
+	  	FD_SET( mainsocket, &fds );
+		to.tv_sec=0;
+		to.tv_usec=100000; /* 1/10 second */
+		if( select( FD_SETSIZE, &fds, NULL, NULL, &to ) > 0 ) {
+			pthread_t pid;
+			client_sock = accept(mainsocket, (struct sockaddr *)&client, (socklen_t*)&alen);
+			if (client_sock < 0) {
+				fail( errno, "accept() failed!" );
+				control->status=mpc_quit;
+			}
+			addMessage( 2, "Connection accepted" );
 
-            new_sock = falloc( 1, sizeof(int) );
-            *new_sock = client_sock;
+			new_sock = falloc( 1, sizeof(int) );
+			*new_sock = client_sock;
 
-            /* todo collect pids?
-             * or better use a threadpool */
-            if( pthread_create( &pid , NULL ,  clientHandler , (void*) new_sock) < 0) {
-                fail( errno, "Could not create client handler thread!" );
-                control->status=mpc_quit;
-            }
-        }
-    }
-    addMessage( 0, "Dropped out of the main loop" );
-    control->inUI=0;
+			/* todo collect pids?
+			 * or better use a threadpool */
+			if( pthread_create( &pid , NULL ,  clientHandler , (void*) new_sock) < 0) {
+				fail( errno, "Could not create client handler thread!" );
+				control->status=mpc_quit;
+			}
+		}
+	}
+	addMessage( 0, "Dropped out of the main loop" );
+	control->inUI=0;
 
-    freeConfig( );
+	freeConfig( );
 
 	return 0;
 }
