@@ -120,6 +120,15 @@ function setVolume( vol ) {
 	sendCMD( 0x15, vol );
 }
 
+function dnpfav( cmd ) {
+	var e=document.getElementById('range');
+	cmd|=e.options[e.selectedIndex].value;
+	if(document.getElementById('fuzzy').checked ) {
+		cmd|=0x1000;
+	}
+	sendCMD( cmd );
+}
+
 function search() {
 	var e=document.getElementById('range');
 	var term=document.getElementById('text').value;
