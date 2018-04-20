@@ -135,7 +135,7 @@ jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mptitle *root ) {
  * put data to be sent over into the buff
  * adds messages only if any are available for the client
 **/
-char *serializeStatus( long *count, int clientid, int fullstat ) {
+char *serializeStatus( unsigned long *count, int clientid, int fullstat ) {
 	mpconfig *data=getConfig();
 	jsonObject *jo=NULL;
 
@@ -169,7 +169,7 @@ char *serializeStatus( long *count, int clientid, int fullstat ) {
 	if( _curclient == -1 ) {
 		if( *count < data->msg->count ) {
 			jsonAddStr( jo, "msg", msgBuffPeek( data->msg, *count ) );
-			(*count)++;
+			*count=(*count)+1;
 		}
 		else {
 			jsonAddStr( jo, "msg", "" );

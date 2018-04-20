@@ -20,7 +20,7 @@
 
 void *netreader( void *control );
 void setSCommand( mpcmd cmd );
-char *serializeStatus( long *count, int clientid, int fullstat );
+char *serializeStatus( unsigned long *count, int clientid, int fullstat );
 char *serializeConfig( void );
 void setCurClient( int client );
 void unlockClient( int client );

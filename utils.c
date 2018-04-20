@@ -459,14 +459,14 @@ unsigned long msgBuffAdd( msgbuf *msgbuf, char *line ) {
  */
 char *msgBuffGet( struct msgbuf_t *msgbuf ) {
 	char *retval = NULL;
+	pthread_mutex_lock( msgbuf->msgLock );
 	if( msgbuf->lines > 0 ) {
-		pthread_mutex_lock( msgbuf->msgLock );
 		retval=msgbuf->msg[msgbuf->current];
 		msgbuf->msg[msgbuf->current]=NULL;
 		msgbuf->current =(msgbuf->current+1)%MSGNUM;
 		msgbuf->lines--;
-		pthread_mutex_unlock( msgbuf->msgLock );
 	}
+	pthread_mutex_unlock( msgbuf->msgLock );
 	return retval;
 }
 
@@ -480,13 +480,17 @@ const char *msgBuffPeek( struct msgbuf_t *msgbuf, unsigned long msgno ) {
 	char *retval = "";
 	int pos;
 
+	pthread_mutex_lock( msgbuf->msgLock );
 	if( msgno < msgbuf->count ) {
-		pthread_mutex_lock( msgbuf->msgLock );
-		pos=msgbuf->current+msgbuf->lines; /* the latest entry */
-		pos=pos-(msgbuf->count-msgno ); /* get the proper offset */
-		retval=msgbuf->msg[pos%MSGNUM];
-		pthread_mutex_unlock( msgbuf->msgLock );
+		/* Avoid Underflows!*/
+		if( msgno > msgbuf->count-msgbuf->lines ) {
+			pos=msgbuf->current+msgbuf->lines; /* the latest entry */
+			pos=pos-(msgbuf->count-msgno ); /* get the proper offset */
+			retval=msgbuf->msg[pos%MSGNUM];
+		}
 	}
+	pthread_mutex_unlock( msgbuf->msgLock );
+
 	return retval;
 }
 
@@ -511,6 +515,7 @@ char *msgBuffAll( struct msgbuf_t *msgbuf ) {
 			len=len+256;
 			buff=realloc( buff, len*sizeof( char ) );
 			if( NULL == buff ) {
+				pthread_mutex_unlock( msgbuf->msgLock );
 				fail( errno, "Can't increase message buffer" );
 			}
 		}

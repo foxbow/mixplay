@@ -107,7 +107,7 @@ static void *clientHandler(void *args ) {
 	char *jsonLine=NULL;
 	fd_set fds;
 	mpconfig *config;
-	long clmsg;
+	unsigned long clmsg;
 	int state=0;
 	char *pos, *end;
 	mpcmd cmd=mpc_idle;
@@ -195,19 +195,15 @@ static void *clientHandler(void *args ) {
 									cmd=mpc_idle;
 								}
 								else {
-									addMessage( 1, "Got command %s 0x%s", cmd, mpcString(cmd), pos );
+									addMessage( 1, "Got command 0x%04x - %s", cmd, mpcString(cmd) );
 								}
 								pos+=4;
 								if( *pos == '?' ) {
 									pos++;
 									if( config->argument != NULL ) {
-										// scrolling volume may send a *lot* of requests
-										if( cmd != mpc_setvol ) {
-											sfree( &(config->argument) );
-											addMessage( 0, "Stray argument: %s for %s!", config->argument, mpcString(cmd) );
-										}
-										else {
-											addMessage( 0, "Recycling argument: %s for %s!", config->argument, pos );
+										addMessage( 0, "Argument %s becomes %s!", config->argument, pos );
+										if( strlen(config->argument) <= strlen(pos) ) {
+											config->argument=frealloc( config->argument, strlen(pos)+1 );
 										}
 									}
 									else {
@@ -337,7 +333,7 @@ static void *clientHandler(void *args ) {
 				if( _isDaemon == 0 ) {
 					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012\015\012", mtype );
 					send(sock , commdata, strlen(commdata), 0);
-	   				filePost( sock, fname );
+					filePost( sock, fname );
 				}
 				else {
 					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012Content-Length: %i;\015\012\015\012", mtype, flen );
@@ -384,7 +380,7 @@ static void *clientHandler(void *args ) {
 	}
 
 	addMessage( 2, "Client handler exited" );
-   	unlockClient( sock );
+	unlockClient( sock );
 	close(sock);
 	free( args );
 	sfree( &commdata );

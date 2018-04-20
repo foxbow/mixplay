@@ -6,22 +6,27 @@ var msgline="";
 function sendCMD( cmd, arg="" ) {
 	var xmlhttp=new XMLHttpRequest();
 	var code=Number(cmd).toString(16);
-    while (code.length < 4) {
-        code = "0" + code;
-    }
-	
+	while (code.length < 4) {
+		code = "0" + code;
+	}
+
 	xmlhttp.onreadystatechange=function() {
-  		if ( xmlhttp.readyState==4 && xmlhttp.status!=204 ) {
-  			if( xmlhttp.status == 0 ) {
-  				alert("Error: connection lost!");
-  				doUpdate=0;
-  			}
-  			else {
+		if ( xmlhttp.readyState==4 && xmlhttp.status!=204 ) {
+			if( xmlhttp.status == 0 ) {
+				if( doUpdate != 0 ) {
+					doUpdate=0;
+					if( confirm("CMD Error: connection lost!\nRetry?") ) {
+						doUpdate=1;
+						updateUI();
+					}
+				}
+			}
+			else {
 				alert( "Received Error "+xmlhttp.status+" after sending 0x"+code );
 			}
-  		}
+		}
 	}
-	
+
 	if( arg != "" ) {
 		xmlhttp.open("GET", "/cmd/"+code+"?"+arg, true);
 	}
@@ -35,12 +40,12 @@ function sendCMD( cmd, arg="" ) {
  * use scrollwheel to control volume
  */
 function volWheel( e ) {
-  if( e.deltaY < 0 ) {
-    sendCMD( 0x0d );
-  }
-  else if( e.deltaY > 0 ) {
-    sendCMD( 0x0e );
-  }
+	if( e.deltaY < 0 ) {
+		sendCMD( 0x0d );
+	}
+	else if( e.deltaY > 0 ) {
+		sendCMD( 0x0e );
+	}
 }
 
 function setElement( e, val ) {
@@ -50,65 +55,77 @@ function setElement( e, val ) {
 function updateUI( ){
 	var xmlhttp=new XMLHttpRequest();
 	xmlhttp.onreadystatechange=function() {
-  		if (xmlhttp.readyState==4 ) {
-  			if( xmlhttp.status==200 ) {
-	  			data=JSON.parse(xmlhttp.responseText);
-	  			if( data !== undefined ) {
-	  				if( data.version != mpver ) {
-	  					doUpdate=0;
-	  					alert("Version clash, expected "+mpver+" and got "+data.version );
-	  					return;
-	  				}
-	  				if( data.type == 3 ) {
-		  				document.title=data.current.artist+" - "+data.current.title;
-		  				setElement( 'title', data.current.title );
-			  			setElement( 'prev', data.prev.artist+" - "+data.prev.title );
-			  			setElement( 'artist', data.current.artist );
-			  			setElement( 'album', data.current.album );
-			  			setElement( 'genre', data.current.genre );
-			  			setElement( 'next', data.next.artist+" - "+data.next.title );
-			  			if( data.current.flags & 1 )  {
-				  			document.getElementById( 'fav' ).disabled=true;
-			  			}
-			  			else {
-				  			document.getElementById( 'fav' ).disabled=false;		  			
-			  			}
-			  		}
-		  			if( data.status == 0 ) {
-			  			document.getElementById('current').style.backgroundColor="#ddd";
-			  		}
-			  		else {
-			  			document.getElementById('current').style.backgroundColor="#daa";
-			  		}	
-			  		
-		  			setElement( 'playtime', data.playtime );
-		  			setElement( 'remtime', data.remtime );
-		  			document.getElementById( 'progress' ).value=data.percent;
-		  			document.getElementById( 'vol' ).value=data.volume;
-		  			if( data.msg != "" ) {
-		  				msgline=msgline+"\n"+data.msg;
-		  			}
-		  			else {
-		  				if( msgline!= "" ) {
-			  				document.body.style.cursor='auto';
-		  					alert(msgline);
-		  					msgline="";
-		  				}
-		  			}
-		  		}
-		  	}
-		  	else if( xmlhttp.status==503 ) {
-		  		if( confirm( "Try to restart?" ) ) {
-		  			sendCMD( 0x04 );
-		  		}
-		  		else{
-		  			alert( "Stopping updates.." );
-		  			doUpdate=0;
-		  		}
-		  	}
+		if (xmlhttp.readyState==4 ) {
+			if( xmlhttp.status==200 ) {
+				data=JSON.parse(xmlhttp.responseText);
+				if( data !== undefined ) {
+					if( data.version != mpver ) {
+						doUpdate=0;
+						alert("Version clash, expected "+mpver+" and got "+data.version );
+						return;
+					}
+					if( data.type == 3 ) {
+						document.title=data.current.artist+" - "+data.current.title;
+						setElement( 'title', data.current.title );
+						setElement( 'prev', data.prev.artist+" - "+data.prev.title );
+						setElement( 'artist', data.current.artist );
+						setElement( 'album', data.current.album );
+						setElement( 'genre', data.current.genre );
+						setElement( 'next', data.next.artist+" - "+data.next.title );
+						if( data.current.flags & 1 )  {
+							document.getElementById( 'fav' ).disabled=true;
+						}
+						else {
+							document.getElementById( 'fav' ).disabled=false;		  			
+						}
+					}
+					if( data.status == 0 ) {
+						document.getElementById('current').style.backgroundColor="#ddd";
+					}
+					else {
+						document.getElementById('current').style.backgroundColor="#daa";
+					}
+
+					setElement( 'playtime', data.playtime );
+					setElement( 'remtime', data.remtime );
+					document.getElementById( 'progress' ).value=data.percent;
+					document.getElementById( 'vol' ).value=data.volume;
+					if( data.msg != "" ) {
+						msgline=msgline+"\n"+data.msg;
+					}
+					else {
+						if( msgline!= "" ) {
+							document.body.style.cursor='auto';
+							alert(msgline);
+							msgline="";
+						}
+					}
+				}
+			}
+			else if( xmlhttp.status==503 ) {
+				if( confirm( "Try to restart?" ) ) {
+					sendCMD( 0x04 );
+				}
+				else{
+					alert( "Stopping updates.." );
+					doUpdate=0;
+				}
+			}
+			else if( xmlhttp.status == 0 ) {
+				if( doUpdate != 0 ) {
+					doUpdate=0;
+					if( confirm("Update Error: connection lost!\nRetry?") ) {
+						doUpdate=1;
+						updateUI();
+					}
+				}
+			}
+			else {
+				alert( "Received Error "+xmlhttp.status+" after sending 0x"+code );
+			}
 		}
 	}
-	
+
 	if( doUpdate != 0 ) {
 		xmlhttp.open("GET", "/status", true);
 		xmlhttp.send();
