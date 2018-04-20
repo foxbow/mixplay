@@ -483,7 +483,7 @@ const char *msgBuffPeek( struct msgbuf_t *msgbuf, unsigned long msgno ) {
 	pthread_mutex_lock( msgbuf->msgLock );
 	if( msgno < msgbuf->count ) {
 		/* Avoid Underflows!*/
-		if( msgno > msgbuf->count-msgbuf->lines ) {
+		if( msgno >= msgbuf->count-msgbuf->lines ) {
 			pos=msgbuf->current+msgbuf->lines; /* the latest entry */
 			pos=pos-(msgbuf->count-msgno ); /* get the proper offset */
 			retval=msgbuf->msg[pos%MSGNUM];
@@ -589,28 +589,24 @@ char hexval( const char c ) {
 		return 10+(c-'A');
 	}
 
-	addMessage( 1, "Invalid hex character %i - '%c'!", c, c );
 	return -1;
 }
 
 /*
  * reads a hex number with length len
  */
-int readHex( const char *txt, int len ) {
+long readHex( const char *txt ) {
+	int pos=0;
 	int val=0;
-	int mult=1;
-	int retval=0;
+	long retval=0;
 
-	if( strlen(txt) < len ) {
+	if( ( txt==NULL ) || ( strlen(txt) == 0 ) ) {
 		return -1;
 	}
 
-	while( len > 0 ) {
-		len--;
-		val=hexval(txt[len]);
-		if( val == -1 ) return -1;
-		retval+=mult*val;
-		mult=mult*16;
+	while( ( val=hexval(txt[pos++]) ) != -1  ) {
+		retval*=16;
+		retval+=val;
 	}
 
 	return retval;

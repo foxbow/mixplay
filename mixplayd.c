@@ -86,6 +86,7 @@ static char *strdec( char *target, const char *src ) {
 		case 2:
 			buf=buf+hexval(src[i]);
 			target[j]=buf;
+			buf=0;
 			j++;
 			state=0;
 			break;
@@ -189,7 +190,7 @@ static void *clientHandler(void *args ) {
 							}
 							else if( strstr( pos, "/cmd/" ) == pos ) {
 								pos+=5;
-								cmd=readHex(pos,4);
+								cmd=readHex(pos);
 								if( cmd == -1 ) {
 									addMessage( 0, "Illegal command %s", pos );
 									cmd=mpc_idle;
@@ -539,9 +540,9 @@ int main( int argc, char **argv ) {
 		control->inUI=-1;
 	}
 
-   	pthread_create( &(control->rtid), NULL, reader, control );
-   	/* wait for the players to start before handling any commands */
-   	sleep(1);
+	pthread_create( &(control->rtid), NULL, reader, control );
+	/* wait for the players to start before handling any commands */
+	sleep(1);
 
 	if( NULL == control->root ) {
 		setProfile( control );

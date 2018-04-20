@@ -78,6 +78,6 @@ void sfree( char **ptr );
 void dumpbin( const void *data, size_t len );
 char *toLower( char *text );
 char hexval( const char c );
-int readHex( const char *txt, int len );
+long readHex( const char *txt );
 
 #endif
