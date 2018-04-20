@@ -9,7 +9,7 @@
     <title>Mixplay</title>
   </head>
   <body>
-    <div id='main' onselectstart='return false' onwheel='volWheel(event)' >
+    <div id='main' onselectstart='return false' onwheel='volWheel(event)'>
       <div id='prev' onclick='sendCMD(0x02)'>prev</div>
       <div id='current' onclick='sendCMD(0x00)'>
         <div id='artist'>artist</div>
@@ -36,7 +36,7 @@
        Fuzzy <input id='fuzzy' title='Fuzzy' type='checkbox'>
        <input id='search' type='button' onclick='search()' value='Search' >
       <div id='volpack'>
-        <input id='vol' type='range' min='0' max='100' step='1' value='0' oninput='setVolume( this.value )' >
+        <input id='vol' type='range' min='0' max='100' step='1' value='0' oninput='setVolume( this.value )' onwheel='return false'>
       </div>
     </div> <!-- main -->
   </body>

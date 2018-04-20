@@ -195,16 +195,24 @@ static void *clientHandler(void *args ) {
 									cmd=mpc_idle;
 								}
 								else {
-									addMessage( 1, "Got command 0x%04x from 0x%s", cmd, pos );
+									addMessage( 1, "Got command %s 0x%s", cmd, mpcString(cmd), pos );
 								}
 								pos+=4;
 								if( *pos == '?' ) {
 									pos++;
 									if( config->argument != NULL ) {
-										addMessage( 0, "Stray argument: %s!", config->argument );
-										sfree( &(config->argument) );
+										// scrolling volume may send a *lot* of requests
+										if( cmd != mpc_setvol ) {
+											sfree( &(config->argument) );
+											addMessage( 0, "Stray argument: %s for %s!", config->argument, mpcString(cmd) );
+										}
+										else {
+											addMessage( 0, "Recycling argument: %s for %s!", config->argument, pos );
+										}
 									}
-									config->argument=falloc( strlen( pos )+1, sizeof( char ) );
+									else {
+										config->argument=falloc( strlen( pos )+2, sizeof( char ) );
+									}
 									strdec( config->argument, pos );
 								}
 
