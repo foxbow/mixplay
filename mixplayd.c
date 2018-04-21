@@ -189,20 +189,20 @@ static void *clientHandler(void *args ) {
 								state=1;
 							}
 							else if( strstr( pos, "/cmd/" ) == pos ) {
+								addMessage( 1, "received: %s", pos );
 								pos+=5;
-								cmd=readHex(pos);
+								cmd=readHex(pos,&pos);
 								if( cmd == -1 ) {
-									addMessage( 0, "Illegal command %s", pos );
+									addMessage( 1, "Illegal command %s", pos );
 									cmd=mpc_idle;
 								}
 								else {
 									addMessage( 1, "Got command 0x%04x - %s", cmd, mpcString(cmd) );
 								}
-								pos+=4;
 								if( *pos == '?' ) {
 									pos++;
 									if( config->argument != NULL ) {
-										addMessage( 0, "Argument %s becomes %s!", config->argument, pos );
+										addMessage( 1, "Argument %s becomes %s!", config->argument, pos );
 										if( strlen(config->argument) <= strlen(pos) ) {
 											config->argument=frealloc( config->argument, strlen(pos)+1 );
 										}
@@ -532,14 +532,6 @@ int main( int argc, char **argv ) {
 	}
 	addMessage( 1, "bind() done");
 
-	if( getDebug() == 0 ) {
-		_isDaemon=-1;
-		daemon( 0, 0 );
-		openlog ("mixplayd", LOG_PID, LOG_DAEMON);
-		/* Make sure that messages end up in the log */
-		control->inUI=-1;
-	}
-
 	pthread_create( &(control->rtid), NULL, reader, control );
 	/* wait for the players to start before handling any commands */
 	sleep(1);
@@ -565,6 +557,12 @@ int main( int argc, char **argv ) {
 
 	listen(mainsocket , 3);
 	addMessage( 0, "Listening on port %i", port );
+
+	if( getDebug() == 0 ) {
+		_isDaemon=-1;
+		daemon( 0, 0 );
+		openlog ("mixplayd", LOG_PID, LOG_DAEMON);
+	}
 
 	/* enable inUI even when not in daemon mode */
 	control->inUI=-1;

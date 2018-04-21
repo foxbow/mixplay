@@ -394,7 +394,7 @@ int applyDNPlist( mptitle *base, struct marklist_t *list ) {
 	}
 	while( pos != base );
 
-	addMessage( 1, "Marked %i titles as DNP", cnt );
+	addMessage( (cnt>1)?0:1, "Marked %i titles as DNP", cnt );
 
 	return cnt;
 }
@@ -987,7 +987,7 @@ int applyFAVlist( mptitle *root, struct marklist_t *favourites ) {
 	}
 	while ( runner != root );
 
-	addMessage( 1, "Marked %i favourites", cnt );
+	addMessage( (cnt>1)?0:1, "Marked %i favourites", cnt );
 
 	return cnt;
 }

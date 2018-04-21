@@ -576,7 +576,7 @@ void dumpbin( const void *data, size_t len ) {
 /**
  * treats a single character as a hex value
  */
-char hexval( const char c ) {
+int hexval( const char c ) {
 	if( ( c-'0' >= 0 ) && ( c-'9' <= 9 ) ) {
 		return c-'0';
 	}
@@ -594,19 +594,24 @@ char hexval( const char c ) {
 
 /*
  * reads a hex number with length len
+ * if end != NULL it will point to the first unknown character.
  */
-long readHex( const char *txt ) {
+long readHex( char *txt, char **end ) {
 	int pos=0;
-	int val=0;
 	long retval=0;
 
 	if( ( txt==NULL ) || ( strlen(txt) == 0 ) ) {
 		return -1;
 	}
 
-	while( ( val=hexval(txt[pos++]) ) != -1  ) {
+	while( isxdigit(txt[pos]) ) {
 		retval*=16;
-		retval+=val;
+		retval+=hexval(txt[pos]);
+		pos++;
+	}
+
+	if( end != NULL ) {
+		*end=txt+pos;
 	}
 
 	return retval;

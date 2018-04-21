@@ -64,7 +64,7 @@ const char *mpcString( mpcmd rawcmd ) {
 		return mpc_command[cmd];
 	}
 	else {
-		addMessage( 0, "Unknown command code %i", cmd );
+		addMessage( 1, "Unknown command code %i", cmd );
 		return "mpc_idle";
 	}
 }
@@ -78,7 +78,7 @@ const mpcmd mpcCommand( const char *name ) {
 		if( strstr( name, mpc_command[i] ) ) break;
 	}
 	if( i>mpc_idle ) {
-		addMessage( 0, "Unknown command %s!", name );
+		addMessage( 1, "Unknown command %s!", name );
 		return mpc_idle;
 	}
 	return i;
