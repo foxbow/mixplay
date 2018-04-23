@@ -532,6 +532,13 @@ int main( int argc, char **argv ) {
 	}
 	addMessage( 1, "bind() done");
 
+	/* daemonization must happen before childs are created */
+	if( getDebug() == 0 ) {
+		_isDaemon=-1;
+		daemon( 0, 0 );
+		openlog ("mixplayd", LOG_PID, LOG_DAEMON);
+	}
+
 	pthread_create( &(control->rtid), NULL, reader, control );
 	/* wait for the players to start before handling any commands */
 	sleep(1);
@@ -557,12 +564,6 @@ int main( int argc, char **argv ) {
 
 	listen(mainsocket , 3);
 	addMessage( 0, "Listening on port %i", port );
-
-	if( getDebug() == 0 ) {
-		_isDaemon=-1;
-		daemon( 0, 0 );
-		openlog ("mixplayd", LOG_PID, LOG_DAEMON);
-	}
 
 	/* enable inUI even when not in daemon mode */
 	control->inUI=-1;
