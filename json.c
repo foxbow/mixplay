@@ -4,7 +4,6 @@
  *  Created on: 08.12.2017
  *	  Author: bweber
  */
-#include "config.h"
 #include "utils.h"
 #include "json.h"
 
@@ -13,6 +12,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+/*
+ * todo: 'true', 'false' and 'null' are not yet supported
+ */
 
 /* forward definitions of cyclic dependencies in static functions */
 static char *jsonWriteObj( jsonObject *jo, char *json, int len );
@@ -23,6 +26,7 @@ static int jsonParseArray( char *json, jsonObject **jo );
 /*
  * error handling function
  * todo: make this generic so the json functions can be used outside of mixplay
+ *       probably analog to gtk..
  */
 static int jsonFail( const char *func, char *str, const int i, const int state ) {
 	addMessage( 0, "%s#%i: Found invalid '%c' in JSON pos %i\n%s", func, state, str[i], i, str );
@@ -34,8 +38,8 @@ static int jsonFail( const char *func, char *str, const int i, const int state )
  * if ref is 0 this means the content is owned by the node if not
  * it's a reference and must not be free'd
  * ref: 0 - neither key nor val are to be free'd
- *	  1 - only key needs to be free'd
- *	  2 - key and val are to be free'd
+ *      1 - only key needs to be free'd
+ *      2 - key and val are to be free'd
  */
 static jsonObject *jsonInit( int ref ) {
 	jsonObject *jo=NULL;
@@ -118,11 +122,12 @@ static int jsonParseNum( char *json, char **val ) {
 }
 
 /*
- * parses a string value
+ * parsechecks a string value, this does no decoding!
  */
 static int jsonParseString( char *json, char **val ) {
 	int len=strlen(json);
 	int i=0;
+	int j=0;
 	int state=0;
 
 	*val=NULL;
@@ -153,8 +158,14 @@ static int jsonParseString( char *json, char **val ) {
 			break;
 		case 2: /* escape */
 			switch( json[i] ) {
-			case 'u':
-				i+=4; /* todo are we really skipping hex numbers? */
+			case 'u': // four digits follow
+				i++;
+				for( j=0; j<4; j++ ) {
+					if( !isxdigit(json[i] ) ) {
+						return jsonFail( __func__, json, i, state );
+					}
+					i++;
+				}
 				/* no break */
 			case '"':
 			case '\\':

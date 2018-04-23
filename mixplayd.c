@@ -226,7 +226,7 @@ static void *clientHandler(void *args ) {
 								mtype="text/html; charset=utf-8";
 								state=5;
 							}
-							else if( strcmp( pos, "/rc.html" ) == 0 ) {
+							else if( ( strcmp( pos, "/rc" ) == 0 ) || ( strcmp( pos, "/rc.html" ) == 0 )  ) {
 								fname="static/mprc.html";
 								fdata=static_mprc_html;
 								flen=static_mprc_html_len;
@@ -532,7 +532,10 @@ int main( int argc, char **argv ) {
 	}
 	addMessage( 1, "bind() done");
 
-	/* daemonization must happen before childs are created */
+	/* daemonization must happen before childs are created otherwise the pipes are cut
+	 * todo: this can be reworked but needs manual handling of stdin/out/err
+	 *       also consider displaying status messages on initialization like with
+	 *       gmixplay in local mode. */
 	if( getDebug() == 0 ) {
 		_isDaemon=-1;
 		daemon( 0, 0 );
