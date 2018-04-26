@@ -44,7 +44,7 @@ static int filePost( int sock, const char *fname ) {
 	int fd;
 	fd=open( fname, O_RDONLY );
 	if( fd != -1 ) {
-		sendfile( sock, fd, 0, 4096 );
+		sendfile( sock, fd, 0, 10240 );
 		close(fd);
 		return 0;
 	}
@@ -68,10 +68,9 @@ static char *strdec( char *target, const char *src ) {
 		switch( state ) {
 		case 0:
 			if( src[i] == '%' ) {
-				buf=0;
 				state=1;
 			}
-			if( ( src[i] == 0x0d ) || ( src[i] == 0x0a ) ) {
+			else if( ( src[i] == 0x0d ) || ( src[i] == 0x0a ) ) {
 				target[j]=0;
 			}
 			else {
@@ -86,7 +85,6 @@ static char *strdec( char *target, const char *src ) {
 		case 2:
 			buf=buf+hexval(src[i]);
 			target[j]=buf;
-			buf=0;
 			j++;
 			state=0;
 			break;
@@ -213,7 +211,9 @@ static void *clientHandler(void *args ) {
 									strdec( config->argument, pos );
 								}
 
-								if( MPC_CMD(cmd) == mpc_fav ) {
+								if( ( MPC_CMD(cmd) == mpc_fav ) ||
+									( MPC_CMD(cmd) == mpc_search ) ||
+									( MPC_CMD(cmd) == mpc_longsearch ) ){
 									fullstat=-1;
 								}
 

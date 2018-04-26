@@ -1,7 +1,20 @@
 var doUpdate=1;
 var data=null;
 var mpver=~~MPCOMM_VER~~;
-var msgline="";
+var isstream=0;
+var msglines=["","","","","","","","","",""];
+
+function addText(text) {
+	var line="";
+	for( i=0; i<9; i++ ) {
+		msglines[i]=msglines[i+1];
+	}
+	msglines[9]=text;
+	for( i=0; i<10; i++ ) {
+		line+=msglines[i]+"<br>\n";
+	}
+	document.getElementById('msgs').innerHTML=line;
+}
 
 function sendCMD( cmd, arg="" ) {
 	var xmlhttp=new XMLHttpRequest();
@@ -10,6 +23,14 @@ function sendCMD( cmd, arg="" ) {
 		code = "0" + code;
 	}
 
+	/* filter out commands that make no sense in stream */ 
+	if( ( isstream ) && (	
+		( code == '0002' ) ||
+		( code == '0003' ) ||  
+		( code == '0005' ) ||
+		( code == '000f' ) ||  
+		( code == '0010' ) ) )return;
+	
 	xmlhttp.onreadystatechange=function() {
 		if ( xmlhttp.readyState==4 && xmlhttp.status!=204 ) {
 			if( xmlhttp.status == 0 ) {
@@ -52,6 +73,15 @@ function setElement( e, val ) {
 	document.getElementById( e ).innerHTML=val;
 }
 
+function setVisible( e, i ) {
+	if( i == 0 ) {
+		document.getElementById( e ).style.display='none';
+	}
+	else {
+		document.getElementById( e ).style.display='block';
+	}
+}
+
 function updateUI( ){
 	var xmlhttp=new XMLHttpRequest();
 	xmlhttp.onreadystatechange=function() {
@@ -63,7 +93,7 @@ function updateUI( ){
 						doUpdate=0;
 						alert("Version clash, expected "+mpver+" and got "+data.version );
 						return;
-					}
+					}					
 					if( data.type == 3 ) {
 						document.title=data.current.artist+" - "+data.current.title;
 						setElement( 'title', data.current.title );
@@ -78,6 +108,11 @@ function updateUI( ){
 						else {
 							document.getElementById( 'fav' ).disabled=false;		  			
 						}
+						isstream=data.playstream;
+						setVisible( 'prev', !isstream );
+						setVisible( 'ctrl', !isstream );
+						setVisible( 'playstr', isstream );
+						setVisible( 'playpack', !isstream );
 					}
 					if( data.status == 0 ) {
 						document.getElementById('current').style.backgroundColor="#ddd";
@@ -86,19 +121,17 @@ function updateUI( ){
 						document.getElementById('current').style.backgroundColor="#daa";
 					}
 
-					setElement( 'playtime', data.playtime );
-					setElement( 'remtime', data.remtime );
-					document.getElementById( 'progress' ).value=data.percent;
-					document.getElementById( 'vol' ).value=data.volume;
-					if( data.msg != "" ) {
-						msgline=msgline+"\n"+data.msg;
+					if( isstream ) {
+						setElement( 'splaytime', data.playtime );
 					}
 					else {
-						if( msgline!= "" ) {
-							document.body.style.cursor='auto';
-							alert(msgline);
-							msgline="";
-						}
+						setElement( 'playtime', data.playtime );
+						setElement( 'remtime', data.remtime );
+						document.getElementById( 'progress' ).value=data.percent;
+					}
+					document.getElementById( 'vol' ).value=data.volume;
+					if( data.msg != "" ) {
+						addText(data.msg);
 					}
 				}
 			}
@@ -138,6 +171,7 @@ function setVolume( vol ) {
 }
 
 function dnpfav( cmd, term="" ) {
+	if( isstream ) return;
 	var e=document.getElementById('range');
 	cmd|=e.options[e.selectedIndex].value;
 	if(document.getElementById('fuzzy').checked ) {
@@ -147,9 +181,9 @@ function dnpfav( cmd, term="" ) {
 }
 
 function search() {
+	if( isstream ) return;
 	var term=document.getElementById('text').value;
 	if( term.length > 1 ) {
-		document.body.style.cursor='progress';
 		dnpfav( 0x13, term );
 	}
 	else {

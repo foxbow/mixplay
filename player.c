@@ -521,14 +521,16 @@ void *reader( void *cont ) {
 							addMessage( 3, "%s", a );
 							a = a + 13;
 							*strchr( a, '\'' ) = '\0';
+							strncpy( control->current->plnext->artist, control->current->artist, NAMELEN );
+							strncpy( control->current->plnext->title, control->current->title, NAMELEN );
 							strncpy( control->current->plnext->display, control->current->display, MAXPATHLEN );
 							strip( control->current->display, a, MAXPATHLEN );
 
 							if( NULL != ( t = strstr( a, " - " ) ) ) {
 								*t=0;
 								t=t+3;
-								strncpy( control->current->artist, a, NAMELEN );
-								strncpy( control->current->title, t, NAMELEN );
+								strip( control->current->artist, a, NAMELEN );
+								strip( control->current->title, t, NAMELEN );
 							}
 							else {
 								strip( control->current->title, a, NAMELEN );

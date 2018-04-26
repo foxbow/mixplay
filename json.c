@@ -43,11 +43,14 @@ int jsonHasError() {
 /*
  * error handling functions
  */
-static int jsonGetFail( char *msg, ... ) {
+static int jsonFail( char *msg, ... ) {
 	va_list args;
 	va_start( args, msg );
 	vsnprintf( _jsonError, 511, msg, args );
 	va_end( args );
+#ifdef DEBUG
+	fprintf( stderr, "JSON: %s\n", _jsonError );
+#endif
 	return -1;
 }
 
@@ -55,7 +58,7 @@ static int jsonGetFail( char *msg, ... ) {
  * simple wrapper to keep old messages
  */
 static int jsonParseFail( const char *func, char *str, const int i, const int state ) {
-	return jsonGetFail( "%s#%i: Found invalid '%c' in JSON pos %i\n%s", func, state, str[i], i, str );
+	return jsonFail( "%s#%i: Found invalid '%c' in JSON pos %i\n%s", func, state, str[i], i, str );
 }
 
 /**
@@ -70,7 +73,7 @@ static jsonObject *jsonInit( int ref ) {
 	jsonObject *jo=NULL;
 	jo=calloc(1, sizeof(jsonObject));
 	if( jo == NULL ) {
-		jsonGetFail( "Out of memory!" );
+		jsonFail( "Out of memory!" );
 		return NULL;
 	}
 	jo->key=NULL;
@@ -187,7 +190,7 @@ static int jsonParseString( char *json, char **val ) {
 			break;
 		case 2: /* escape */
 			switch( json[ip] ) {
-			case 'u': // four digits follow
+			case 'u': /* four digits follow */
 				for( j=0; j<4; j++ ) {
 					ip++;
 					if( !isxdigit(json[ip] ) ) {
@@ -346,7 +349,7 @@ static int setIndex( jsonObject *jo, int i ) {
 	sprintf( buf, "%i", i );
 	jo->key=calloc( strlen(buf)+1, sizeof(char) );
 	if( jo->key == NULL ) {
-		jsonGetFail( "Out of memory!" );
+		jsonFail( "Out of memory!" );
 		return -1;
 	}
 	strcpy( jo->key, buf );
@@ -471,7 +474,7 @@ static jsonObject *jsonFollowPath( jsonObject *jo, const char *key ) {
 	if( strchr( key, '.' ) != NULL ) {
 		path=calloc( strlen( key )+1, sizeof( char ) );
 		if( path == NULL ) {
-			jsonGetFail( "Out of memory!" );
+			jsonFail( "Out of memory!" );
 			return NULL;
 		}
 		strcpy( path, key );
@@ -521,7 +524,7 @@ const char *jsonGetStr( jsonObject *jo, const char *key ) {
 		return pos->val;
 	}
 
-	jsonGetFail( "No string value for key %s", key );
+	jsonFail( "No string value for key %s", key );
 	return NULL;
 }
 
@@ -535,7 +538,7 @@ char *jsonCopyStr( jsonObject *jo, const char *key ) {
 	if( val != NULL ) {
 		buf=calloc( strlen( val )+1, sizeof( char ) );
 		if( buf == NULL ) {
-			jsonGetFail( "Out of memory!" );
+			jsonFail( "Out of memory!" );
 			return NULL;
 		}
 		strcpy( buf, val );
@@ -553,7 +556,7 @@ int jsonCopyChars( jsonObject *jo, const char *key, char buf[], int size ) {
 	if( val != NULL ) {
 		len=strlen(val);
 		if( size < len ) {
-			jsonGetFail( "Value for %s is too long! Result is truncated." );
+			jsonFail( "Value for %s is too long! Result is truncated." );
 			len=size-1;
 			ret=-1;
 		}
@@ -586,7 +589,7 @@ char **jsonCopyStrs( jsonObject *jo, const char *key, const int num ) {
 	if( (pos != NULL ) && ( pos->type == json_array ) ) {
 		vals=calloc( num, sizeof( char * ) );
 		if( vals == NULL ) {
-			jsonGetFail( "Out of memory!" );
+			jsonFail( "Out of memory!" );
 			return NULL;
 		}
 
@@ -598,7 +601,7 @@ char **jsonCopyStrs( jsonObject *jo, const char *key, const int num ) {
 			else {
 				vals[i]=calloc( strlen(val)+1, sizeof( char ) );
 				if( vals[i] == NULL ) {
-					jsonGetFail( "Out of memory!" );
+					jsonFail( "Out of memory!" );
 					/* todo: vals and vals[0..i] will be dangling! */
 					return NULL;
 				}
@@ -607,7 +610,7 @@ char **jsonCopyStrs( jsonObject *jo, const char *key, const int num ) {
 		}
 	}
 	else {
-		jsonGetFail( "No array for %s", key );
+		jsonFail( "No array for %s", key );
 	}
 	return vals;
 }
@@ -624,7 +627,7 @@ jsonObject *jsonGetObj( jsonObject *jo, const char *key ) {
 		return pos->val;
 	}
 	else {
-		jsonGetFail( "No object for key '%s'", key );
+		jsonFail( "No object for key '%s'", key );
 	}
 
 	return NULL;
@@ -649,7 +652,7 @@ static jsonObject *jsonAppend( jsonObject *jo, const char *key ) {
 
 	jo->key=calloc( strlen(key)+1, sizeof(char) );
 	if( jo->key == NULL ) {
-		jsonGetFail( "Out of memory!" );
+		jsonFail( "Out of memory!" );
 		return NULL;
 	}
 
@@ -685,7 +688,7 @@ jsonObject *jsonAddStr( jsonObject *jo, const char *key, const char *val ) {
 	else {
 		jo->val=calloc( strlen(val)+1, sizeof(char) );
 		if( jo->val == NULL ) {
-			jsonGetFail( "Out of memory!" );
+			jsonFail( "Out of memory!" );
 			return NULL;
 		}
 		jo->type=json_string;
@@ -748,7 +751,7 @@ jsonObject *jsonAddInt( jsonObject *jo, const char *key, const int val ) {
 	sprintf( buf, "%i", val );
 	jo->val=calloc( strlen(buf)+1, sizeof(char) );
 	if( jo->val == NULL ) {
-		jsonGetFail( "Out of memory!" );
+		jsonFail( "Out of memory!" );
 		return NULL;
 	}
 	strcpy( jo->val, buf );
@@ -842,7 +845,7 @@ static char *sizeCheck( char *json, int *len ) {
 		*len=(*len)+JSON_INCBUFF;
 		json=realloc( json, *len );
 		if( json == NULL ) {
-			jsonGetFail( "Out of Memory!" );
+			jsonFail( "Out of Memory!" );
 			return NULL;
 		}
 	}
@@ -943,7 +946,7 @@ char *jsonToString( jsonObject *jo ) {
 	int len=JSON_INCBUFF;
 	json=calloc( len, sizeof( char ) );
 	if( json == NULL ) {
-		jsonGetFail( "Out of memory!" );
+		jsonFail( "Out of memory!" );
 		return NULL;
 	}
 	json=jsonWriteObj( jo, json, len );
