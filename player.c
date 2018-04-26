@@ -470,9 +470,9 @@ void *reader( void *cont ) {
 						break;
 					case 'E':
 						fail( F_FAIL, "ERROR: %s\nIndex: %i\nName: %s\nPath: %s", line,
-							  control->current->key,
-							  control->current->display,
-							  control->current->path );
+							control->current->key,
+							control->current->display,
+							control->current->path );
 						break;
 					case 'F':
 						if( outvol > 0 ) {

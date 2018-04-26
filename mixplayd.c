@@ -113,7 +113,7 @@ static void *clientHandler(void *args ) {
 	char *pos, *end;
 	mpcmd cmd=mpc_idle;
 	static const char *mtype;
-	mptitle *playing=NULL;
+	char playing[MAXPATHLEN];
 	size_t commsize=MP_BLKSIZE;
 	ssize_t retval=0;
 	ssize_t recvd=0;
@@ -290,11 +290,11 @@ static void *clientHandler(void *args ) {
 			memset( commdata, 0, commsize );
 			switch( state ) {
 			case 11: /* get update */
-				if( config->current->plnext != playing ) {
+				if( strcmp( config->current->display, playing ) ) {
+					strcpy( playing, config->current->display );
 					fullstat=-1;
 				}
 				jsonLine=serializeStatus( &clmsg, sock, fullstat );
-				playing=config->current->plnext;
 				fullstat=0;
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i;\015\012\015\012", (int)strlen(jsonLine) );
 				while( ( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {

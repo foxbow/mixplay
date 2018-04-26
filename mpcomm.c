@@ -88,11 +88,11 @@ static void jsonGetTitle( jsonObject *jo, const char *key, mptitle *title ) {
 	to=jsonGetObj( jo, key);
 
 	if( to != NULL ) {
-		jsonCopyChars(to, "artist", title->artist);
-		jsonCopyChars(to, "album", title->album);
-		jsonCopyChars(to, "title", title->title);
+		jsonCopyChars(to, "artist", title->artist, NAMELEN );
+		jsonCopyChars(to, "album", title->album, NAMELEN );
+		jsonCopyChars(to, "title", title->title, NAMELEN );
 		title->flags=jsonGetInt( to, "flags" );
-		jsonCopyChars(to, "genre", title->genre);
+		jsonCopyChars(to, "genre", title->genre, NAMELEN );
 		title->playcount=jsonGetInt( to, "playcount" );
 		title->skipcount=jsonGetInt( to, "skipcount" );
 		sprintf( title->display, "%s - %s", title->artist, title->title );
@@ -274,12 +274,12 @@ static int deserializeStatus( jsonObject *jo ) {
 		jsonGetTitle( jo, "current", data->current );
 		jsonGetTitle( jo, "next", data->current->plnext );
 	}
-	jsonCopyChars( jo, "playtime", data->playtime );
-	jsonCopyChars( jo, "remtime", data->remtime );
+	jsonCopyChars( jo, "playtime", data->playtime, 10 );
+	jsonCopyChars( jo, "remtime", data->remtime, 10 );
 	data->percent=jsonGetInt( jo, "percent" );
 	data->volume=jsonGetInt( jo, "volume" );
 	data->status=jsonGetInt( jo, "status" );
-	jsonCopyChars( jo, "msg", msgline );
+	jsonCopyChars( jo, "msg", msgline, 128 );
 	if( strlen( msgline ) > 0 ){
 		addMessage( 0, msgline );
 	}

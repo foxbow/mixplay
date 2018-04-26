@@ -17,7 +17,8 @@
  * JSON defined datatypes
  */
 enum _jsonTypes_t {
-	json_none,
+	json_null,
+	json_boolean,
 	json_string,
 	json_number,
 	json_object,
@@ -25,9 +26,7 @@ enum _jsonTypes_t {
 };
 
 typedef enum _jsonTypes_t jsonType;
-
 typedef struct _jsonObject_t jsonObject;
-
 /*
  * key, val - the JSON key and value pair
  * type	 - JSON type of val
@@ -44,10 +43,12 @@ struct _jsonObject_t {
 	jsonObject *next;
 };
 
+int jsonHasError( void );
+char *jsonGetError( void );
 
 int	jsonGetInt( jsonObject *jo, const char *key );
 const char *jsonGetStr( jsonObject *jo, const char *key );
-int	jsonCopyChars( jsonObject *jo, const char *key, char *buf );
+int	jsonCopyChars( jsonObject *jo, const char *key, char *buf, int size );
 char  *jsonCopyStr( jsonObject *jo, const char *key );
 char **jsonCopyStrs( jsonObject *jo, const char *key, const int num );
 jsonObject *jsonGetObj( jsonObject *jo, const char *key );
@@ -57,6 +58,7 @@ jsonObject *jsonAddStrs( jsonObject *jo, const char *key, char **vals, const int
 jsonObject *jsonAddInt( jsonObject *jo, const char *key, const int val );
 jsonObject *jsonAddObj( jsonObject *jo, const char *key, jsonObject *val );
 jsonObject *jsonAddArr( jsonObject *jo, const char *key, jsonObject *val );
+jsonObject *jsonAddBool( jsonObject *jo, const char *key, long val );
 
 jsonObject *jsonInitArr( jsonObject *jo, const char *key );
 jsonObject *jsonAddArrElement( jsonObject *jo, jsonType type, void *element );
