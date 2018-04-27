@@ -726,7 +726,10 @@ char *jsonEncode( const char *val ) {
 			break;
 		/* no explicit encoding of extended chars yet! */
 		default:
-			ret[op++]=val[ip];
+			if(isprint(val[ip])) {
+				ret[op++]=val[ip];
+			}
+			json( stderr, "JSON: %s\n", _jsonError );
 		}
 	}
 
