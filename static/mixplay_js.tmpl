@@ -5,8 +5,8 @@ var isstream=0;
 var msglines=["","","","","","","","","","","","","","",""];
 var msgpos=0;
 
-function toggleMore(f) {
-	e=document.getElementById('more');
+function toggleVisibility( element ) {
+	e=document.getElementById( element );
 	if( e.style.display=='none') {
 		e.style.display='block';
 	}
@@ -24,6 +24,8 @@ function killServer() {
 function addText(text) {
 	var line="";
 	var numlines=15;
+	e=document.getElementById('msgs');
+
 	if( msgpos < numlines ) {
 		msglines[msgpos]=text;
 		msgpos++;
@@ -34,11 +36,19 @@ function addText(text) {
 		}
 		msglines[numlines-1]=text;
 	}
-	
+
 	for( i=0; i<numlines; i++ ) {
 		line+=msglines[i]+"<br>\n";
 	}
 	document.getElementById('msgs').innerHTML=line;
+
+	f=document.getElementById('showmsgs');
+	if( e.style.display=='none') {
+		f.value="\u2630 Messages *"
+	}
+	else {
+		f.value="\u2630 Messages"
+	}
 }
 
 function sendCMD( cmd, arg="" ) {

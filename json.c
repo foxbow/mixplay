@@ -724,11 +724,10 @@ char *jsonEncode( const char *val ) {
 			ret[op++]='\\';
 			ret[op++]='t';
 			break;
-		/* no encoding of extended chars yet! */
+		/* no explicit encoding of extended chars yet! */
 		default:
 			ret[op++]=val[ip];
 		}
-		ret[op]=0;
 	}
 
 	return ret;
