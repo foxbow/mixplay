@@ -209,6 +209,9 @@ int getArgs( int argc, char ** argv ){
 		return setArgument( argv[optind] );
 	}
 
+	if( config->changed == -1 ) {
+		writeConfig( NULL );
+	}
 	return 0;
 }
 
@@ -454,6 +457,7 @@ void writeConfig( const char *musicpath ) {
 		fprintf( fp, "\nremote=%i", c_config->remote );
 		fprintf( fp, "\n" );
 		fclose( fp );
+		c_config->changed=0;
 	}
 	else {
 		fail( errno, "Could not open %s", conffile );

@@ -321,7 +321,7 @@ void *setProfile( void *data ) {
 		control->command=mpc_start;
 	}
 
-	if( active != control->active ) {
+	if( ( control->active != active ) && !control->remote ) {
 		control->changed = -1;
 	}
 	return NULL;

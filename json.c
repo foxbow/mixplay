@@ -661,20 +661,77 @@ static jsonObject *jsonAppend( jsonObject *jo, const char *key ) {
 	return jo;
 }
 
-/**
- * filters out double quotes
- * todo: Proper encoding of special chars!
- */
-static char *fixstr( char *target, const char *src ) {
-	int i, j;
-	for( i=0, j=0; i<strlen( src ); i++ ) {
-		if( src[i] != '"' ) {
-			target[j]=src[i];
-			j++;
+char *jsonEncode( const char *val ) {
+	int len=0;
+	char *ret=NULL;
+	int ip, op;
+
+	/* guess length of target string */
+	for( ip=0; ip<strlen(val); ip++ ) {
+		switch( val[ip] ) {
+		case '"':
+		case '\\':
+		case '/':
+		case '\b':
+		case '\f':
+		case '\n':
+		case '\r':
+		case '\t':
+			len+=2;
+			break;
+		default:
+			len++;
 		}
 	}
-	target[j]=0;
-	return target;
+
+	ret=calloc( len, sizeof(char) );
+	if( ret == NULL ) {
+		jsonFail( "Out of memory!" );
+		return NULL;
+	}
+
+	for( ip=0, op=0; ip<strlen(val); ip++ ) {
+		switch( val[ip] ) {
+		case '"':
+			ret[op++]='\\';
+			ret[op++]='"';
+			break;
+		case '\\':
+			ret[op++]='\\';
+			ret[op++]='\\';
+			break;
+		case '/':
+			ret[op++]='\\';
+			ret[op++]='/';
+			break;
+		case '\b':
+			ret[op++]='\\';
+			ret[op++]='b';
+			break;
+		case '\f':
+			ret[op++]='\\';
+			ret[op++]='f';
+			break;
+		case '\n':
+			ret[op++]='\\';
+			ret[op++]='n';
+			break;
+		case '\r':
+			ret[op++]='\\';
+			ret[op++]='r';
+			break;
+		case '\t':
+			ret[op++]='\\';
+			ret[op++]='t';
+			break;
+		/* no encoding of extended chars yet! */
+		default:
+			ret[op++]=val[ip];
+		}
+		ret[op]=0;
+	}
+
+	return ret;
 }
 
 /**
@@ -686,13 +743,12 @@ jsonObject *jsonAddStr( jsonObject *jo, const char *key, const char *val ) {
 		jo->val=NULL;
 	}
 	else {
-		jo->val=calloc( strlen(val)+1, sizeof(char) );
+		jo->val=jsonEncode( val );
 		if( jo->val == NULL ) {
 			jsonFail( "Out of memory!" );
 			return NULL;
 		}
 		jo->type=json_string;
-		fixstr( jo->val, val );
 	}
 	return jo;
 }

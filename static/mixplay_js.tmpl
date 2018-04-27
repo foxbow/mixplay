@@ -2,15 +2,40 @@ var doUpdate=1;
 var data=null;
 var mpver=~~MPCOMM_VER~~;
 var isstream=0;
-var msglines=["","","","","","","","","",""];
+var msglines=["","","","","","","","","","","","","","",""];
+var msgpos=0;
+
+function toggleMore(f) {
+	e=document.getElementById('more');
+	if( e.style.display=='none') {
+		e.style.display='block';
+	}
+	else {
+		e.style.display='none';
+	}
+}
+
+function killServer() {
+	if( confirm("Do you really want to stop the Server?") ) {
+		sendCMD(0x11);
+	}
+}
 
 function addText(text) {
 	var line="";
-	for( i=0; i<9; i++ ) {
-		msglines[i]=msglines[i+1];
+	var numlines=15;
+	if( msgpos < numlines ) {
+		msglines[msgpos]=text;
+		msgpos++;
 	}
-	msglines[9]=text;
-	for( i=0; i<10; i++ ) {
+	else {
+		for( i=0; i<numlines-1; i++ ) {
+			msglines[i]=msglines[i+1];
+		}
+		msglines[numlines-1]=text;
+	}
+	
+	for( i=0; i<numlines; i++ ) {
 		line+=msglines[i]+"<br>\n";
 	}
 	document.getElementById('msgs').innerHTML=line;
@@ -180,14 +205,14 @@ function dnpfav( cmd, term="" ) {
 	sendCMD( cmd, term );
 }
 
-function search() {
+function sendArg( cmd ) {
 	if( isstream ) return;
 	var term=document.getElementById('text').value;
 	if( term.length > 1 ) {
-		dnpfav( 0x13, term );
+		dnpfav( cmd, term );
 	}
 	else {
-		alert("Need at least two letters to search!");
+		alert("Need at least two letters!");
 	}
 }
 

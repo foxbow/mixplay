@@ -580,7 +580,7 @@ void profileStart( GtkButton *button, gpointer data ) {
 		mpcontrol->active = profile;
 	}
 
-	if( mpcontrol->active != profile ) {
+	if( ( mpcontrol->active != profile ) && !mpcontrol->remote ) {
 		mpcontrol->changed=-1;
 	}
 
