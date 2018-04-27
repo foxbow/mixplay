@@ -57,7 +57,7 @@ static int jsonFail( char *msg, ... ) {
 /**
  * simple wrapper to keep old messages
  */
-static int jsonParseFail( const char *func, char *str, const int i, const int state ) {
+static int jsonParseFail( const char *func, const char *str, const int i, const int state ) {
 	return jsonFail( "%s#%i: Found invalid '%c' in JSON pos %i\n%s", func, state, str[i], i, str );
 }
 
@@ -729,7 +729,7 @@ char *jsonEncode( const char *val ) {
 			if(isprint(val[ip])) {
 				ret[op++]=val[ip];
 			}
-			json( stderr, "JSON: %s\n", _jsonError );
+			jsonParseFail( __func__, val, ip, 0 );
 		}
 	}
 
