@@ -313,7 +313,7 @@ static void *clientHandler(void *args ) {
 						len=strlen( commdata );
 					}
 					if( ( cmd == mpc_dbinfo ) || ( cmd == mpc_dbclean) ||
-							( cmd == mpc_doublets ) || ( cmd == mpc_shuffle ) ||
+							( cmd == mpc_doublets ) ||
 							( MPC_CMD(cmd) == mpc_search ) ) {
 						setCurClient( sock );
 						/* setCurClient may block so we need to skip messages */

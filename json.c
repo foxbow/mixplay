@@ -684,7 +684,7 @@ char *jsonEncode( const char *val ) {
 		}
 	}
 
-	ret=calloc( len, sizeof(char) );
+	ret=calloc( len+1, sizeof(char) );
 	if( ret == NULL ) {
 		jsonFail( "Out of memory!" );
 		return NULL;
@@ -732,6 +732,7 @@ char *jsonEncode( const char *val ) {
 			jsonParseFail( __func__, val, ip, 0 );
 		}
 	}
+	ret[op]=0;
 
 	return ret;
 }

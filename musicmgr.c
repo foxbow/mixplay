@@ -781,7 +781,7 @@ mptitle *shuffleTitles( mptitle *base ) {
 
 	newCount( base );
 	num = countTitles( base, MP_ALL, MP_DNP ); /* |MP_MARK ); */
-	addMessage( 2, "Shuffling %i titles", num );
+	addMessage( 0, "Shuffling %i titles", num );
 
 	for( i=0; i<num; i++ ) {
 		unsigned long skip;

@@ -765,10 +765,9 @@ void *reader( void *cont ) {
 			break;
 
 		case mpc_dbclean:
+			progressStart( "Database Cleanup" );
 			order=0;
 			write( p_command[fdset][1], "STOP\n", 6 );
-			progressStart( "Database Cleanup" );
-
 
 			addMessage( 0, "Checking for deleted titles.." );
 			i=dbCheckExist( control->dbname );
@@ -878,11 +877,11 @@ void *reader( void *cont ) {
 			break;
 
 		case mpc_dbinfo:
-		  	progressStart( "Database Info" );
-		   	addMessage( 0, "Music dir: %s", control->musicdir );
-		   	dumpInfo( control->root, -1, control->skipdnp );
-		   	progressEnd();
-		   	break;
+			progressStart( "Database Info" );
+			addMessage( 0, "Music dir: %s", control->musicdir );
+			dumpInfo( control->root, -1, control->skipdnp );
+			progressEnd();
+			break;
 
 		case mpc_longsearch:
 		case mpc_search:
