@@ -890,7 +890,9 @@ void *reader( void *cont ) {
 			}
 			else if( addRangePrefix( line, control->command ) == 0 ) {
 				strcat( line, control->argument );
-				if( cmd == mpc_longsearch ) {
+				if( ( cmd == mpc_longsearch ) ||
+						( MPC_RANGE(control->command) == mpc_album ) ||
+						( MPC_RANGE(control->command) == mpc_artist ) ) {
 					progressStart( "Looking for %s", control->argument );
 					i=searchPlay(title, line, -1);
 					addMessage( 0, "Found %i titles", i );

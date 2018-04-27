@@ -61,6 +61,145 @@ static int jsonParseFail( const char *func, const char *str, const int i, const 
 	return jsonFail( "%s#%i: Found invalid '%c' in JSON pos %i\n%s", func, state, str[i], i, str );
 }
 
+static char *jsonEncode( const char *val ) {
+	int len=0;
+	char *ret=NULL;
+	int ip, op;
+
+	/* guess length of target string */
+	for( ip=0; ip<strlen(val); ip++ ) {
+		switch( val[ip] ) {
+		case '"':
+		case '\\':
+		case '/':
+		case '\b':
+		case '\f':
+		case '\n':
+		case '\r':
+		case '\t':
+			len+=2;
+			break;
+		default:
+			len++;
+		}
+	}
+
+	ret=calloc( len+1, sizeof(char) );
+	if( ret == NULL ) {
+		jsonFail( "Out of memory!" );
+		return NULL;
+	}
+
+	for( ip=0, op=0; ip<strlen(val); ip++ ) {
+		switch( val[ip] ) {
+		case '"':
+			ret[op++]='\\';
+			ret[op++]='"';
+			break;
+		case '\\':
+			ret[op++]='\\';
+			ret[op++]='\\';
+			break;
+		case '/':
+			ret[op++]='\\';
+			ret[op++]='/';
+			break;
+		case '\b':
+			ret[op++]='\\';
+			ret[op++]='b';
+			break;
+		case '\f':
+			ret[op++]='\\';
+			ret[op++]='f';
+			break;
+		case '\n':
+			ret[op++]='\\';
+			ret[op++]='n';
+			break;
+		case '\r':
+			ret[op++]='\\';
+			ret[op++]='r';
+			break;
+		case '\t':
+			ret[op++]='\\';
+			ret[op++]='t';
+			break;
+		/* no explicit encoding of extended chars yet! */
+		default:
+			if(isprint(val[ip])) {
+				ret[op++]=val[ip];
+			}
+			jsonParseFail( __func__, val, ip, 0 );
+		}
+	}
+	ret[op]=0;
+
+	return ret;
+}
+
+/**
+ * decode a JSON string value into a standard C text representation
+ */
+char *jsonDecode( const char *val ) {
+	int len=0;
+	char *ret=NULL;
+	int ip, op;
+
+	/* guess length of target string */
+	for( ip=0; ip<strlen(val); ip++ ) {
+		if( val[ip] != '\\' ) len++;
+	}
+
+	ret=calloc( len+1, sizeof(char) );
+	if( ret == NULL ) {
+		jsonFail( "Out of memory!" );
+		return NULL;
+	}
+
+	ip=0;
+	op=0;
+	while( ip<strlen(val)) {
+		if( val[ip]  == '\\' ) {
+			ip++;
+			switch( val[ip] ) {
+			case '"':
+				ret[op++]='"';
+				break;
+			case '\\':
+				ret[op++]='\\';
+				break;
+			case '/':
+				ret[op++]='/';
+				break;
+			case 'b':
+				ret[op++]='\b';
+				break;
+			case 'f':
+				ret[op++]='\f';
+				break;
+			case 'n':
+				ret[op++]='\n';
+				break;
+			case 'r':
+				ret[op++]='\r';
+				break;
+			case 't':
+				ret[op++]='\t';
+				break;
+			default:
+				jsonParseFail( __func__, val, ip, 0 );
+			}
+		}
+		else {
+			ret[op++]=val[ip];
+		}
+		ip++;
+	}
+	ret[op]=0;
+
+	return ret;
+}
+
 /**
  * creates an empty json node
  * if ref is 0 this means the content is owned by the node if not
@@ -512,45 +651,23 @@ int jsonGetInt( jsonObject *jo, const char *key ) {
 	return 0;
 }
 
-/*
- * returns the string value of key
- * this is a pointer to the string, do *not* free or change!
- */
-const char *jsonGetStr( jsonObject *jo, const char *key ) {
-	jsonObject *pos=jo;
-
-	pos=jsonFollowPath( jo, key );
-	if( ( pos != NULL ) && ( pos->type == json_string || ( pos->type == json_null ) ) ) {
-		return pos->val;
-	}
-
-	jsonFail( "No string value for key %s", key );
-	return NULL;
-}
-
 /**
- * copies the value of key into a new memory area
+ * copies and decodes the value of key into a new memory area
  * the memory will be allocated so make sure that returned pointer is free'd after use
  */
-char *jsonCopyStr( jsonObject *jo, const char *key ) {
-	char *buf=NULL;
+char *jsonGetStr( jsonObject *jo, const char *key ) {
 	const char *val=jsonGetStr(jo, key);
-	if( val != NULL ) {
-		buf=calloc( strlen( val )+1, sizeof( char ) );
-		if( buf == NULL ) {
-			jsonFail( "Out of memory!" );
-			return NULL;
-		}
-		strcpy( buf, val );
+	if( val == NULL ) {
+		return NULL;
 	}
-	return buf;
+	return jsonDecode(val);
 }
 
 /*
- * copies the value for key into buf.
+ * copies the decoded value for key into buf.
  */
-int jsonCopyChars( jsonObject *jo, const char *key, char buf[], int size ) {
-	const char *val=jsonGetStr(jo, key);
+int jsonCopyStr( jsonObject *jo, const char *key, char buf[], int size ) {
+	char *val=jsonGetStr(jo, key);
 	int len=0;
 	int ret=0;
 	if( val != NULL ) {
@@ -561,6 +678,7 @@ int jsonCopyChars( jsonObject *jo, const char *key, char buf[], int size ) {
 			ret=-1;
 		}
 		memcpy( buf, val, len );
+		free(val);
 	}
 	buf[len]=0;
 	return ret?-1:strlen(buf);
@@ -579,7 +697,7 @@ static void *jsonGetByIndex( jsonObject *jo, int i ) {
 /**
  * copy the array of strings into the vals pointer
  */
-char **jsonCopyStrs( jsonObject *jo, const char *key, const int num ) {
+char **jsonGetStrs( jsonObject *jo, const char *key, const int num ) {
 	int i;
 	char **vals=NULL;
 	char *val;
@@ -599,13 +717,7 @@ char **jsonCopyStrs( jsonObject *jo, const char *key, const int num ) {
 				vals[i]=NULL;
 			}
 			else {
-				vals[i]=calloc( strlen(val)+1, sizeof( char ) );
-				if( vals[i] == NULL ) {
-					jsonFail( "Out of memory!" );
-					/* todo: vals and vals[0..i] will be dangling! */
-					return NULL;
-				}
-				strcpy( vals[i], val );
+				vals[i]=jsonDecode(val);
 			}
 		}
 	}
@@ -661,101 +773,6 @@ static jsonObject *jsonAppend( jsonObject *jo, const char *key ) {
 	return jo;
 }
 
-char *jsonEncode( const char *val ) {
-	int len=0;
-	char *ret=NULL;
-	int ip, op;
-
-	/* guess length of target string */
-	for( ip=0; ip<strlen(val); ip++ ) {
-		switch( val[ip] ) {
-		case '"':
-		case '\\':
-		case '/':
-		case '\b':
-		case '\f':
-		case '\n':
-		case '\r':
-		case '\t':
-			len+=2;
-			break;
-		default:
-			len++;
-		}
-	}
-
-	ret=calloc( len+1, sizeof(char) );
-	if( ret == NULL ) {
-		jsonFail( "Out of memory!" );
-		return NULL;
-	}
-
-	for( ip=0, op=0; ip<strlen(val); ip++ ) {
-		switch( val[ip] ) {
-		case '"':
-			ret[op++]='\\';
-			ret[op++]='"';
-			break;
-		case '\\':
-			ret[op++]='\\';
-			ret[op++]='\\';
-			break;
-		case '/':
-			ret[op++]='\\';
-			ret[op++]='/';
-			break;
-		case '\b':
-			ret[op++]='\\';
-			ret[op++]='b';
-			break;
-		case '\f':
-			ret[op++]='\\';
-			ret[op++]='f';
-			break;
-		case '\n':
-			ret[op++]='\\';
-			ret[op++]='n';
-			break;
-		case '\r':
-			ret[op++]='\\';
-			ret[op++]='r';
-			break;
-		case '\t':
-			ret[op++]='\\';
-			ret[op++]='t';
-			break;
-		/* no explicit encoding of extended chars yet! */
-		default:
-			if(isprint(val[ip])) {
-				ret[op++]=val[ip];
-			}
-			jsonParseFail( __func__, val, ip, 0 );
-		}
-	}
-	ret[op]=0;
-
-	return ret;
-}
-
-/**
- * creates a new JSON string object and appends it to the end of the given root object chain
- */
-jsonObject *jsonAddStr( jsonObject *jo, const char *key, const char *val ) {
-	jo=jsonAppend( jo, key );
-	if( val == NULL ) {
-		jo->val=NULL;
-	}
-	else {
-		jo->val=jsonEncode( val );
-		if( jo->val == NULL ) {
-			jsonFail( "Out of memory!" );
-			return NULL;
-		}
-		jo->type=json_string;
-	}
-	return jo;
-}
-
 /**
  * creates a new JSON boolean object and appends it to the end of the given root object chain
  */
@@ -778,6 +795,25 @@ jsonObject *jsonAddArr( jsonObject *jo, const char *key, jsonObject *val ) {
 	jo=jsonAppend( jo, key );
 	jo->type=json_array;
 	jo->val=val;
+	return jo;
+}
+
+/**
+ * creates a new JSON string object and appends it to the end of the given root object chain
+ */
+jsonObject *jsonAddStr( jsonObject *jo, const char *key, const char *val ) {
+	jo=jsonAppend( jo, key );
+	if( val == NULL ) {
+		jo->val=NULL;
+	}
+	else {
+		jo->val=jsonEncode( val );
+		if( jo->val == NULL ) {
+			jsonFail( "Out of memory!" );
+			return NULL;
+		}
+		jo->type=json_string;
+	}
 	return jo;
 }
 

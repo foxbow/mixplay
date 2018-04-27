@@ -88,11 +88,11 @@ static void jsonGetTitle( jsonObject *jo, const char *key, mptitle *title ) {
 	to=jsonGetObj( jo, key);
 
 	if( to != NULL ) {
-		jsonCopyChars(to, "artist", title->artist, NAMELEN );
-		jsonCopyChars(to, "album", title->album, NAMELEN );
-		jsonCopyChars(to, "title", title->title, NAMELEN );
+		jsonCopyStr(to, "artist", title->artist, NAMELEN );
+		jsonCopyStr(to, "album", title->album, NAMELEN );
+		jsonCopyStr(to, "title", title->title, NAMELEN );
 		title->flags=jsonGetInt( to, "flags" );
-		jsonCopyChars(to, "genre", title->genre, NAMELEN );
+		jsonCopyStr(to, "genre", title->genre, NAMELEN );
 		title->playcount=jsonGetInt( to, "playcount" );
 		title->skipcount=jsonGetInt( to, "skipcount" );
 		sprintf( title->display, "%s - %s", title->artist, title->title );
@@ -241,13 +241,13 @@ static int deserializeConfig( jsonObject *jo ) {
 	freeConfigContents( );
 
 	config->fade=jsonGetInt( joconf, "fade");
-	config->musicdir=jsonCopyStr( joconf, "musicdir" );
+	config->musicdir=jsonGetStr( joconf, "musicdir" );
 	config->profiles=jsonGetInt( joconf, "profiles" );
-	config->profile=jsonCopyStrs( joconf, "profile", config->profiles );
+	config->profile=jsonGetStrs( joconf, "profile", config->profiles );
 	config->skipdnp=jsonGetInt( joconf, "skipdnp" );
 	config->streams=jsonGetInt( joconf, "streams" );
-	config->stream=jsonCopyStrs( joconf, "stream", config->streams );
-	config->sname=jsonCopyStrs( joconf, "sname", config->streams );
+	config->stream=jsonGetStrs( joconf, "stream", config->streams );
+	config->sname=jsonGetStrs( joconf, "sname", config->streams );
 
 	return 0;
 }
@@ -274,12 +274,12 @@ static int deserializeStatus( jsonObject *jo ) {
 		jsonGetTitle( jo, "current", data->current );
 		jsonGetTitle( jo, "next", data->current->plnext );
 	}
-	jsonCopyChars( jo, "playtime", data->playtime, 10 );
-	jsonCopyChars( jo, "remtime", data->remtime, 10 );
+	jsonCopyStr( jo, "playtime", data->playtime, 10 );
+	jsonCopyStr( jo, "remtime", data->remtime, 10 );
 	data->percent=jsonGetInt( jo, "percent" );
 	data->volume=jsonGetInt( jo, "volume" );
 	data->status=jsonGetInt( jo, "status" );
-	jsonCopyChars( jo, "msg", msgline, 128 );
+	jsonCopyStr( jo, "msg", msgline, 128 );
 	if( strlen( msgline ) > 0 ){
 		addMessage( 0, msgline );
 	}
