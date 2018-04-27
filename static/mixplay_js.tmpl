@@ -128,7 +128,7 @@ function updateUI( ){
 						doUpdate=0;
 						alert("Version clash, expected "+mpver+" and got "+data.version );
 						return;
-					}					
+					}
 					if( data.type == 3 ) {
 						document.title=data.current.artist+" - "+data.current.title;
 						setElement( 'title', data.current.title );
@@ -205,13 +205,10 @@ function setVolume( vol ) {
 	sendCMD( 0x15, vol );
 }
 
-function dnpfav( cmd, term="" ) {
+function sendRange( cmd, term="" ) {
 	if( isstream ) return;
 	var e=document.getElementById('range');
 	cmd|=e.options[e.selectedIndex].value;
-	if(document.getElementById('fuzzy').checked ) {
-		cmd|=0x1000;
-	}
 	sendCMD( cmd, term );
 }
 
@@ -219,7 +216,7 @@ function sendArg( cmd ) {
 	if( isstream ) return;
 	var term=document.getElementById('text').value;
 	if( term.length > 1 ) {
-		dnpfav( cmd, term );
+		sendRange( cmd, term );
 	}
 	else {
 		alert("Need at least two letters!");
