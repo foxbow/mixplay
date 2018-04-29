@@ -51,7 +51,6 @@ int	jsonCopyStr( jsonObject *jo, const char *key, char *buf, int size );
 char  *jsonGetStr( jsonObject *jo, const char *key );
 char **jsonGetStrs( jsonObject *jo, const char *key, const int num );
 jsonObject *jsonGetObj( jsonObject *jo, const char *key );
-char *jsonDecode( const char *val );
 
 jsonObject *jsonAddStr( jsonObject *jo, const char *key, const char *val );
 jsonObject *jsonAddStrs( jsonObject *jo, const char *key, char **vals, const int num );

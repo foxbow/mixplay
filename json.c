@@ -137,28 +137,11 @@ static char *jsonEncode( const char *val ) {
 	return ret;
 }
 
-/**
- * decode a JSON string value into a standard C text representation
- */
-char *jsonDecode( const char *val ) {
-	int len=0;
-	char *ret=NULL;
-	int ip, op;
+static int jsonDecodeInto( const char *val, char *ret, int len ) {
+	int ip=0;
+	int op=0;
 
-	/* guess length of target string */
-	for( ip=0; ip<strlen(val); ip++ ) {
-		if( val[ip] != '\\' ) len++;
-	}
-
-	ret=calloc( len+1, sizeof(char) );
-	if( ret == NULL ) {
-		jsonFail( "Out of memory!" );
-		return NULL;
-	}
-
-	ip=0;
-	op=0;
-	while( ip<strlen(val)) {
+	while( ( ip < strlen(val) ) && ( op < len-1) ) {
 		if( val[ip]  == '\\' ) {
 			ip++;
 			switch( val[ip] ) {
@@ -188,6 +171,7 @@ char *jsonDecode( const char *val ) {
 				break;
 			default:
 				jsonParseFail( __func__, val, ip, 0 );
+				return -1;
 			}
 		}
 		else {
@@ -196,6 +180,30 @@ char *jsonDecode( const char *val ) {
 		ip++;
 	}
 	ret[op]=0;
+	
+	return strlen(ret);
+}
+
+/**
+ * decode a JSON string value into a standard C text representation
+ */
+static char *jsonDecode( const char *val ) {
+	int len=0;
+	int ip=0;
+	char *ret=NULL;
+
+	/* guess length of target string */
+	for( ip=0; ip<strlen(val); ip++ ) {
+		if( val[ip] != '\\' ) len++;
+	}
+
+	ret=calloc( len+1, sizeof(char) );
+	if( ret == NULL ) {
+		jsonFail( "Out of memory!" );
+		return NULL;
+	}
+
+	jsonDecodeInto( val, ret, len+1 );
 
 	return ret;
 }
@@ -656,32 +664,22 @@ int jsonGetInt( jsonObject *jo, const char *key ) {
  * the memory will be allocated so make sure that returned pointer is free'd after use
  */
 char *jsonGetStr( jsonObject *jo, const char *key ) {
-	const char *val=jsonGetStr(jo, key);
-	if( val == NULL ) {
+	jo=jsonFollowPath( jo, key );
+	if( jo == NULL ) {
 		return NULL;
 	}
-	return jsonDecode(val);
+	return jsonDecode( jo->val );
 }
 
 /*
  * copies the decoded value for key into buf.
  */
 int jsonCopyStr( jsonObject *jo, const char *key, char buf[], int size ) {
-	char *val=jsonGetStr(jo, key);
-	int len=0;
-	int ret=0;
-	if( val != NULL ) {
-		len=strlen(val);
-		if( size < len ) {
-			jsonFail( "Value for %s is too long! Result is truncated." );
-			len=size-1;
-			ret=-1;
-		}
-		memcpy( buf, val, len );
-		free(val);
+	jo=jsonFollowPath( jo, key );
+	if( jo == NULL ) {
+		return -1;
 	}
-	buf[len]=0;
-	return ret?-1:strlen(buf);
+	return jsonDecodeInto( jo->val, buf, size );
 }
 
 /*
