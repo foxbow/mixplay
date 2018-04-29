@@ -61,7 +61,7 @@ mptitle *cleanTitles( mptitle *root );
 int DNPSkip( mptitle *base, const unsigned int level );
 int applyDNPlist( mptitle *base, struct marklist_t *list );
 int applyFAVlist( mptitle *root, struct marklist_t *list );
-int searchPlay( mptitle *root, const char *pat, unsigned num );
+int searchPlay( mptitle *root, const char *pat, unsigned num, const int global );
 int handleRangeCmd( mptitle *title, mpcmd cmd );
 int addRangePrefix( char *line, mpcmd cmd );
 

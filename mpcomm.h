@@ -23,6 +23,7 @@ void setSCommand( mpcmd cmd );
 char *serializeStatus( unsigned long *count, int clientid, int fullstat );
 char *serializeConfig( void );
 void setCurClient( int client );
+int isCurClient( int client );
 void unlockClient( int client );
 
 #endif /* MPCOMM_H_ */

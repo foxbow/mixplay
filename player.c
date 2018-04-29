@@ -365,8 +365,8 @@ void *reader( void *cont ) {
 	mpconfig	*control;
 	mptitle 	*next;
 	mptitle		*title=NULL;
-	fd_set				fds;
-	struct timeval		to;
+	fd_set			fds;
+	struct timeval	to;
 	int64_t	i, key;
 	int		invol=80;
 	int		outvol=80;
@@ -375,11 +375,13 @@ void *reader( void *cont ) {
 	char 	*a, *t;
 	int 	order=1;
 	int 	intime=0;
+	int		oldtime=0;
 	int 	fade=3;
 	int 	p_status[2][2];			/* status pipes to mpg123 */
 	int 	p_command[2][2];		/* command pipes to mpg123 */
 	pid_t	pid[2];
 	mpcmd	cmd=mpc_idle;
+	int		update=0;
 
 	control=( mpconfig * )cont;
 	assert( control->fade < 2 );
@@ -450,9 +452,10 @@ void *reader( void *cont ) {
 		for( i=0; i<=control->fade; i++ ) {
 			FD_SET( p_status[i][0], &fds );
 		}
-		to.tv_sec=0;
-		to.tv_usec=100000; /* 1/10 second */
+		to.tv_sec=1;
+		to.tv_usec=0; /* 1/10 second */
 		i=select( FD_SETSIZE, &fds, NULL, NULL, &to );
+		update=0;
 
 		/* drain inactive player */
 		if( control->fade && FD_ISSET( p_status[fdset?0:1][0], &fds ) ) {
@@ -511,6 +514,7 @@ void *reader( void *cont ) {
 					if( NULL != strstr( line, "ICY-" ) ) {
 						if( NULL != strstr( line, "ICY-NAME: " ) ) {
 							strip( control->current->album, line+13, NAMELEN );
+							update=-1;
 						}
 
 						if( NULL != ( a = strstr( line, "StreamTitle" ) ) ) {
@@ -535,6 +539,7 @@ void *reader( void *cont ) {
 							else {
 								strip( control->current->title, a, NAMELEN );
 							}
+							update=-1;
 						}
 					}
 
@@ -561,6 +566,20 @@ void *reader( void *cont ) {
 					*a=0;
 					a=strrchr( line, ' ' );
 					intime=atoi( a );
+
+					if( invol < 100 ) {
+						invol++;
+						snprintf( line, MAXPATHLEN, "volume %i\n", invol );
+						write( p_command[fdset][1], line, strlen( line ) );
+					}
+						
+					if( intime != oldtime ) {
+						oldtime=intime;
+						update=-1;
+					}
+					else {
+						break;
+					}
 
 					if( intime/60 < 60 ) {
 						sprintf( control->playtime, "%02i:%02i", intime/60, intime%60 );
@@ -592,13 +611,6 @@ void *reader( void *cont ) {
 								sendplay( p_command[fdset][1], control );
 							}
 						}
-
-						if( invol < 100 ) {
-							invol++;
-							snprintf( line, MAXPATHLEN, "volume %i\n", invol );
-							write( p_command[fdset][1], line, strlen( line ) );
-						}
-
 					}
 					break;
 
@@ -642,7 +654,6 @@ void *reader( void *cont ) {
 
 							order=1;
 						}
-
 						break;
 
 					case 1: /* PAUSE */
@@ -660,6 +671,8 @@ void *reader( void *cont ) {
 						addMessage( 0, "Unknown status %i!\n%s", cmd, line );
 						break;
 					}
+					
+					update=-1;
 					break;
 
 				case 'V': /* volume reply */
@@ -862,10 +875,12 @@ void *reader( void *cont ) {
 
 		case mpc_ivol:
 			adjustVolume( +VOLSTEP );
+			update=-1;
 			break;
 
 		case mpc_dvol:
 			adjustVolume( -VOLSTEP );
+			update=-1;
 			break;
 
 		case mpc_bskip:
@@ -890,15 +905,16 @@ void *reader( void *cont ) {
 			}
 			else if( addRangePrefix( line, control->command ) == 0 ) {
 				strcat( line, control->argument );
+				addMessage( 2, "Searchstring: %s", line );
 				if( ( cmd == mpc_longsearch ) ||
 						( MPC_RANGE(control->command) == mpc_album ) ||
 						( MPC_RANGE(control->command) == mpc_artist ) ) {
 					progressStart( "Looking for %s", control->argument );
-					i=searchPlay(title, line, -1);
+					i=searchPlay(title, line, -1, 0 );
 					addMessage( 0, "Found %i titles", i );
 				}
 				else {
-					if( searchPlay(title, line, 1) == 0 ) {
+					if( searchPlay(title, line, 1, 0 ) == 0 ) {
 						progressStart( "Nothing found for %s", control->argument );
 					}
 				}
@@ -913,6 +929,7 @@ void *reader( void *cont ) {
 				setVolume( atoi(control->argument) );
 				sfree( &(control->argument) );
 			}
+			update=-1;
 			break;
 
 		case mpc_idle:
@@ -933,7 +950,9 @@ void *reader( void *cont ) {
 		pthread_mutex_unlock( &cmdlock );
 
 		/* notify UI that something has changed */
-		updateUI( );
+		if( update ) {
+			updateUI( );
+		}
 	}
 	while ( control->status != mpc_quit );
 

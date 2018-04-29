@@ -30,6 +30,10 @@ void setCurClient( int client ) {
 	_curclient=client;
 }
 
+int isCurClient( int client ) {
+	return( _curclient == client );
+}
+
 /*
  * sends all next messages to every client and allows other clients
  * to lock the messages

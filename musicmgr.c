@@ -264,22 +264,22 @@ static int matchTitle( mptitle *title, const char* pat ) {
 /**
  * play the search results next
  */
-int searchPlay( mptitle *root, const char *pat, unsigned num ) {
+int searchPlay( mptitle *root, const char *pat, unsigned num, const int global ) {
 	mptitle *runner=root;
 	mptitle *pos=root;
-	mptitle *next=root->dbnext;
 	int cnt=0;
-
-	while( ( next != root ) && ( cnt < num ) ) {
-		if( ( runner->flags & MP_MARK ) && matchTitle( runner, pat) ) {
+	
+	do {
+		activity("searching");
+		if( matchTitle( runner, pat) && ( global || !( runner->flags & MP_DNP ) ) ){
 			moveEntry( runner, pos );
 			pos=runner;
 			runner->flags|=(MP_CNTD|MP_SKPD);
 			cnt++;
 		}
-		runner=next;
-		next=next->dbnext;
-	}
+		runner=runner->dbnext;
+	} while( ( runner != root ) && ( cnt < num ) );
+	
 	return cnt;
 }
 

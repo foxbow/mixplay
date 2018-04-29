@@ -133,8 +133,8 @@ static void *clientHandler(void *args ) {
 		FD_ZERO( &fds );
 		FD_SET( sock, &fds );
 
-		to.tv_sec=0;
-		to.tv_usec=100000; /* 1/2 second */
+		to.tv_sec=1;
+		to.tv_usec=0;
 		select( FD_SETSIZE, &fds, NULL, NULL, &to );
 		if( FD_ISSET( sock, &fds ) ) {
 			memset( commdata, 0, commsize );
@@ -211,9 +211,7 @@ static void *clientHandler(void *args ) {
 									strdec( config->argument, pos );
 								}
 
-								if( ( MPC_CMD(cmd) == mpc_fav ) ||
-									( MPC_CMD(cmd) == mpc_search ) ||
-									( MPC_CMD(cmd) == mpc_longsearch ) ){
+								if( MPC_CMD(cmd) == mpc_fav ) {
 									fullstat=-1;
 								}
 
@@ -292,6 +290,10 @@ static void *clientHandler(void *args ) {
 			case 11: /* get update */
 				if( strcmp( config->current->display, playing ) ) {
 					strcpy( playing, config->current->display );
+					fullstat=-1;
+				}
+				
+				if( isCurClient( sock ) ) {
 					fullstat=-1;
 				}
 				jsonLine=serializeStatus( &clmsg, sock, fullstat );
@@ -401,17 +403,17 @@ void activity( const char *msg, ... ) {
 	int pos;
 	va_list args;
 
-	if( getVerbosity() && ( _ftrpos%( 100/getVerbosity() ) == 0 ) ) {
-		pos=( _ftrpos/( 100/getVerbosity() ) )%4;
+	if( getDebug() && ( _ftrpos%( 100/getDebug() ) == 0 ) ) {
+		pos=( _ftrpos/( 100/getDebug() ) )%4;
 		va_start( args, msg );
 		vsprintf( text, msg, args );
-		printf( "%s %c		  \r", text, roller[pos] );
+		printf( "%c %s                                  \r", roller[pos], text );
 		fflush( stdout );
 		va_end( args );
 	}
 
-	if( getVerbosity() > 0 ) {
-		_ftrpos=( _ftrpos+1 )%( 400/getVerbosity() );
+	if( getDebug() ) {
+		_ftrpos=( _ftrpos+1 )%( 400/getDebug() );
 	}
 }
 
@@ -575,8 +577,8 @@ int main( int argc, char **argv ) {
 	while( control->status != mpc_quit ){
 		FD_ZERO( &fds );
 	  	FD_SET( mainsocket, &fds );
-		to.tv_sec=0;
-		to.tv_usec=100000; /* 1/10 second */
+		to.tv_sec=1;
+		to.tv_usec=0;
 		if( select( FD_SETSIZE, &fds, NULL, NULL, &to ) > 0 ) {
 			pthread_t pid;
 			client_sock = accept(mainsocket, (struct sockaddr *)&client, (socklen_t*)&alen);
