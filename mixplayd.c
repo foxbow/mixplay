@@ -298,13 +298,12 @@ static void *clientHandler(void *args ) {
 				}
 				jsonLine=serializeStatus( &clmsg, sock, fullstat );
 				fullstat=0;
-				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i;\015\012\015\012", (int)strlen(jsonLine) );
+				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012", (int)strlen(jsonLine) );
 				while( ( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
 					commsize+=MP_BLKSIZE;
 					commdata=frealloc( commdata, commsize );
 				}
 				strcat( commdata, jsonLine );
-				strcat( commdata, "\015\012\015\012" );
 				len=strlen(commdata);
 				sfree( &jsonLine );
 				break;
@@ -357,7 +356,6 @@ static void *clientHandler(void *args ) {
 					commdata=frealloc( commdata, commsize );
 				}
 				strcat( commdata, jsonLine );
-				strcat( commdata, "\015\012\015\012" );
 				len=strlen(commdata);
 				sfree( &jsonLine );
 				break;
