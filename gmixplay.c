@@ -82,7 +82,7 @@ int main( int argc, char **argv ) {
 	gtk_init( &argc, &argv );
 
 	/* parse command line */
-	if( ( getArgs( argc, argv ) != 0 ) && ( control->remote ) ) {
+	if( ( getArgs( argc, argv ) != 0 ) && ( control->remote == 1 ) ) {
 		addMessage( 0, "Disabling remote connection" );
 		control->remote=0;
 	}

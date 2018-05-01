@@ -24,6 +24,7 @@
 #include "config.h"
 #include "mpcomm.h"
 #include "player.h"
+#include "mpserver.h"
 
 static pthread_mutex_t msglock=PTHREAD_MUTEX_INITIALIZER;
 static mpconfig *c_config=NULL;
@@ -114,15 +115,16 @@ void setCommand( mpcmd cmd ) {
  */
 static void printUsage( char *name ) {
 	addMessage( 0, "USAGE: %s [args] [resource]", name );
- 	addMessage( 0, " -v : increase debug message level to display in app" );
+	addMessage( 0, " -v : increase debug message level to display in app" );
 /*	addMessage( 0, " -S : run in fullscreen mode (gmixplay)" );*/
-   	addMessage( 0, " -d : increase debug message level to display on console" );
+	addMessage( 0, " -d : increase debug message level to display on console" );
 	addMessage( 0, " -f : single channel - disable fading" );
 	addMessage( 0, " -F : enable fading");
 	addMessage( 0, " -r : control remote mixplayd (see -p and -h)" );
 	addMessage( 0, " -l : play local music" );
 	addMessage( 0, " -h <addr> : set remote host" );
-	addMessage( 0, " -p <port> : set remote port [2347]" );
+	addMessage( 0, " -p <port> : set communication port [2347]" );
+	addMessage( 0, " -s : start HTTP server" );
 	addMessage( 0, " -W': write changed config" );
 	addMessage( 0, " resource: resource to play" );
 	addMessage( 0, "		   URL, path, mp3 file, playlist\n" );
@@ -137,7 +139,7 @@ int getArgs( int argc, char ** argv ){
 
 	/* parse command line options */
 	/* using unsigned char c to work around getopt quirk on ARM */
-	while ( ( c = getopt( argc, argv, "vfldFrh:p:W" ) ) != 255 ) {
+	while ( ( c = getopt( argc, argv, "vfldFrh:p:sW" ) ) != 255 ) {
 		switch ( c ) {
 		case 'v': /* increase debug message level to display */
 			incVerbosity();
@@ -181,7 +183,10 @@ int getArgs( int argc, char ** argv ){
 
 		case 'p':
 			config->port=atoi(optarg);
-			config->remote=1;
+			break;
+
+		case 's':
+			config->remote=2;
 			break;
 
 		case 'W':
@@ -229,7 +234,11 @@ int initAll( int dispatch ) {
 
 	control=getConfig();
 
-	if ( !control->remote ) {
+	if ( control->remote == 1 ) {
+		pthread_create( &control->rtid, NULL, netreader, (void *)control );
+		control->playstream=0;
+	}
+	else {
 		/* start the actual player */
 		pthread_create( &control->rtid, NULL, reader, (void *)control );
 		/* make sure the mpg123 instances have a chance to start up */
@@ -250,9 +259,9 @@ int initAll( int dispatch ) {
 			setCommand( mpc_play );
 		}
 	}
-	else {
-		pthread_create( &control->rtid, NULL, netreader, (void *)control );
-		control->playstream=0;
+
+	if ( control->remote == 2 ) {
+		pthread_create( &control->stid, NULL, mpserver, NULL );
 	}
 
 	return 0;

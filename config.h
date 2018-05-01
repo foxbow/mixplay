@@ -94,6 +94,7 @@ struct _mpcontrol_t {
 	char *argument;				/* arguments to command */
 	int status;					/* status of the player/system */
 	pthread_t rtid;				/* thread ID of the reader */
+	pthread_t stid;				/* thread ID of the server */
 	int skipdnp;				/* how many skips mean dnp? */
 	int fade;					/* controls fading between titles */
 	int volume;					/* current volume [0..100] */

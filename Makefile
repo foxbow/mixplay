@@ -5,7 +5,7 @@ CCFLAGS=-DMPCOMM_VER="${MPCOMM_VER}"
 CCFLAGS+=-DVERSION=\"${VERSION}\"
 CCFLAGS+=-Wall -g -pedantic -Werror
 
-OBJS=utils.o musicmgr.o database.o mpgutils.o player.o config.o player.o mpcomm.o json.o
+OBJS=mpserver.o utils.o musicmgr.o database.o mpgutils.o player.o config.o player.o mpcomm.o json.o
 NCOBJS=cmixplay.o ncbox.o
 GLOBJS=gladeutils.o gcallbacks.o gmixplay.o  
 LIBS=-lmpg123 -lpthread
