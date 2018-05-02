@@ -29,6 +29,28 @@
 static pthread_mutex_t msglock=PTHREAD_MUTEX_INITIALIZER;
 static mpconfig *c_config=NULL;
 
+/**
+ * the progress function list
+ */
+typedef struct _progressFunc_t _progressFunc;
+struct _progressFunc_t {
+	void (*func)( const char* );
+	_progressFunc *next;
+};
+
+_progressFunc *_pfunc=NULL;
+
+/**
+ * the update function list
+ */
+typedef struct _updateFunc_t _updateFunc;
+struct _updateFunc_t {
+	void (*func)( void );
+	_updateFunc *next;
+};
+_updateFunc *_ufunc=NULL;
+
+
 static const char *mpc_command[] = {
 		"mpc_play",
 		"mpc_stop",
@@ -61,7 +83,7 @@ static const char *mpc_command[] = {
  */
 const char *mpcString( mpcmd rawcmd ) {
 	mpcmd cmd=MPC_CMD(rawcmd);
-	if( ( cmd >= 0 ) && ( cmd <= mpc_idle ) ) {
+	if( cmd <= mpc_idle ) {
 		return mpc_command[cmd];
 	}
 	else {
@@ -200,7 +222,7 @@ int getArgs( int argc, char ** argv ){
 				fprintf (stderr, "Option -%c requires an argument!\n", optopt);
 				break;
 			default:
-				addMessage( 0, "Unknown option -%c %i\n", c, c );
+				addMessage( 0, "Unknown option -%c\n", optopt );
 			}
 			/* no break */
 
@@ -227,6 +249,8 @@ int getArgs( int argc, char ** argv ){
  * if dispatch is != 0, the profile will be set in a separate thread.
  * this is handy if the main thread is used to display messages e.g.:
  * gmixplay
+ *
+ * this will also start the communication thread is remote=2
  */
 int initAll( int dispatch ) {
 	mpconfig *control;
@@ -260,6 +284,9 @@ int initAll( int dispatch ) {
 		}
 	}
 
+	/*
+	 * start the comm server if requested
+	 */
 	if ( control->remote == 2 ) {
 		pthread_create( &control->stid, NULL, mpserver, NULL );
 	}
@@ -591,4 +618,86 @@ int incVerbosity() {
 
 void muteVerbosity() {
 	setVerbosity(0);
+}
+
+void addProgressHook( void (*func)( const char* ) ){
+	_progressFunc *pos=_pfunc;
+	if( pos == NULL ) {
+		_pfunc=falloc(1,  sizeof(_progressFunc) );
+		pos=_pfunc;
+	}
+	else {
+		while( pos->next != NULL ) {
+			pos=pos->next;
+		}
+		pos->next=falloc(1,  sizeof(_progressFunc) );
+		pos=pos->next;
+	}
+	pos->func=func;
+}
+
+/*
+ * stub implementations
+ */
+void progressStart( char* msg, ... ) {
+	va_list args;
+	char *line;
+	_progressFunc *pos=_pfunc;
+
+	line=falloc( 512, sizeof( char ) );
+
+	va_start( args, msg );
+	vsnprintf( line, 512, msg, args );
+	va_end( args );
+
+	while( pos != NULL ) {
+		pos->func( msg );
+		pos=pos->next;
+	}
+	addMessage( 0, line );
+
+	free( line );
+}
+
+/**
+ * end a progress display
+ */
+void progressEnd( void ) {
+	_progressFunc *pos=_pfunc;
+
+	addMessage( 0, "Done." );
+	while( pos != NULL ) {
+		pos->func( NULL );
+		pos=pos->next;
+	}
+}
+
+/**
+ * register an update function
+ */
+void addUpdateHook( void (*func)( void ) ){
+	_updateFunc *pos=_ufunc;
+	if( pos == NULL ) {
+		_ufunc=falloc(1,  sizeof(_updateFunc) );
+		pos=_ufunc;
+	}
+	else {
+		while( pos->next != NULL ) {
+			pos=pos->next;
+		}
+		pos->next=falloc(1,  sizeof(_updateFunc) );
+		pos=pos->next;
+	}
+	pos->func=func;
+}
+
+/**
+ * run all registered update functions
+ */
+void updateUI() {
+	_updateFunc *pos=_ufunc;
+	while( pos != NULL ) {
+		pos->func();
+		pos=pos->next;
+	}
 }

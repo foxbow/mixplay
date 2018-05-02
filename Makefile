@@ -3,7 +3,7 @@ VERSION=$(shell git describe --tags --abbrev=1 --dirty=-dev --always)
 MPCOMM_VER=11
 CCFLAGS=-DMPCOMM_VER="${MPCOMM_VER}"
 CCFLAGS+=-DVERSION=\"${VERSION}\"
-CCFLAGS+=-Wall -g -pedantic -Werror
+CCFLAGS+=-Wall -pedantic -Werror -g
 
 OBJS=mpserver.o utils.o musicmgr.o database.o mpgutils.o player.o config.o player.o mpcomm.o json.o
 NCOBJS=cmixplay.o ncbox.o

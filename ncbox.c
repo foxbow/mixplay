@@ -347,19 +347,7 @@ void drawframe( mptitle *current, const char *status, int stream ) {
 	refresh();
 }
 
-/*
- * dummy implementations
- */
-void progressStart( char *msg, ... ) {
-	addMessage( 0, msg );
-}
-
-void progressEnd( ) {
-	addMessage( 0, "Done." );
-	/* do null */
-}
-
-void updateUI( ) {
+void nc_updateHook( void ) {
 	mpconfig *control=getConfig();
 	char status[MP_MSGLEN];
 	int i;

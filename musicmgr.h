@@ -8,7 +8,7 @@
 #define NAMELEN 64
 #define MAXPATHLEN 256
 
-#define RANDOM(x) (abs(rand()%x))
+#define RANDOM(x) (rand()%x)
 
 #define MP_FAV  1	/* Favourite */
 #define MP_DNP  2   /* do not play */

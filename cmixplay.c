@@ -59,12 +59,13 @@ int main( int argc, char **argv ) {
 	initAll( 0 );
 
 	/* Start curses mode */
-	config->inUI=-1;
 	initscr();
 	curs_set( 0 );
 	cbreak();
 	keypad( stdscr, TRUE );
 	noecho();
+	config->inUI=-1;
+	addUpdateHook( &nc_updateHook );
 	drawframe( NULL, "INIT", config->playstream );
 
 	do {

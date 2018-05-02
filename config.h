@@ -126,6 +126,12 @@ void muteVerbosity( void );
 void addMessage( int v, char *msg, ... );
 char *getMessage( void );
 
+void progressStart( char *msg, ... );
+void progressEnd( void );
+void addProgressHook( void (*func)( const char* ) );
+void addUpdateHook( void (*func)( void ) );
+void updateUI( void );
+
 const char *mpcString( mpcmd rawcmd );
 const mpcmd mpcCommand( const char *val );
 void setCommand( mpcmd rawcmd );

@@ -16,9 +16,10 @@ void popAsk( const char *text, char *reply );
 void dhline( int r, int c, int len );
 void dvline( int r, int c, int len );
 void drawbox( int r0, int c0, int r1, int c1 );
-int popUpActive();
-void popDown();
+int popUpActive( void );
+void popDown( void );
 void drawframe( mptitle *current, const char *status, int stream );
+void nc_updateHook( void );
 /* void fail( int error, const char* msg, ... ); */
 
 #endif /* NCBOX_H_ */

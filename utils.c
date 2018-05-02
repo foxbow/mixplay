@@ -230,11 +230,7 @@ static int setBit( unsigned long pos, strval_t val ) {
 	int bytepos;
 	unsigned char set=0;
 
-	/* avoid under/overflow */
-	if( pos < 0 ) {
-		pos=0;
-	}
-
+	/* avoid overflow */
 	if( pos > CMP_BITS ) {
 		pos=CMP_BITS;
 	}
@@ -383,7 +379,7 @@ int isDir( const char *path ) {
 void *falloc( size_t num, size_t size ) {
 	void *result=NULL;
 
-   	result=calloc( num, size );
+	result=calloc( num, size );
 
 	if( NULL == result ) {
 		fail( errno, "Sorry.." );
@@ -414,6 +410,9 @@ void sfree( char **ptr ) {
 	*ptr=NULL;
 }
 
+/*
+ * initialize a message ringbuffer
+ */
 msgbuf *msgBuffInit() {
 	msgbuf *msgBuf=falloc( 1, sizeof( msgbuf ) );
 	msgBuf->msgLock=falloc( 1, sizeof( pthread_mutex_t ) );
@@ -593,7 +592,7 @@ int hexval( const char c ) {
 }
 
 /*
- * reads a hex number with length len
+ * reads a hex number
  * if end != NULL it will point to the first unknown character.
  */
 long readHex( char *txt, char **end ) {

@@ -1,7 +1,7 @@
 /*
  * mixplayd.c
  *
- * mixplay demon that play headless and offers a control channel
+ * mixplay demon that plays headless and offers a control channel
  * through an IP socket
  *
  *  Created on: 16.11.2017
@@ -22,8 +22,7 @@ static int _isDaemon=0;
 
 /**
  * show activity roller on console
- * this will only show when the global verbosity is larger than 0
- * spins faster with increased verbosity
+ * this will only show if debug mode is enabled
  */
 void activity( const char *msg, ... ) {
 	char roller[5]="|/-\\";
@@ -46,7 +45,7 @@ void activity( const char *msg, ... ) {
 }
 
 /*
- * Print errormessage, errno and wait for [enter]
+ * Print errormessage and exit
  * msg - Message to print
  * info - second part of the massage, for instance a variable
  * error - errno that was set
@@ -73,22 +72,10 @@ void fail( int error, const char* msg, ... ) {
 	exit( error );
 }
 
-void progressStart( char* msg, ... ) {
-	va_list args;
-	char *line;
-	line=falloc( 512, sizeof( char ) );
-
-	va_start( args, msg );
-	vsnprintf( line, 512, msg, args );
-	addMessage( 0, line );
-	va_end( args );
-}
-
-void progressEnd( ) {
-	addMessage( 0, "Done." );
-}
-
-void updateUI( ) {
+/**
+ * special handling for the server during information updates
+ */
+void s_updateHook( ) {
 	mpconfig *data=getConfig();
 	if( _curmsg < data->msg->count ) {
 		if( getDebug() == 0 ) {
@@ -136,7 +123,7 @@ int main( int argc, char **argv ) {
 		return -1;
 	}
 
-	/* thi swill only run as server */
+	/* this will only run as server */
 	control->remote=2;
 
 	/* daemonization must happen before childs are created otherwise the pipes are cut
@@ -147,6 +134,7 @@ int main( int argc, char **argv ) {
 		daemon( 0, 0 );
 		openlog ("mixplayd", LOG_PID, LOG_DAEMON);
 	}
+	addUpdateHook( &s_updateHook );
 	control->inUI=1;
 	initAll( 0 );
 	pthread_join( control->stid, NULL );

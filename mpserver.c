@@ -109,6 +109,7 @@ static void *clientHandler(void *args ) {
 	unsigned int flen;
 	int fullstat=-1;
 	int okreply=-1;
+	int rawcmd;
 
 	commdata=falloc( commsize, sizeof( char ) );
 
@@ -178,12 +179,13 @@ static void *clientHandler(void *args ) {
 							else if( strstr( pos, "/cmd/" ) == pos ) {
 								addMessage( 1, "received: %s", pos );
 								pos+=5;
-								cmd=readHex(pos,&pos);
-								if( cmd == -1 ) {
+								rawcmd=readHex(pos,&pos);
+								if( rawcmd == -1 ) {
 									addMessage( 1, "Illegal command %s", pos );
 									cmd=mpc_idle;
 								}
 								else {
+									cmd=rawcmd;
 									addMessage( 1, "Got command 0x%04x - %s", cmd, mpcString(cmd) );
 								}
 								if( *pos == '?' ) {
@@ -439,7 +441,7 @@ void *mpserver( void *data ) {
 
 			/* todo collect pids?
 			 * or better use a threadpool */
-			if( pthread_create( &pid , NULL ,  clientHandler , (void*) new_sock) < 0) {
+			if( pthread_create( &pid, NULL, clientHandler, (void*)new_sock ) < 0) {
 				fail( errno, "Could not create client handler thread!" );
 				control->status=mpc_quit;
 			}

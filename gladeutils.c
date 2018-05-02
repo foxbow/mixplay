@@ -127,31 +127,6 @@ static int g_progressStart( void *title ) {
 }
 
 /**
- * Opens an info requester
- */
-void progressStart( char *msg, ... ) {
-	va_list args;
-	char *line;
-	line=falloc( 512, sizeof( char ) );
-
-	va_start( args, msg );
-	vsnprintf( line, 512, msg, args );
-	va_end( args );
-
-	if( getConfig()->inUI ) {
-		gdk_threads_add_idle( g_progressStart, line );
-
-		while ( gtk_events_pending () ) {
-			gtk_main_iteration ();
-		}
-	}
-	else {
-		addMessage( 0, line );
-		free( line );
-	}
-}
-
-/**
  * pops up a requester to show a message
  * Usually called from within an ProgressStart() ProgressEnd() bracket
  * Can be called as is and just pops up a closeable requester
@@ -203,16 +178,25 @@ static int g_progressEnd( void *data ) {
 }
 
 /**
- * enables closing of the info requester
+ * extended progress handling for gmixplay
  */
-void progressEnd( ) {
-	addMessage( 0, "Done." );
+void g_progressHook( const char *msg ) {
+	if( msg == NULL ) {
+		if( getConfig()->inUI ) {
+			gdk_threads_add_idle( g_progressEnd, NULL );
 
-	if( getConfig()->inUI ) {
-		gdk_threads_add_idle( g_progressEnd, NULL );
+			while ( gtk_events_pending () ) {
+				gtk_main_iteration ();
+			}
+		}
+	}
+	else {
+		if( getConfig()->inUI ) {
+			gdk_threads_add_idle( g_progressStart, (void *)msg );
 
-		while ( gtk_events_pending () ) {
-			gtk_main_iteration ();
+			while ( gtk_events_pending () ) {
+				gtk_main_iteration ();
+			}
 		}
 	}
 }
@@ -383,7 +367,7 @@ static int g_updateUI( void *data ) {
 	gtk_progress_bar_set_fraction( GTK_PROGRESS_BAR( MP_GLDATA->widgets->progress ),
 								   control->percent/100.0 );
 
-   	g_progressLog( getMessage() );
+	g_progressLog( getMessage() );
 
 	return 0;
 }
@@ -394,7 +378,7 @@ static int g_updateUI( void *data ) {
  *
  * needed to keep updateUI() GUI independent
  */
-void updateUI( ) {
+void g_updateHook( void ) {
 	mpconfig *control=getConfig();
 	if( control->inUI ) {
 		if( control->status == mpc_quit ) {

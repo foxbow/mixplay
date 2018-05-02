@@ -49,4 +49,7 @@ struct glcontrol_t {
 	struct msgbuf_t *msgbuff;	/* generic message buffer */
 };
 
+void g_progressHook( const char* msg );
+void g_updateHook( void );
+
 #endif /* __GLADEUTILS_H__ */
