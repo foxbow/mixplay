@@ -18,6 +18,7 @@
 #include <sys/stat.h>
 #include <getopt.h>
 #include <unistd.h>
+#include <syslog.h>
 
 #include "utils.h"
 #include "musicmgr.h"
@@ -572,6 +573,9 @@ void addMessage( int v, char *msg, ... ) {
 		}
 		else {
 			printf( "V %s\n", line );
+		}
+		if( c_config->isDaemon ) {
+			syslog( LOG_NOTICE, "%s", line );
 		}
 	}
 	else if( v < getDebug() ) {

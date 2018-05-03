@@ -12,6 +12,75 @@
 #include "config.h"
 #include "mpcomm.h"
 
+static int _ftrpos=0;
+
+/**
+ * show activity roller on console
+ * this will only show when the global verbosity is larger than 0
+ * spins faster with increased verbosity
+ */
+void activity( const char *msg, ... ) {
+	char roller[5]="|/-\\";
+	char text[256]="";
+	int pos;
+	va_list args;
+
+	if( getVerbosity() && ( _ftrpos%( 100/getVerbosity() ) == 0 ) ) {
+		pos=( _ftrpos/( 100/getVerbosity() ) )%4;
+
+		va_start( args, msg );
+		vsprintf( text, msg, args );
+		printf( "%s %c		  \r", text, roller[pos] );
+		fflush( stdout );
+		va_end( args );
+	}
+
+	if( getVerbosity() > 0 ) {
+		_ftrpos=( _ftrpos+1 )%( 400/getVerbosity() );
+	}
+}
+
+/*
+ * Print errormessage, errno and wait for [enter]
+ * msg - Message to print
+ * info - second part of the massage, for instance a variable
+ * error - errno that was set
+ *		 F_FAIL = print message w/o errno and exit
+ */
+void fail( int error, const char* msg, ... ) {
+	va_list args;
+	char line[512];
+
+	va_start( args, msg );
+	vsprintf( line, msg, args );
+	va_end( args );
+
+	if( error == 0 ) {
+		addMessage( 0, "OBSOLETE: %s", line );
+		return;
+	}
+
+	getConfig()->status=mpc_quit;
+
+	fprintf( stderr, "\n" );
+
+	if( error == F_FAIL ) {
+		fprintf( stderr, "ERROR: %s\n", line );
+	}
+	else {
+		fprintf( stderr, "ERROR: %s\n%i - %s\n", line, abs( error ), strerror( abs( error ) ) );
+	}
+	fprintf( stderr, "Press [ENTER]\n" );
+	fflush( stdout );
+	fflush( stderr );
+
+	while( getc( stdin )!=10 );
+
+	exit( error );
+
+	return;
+}
+
 int main( int argc, char **argv ) {
 	mpconfig	*config;
 	int 		db=0;

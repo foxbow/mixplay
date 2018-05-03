@@ -18,7 +18,6 @@
 
 static int _ftrpos=0;
 static long _curmsg=0;
-static int _isDaemon=0;
 
 /**
  * show activity roller on console
@@ -55,7 +54,7 @@ void fail( int error, const char* msg, ... ) {
 	va_list args;
 	va_start( args, msg );
 
-	if( _isDaemon ) {
+	if( getConfig()->isDaemon ) {
 		vsyslog( LOG_ERR, msg, args );
 	}
 	fprintf( stdout, "\n" );
@@ -63,7 +62,7 @@ void fail( int error, const char* msg, ... ) {
 	fprintf( stdout, "\n" );
 	if( error > 0 ) {
 		fprintf( stdout, "ERROR: %i - %s\n", abs( error ), strerror( abs( error ) ) );
-		if( _isDaemon ) {
+		if( getConfig()->isDaemon ) {
 			syslog( LOG_ERR, "ERROR: %i - %s\n", abs( error ), strerror( abs( error ) ) );
 		}
 	}
@@ -133,6 +132,7 @@ int main( int argc, char **argv ) {
 	if( getDebug() == 0 ) {
 		daemon( 0, 0 );
 		openlog ("mixplayd", LOG_PID, LOG_DAEMON);
+		control->isDaemon=-1;
 	}
 	addUpdateHook( &s_updateHook );
 	control->inUI=1;

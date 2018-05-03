@@ -108,6 +108,7 @@ struct _mpcontrol_t {
 	int  port;
 	int remote;
 	int changed;
+	int isDaemon;
 };
 
 void writeConfig( const char *musicpath );
