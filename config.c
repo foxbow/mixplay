@@ -120,7 +120,7 @@ void setCommand( mpcmd cmd ) {
 		return;
 	}
 
-	if( config->remote ) {
+	if( config->remote==1 ) {
 		if( cmd == mpc_quit ) {
 			config->status = mpc_quit;
 		}
