@@ -655,8 +655,8 @@ mptitle *insertTitle( mptitle *base, const char *path ) {
  *
  * MP_DNP|MP_FAV will match any title where either flag is set
  */
-static int countTitles( mptitle *base, const unsigned int inc, const unsigned int exc ) {
-	int cnt=0;
+static unsigned long countTitles( mptitle *base, const unsigned int inc, const unsigned int exc ) {
+	unsigned long cnt=0;
 	mptitle *runner=base;
 
 	if( NULL == base ) {
@@ -756,8 +756,8 @@ mptitle *shuffleTitles( mptitle *base ) {
 	mptitle *end=NULL;
 	mptitle *runner=base;
 	mptitle *guard=NULL;
-	unsigned int num=0;
-	unsigned int i;
+	unsigned long num=0;
+	unsigned long i;
 	unsigned int nameskip=0;
 	unsigned int playskip=0;
 	unsigned int added=0;
@@ -766,6 +766,7 @@ mptitle *shuffleTitles( mptitle *base ) {
 	struct timeval tv;
 	unsigned long pcount=0;
 	char name[NAMELEN], lastname[NAMELEN]="";
+	unsigned long skip;
 
 	int valid=0;
 	/* 0 - nothing checked
@@ -784,7 +785,6 @@ mptitle *shuffleTitles( mptitle *base ) {
 	addMessage( 0, "Shuffling %i titles", num );
 
 	for( i=0; i<num; i++ ) {
-		unsigned long skip;
 		activity( "Shuffling " );
 
 		/* select a random title from the database */
@@ -819,7 +819,7 @@ mptitle *shuffleTitles( mptitle *base ) {
 				strlncpy( name, runner->artist, NAMELEN );
 
 				while( checkSim( name, lastname ) ) {
-					activity( "Nameskipping " );
+					activity( "Nameskipping" );
 					runner=runner->dbnext;
 					runner=skipOver( runner );
 
@@ -858,14 +858,14 @@ mptitle *shuffleTitles( mptitle *base ) {
 				}
 
 				if( !( valid & 2 ) ) {
-					activity( "Playcountskipping " );
+					activity( "Playcountskipping" );
 					runner=runner->dbnext;
 					runner=skipOver( runner );
 					valid=0;
 
 					if( guard == runner ) {
 						valid=1;	/* we're back where we started and this one is valid by name */
-						pcount++;   /* allow more replays */
+						pcount++;	/* allow more replays */
 						addMessage( 2, "Increasing maxplaycount to %li at %i", pcount, i );
 					}
 				}
@@ -878,7 +878,7 @@ mptitle *shuffleTitles( mptitle *base ) {
 			if( ++cycles > 10 ) {
 				addMessage( 2, "Looks like we ran into a loop in round %i/%i", i, num );
 				cycles=0;
-				pcount++;   /* allow replays */
+				pcount++;	/* allow replays */
 				addMessage( 2, "Increasing maxplaycount to %li", pcount );
 			}
 		} /* while( valid != 3 ) */
@@ -919,10 +919,7 @@ mptitle *shuffleTitles( mptitle *base ) {
  * skips the given number of titles
  * global - select if titles should be skipped in the playlist or the database
  */
-mptitle *skipTitles( mptitle *current, int num, const int global ) {
-	int dir=num;
-	num=abs( num );
-
+mptitle *skipTitles( mptitle *current, unsigned long num, const int global ) {
 	if( NULL == current ) {
 		return NULL;
 	}
@@ -937,25 +934,15 @@ mptitle *skipTitles( mptitle *current, int num, const int global ) {
 	}
 
 	while( num > 0 ) {
-		if( dir < 0 ) {
-			if( global ) {
-				current=current->dbprev;
-			}
-			else {
-				current=current->plprev;
-			}
+		if( global ) {
+			current=skipOver( current->dbnext );
 		}
 		else {
-			if( global ) {
-				current=skipOver( current->dbnext );
-			}
-			else {
-				current=current->plnext;
-			}
+			current=current->plnext;
 		}
-
 		num--;
 	}
+
 
 	return current;
 }

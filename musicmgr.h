@@ -8,7 +8,7 @@
 #define NAMELEN 64
 #define MAXPATHLEN 256
 
-#define RANDOM(x) ((unsigned)rand()%x)
+#define RANDOM(x) ((unsigned)rand()%(x))
 
 #define MP_FAV  1	/* Favourite */
 #define MP_DNP  2   /* do not play */
@@ -53,7 +53,7 @@ mptitle *shuffleTitles( mptitle *base );
 mptitle *rewindTitles( mptitle *base );
 mptitle *loadPlaylist( const char *path );
 mptitle *insertTitle( mptitle *base, const char *path );
-mptitle *skipTitles( mptitle *current, int num, const int global );
+mptitle *skipTitles( mptitle *current, unsigned long num, const int global );
 mptitle *searchList( mptitle *base, struct marklist_t *term );
 mptitle *getTitle( unsigned int key );
 mptitle *cleanTitles( mptitle *root );
