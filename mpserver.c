@@ -394,9 +394,9 @@ void *mpserver( void *data ) {
 	int 		port=MP_PORT;
 	mpconfig	*control;
 
-	control=readConfig( );
+	control=getConfig( );
 	/* server can never be remote */
-	control->remote=0;
+	control->remote=2;
 
 
 	mainsocket = socket(AF_INET , SOCK_STREAM , 0);
@@ -431,8 +431,8 @@ void *mpserver( void *data ) {
 			pthread_t pid;
 			client_sock = accept(mainsocket, (struct sockaddr *)&client, (socklen_t*)&alen);
 			if (client_sock < 0) {
-				fail( errno, "accept() failed!" );
-				control->status=mpc_quit;
+				addMessage(0, "accept() failed!" );
+				continue;
 			}
 			addMessage( 2, "Connection accepted" );
 
@@ -442,8 +442,8 @@ void *mpserver( void *data ) {
 			/* todo collect pids?
 			 * or better use a threadpool */
 			if( pthread_create( &pid, NULL, clientHandler, (void*)new_sock ) < 0) {
-				fail( errno, "Could not create client handler thread!" );
-				control->status=mpc_quit;
+				addMessage( 0, "Could not create client handler thread!" );
+				continue;
 			}
 		}
 	}

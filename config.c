@@ -374,6 +374,7 @@ mpconfig *readConfig( ) {
 	c_config->host="127.0.0.1";
 	c_config->port=MP_PORT;
 	c_config->changed=0;
+	c_config->isDaemon=0;
 
 	snprintf( c_config->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", getenv("HOME") );
 
