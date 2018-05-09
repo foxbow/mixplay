@@ -51,17 +51,18 @@ LIBS+=$(shell pkg-config --libs $(REFS))
 CCFLAGS+=$(shell pkg-config --cflags $(REFS))
 
 all: dep.d $(EXES)
-	
+
 clean:
 	rm -f *.o
 	rm -f *.gch
 	rm -f bin/*
 	rm -f dep.d
 	touch bin/KEEPDIR
-	
+
 distclean: clean
-	rm static/CURVER	
-	rm static/mixplay.js
+	rm -f static/CURVER
+	rm -f static/mixplay.js
+	rm -f static/*~
 	rm -f gmixplay_app.h
 	rm -f mprc_html.h
 	rm -f mixplayd_*.h
@@ -81,7 +82,7 @@ bin/gmixplay: $(OBJS) $(GLOBJS)
 
 %.o: %.c
 	$(CC) $(CCFLAGS) -c $<
-	
+
 install-mixplayd: bin/mixplayd
 	install -d $(BINDIR)
 	install -s -m 0755 bin/mixplayd $(BINDIR)
@@ -96,13 +97,13 @@ install-gmixplay: bin/gmixplay
 	install -d ~/.local/share/icons/
 	install -m 0644 static/mixplay.svg $(SHAREDIR)/icons/
 	install -d $(SHAREDIR)/applications/
-	desktop-file-install --dir=$(SHAREDIR)/applications -m 0755 --set-key=Exec --set-value="$(BINDIR)/gmixplay %u" --set-icon=$(SHAREDIR)/icons/mixplay.svg --rebuild-mime-info-cache static/gmixplay.desktop
+	desktop-file-install --dir=$(SHAREDIR)/applications -m 0755 --set-icon=$(SHAREDIR)/icons/mixplay.svg --rebuild-mime-info-cache static/gmixplay.desktop
 
 install-service: install-mixplayd
 	$(info No service support yet!)
-	
+
 install: $(INST)
-	
+
 mixplayd_html.h: static/mixplay.html
 	xxd -i static/mixplay.html > mixplayd_html.h
 
@@ -114,19 +115,19 @@ mixplayd_css.h: static/mixplay.css
 
 static/mixplay.js: static/mixplay_js.tmpl
 	sed -e 's/~~MPCOMM_VER~~/'${MPCOMM_VER}'/g'  static/mixplay_js.tmpl > static/mixplay.js
-	
+
 mixplayd_js.h: static/mixplay.js
 	xxd -i static/mixplay.js > mixplayd_js.h
 
 gmixplay_app.h: static/gmixplay_app.glade
 	xxd -i static/gmixplay_app.glade > gmixplay_app.h
-	
+
 prepare:
 	apt-get install ncurses-dev mpg123 libmpg123-dev libgtk-3-dev libasound-dev
 
 dep.d: *.h
 	rm -f dep.d
 	gcc *.c -MM -MG >> dep.d
-	
+
 # This will fail silently of first make run
 -include dep.d

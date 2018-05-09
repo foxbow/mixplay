@@ -20,7 +20,7 @@ void setvol( GtkButton *button, gpointer data ) {
 	if( ( conf->argument == NULL ) && ( vol != conf->volume ) ) {
 		conf->volume = vol;
 		conf->argument=falloc( 4, sizeof( char ) );
-		sprintf( conf->argument, "%i", vol );
+		snprintf( conf->argument, 3, "%i", vol );
 		setCommand( mpc_setvol );
 	}
 }
@@ -60,14 +60,9 @@ void markfav( GtkButton *button, gpointer data ) {
 	int reply;
 	mpconfig *mpcontrol=getConfig();
 
+	/* remember the current title even if the player already jumped to the next title */
 	title = mpcontrol->current;
 
-	/*
-	 * Do not pause. This may mess up things, if the current title
-	 * changes while the requester is still open. Then the next title
-	 * will be marked. This is not ideal but better than having a pause
-	 * during play.
-	 */
 	dialog = gtk_message_dialog_new(
 				 GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
 				 GTK_DIALOG_DESTROY_WITH_PARENT,
