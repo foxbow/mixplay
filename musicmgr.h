@@ -53,7 +53,7 @@ mptitle *shuffleTitles( mptitle *base );
 mptitle *rewindTitles( mptitle *base );
 mptitle *loadPlaylist( const char *path );
 mptitle *insertTitle( mptitle *base, const char *path );
-mptitle *skipTitles( mptitle *current, unsigned long num, const int global );
+mptitle *skipTitles( mptitle *current, long num, const int global );
 mptitle *searchList( mptitle *base, struct marklist_t *term );
 mptitle *getTitle( unsigned int key );
 mptitle *cleanTitles( mptitle *root );

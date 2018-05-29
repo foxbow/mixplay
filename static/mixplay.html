@@ -43,17 +43,24 @@
     </div> <!-- main -->
     <input id='showmore' style='border: none; background: none;' type='button' onclick='toggleVisibility("more")' value='&#x2630; Tools' >
     <div id='more' style='display: none; width:100%;' >
-       <input id='text' type='text'><br>
-       <input id='search' type='button' onclick='sendArg(0x13)' value='Search' >
-       <input id='search' type='button' onclick='sendArg(0x1013)' value='Fuzzy' >
-<!--       <input id='newprof' type='button' onclick='sendArg(0x16)' value='Profile' >
+      <input id='text' type='text'><br>
+      <input id='search' type='button' onclick='sendArg(0x13)' value='Search' >
+      <input id='search' type='button' onclick='sendArg(0x1013)' value='Fuzzy' >
+      <input id='newprof' type='button' onclick='sendArg(0x16)' value='Create Profile' >
+      <input id='load' type='button' onclick='sendArg(0x17)' value='Load' >
+<!--
+      <hr>
+      <select label='Profile' id='profile'>
+         <option value='0' selected>None</option>
+       </select>
+      <input id='setprof' type='button' onclick='setProf()' value='Set Profile' >
 -->
-       <hr>
-       <input id='shuffle' type='button' onclick='sendCMD(0x0c)' value='Shuffle' >
-       <input id='rescan' type='button' onclick='sendCMD(0x08)' value='ReScan' >
-       <input id='dbinfo' type='button' onclick='sendCMD(0x12)' value='DBInfo' >
-       <input id='stop' type='button' onclick='killServer()' value='STOP' >
-       <hr>
+      <hr>
+      <input id='shuffle' type='button' onclick='sendCMD(0x0c)' value='Shuffle' >
+      <input id='rescan' type='button' onclick='sendCMD(0x08)' value='ReScan' >
+      <input id='dbinfo' type='button' onclick='sendCMD(0x12)' value='DBInfo' >
+      <input id='stop' type='button' onclick='killServer()' value='STOP' >
+      <hr>
     </div>
     <input id='showmsgs' style='border: none; background: none;' type='button' onclick='toggleVisibility("msgs")' value='&#x2630; Messages' >
     <div id='msgs' style='display: none;' width='100%'></div>

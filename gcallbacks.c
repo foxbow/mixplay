@@ -509,7 +509,7 @@ void profileStart( GtkButton *button, gpointer data ) {
 				path=NULL; /* is free'd in player! */
 			}
 		}
-	   	gtk_widget_destroy( dialog );
+		gtk_widget_destroy( dialog );
 
 		mpcontrol->active = profile;
 		break;
@@ -561,7 +561,7 @@ void profileStart( GtkButton *button, gpointer data ) {
 				addMessage( 0, "Can't change profile, argument is already set! [%s]", mpcontrol->argument );
 			}
 			else {
-				mpcontrol->argument=calloc( sizeof(char), 10);
+				mpcontrol->argument=falloc( 10, sizeof(char) );
 				snprintf( mpcontrol->argument, 9, "%i", mpcontrol->active );
 				setCommand( mpc_profile );
 			}
@@ -580,12 +580,13 @@ void profileStart( GtkButton *button, gpointer data ) {
 	}
 
 	if( path != NULL ) {
-		if( mpcontrol->status == mpc_start ) {
-			setCommand( mpc_start );
+		if( mpcontrol->argument != NULL ) {
+			addMessage( 0, "Can't set path, argument is already set! [%s]", mpcontrol->argument );
 		}
-		if( setArgument( path ) ){
-			mpcontrol->active = 0;
-			setCommand( mpc_start );
+		else {
+			mpcontrol->argument=falloc( strlen( path )+1, sizeof(char) );
+			strcpy( mpcontrol->argument, path );
+			setCommand( mpc_path );
 		}
 		free( path );
 	}

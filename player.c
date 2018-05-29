@@ -572,7 +572,7 @@ void *reader( void *cont ) {
 						snprintf( line, MAXPATHLEN, "volume %i\n", invol );
 						write( p_command[fdset][1], line, strlen( line ) );
 					}
-						
+
 					if( intime != oldtime ) {
 						oldtime=intime;
 						update=-1;
@@ -619,35 +619,41 @@ void *reader( void *cont ) {
 
 					switch ( cmd ) {
 					case 0: /* STOP */
+						addMessage(2,"Player stopped!");
 						/* player was not yet fully initialized, start again */
 						if( control->status == mpc_start ) {
+							addMessage(2,"Restart..");
 							sendplay( p_command[fdset][1], control );
 						}
 						/* stream stopped playing? */
 						else if( control->playstream != 0 ) {
+							addMessage(2,"Stream stopped");
 							control->status=mpc_idle;
 						}
 						/* we're playing a playlist */
 						else {
+							addMessage(2,"Title change");
 							/* should the playcount be increased? */
 							if( control->fade == 0 ) {
 								playCount( control );
 							}
+							addMessage(2,"skipping %i",order);
 							next = skipTitles( control->current, order, 0 );
+							addMessage(2,"skipped");
 
-							if ( ( next == control->current ) ||
-									( ( ( order == 1  ) && ( next == control->root ) ) ||
-									  ( ( order == -1 ) && ( next == control->root->plprev ) ) ) ) {
+							if ( next == control->current ) {
 								control->status=mpc_idle; /* stop */
+								addMessage(2,"Single title");
 							}
 							else {
+								addMessage(2,"Next title");
 								if( ( order==1 ) && ( next == control->root ) ) {
+									addMessage(2,"Shuffle!");
 									progressStart( "Reshuffling" );
 									control->root=shuffleTitles( control->root );
 									progressEnd();
 									next=control->root;
 								}
-
 								control->current=next;
 								sendplay( p_command[fdset][1], control );
 							}
@@ -671,7 +677,7 @@ void *reader( void *cont ) {
 						addMessage( 0, "Unknown status %i!\n%s", cmd, line );
 						break;
 					}
-					
+
 					update=-1;
 					break;
 
@@ -862,6 +868,28 @@ void *reader( void *cont ) {
 				setProfile( control );
 				control->current = control->root;
 				sendplay( p_command[fdset][1], control );
+				sfree( &(control->argument) );
+			}
+			break;
+
+		case mpc_path:
+			if( control->argument == NULL ) {
+				progressStart( "No path given!" );
+				progressEnd();
+			}
+			else {
+				/* todo: stop player? */
+				if( setArgument( control->argument ) ){
+					control->active = 0;
+					control->current = control->root;
+					if( control->status == mpc_start ) {
+						write( p_command[fdset][1], "STOP\n", 6 );
+					}
+					else {
+						control->status=mpc_start;
+						sendplay( p_command[fdset][1], control );
+					}
+				}
 				sfree( &(control->argument) );
 			}
 			break;

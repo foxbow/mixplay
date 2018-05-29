@@ -1,6 +1,6 @@
-# CC=/usr/bin/gcc
+CC=gcc
 VERSION=$(shell git describe --tags --abbrev=1 --dirty=-dev --always)
-MPCOMM_VER=11
+MPCOMM_VER=12
 CCFLAGS=-DMPCOMM_VER="${MPCOMM_VER}"
 CCFLAGS+=-DVERSION=\"${VERSION}\"
 CCFLAGS+=-Wall -pedantic -Werror -g
@@ -127,7 +127,7 @@ prepare:
 
 dep.d: *.h
 	rm -f dep.d
-	gcc *.c -MM -MG >> dep.d
+	$(CC) *.c -MM -MG >> dep.d
 
 # This will fail silently of first make run
 -include dep.d

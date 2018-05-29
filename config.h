@@ -41,6 +41,7 @@ enum _mpcmd_t {
 	mpc_longsearch,
 	mpc_setvol,
 	mpc_newprof,
+	mpc_path,
 	mpc_idle,
 	mpc_title=1<<8,
 	mpc_artist=2<<8,

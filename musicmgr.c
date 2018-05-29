@@ -919,23 +919,14 @@ mptitle *shuffleTitles( mptitle *base ) {
  * skips the given number of titles
  * global - select if titles should be skipped in the playlist or the database
  */
-mptitle *skipTitles( mptitle *current, unsigned long num, const int global ) {
+mptitle *skipTitles( mptitle *current, long num, const int global ) {
 	if( NULL == current ) {
 		return NULL;
 	}
 
-	if( 0 == num ) {
-		if( global ) {
-			return skipOver( current );
-		}
-		else {
-			return current;
-		}
-	}
-
 	while( num > 0 ) {
 		if( global ) {
-			current=skipOver( current->dbnext );
+			current=current->dbnext;
 		}
 		else {
 			current=current->plnext;
@@ -943,6 +934,15 @@ mptitle *skipTitles( mptitle *current, unsigned long num, const int global ) {
 		num--;
 	}
 
+	while( num < 0 ) {
+		if( global ) {
+			current=current->dpprev;
+		}
+		else {
+			current=current->plprev;
+		}
+		num++;
+	}
 
 	return current;
 }
