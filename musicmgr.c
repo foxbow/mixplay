@@ -789,7 +789,8 @@ mptitle *shuffleTitles( mptitle *base ) {
 
 		/* select a random title from the database */
 		skip=RANDOM( num-i );
-		runner=skipTitles( runner, skip, -1 );
+		/* skip forward until a title is found the is neither DNP nor MARK */
+		runner=skipOver(skipTitles( runner, skip, -1 ));
 
 		if( runner->flags & MP_MARK ) {
 			fail( F_FAIL, "%s is marked %i %i/%i!", runner->display, skip, i, num );
@@ -802,7 +803,6 @@ mptitle *shuffleTitles( mptitle *base ) {
 
 		cycles=0;
 
-		/* skip forward until a title is found the is neither DNP nor MARK */
 		if( valid != -1 ) {
 			valid=0; /* title has not passed any tests */
 		}
@@ -845,7 +845,7 @@ mptitle *shuffleTitles( mptitle *base ) {
 			guard=runner;
 
 			/* title did not pass playcountcheck and we are not in stuffing mode */
-			while( !(valid & 2 ) ) {
+			while( (valid & 2 ) != 2 ) {
 				if( runner->flags & MP_FAV ) {
 					if ( runner-> playcount <= 2*pcount ) {
 						valid|=2;
@@ -901,7 +901,7 @@ mptitle *shuffleTitles( mptitle *base ) {
 		}
 	}
 
-	addMessage( 1, "Added %i titles						  ", added );
+	addMessage( 1, "Added %i titles", added );
 	addMessage( 1, "Skipped %i titles to avoid artist repeats", nameskip );
 	addMessage( 1, "Skipped %i titles to keep playrate even (max=%i)", playskip, pcount );
 	addMessage( 1, "Stuffed %i titles into playlist", stuffed );
@@ -936,7 +936,7 @@ mptitle *skipTitles( mptitle *current, long num, const int global ) {
 
 	while( num < 0 ) {
 		if( global ) {
-			current=current->dpprev;
+			current=current->dbprev;
 		}
 		else {
 			current=current->plprev;
