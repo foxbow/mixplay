@@ -28,11 +28,11 @@ typedef unsigned char* strval_t;
  * Message ringbuffer structure
  */
 struct msgbuf_t {
-	char *msg[MSGNUM];
-	int  current;
-	int  lines;
-	unsigned long count;
-	pthread_mutex_t *msgLock;
+	char *msg[MSGNUM];			/* the message buffer */
+	int  current;				/* index if the first unhandles message line */
+	int  lines;					/* how many message lines are in use */
+	unsigned long count;		/* the number of the last read message */
+	pthread_mutex_t *msgLock;	/* mutex to control access to the messages */
 };
 typedef struct msgbuf_t msgbuf;
 

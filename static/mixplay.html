@@ -41,29 +41,36 @@
         &#x1F50A; <input id='vol' type='range' min='0' max='100' step='1' value='0' oninput='setVolume( this.value )' onwheel='return false'>
       </div>
     </div> <!-- main -->
-    <input id='showmore' style='border: none; background: none;' type='button' onclick='toggleVisibility("more")' value='&#x2630; Tools' >
-    <div id='more' style='display: none; width:100%;' >
+    <input id='showsearch' style='border: none; background: none;' type='button' onclick='toggleVisibility("search")' value='&#x2630; Search' >
+    <input id='showprofile' style='border: none; background: none;' type='button' onclick='toggleVisibility("profile")' value='&#x2630; Profile' >
+    <input id='showtools' style='border: none; background: none;' type='button' onclick='toggleVisibility("tools")' value='&#x2630; Tools' >
+    <input id='showmsgs' style='border: none; background: none;' type='button' onclick='toggleVisibility("msgs")' value='&#x2630; Messages' >
+    <div id='search' style='display: none; width:100%;' >
+      <em>Search:</em><br>
       <input id='text' type='text'><br>
       <input id='search' type='button' onclick='sendArg(0x13)' value='Search' >
       <input id='search' type='button' onclick='sendArg(0x1013)' value='Fuzzy' >
-      <input id='newprof' type='button' onclick='sendArg(0x16)' value='Create Profile' >
-      <input id='load' type='button' onclick='sendArg(0x17)' value='Load' >
-<!--
-      <hr>
-      <select label='Profile' id='profile'>
+    </div>
+    <div id='profile' style='display: none; width:100%;' >
+      <em>Profiles:</em><br>
+      <select label='Profile' id='profiles'>
          <option value='0' selected>None</option>
        </select>
-      <input id='setprof' type='button' onclick='setProf()' value='Set Profile' >
--->
-      <hr>
+      <input id='setprof' type='button' onclick='setProf()' value='Set Profile' ><br>
+      <input id='ptext' type='text'>
+      <input id='newprof' type='button' onclick='sendPArg(0x16)' value='Create Profile' >
+      <input id='load' type='button' onclick='sendPArg(0x17)' value='Load URL' >
+    </div>
+    <div id='tools' style='display: none; width:100%;' >
+      <em>Tools:<em><br>
       <input id='shuffle' type='button' onclick='sendCMD(0x0c)' value='Shuffle' >
       <input id='rescan' type='button' onclick='sendCMD(0x08)' value='ReScan' >
       <input id='dbinfo' type='button' onclick='sendCMD(0x12)' value='DBInfo' >
       <input id='stop' type='button' onclick='killServer()' value='STOP' >
-      <hr>
     </div>
-    <input id='showmsgs' style='border: none; background: none;' type='button' onclick='toggleVisibility("msgs")' value='&#x2630; Messages' >
-    <div id='msgs' style='display: none;' width='100%'></div>
+    <div id='msgs' style='display: none;' width='100%'>
+      <em>Messages:</em><br>
+    </div>
   </body>
 </html>
 

@@ -425,6 +425,7 @@ msgbuf *msgBuffInit() {
 
 /**
  * helperfunction to implement message ringbuffer
+ * adds message 'line' to the buffer.
  * returns the current message number
  */
 unsigned long msgBuffAdd( msgbuf *msgbuf, char *line ) {

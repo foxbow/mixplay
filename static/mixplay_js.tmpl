@@ -231,4 +231,14 @@ function sendArg( cmd ) {
 	}
 }
 
+function sendPArg( cmd ) {
+	var term=document.getElementById('ptext').value;
+	if( term.length > 1 ) {
+		sendRange( cmd, term );
+	}
+	else {
+		alert("Need at least two letters!");
+	}
+}
+
 updateUI();
