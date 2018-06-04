@@ -291,9 +291,9 @@ static int g_updateUI( void *data ) {
 			gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_next, buff );
 		}
 		else {
-	   		gtk_widget_set_tooltip_text( MP_GLDATA->widgets->title_current, control->current->path );
-		   	gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_prev, NULL );
-		   	gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_next, NULL );
+			gtk_widget_set_tooltip_text( MP_GLDATA->widgets->title_current, control->current->path );
+			gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_prev, NULL );
+			gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_next, NULL );
 		}
 
 		runner=control->current->plnext->plnext;
@@ -338,13 +338,13 @@ static int g_updateUI( void *data ) {
 		}
 		else if( 0 == control->active ) {
 			if( control->playstream ) {
-		   		gtk_widget_set_visible( MP_GLDATA->widgets->remain, 0 );
+				gtk_widget_set_visible( MP_GLDATA->widgets->remain, 0 );
 				setButtonLabel( MP_GLDATA->widgets->button_profile, "Add Stream" );
-		   	}
-		   	else {
-		   		gtk_widget_set_visible( MP_GLDATA->widgets->remain, -1 );
+			}
+			else {
+				gtk_widget_set_visible( MP_GLDATA->widgets->remain, -1 );
 				setButtonLabel( MP_GLDATA->widgets->button_profile, "Profile.." );
-		   	}
+			}
 		}
 		else {
 			gtk_widget_set_visible( MP_GLDATA->widgets->remain, -1 );

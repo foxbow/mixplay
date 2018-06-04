@@ -853,6 +853,18 @@ void *reader( void *cont ) {
 				progressStart( "No profile given!" );
 				progressEnd();
 			}
+			else if(control->playstream){
+				control->streams++;
+				control->stream=frealloc(control->stream, control->streams+sizeof( char * ) );
+				control->stream[control->streams-1]=falloc( strlen(control->argument)+1, sizeof( char ) );
+				strcpy( control->stream[control->streams-1], control->argument );
+				control->sname=frealloc(control->stream, control->streams+sizeof( char * ) );
+				control->sname[control->streams-1]=falloc( strlen(control->current->path)+1, sizeof( char ) );
+				strcpy( control->sname[control->streams-1], control->current->path );
+				control->active=-(control->streams);
+				writeConfig( NULL );
+				sfree( &(control->argument) );
+			}
 			else {
 				write( p_command[fdset][1], "STOP\n", 6 );
 				control->status=mpc_start;
