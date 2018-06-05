@@ -225,28 +225,22 @@ void *setProfile( void *data ) {
 	active=control->active;
 
 	if( active < 0 ) {
-		control->playstream=1;
 		active = -(active+1);
 
 		if( active >= control->streams ) {
-			fail( F_FAIL, "Stream #%i does no exist!", active );
+			addMessage( 0, "Stream #%i does no exist!", active );
+			return NULL;
 		}
 
+		control->playstream=1;
 		setStream( control, control->stream[active], control->sname[active] );
 	}
 	else if( active > 0 ){
 		active=active-1;
 
 		if( active > control->profiles ) {
-			if( control->argument == NULL ) {
-				addMessage ( 0, "Profile #%i does no exist!", active );
-				return NULL;
-			}
-			else {
-				progressStart( "Creating new profile %s", control->argument );
-				control->profile=realloc( control->profile, (active+1)*sizeof(char*) );
-				control->profile[active]=control->argument;
-			}
+			addMessage ( 0, "Profile #%i does no exist!", active );
+			return NULL;
 		}
 
 		if( NULL == control->profile[active] ) {
@@ -848,22 +842,9 @@ void *reader( void *cont ) {
 			break;
 
 		case mpc_profile:
-		case mpc_newprof:
 			if( control->argument == NULL ) {
 				progressStart( "No profile given!" );
 				progressEnd();
-			}
-			else if(control->playstream){
-				control->streams++;
-				control->stream=frealloc(control->stream, control->streams+sizeof( char * ) );
-				control->stream[control->streams-1]=falloc( strlen(control->argument)+1, sizeof( char ) );
-				strcpy( control->stream[control->streams-1], control->argument );
-				control->sname=frealloc(control->stream, control->streams+sizeof( char * ) );
-				control->sname[control->streams-1]=falloc( strlen(control->current->path)+1, sizeof( char ) );
-				strcpy( control->sname[control->streams-1], control->current->path );
-				control->active=-(control->streams);
-				writeConfig( NULL );
-				sfree( &(control->argument) );
 			}
 			else {
 				write( p_command[fdset][1], "STOP\n", 6 );
@@ -871,16 +852,48 @@ void *reader( void *cont ) {
 				if( control->dbname[0] == 0 ) {
 					readConfig( );
 				}
-				if( cmd == mpc_newprof ) {
-					control->active=control->profiles+2;
-				}
-				else {
-					control->active=atoi( control->argument );
-				}
+				control->active=atoi( control->argument );
 				setProfile( control );
 				control->current = control->root;
 				sendplay( p_command[fdset][1], control );
 				sfree( &(control->argument) );
+			}
+
+			break;
+
+		case mpc_newprof:
+			if( control->argument == NULL ) {
+				progressStart( "No profile given!" );
+				progressEnd();
+			}
+			else if(control->playstream){
+				control->streams++;
+				control->stream=frealloc(control->stream, control->streams*sizeof( char * ) );
+				control->stream[control->streams-1]=falloc( strlen(control->current->path)+1, sizeof( char ) );
+				strcpy( control->stream[control->streams-1], control->current->path );
+				control->sname=frealloc(control->sname, control->streams*sizeof( char * ) );
+				control->sname[control->streams-1]=control->argument;
+				control->active=-(control->streams);
+				writeConfig( NULL );
+				control->argument=NULL;
+			}
+			else {
+				control->profiles++;
+				control->profile=realloc( control->profile, control->profiles*sizeof(char*) );
+				control->profile[control->profiles-1]=control->argument;
+				control->active=control->profiles;
+				writeConfig( NULL );
+				control->argument=NULL;
+
+				write( p_command[fdset][1], "STOP\n", 6 );
+				control->status=mpc_start;
+				if( control->dbname[0] == 0 ) {
+					readConfig( );
+				}
+				control->active=control->profiles+2;
+				setProfile( control );
+				control->current = control->root;
+				sendplay( p_command[fdset][1], control );
 			}
 			break;
 

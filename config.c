@@ -147,7 +147,7 @@ static void printUsage( char *name ) {
 	addMessage( 0, " -h <addr> : set remote host" );
 	addMessage( 0, " -p <port> : set communication port [2347]" );
 	addMessage( 0, " -s : start HTTP server" );
-	addMessage( 0, " -W': write changed config" );
+	addMessage( 0, " -W': write changed config (used with -r,-l,-h,-p)" );
 	addMessage( 0, " resource: resource to play" );
 	addMessage( 0, "		   URL, path, mp3 file, playlist\n" );
 }
