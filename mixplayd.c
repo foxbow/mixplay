@@ -17,7 +17,7 @@
 #include "player.h"
 
 static int _ftrpos=0;
-static long _curmsg=0;
+static unsigned long _curmsg=0;
 
 /**
  * show activity roller on console
@@ -58,6 +58,7 @@ void fail( int error, const char* msg, ... ) {
 		vsyslog( LOG_ERR, msg, args );
 	}
 	fprintf( stdout, "\n" );
+	printf("mixplayd: ");
 	vfprintf( stdout, msg, args );
 	fprintf( stdout, "\n" );
 	if( error > 0 ) {
@@ -125,15 +126,13 @@ int main( int argc, char **argv ) {
 	/* this will only run as server */
 	control->remote=2;
 
-	/* daemonization must happen before childs are created otherwise the pipes are cut
-	 * todo: this can be reworked but needs manual handling of stdin/out/err
-	 *       also consider displaying status messages on initialization like with
-	 *       gmixplay in local mode. */
+	/* daemonization must happen before childs are created otherwise the pipes are cut */
 	if( getDebug() == 0 ) {
-		daemon( 0, 0 );
+		daemon( 0, 1 );
 		openlog ("mixplayd", LOG_PID, LOG_DAEMON);
 		control->isDaemon=-1;
 	}
+
 	addUpdateHook( &s_updateHook );
 	control->inUI=1;
 	initAll( 0 );

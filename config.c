@@ -18,7 +18,6 @@
 #include <sys/stat.h>
 #include <getopt.h>
 #include <unistd.h>
-#include <syslog.h>
 
 #include "utils.h"
 #include "musicmgr.h"
@@ -39,7 +38,7 @@ struct _progressFunc_t {
 	_progressFunc *next;
 };
 
-_progressFunc *_pfunc=NULL;
+static _progressFunc *_pfunc=NULL;
 
 /**
  * the update function list
@@ -49,8 +48,7 @@ struct _updateFunc_t {
 	void (*func)( void );
 	_updateFunc *next;
 };
-_updateFunc *_ufunc=NULL;
-
+static _updateFunc *_ufunc=NULL;
 
 static const char *mpc_command[] = {
 		"mpc_play",
@@ -76,6 +74,7 @@ static const char *mpc_command[] = {
 		"mpc_longsearch",
 		"mpc_setvol",
 		"mpc_newprof",
+		"mpc_path",
 		"mpc_idle"
 };
 
@@ -560,27 +559,22 @@ void addMessage( int v, char *msg, ... ) {
 
 	if( c_config == NULL ) {
 		fprintf( stderr, "* %s\n", line );
-		free(line);
-		pthread_mutex_unlock( &msglock );
-		return;
 	}
-
-	if( v <= getVerbosity() ) {
-		if( c_config->inUI ) {
-			msgBuffAdd( c_config->msg, line );
-			if( v < getDebug() ) {
-				fprintf( stderr, "D %s\n", line );
+	else {
+		if( v <= getVerbosity() ) {
+			if( c_config->inUI ) {
+				msgBuffAdd( c_config->msg, line );
+				if( v < getDebug() ) {
+					fprintf( stderr, "D %s\n", line );
+				}
+			}
+			else {
+				printf( "V %s\n", line );
 			}
 		}
-		else {
-			printf( "V %s\n", line );
+		else if( v < getDebug() ) {
+			fprintf( stderr, "D %s\n", line );
 		}
-		if( c_config->isDaemon ) {
-			syslog( LOG_NOTICE, "%s", line );
-		}
-	}
-	else if( v < getDebug() ) {
-		fprintf( stderr, "D %s\n", line );
 	}
 
 	free(line);

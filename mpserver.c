@@ -393,6 +393,7 @@ void *mpserver( void *data ) {
 	struct sockaddr_in server , client;
 	int 		port=MP_PORT;
 	mpconfig	*control;
+	int devnull=0;
 
 	control=getConfig( );
 	/* server can never be remote */
@@ -417,6 +418,21 @@ void *mpserver( void *data ) {
 
 	listen(mainsocket , 3);
 	addMessage( 0, "Listening on port %i", port );
+
+	/* redirect stdin/out/err in demon mode */
+	if( control->isDaemon ) {
+		if ((devnull = open( "/dev/null", O_RDWR | O_NOCTTY)) == -1) {
+			fail( errno, "Could not open /dev/null!" );
+		}
+		if ( dup2( devnull, STDIN_FILENO) == -1 ||
+				dup2( devnull, STDOUT_FILENO) == -1 ||
+				dup2( devnull, STDERR_FILENO) == -1 ) {
+			fail( errno, "Could not redirect std channels!" );
+		}
+		if ( devnull > 2) {
+			close( devnull );
+		}
+	}
 
 	/* enable inUI even when not in daemon mode */
 	control->inUI=-1;

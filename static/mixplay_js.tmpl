@@ -26,6 +26,7 @@ function toggleVisibility( element ) {
 function killServer() {
 	if( confirm("Do you really want to stop the Server?") ) {
 		sendCMD(0x11);
+		doUpdate=0;
 	}
 }
 
