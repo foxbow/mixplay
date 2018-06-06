@@ -147,8 +147,6 @@ char *serializeStatus( unsigned long *count, int clientid, int fullstat ) {
 
 	if( fullstat ) {
 		jsonAddInt( jo, "type", MPCOMM_FULLSTAT );
-		jsonAddInt( jo, "playstream", data->playstream );
-		jsonAddInt( jo, "active", data->active );
 		if( data->current != NULL ) {
 			jsonAddTitle( jo, "prev", data->current->plprev );
 			jsonAddTitle( jo, "current", data->current );
@@ -163,6 +161,8 @@ char *serializeStatus( unsigned long *count, int clientid, int fullstat ) {
 	else {
 		jsonAddInt( jo, "type", MPCOMM_STAT );
 	}
+	jsonAddInt( jo, "playstream", data->playstream );
+	jsonAddInt( jo, "active", data->active );
 	jsonAddStr( jo, "playtime", data->playtime );
 	jsonAddStr( jo, "remtime", data->remtime );
 	jsonAddInt( jo, "percent", data->percent );
@@ -272,12 +272,12 @@ static int deserializeStatus( jsonObject *jo ) {
 		addToPL( insertTitle( data->current, "server/mixplayd/title" ), data->current );
 	}
 	if( jsonGetInt(jo, "type" ) == MPCOMM_FULLSTAT ) {
-		data->active=jsonGetInt( jo, "active");
-		data->playstream=jsonGetInt( jo, "playstream" );
 		jsonGetTitle( jo, "prev", data->current->plprev );
 		jsonGetTitle( jo, "current", data->current );
 		jsonGetTitle( jo, "next", data->current->plnext );
 	}
+	data->active=jsonGetInt( jo, "active");
+	data->playstream=jsonGetInt( jo, "playstream" );
 	jsonCopyStr( jo, "playtime", data->playtime, 10 );
 	jsonCopyStr( jo, "remtime", data->remtime, 10 );
 	data->percent=jsonGetInt( jo, "percent" );

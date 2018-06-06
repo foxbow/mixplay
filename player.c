@@ -229,7 +229,8 @@ void *setProfile( void *data ) {
 
 		if( active >= control->streams ) {
 			addMessage( 0, "Stream #%i does no exist!", active );
-			return NULL;
+			control->active=1;
+			return setProfile(data);
 		}
 
 		control->playstream=1;
@@ -240,7 +241,8 @@ void *setProfile( void *data ) {
 
 		if( active > control->profiles ) {
 			addMessage ( 0, "Profile #%i does no exist!", active );
-			return NULL;
+			control->active=1;
+			return setProfile(data);
 		}
 
 		if( NULL == control->profile[active] ) {
@@ -365,6 +367,7 @@ void *reader( void *cont ) {
 	int		invol=80;
 	int		outvol=80;
 	int 	fdset=0;
+	int		profile;
 	char 	line[MAXPATHLEN];
 	char 	*a, *t;
 	int 	order=1;
@@ -679,10 +682,11 @@ void *reader( void *cont ) {
 					break;
 
 				case 'E':
-					fail( F_FAIL, "ERROR: %s\nIndex: %i\nName: %s\nPath: %s", line,
+					addMessage( 0, "ERROR: %s\nIndex: %i\nName: %s\nPath: %s", line,
 						  control->current->key,
 						  control->current->display,
 						  control->current->path );
+					control->status=mpc_idle;
 					break;
 
 				default:
@@ -894,6 +898,55 @@ void *reader( void *cont ) {
 				setProfile( control );
 				control->current = control->root;
 				sendplay( p_command[fdset][1], control );
+			}
+			break;
+
+		case mpc_remprof:
+			if( control->argument == NULL ) {
+				progressStart( "No profile given!" );
+				progressEnd();
+			}
+			else {
+				profile=atoi( control->argument );
+				if( profile == 0 ) {
+					progressStart( "Cannot remove empty profile!" );
+					progressEnd();
+				}
+				if( profile > 0 ) {
+					if( control->profiles == 1 ) {
+						progressStart( "Cannot remove the last profile!" );
+						progressEnd();
+					}
+					else if( profile > control->profiles ) {
+						progressStart( "Profile #%i does not exist!", profile );
+						progressEnd();
+					}
+					else {
+						free( control->profile[profile-1] );
+						for(i=profile;i<control->profiles;i++) {
+							control->profile[i-1]=control->profile[i];
+						}
+						control->profiles--;
+						writeConfig(NULL);
+					}
+				}
+				else {
+					profile=(-profile);
+					if( profile > control->streams ) {
+						progressStart( "Stream #%i does not exist!", profile );
+						progressEnd();
+					}
+					else {
+						free( control->stream[profile-1] );
+						free( control->sname[profile-1] );
+						for(i=profile;i<control->streams;i++) {
+							control->stream[i-1]=control->stream[i];
+							control->sname[i-1]=control->sname[i];
+						}
+						control->streams--;
+						writeConfig(NULL);
+					}
+				}
 			}
 			break;
 

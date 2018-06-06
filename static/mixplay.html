@@ -55,10 +55,10 @@
       <em>Profiles:</em><br>
       <select label='Profile' id='profiles'>
       </select>
-      <input id='setprof' type='button' onclick='setProf()' value='Set Profile' ><br>
+      <input id='setprof' type='button' onclick='setProf()' value='Set Profile' >
+      <input id='remprof' type='button' onclick='remProf()' value='Remove Profile' ><br>
       <input id='ptext' type='text'>
-      <input id='newprof' type='button' onclick='sendPArg(0x16)' value='Create Profile' >
-      <input id='load' type='button' onclick='sendPArg(0x17)' value='Load URL' >
+      <input id='newprof' type='button' onclick='createLoad()' value='New/Load' >
     </div>
     <div id='tools' style='display: none; width:100%;' >
       <em>Tools:<em><br>

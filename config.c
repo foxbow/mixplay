@@ -75,6 +75,7 @@ static const char *mpc_command[] = {
 		"mpc_setvol",
 		"mpc_newprof",
 		"mpc_path",
+		"mpc_remprof",
 		"mpc_idle"
 };
 
