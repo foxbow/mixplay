@@ -6,17 +6,25 @@ var isstream=0;
 var msglines=["","","","","","","","","","","","","","",""];
 var msgpos=0;
 var active=0;
+int adding=0;
 
 function setProf() {
-	var id=document.getElementById("profiles").value;
+	var e=document.getElementById("profiles");
+	var id=e.value;
 	if( id != 0 ) {
 		sendCMD( 0x06,id );
+	}
+	else {
+		e.value=active;
 	}
 }
 
 function toggleVisibility( element ) {
 	e=document.getElementById( element );
 	if( e.style.display=='none') {
+		if( element == 'msgs' ) { 
+			document.getElementById('showmsgs').value="\u2630 Messages"
+		}
 		e.style.display='block';
 	}
 	else {
@@ -32,6 +40,11 @@ function killServer() {
 }
 
 function addText(text) {
+	if( adding != 0 ){ 
+		setTimeout("addText("+text+")",100);
+		return;
+	}
+	adding=1;
 	var line="";
 	var numlines=15;
 	e=document.getElementById('msgs');
@@ -56,9 +69,7 @@ function addText(text) {
 	if( e.style.display=='none') {
 		f.value="\u2630 Messages *"
 	}
-	else {
-		f.value="\u2630 Messages"
-	}
+	adding=0;
 }
 
 function sendCMD( cmd, arg="" ) {
@@ -248,6 +259,7 @@ function getConfig() {
 						for(i=0; i<data.config.streams; i++) {
 							s.options[s.options.length] = new Option(data.config.sname[i],-(i+1));
 						}
+						active=0;
 					}
 					else {
 						doUpdate=0;

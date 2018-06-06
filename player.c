@@ -913,8 +913,8 @@ void *reader( void *cont ) {
 					progressEnd();
 				}
 				if( profile > 0 ) {
-					if( control->profiles == 1 ) {
-						progressStart( "Cannot remove the last profile!" );
+					if( profile == control->active ) {
+						progressStart( "Cannot remove active profile!" );
 						progressEnd();
 					}
 					else if( profile > control->profiles ) {
@@ -927,6 +927,10 @@ void *reader( void *cont ) {
 							control->profile[i-1]=control->profile[i];
 						}
 						control->profiles--;
+
+						if( control->active > profile ) {
+							control->active--;
+						}
 						writeConfig(NULL);
 					}
 				}
@@ -944,6 +948,14 @@ void *reader( void *cont ) {
 							control->sname[i-1]=control->sname[i];
 						}
 						control->streams--;
+						control->profiles--;
+						if( profile == control->active ) {
+							control->active=0;
+						}
+						else if( control->active < -profile ) {
+							control->active++;
+						}
+
 						writeConfig(NULL);
 					}
 				}
