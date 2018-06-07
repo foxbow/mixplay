@@ -166,12 +166,22 @@ function updateUI( ){
 						else {
 							document.getElementById( 'fav' ).disabled=false;		  			
 						}
-						setVisible( 'prev', !isstream );
-						setVisible( 'ctrl', !isstream );
-						setVisible( 'playstr', isstream );
-						setVisible( 'playpack', !isstream );
 					}
 					isstream=data.playstream;
+
+					setVisible( 'prev', !isstream );
+					setVisible( 'ctrl', !isstream );
+					setVisible( 'playstr', isstream );
+					setVisible( 'playpack', !isstream );
+					if( isstream ) {
+						setElement( 'splaytime', data.playtime );
+					}
+					else {
+						setElement( 'playtime', data.playtime );
+						setElement( 'remtime', data.remtime );
+						document.getElementById( 'progress' ).value=data.percent;
+					}
+
 					if( active != data.active ) {
 						active=data.active;
 						setActive( active );
@@ -183,14 +193,6 @@ function updateUI( ){
 						document.getElementById('current').style.backgroundColor="#daa";
 					}
 
-					if( isstream ) {
-						setElement( 'splaytime', data.playtime );
-					}
-					else {
-						setElement( 'playtime', data.playtime );
-						setElement( 'remtime', data.remtime );
-						document.getElementById( 'progress' ).value=data.percent;
-					}
 					document.getElementById( 'vol' ).value=data.volume;
 					if( data.msg != "" ) {
 						addText(data.msg);
