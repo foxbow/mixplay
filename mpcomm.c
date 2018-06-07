@@ -204,7 +204,7 @@ char *serializeStatus( unsigned long *count, int clientid, int fullstat ) {
 /**
  * global/static part of the given config
  */
-char *serializeConfig( ) {
+char *serializeConfig( void ) {
 	mpconfig *config=getConfig();
 	jsonObject *joroot=NULL;
 	jsonObject *jo=NULL;

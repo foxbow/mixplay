@@ -44,8 +44,9 @@ static int filePost( int sock, const char *fname ) {
 }
 
 /**
- * decodes parts in the form of %xx in fact I only expect to see %20
- * in search strings but who knows.. and it WILL break soon too..
+ * decodes parts in the form of %xx
+ * In fact I only expect to see %20 in search strings but who knows..
+ * and it WILL certainly break soon too..
  * also considers \n or \r to be line end characters
  */
 static char *strdec( char *target, const char *src ) {
@@ -97,7 +98,7 @@ static void *clientHandler(void *args ) {
 	mpconfig *config;
 	unsigned long clmsg;
 	int state=0;
-	char *pos, *end;
+	char *pos, *end, *arg;
 	mpcmd cmd=mpc_idle;
 	static const char *mtype;
 	char playing[MAXPATHLEN];
@@ -146,139 +147,113 @@ static void *clientHandler(void *args ) {
 				break;
 			default:
 				toLower( commdata );
-				pos=commdata;
-				while( pos != NULL ) {
-					/* empty line means we're done */
-					if( ( pos[0]==0x0d ) && ( pos[1]==0x0a ) ) {
-						switch(state){
-						case 0:
-							break;
-						default:
-							if( state < 10 ) {
-								state=(10*state)+1;
-							}
-						}
-						pos=NULL;
+				/* don't send empty replies for non-web clients */
+				if( strstr( commdata, "xmixplay: 1" ) != NULL ) {
+					okreply=0;
+				}
+				pos=strstr( commdata, "get " );
+				if( pos != NULL ) {
+					pos=pos+4;
+					end=strchr( pos, ' ' );
+					if( end == NULL ) {
+						addMessage( 0, "Discarding %s", pos );
 					}
-					/* don't send empty replies for non-web clients */
-					else if( strstr( pos, "xmixplay: 1" ) == pos ) {
-						okreply=0;
-					}
-					/* get command */
-					else if( strstr( pos, "get" ) == pos ) {
-						pos=pos+4;
-						end=strchr( pos, ' ' );
-						if( end == NULL ) {
-							addMessage( 0, "Discarding %s", pos );
+					else {
+						*(end+1)=0;
+						/* has an argument and/or msgcount been set? */
+						arg=strchr( pos, '?' );
+						if( arg != NULL ) {
+							arg++;
 						}
-						else {
-							*end=0;
-							if( strcmp( pos, "/status" ) == 0 ) {
-								state=1;
-							}
-							else if( strstr( pos, "/cmd/" ) == pos ) {
-								addMessage( 1, "received: %s", pos );
-								pos+=5;
-								rawcmd=readHex(pos,&pos);
-								if( rawcmd == -1 ) {
-									addMessage( 1, "Illegal command %s", pos );
-									cmd=mpc_idle;
-								}
-								else {
-									cmd=rawcmd;
-									addMessage( 1, "Got command 0x%04x - %s", cmd, mpcString(cmd) );
-								}
-								if( *pos == '?' ) {
-									pos++;
-									if( config->argument != NULL ) {
-										addMessage( 1, "Argument %s becomes %s!", config->argument, pos );
-										if( strlen(config->argument) <= strlen(pos) ) {
-											config->argument=frealloc( config->argument, strlen(pos)+1 );
-										}
-									}
-									else {
-										config->argument=falloc( strlen( pos )+2, sizeof( char ) );
-									}
-									strdec( config->argument, pos );
-								}
-
-								if( MPC_CMD(cmd) == mpc_fav ) {
-									fullstat=-1;
-								}
-
-								state=2;
-							}
-							else if( ( strcmp( pos, "/") == 0 ) || ( strcmp( pos, "/index.html" ) == 0 ) ) {
-								fname="static/mixplay.html";
-								fdata=static_mixplay_html;
-								flen=static_mixplay_html_len;
-								mtype="text/html; charset=utf-8";
-								state=5;
-							}
-							else if( ( strcmp( pos, "/rc" ) == 0 ) || ( strcmp( pos, "/rc.html" ) == 0 )  ) {
-								fname="static/mprc.html";
-								fdata=static_mprc_html;
-								flen=static_mprc_html_len;
-								mtype="text/html; charset=utf-8";
-								state=5;
-
-							}
-							else if( strcmp( pos, "/mixplay.css" ) == 0 ) {
-								fname="static/mixplay.css";
-								fdata=static_mixplay_css;
-								flen=static_mixplay_css_len;
-								mtype="text/css; charset=utf-8";
-								state=5;
-							}
-							else if( strcmp( pos, "/mixplay.js" ) == 0 ) {
-								fname="static/mixplay.js";
-								fdata=static_mixplay_js;
-								flen=static_mixplay_js_len;
-								mtype="application/javascript; charset=utf-8";
-								state=5;
-							}
-							else if( strcmp( pos, "/favicon.ico" ) == 0 ) {
-								/* ignore for now */
-								send( sock, "HTTP/1.1 204 No Content\015\012\015\012", 28, 0 );
-								pos=NULL;
-							}
-							else if( strcmp( pos, "/config") == 0 ) {
-								state=6;
+						if( strstr( pos, "/status" ) == pos ) {
+							state=1;
+						}
+						else if( strstr( pos, "/cmd/" ) == pos ) {
+							addMessage( 1, "received: %s", pos );
+							pos+=5;
+							rawcmd=readHex(pos,&pos);
+							if( rawcmd == -1 ) {
+								addMessage( 1, "Illegal command %s", pos );
+								cmd=mpc_idle;
 							}
 							else {
-								addMessage( 1, "Illegal get %s", pos );
-								send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
-								running=0;
-								pos=NULL;
+								cmd=rawcmd;
+								addMessage( 1, "Got command 0x%04x - %s", cmd, mpcString(cmd) );
 							}
-							/* set pos to a sensible position so the next line can be found */
-							if( pos != NULL ) {
-								pos=end+1;
+							if( arg != NULL ) {
+								pos=arg;
+								if( config->argument != NULL ) {
+									addMessage( 1, "Argument %s becomes %s!", config->argument, pos );
+									if( strlen(config->argument) <= strlen(pos) ) {
+										config->argument=frealloc( config->argument, strlen(pos)+1 );
+									}
+								}
+								else {
+									config->argument=falloc( strlen( pos )+2, sizeof( char ) );
+								}
+								strdec( config->argument, pos );
 							}
-						}
-					} /* /get command */
 
-					/* get next request line */
-					if( pos!=NULL ) {
-						while( pos[1] != 0 ) {
-							if( ( pos[0] == 0x0d ) && ( pos[1] == 0x0a ) ) {
-								pos+=2;
-								break;
+							if( MPC_CMD(cmd) == mpc_fav ) {
+								fullstat=-1;
 							}
-							pos++;
+
+							state=2;
 						}
-						if( pos[1] == 0 ) {
-							pos=NULL;
+						else if( ( strstr( pos, "/ ") == pos ) || ( strstr( pos, "/index.html " ) == pos ) ) {
+							fname="static/mixplay.html";
+							fdata=static_mixplay_html;
+							flen=static_mixplay_html_len;
+							mtype="text/html; charset=utf-8";
+							state=5;
+						}
+						else if( ( strstr( pos, "/rc " ) == pos ) || ( strstr( pos, "/rc.html " ) == pos )  ) {
+							fname="static/mprc.html";
+							fdata=static_mprc_html;
+							flen=static_mprc_html_len;
+							mtype="text/html; charset=utf-8";
+							state=5;
+
+						}
+						else if( strstr( pos, "/mixplay.css " ) == pos ) {
+							fname="static/mixplay.css";
+							fdata=static_mixplay_css;
+							flen=static_mixplay_css_len;
+							mtype="text/css; charset=utf-8";
+							state=5;
+						}
+						else if( strstr( pos, "/mixplay.js " ) == pos ) {
+							fname="static/mixplay.js";
+							fdata=static_mixplay_js;
+							flen=static_mixplay_js_len;
+							mtype="application/javascript; charset=utf-8";
+							state=5;
+						}
+						else if( strstr( pos, "/favicon.ico " ) == pos ) {
+							/* ignore for now */
+							send( sock, "HTTP/1.1 204 No Content\015\012\015\012", 28, 0 );
+						}
+						else if( strstr( pos, "/config") == pos ) {
+							state=6;
+						}
+						else {
+							addMessage( 0, "Illegal get %s", pos );
+							send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
+							state=0;
+							running=0;
 						}
 					}
-				} /* while ( pos != NULL ) */
+				} /* /get command */
+				else {
+					addMessage( 0, "Unknown command %s", commdata );
+				}
 			} /* switch(retval) */
 		} /* if fd_isset */
 
 		if( running && ( config->status != mpc_start ) ) {
 			memset( commdata, 0, commsize );
 			switch( state ) {
-			case 11: /* get update */
+			case 1: /* get update */
 				if( strcmp( config->current->display, playing ) ) {
 					strcpy( playing, config->current->display );
 					fullstat=-1;
@@ -298,7 +273,7 @@ static void *clientHandler(void *args ) {
 				len=strlen(commdata);
 				sfree( &jsonLine );
 				break;
-			case 21: /* set command */
+			case 2: /* set command */
 				if( cmd != mpc_idle ) {
 					if( okreply ) {
 						sprintf( commdata, "HTTP/1.1 204 No Content\015\012\015\012" );
@@ -318,11 +293,11 @@ static void *clientHandler(void *args ) {
 					len=strlen( commdata );
 				}
 				break;
-			case 31: /* unknown command */
+			case 3: /* unknown command */
 				sprintf( commdata, "HTTP/1.1 501 Not Implemented\015\012\015\012" );
 				len=strlen( commdata );
 				break;
-			case 51: /* send file */
+			case 5: /* send file */
 				if( getDebug() ) {
 					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012\015\012", mtype );
 					send(sock , commdata, strlen(commdata), 0);
@@ -339,7 +314,7 @@ static void *clientHandler(void *args ) {
 				len=0;
 				running=0;
 				break;
-			case 61: /* get config */
+			case 6: /* get config */
 				jsonLine=serializeConfig( );
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012", (int)strlen(jsonLine) );
 				while( ( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {

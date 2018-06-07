@@ -245,10 +245,6 @@ void *setProfile( void *data ) {
 			return setProfile(data);
 		}
 
-		if( NULL == control->profile[active] ) {
-			fail( F_FAIL, "Profile #%i is not set!", active );
-		}
-
 		profile=control->profile[active];
 		snprintf( confdir, MAXPATHLEN, "%s/.mixplay", getenv( "HOME" ) );
 
@@ -851,16 +847,20 @@ void *reader( void *cont ) {
 				progressEnd();
 			}
 			else {
-				write( p_command[fdset][1], "STOP\n", 6 );
-				control->status=mpc_start;
-				if( control->dbname[0] == 0 ) {
-					readConfig( );
+				profile=atoi( control->argument );
+				if( ( profile != 0 ) && ( profile != control->active ) ) {
+					write( p_command[fdset][1], "STOP\n", 6 );
+					control->status=mpc_start;
+					if( control->dbname[0] == 0 ) {
+						readConfig( );
+					}
+					control->active=profile;
+					setProfile( control );
+					control->current = control->root;
+					sendplay( p_command[fdset][1], control );
+					sfree( &(control->argument) );
+					writeConfig(NULL);
 				}
-				control->active=atoi( control->argument );
-				setProfile( control );
-				control->current = control->root;
-				sendplay( p_command[fdset][1], control );
-				sfree( &(control->argument) );
 			}
 
 			break;

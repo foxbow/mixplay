@@ -6,8 +6,16 @@ var isstream=0;
 var msglines=["","","","","","","","","","","","","","",""];
 var msgpos=0;
 var active=0;
-var adding=0;
 
+/* stop updates and make sure that error messages do not stack */
+function fail( msg ) {
+	if( doUpdate != 0 ) {
+		doUpdate=0;
+		alert( msg );
+	}
+}
+
+/* set profile to sanitized value */
 function setProf() {
 	var e=document.getElementById("profiles");
 	var id=e.value;
@@ -19,6 +27,7 @@ function setProf() {
 	}
 }
 
+/* toggle visibility of extra panes */
 function toggleVisibility( element ) {
 	e=document.getElementById( element );
 	if( e.style.display=='none') {
@@ -32,6 +41,7 @@ function toggleVisibility( element ) {
 	}
 }
 
+/* stop the server - this should really not be here =) */
 function killServer() {
 	if( confirm("Do you really want to stop the Server?") ) {
 		sendCMD(0x11);
@@ -39,12 +49,8 @@ function killServer() {
 	}
 }
 
+/* add a line of text to the message pane. Acts as ringbuffer */
 function addText(text) {
-	if( adding != 0 ){ 
-		setTimeout("addText("+text+")",100);
-		return;
-	}
-	adding=1;
 	var line="";
 	var numlines=15;
 	e=document.getElementById('msgs');
@@ -69,9 +75,9 @@ function addText(text) {
 	if( e.style.display=='none') {
 		f.value="\u2630 Messages *"
 	}
-	adding=0;
 }
 
+/* send a command with optional argument to the server */
 function sendCMD( cmd, arg="" ) {
 	var xmlhttp=new XMLHttpRequest();
 	var code=Number(cmd).toString(16);
@@ -90,16 +96,10 @@ function sendCMD( cmd, arg="" ) {
 	xmlhttp.onreadystatechange=function() {
 		if ( xmlhttp.readyState==4 && xmlhttp.status!=204 ) {
 			if( xmlhttp.status == 0 ) {
-				if( doUpdate != 0 ) {
-					doUpdate=0;
-					if( confirm("CMD Error: connection lost!\nRetry?") ) {
-						doUpdate=1;
-						updateUI();
-					}
-				}
+				fail( "CMD Error: connection lost!" );
 			}
 			else {
-				alert( "Received Error "+xmlhttp.status+" after sending 0x"+code );
+				fail( "Received Error "+xmlhttp.status+" after sending 0x"+code );
 			}
 		}
 	}
@@ -125,10 +125,12 @@ function volWheel( e ) {
 	}
 }
 
+/* change text in an element */
 function setElement( e, val ) {
 	document.getElementById( e ).innerHTML=val;
 }
 
+/* show/hide an element */
 function setVisible( e, i ) {
 	if( i == 0 ) {
 		document.getElementById( e ).style.display='none';
@@ -138,6 +140,7 @@ function setVisible( e, i ) {
 	}
 }
 
+/* get current status from the server and update the UI elements with the data */
 function updateUI( ){
 	var xmlhttp=new XMLHttpRequest();
 	xmlhttp.onreadystatechange=function() {
@@ -146,8 +149,7 @@ function updateUI( ){
 				data=JSON.parse(xmlhttp.responseText);
 				if( data !== undefined ) {
 					if( data.version != mpver ) {
-						doUpdate=0;
-						alert("Version clash, expected "+mpver+" and got "+data.version );
+						fail( "Version clash, expected "+mpver+" and got "+data.version );
 						return;
 					}
 					if( data.type == 3 ) {
@@ -195,26 +197,19 @@ function updateUI( ){
 					}
 				}
 			}
-			else if( xmlhttp.status==503 ) {
-				if( confirm( "Try to restart?" ) ) {
-					sendCMD( 0x04 );
-				}
-				else{
-					alert( "Stopping updates.." );
-					doUpdate=0;
-				}
-			}
 			else if( xmlhttp.status == 0 ) {
-				if( doUpdate != 0 ) {
-					doUpdate=0;
-					if( confirm("Update Error: connection lost!\nRetry?") ) {
-						doUpdate=1;
-						updateUI();
-					}
-				}
+				fail( "Update Error: connection lost!" );
 			}
 			else {
-				alert( "Received Error "+xmlhttp.status+" after sending 0x"+code );
+				fail( "Received Error "+xmlhttp.status+" after sending 0x"+code );
+			}
+
+			if( doUpdate != 0 ) {
+				setTimeout("updateUI()",333);
+			}
+			else {
+				document.getElementById('main').style.backgroundColor="#daa";
+				document.getElementById('current').style.backgroundColor="#daa";
 			}
 		}
 	}
@@ -223,20 +218,18 @@ function updateUI( ){
 		setTimeout("getConfig()",333);
 		doUpdate=1;
 	}
-	
-	if( doUpdate == 1 ) {
-			xmlhttp.open("GET", "/status", true);
-			xmlhttp.send();
-			setTimeout("updateUI()",333);
-	} 
+
+	xmlhttp.open("GET", "/status", true);
+	xmlhttp.send();
 }
 
-
+/* shows the current profile/channel in the profile select dropdown */ 
 function setActive( id ) {
 	var s=document.getElementById("profiles");
 	s.value=id;
 }
 
+/* gets the basic configuration of the server */
 function getConfig() {
 	var xmlhttp=new XMLHttpRequest();
 	xmlhttp.onreadystatechange=function() {
@@ -245,8 +238,7 @@ function getConfig() {
 				data=JSON.parse(xmlhttp.responseText);
 				if( data !== undefined ) {
 					if( data.version != mpver ) {
-						doUpdate=0;
-						alert("Version clash, expected "+mpver+" and got "+data.version );
+						fail( "Version clash, expected "+mpver+" and got "+data.version );
 						return;
 					}
 					if( data.type == 2 ) {
@@ -262,18 +254,15 @@ function getConfig() {
 						active=0;
 					}
 					else {
-						doUpdate=0;
-						alert( "Received reply of type "+data.type+" for config!" );
+						fail( "Received reply of type "+data.type+" for config!" );
 					}
 				}
 				else {
-					doUpdate=0;
-					alert( "Received no Data for config!" );
+					fail( "Received no Data for config!" );
 				}
 			}
 			else {
-				doUpdate=0;
-				alert( "Received Error "+xmlhttp.status+" trying to get config" );
+				fail( "Received Error "+xmlhttp.status+" trying to get config" );
 			}
 		}
 	}
