@@ -232,10 +232,14 @@ void infoStart( GtkButton *button, gpointer data ) {
 
 		gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
 								"_Application",  mpc_idle+1,
-								"_Database",  mpc_dbinfo,
-								"_Clean up database", mpc_dbclean,
 /*								"Clean up _filesystem", mpc_doublets, */
 								NULL );
+		if( !mpcontrol->playstream ) {
+			gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
+					"_Database",  mpc_dbinfo,
+					"_Clean up database", mpc_dbclean,
+					NULL );
+		}
 		if( mpcontrol->remote ) {
 			gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
 					"_Stop server", mpc_QUIT,

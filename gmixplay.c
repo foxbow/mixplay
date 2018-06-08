@@ -52,7 +52,7 @@ static void buildUI( mpconfig *control ) {
 	/* Show window. All other widgets are automatically shown by GtkBuilder */
 	gtk_widget_show( MP_GLDATA->widgets->mixplay_main );
 
-   if( MP_GLDATA->fullscreen ) {
+	if( MP_GLDATA->fullscreen ) {
 		gtk_window_fullscreen( GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ) );
 	}
 }

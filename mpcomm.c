@@ -421,6 +421,9 @@ void *netreader( void *control ) {
 			}
 		}
 
+		/* reset buffer */
+		commdata[0]=0;
+
 		/* check current command */
 		pthread_mutex_trylock( &_cmdlock );
 		switch( MPC_CMD(config->command) ) {

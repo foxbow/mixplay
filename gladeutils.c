@@ -240,6 +240,8 @@ static int infoLine( char *line, const mptitle *title, const int len ) {
 /**
  * This function is supposed to be called with gtk_add_thread_idle() to make update
  * work in multithreaded environments.
+ *
+ * todo: this needs to be cleaned up!
  */
 static int g_updateUI( void *data ) {
 	mpconfig *control;
@@ -275,7 +277,7 @@ static int g_updateUI( void *data ) {
 	gtk_widget_set_visible( MP_GLDATA->widgets->volume, (control->volume > -1) );
 
 	if( ( NULL != control->current ) && ( 0 != strlen( control->current->path ) ) ) {
-		usedb=( control->root->key || control->remote )?TRUE:FALSE;
+		usedb=( control->root->key || !control->playstream )?TRUE:FALSE;
 		/* These depend on a database */
 		gtk_widget_set_visible( MP_GLDATA->widgets->button_fav, usedb );
 
