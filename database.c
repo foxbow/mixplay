@@ -317,7 +317,13 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 		}
 		while( dbrunner != dbroot );
 
-		mean=mean/count;
+		/* round up */
+		if( ( mean%count ) > (count/3) ) {
+			mean=(mean/count)+1;
+		}
+		else {
+			mean=(mean/count);
+		}
 	}
 
 	/* scan directory */
