@@ -678,10 +678,11 @@ void *reader( void *cont ) {
 					break;
 
 				case 'E':
-					addMessage( 0, "ERROR: %s\nIndex: %i\nName: %s\nPath: %s", line,
-						  control->current->key,
-						  control->current->display,
-						  control->current->path );
+					addMessage( 0, "%s!", line );
+					addMessage( 1, "Index: %i\nName: %s\nPath: %s",
+							  control->current->key,
+							  control->current->display,
+							  control->current->path );
 					control->status=mpc_idle;
 					break;
 

@@ -307,7 +307,7 @@ function createLoad() {
 	}
 	else {
 		if( term.toLowerCase().startsWith("http") ) {
-			sendRange( 0x17, term );
+			sendCMD( 0x17, term );
 		}
 		else {
 			if( isstream ) {
