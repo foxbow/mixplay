@@ -822,7 +822,12 @@ void *reader( void *cont ) {
 			break;
 
 		case mpc_dnp:
+			next=title->plnext;
 			handleRangeCmd( title, control->command );
+			while( next->plnext == next ) {
+				next=title->dbnext;
+			}
+			control->current=next->plprev;
 			order=1;
 			write( p_command[fdset][1], "STOP\n", 6 );
 			break;

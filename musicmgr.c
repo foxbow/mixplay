@@ -151,6 +151,16 @@ mptitle *addToPL( mptitle *title, mptitle *target ) {
 	return title;
 }
 
+static void remFromPL( mptitle *title ) {
+	if( title->plnext == title ) {
+		return;
+	}
+	title->plprev->plnext=title->plnext;
+	title->plnext->plprev=title->plprev;
+	title->plprev=title;
+	title->plnext=title;
+}
+
 /**
  * helperfunction for scandir() - just return unhidden directories and links
  */
@@ -362,6 +372,8 @@ mptitle *searchList( mptitle *base, struct marklist_t *term ) {
 
 /**
  * applies the dnplist on a list of titles and marks matching titles
+ * if th etitle is part of the playlist it will be removed from the playlist 
+ * too. This may lead to double played artists though...
  */
 int applyDNPlist( mptitle *base, struct marklist_t *list ) {
 	mptitle  *pos = base;
@@ -383,6 +395,7 @@ int applyDNPlist( mptitle *base, struct marklist_t *list ) {
 			if( matchTitle( pos, ptr->dir ) ) {
 				addMessage( 3, "[D] %s: %s", ptr->dir, pos->display );
 				pos->flags |= MP_DNP;
+				remFromPL(pos);
 				cnt++;
 				break;
 			}
@@ -989,7 +1002,7 @@ int markFAV( char *line ) {
 	addToFile( config->favname, line );
 	buff.next=NULL;
 	strcpy( buff.dir, line );
-	return applyFAVlist( config->current, &buff );
+	return applyFAVlist( config->root, &buff );
 }
 
 int markDNP( char *line ) {
@@ -998,7 +1011,7 @@ int markDNP( char *line ) {
 	addToFile( config->dnpname, line );
 	buff.next=NULL;
 	strcpy( buff.dir, line );
-	return applyDNPlist( config->current, &buff );
+	return applyDNPlist( config->root, &buff );
 }
 
 /*
@@ -1359,7 +1372,10 @@ int handleRangeCmd( mptitle *title, mpcmd cmd ) {
 			strcat( line, title->display );
 			break;
 		}
-
+		if( strlen( line ) < 5 ) {
+			addMessage( 0, "Not enough info in %s!", line );
+			return 0;
+		}
 		if( MPC_CMD(cmd) == mpc_fav ) {
 			return markFAV( line );
 		}
