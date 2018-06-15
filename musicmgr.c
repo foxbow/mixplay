@@ -151,14 +151,19 @@ mptitle *addToPL( mptitle *title, mptitle *target ) {
 	return title;
 }
 
-static void remFromPL( mptitle *title ) {
+/*
+ * removes a title from the current playlist chain.
+ */
+static int remFromPL( mptitle *title ) {
 	if( title->plnext == title ) {
-		return;
+		return 0;
 	}
 	title->plprev->plnext=title->plnext;
 	title->plnext->plprev=title->plprev;
 	title->plprev=title;
 	title->plnext=title;
+	title->flags&=~MP_MARK;
+	return 1;
 }
 
 /**
@@ -395,8 +400,7 @@ int applyDNPlist( mptitle *base, struct marklist_t *list ) {
 			if( matchTitle( pos, ptr->dir ) ) {
 				addMessage( 3, "[D] %s: %s", ptr->dir, pos->display );
 				pos->flags |= MP_DNP;
-				remFromPL(pos);
-				cnt++;
+				cnt=cnt+remFromPL(pos);
 				break;
 			}
 
@@ -407,7 +411,45 @@ int applyDNPlist( mptitle *base, struct marklist_t *list ) {
 	}
 	while( pos != base );
 
-	addMessage( (cnt>1)?0:1, "Marked %i titles as DNP", cnt );
+	if( cnt > 1 ) {
+		addMessage( 0, "Marked %i titles as DNP", cnt );
+	}
+
+	return cnt;
+}
+
+/**
+ * This function sets the favourite bit on titles found in the given list
+ */
+int applyFAVlist( mptitle *root, struct marklist_t *favourites ) {
+	struct marklist_t *ptr = NULL;
+	mptitle *runner=root;
+	int cnt=0;
+
+	do {
+		activity( "Favourites " );
+		ptr=favourites;
+
+		while( ptr ) {
+			if( matchTitle( runner, ptr->dir ) ) {
+				addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
+				if( !( runner->flags & MP_FAV ) ) {
+					runner->flags|=MP_FAV;
+					cnt++;
+				}
+				break;
+			}
+
+			ptr=ptr->next;
+		}
+
+		runner=runner->dbnext;
+	}
+	while ( runner != root );
+
+	if( cnt > 1 ) {
+		addMessage( 0, "Marked %i favourites", cnt );
+	}
 
 	return cnt;
 }
@@ -960,60 +1002,6 @@ mptitle *skipTitles( mptitle *current, long num, const int global ) {
 	return current;
 }
 
-/**
- * This function sets the favourite bit on titles found in the given list
- */
-int applyFAVlist( mptitle *root, struct marklist_t *favourites ) {
-	struct marklist_t *ptr = NULL;
-	mptitle *runner=root;
-	int cnt=0;
-
-	do {
-		activity( "Favourites " );
-		ptr=favourites;
-
-		while( ptr ) {
-			if( matchTitle( runner, ptr->dir ) ) {
-				addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
-				runner->flags|=MP_FAV;
-				cnt++;
-				break;
-			}
-
-			ptr=ptr->next;
-		}
-
-		runner=runner->dbnext;
-	}
-	while ( runner != root );
-
-	addMessage( (cnt>1)?0:1, "Marked %i favourites", cnt );
-
-	return cnt;
-}
-
-/**
- * marks the current title as favourite and uses range to check
- * if more favourites need to be included
- */
-int markFAV( char *line ) {
-	mpconfig *config=getConfig();
-	struct marklist_t buff;
-	addToFile( config->favname, line );
-	buff.next=NULL;
-	strcpy( buff.dir, line );
-	return applyFAVlist( config->root, &buff );
-}
-
-int markDNP( char *line ) {
-	mpconfig *config=getConfig();
-	struct marklist_t buff;
-	addToFile( config->dnpname, line );
-	buff.next=NULL;
-	strcpy( buff.dir, line );
-	return applyDNPlist( config->root, &buff );
-}
-
 /*
  * returns the title with the given index
  */
@@ -1354,6 +1342,10 @@ int addRangePrefix( char *line, mpcmd cmd ) {
  */
 int handleRangeCmd( mptitle *title, mpcmd cmd ) {
 	char line[MAXPATHLEN];
+	struct marklist_t buff;
+	int cnt=-1;
+	mpconfig *config=getConfig();
+
 	if( addRangePrefix(line, cmd) == 0 ) {
 		switch( MPC_RANGE(cmd) ) {
 		case mpc_title:
@@ -1376,12 +1368,19 @@ int handleRangeCmd( mptitle *title, mpcmd cmd ) {
 			addMessage( 0, "Not enough info in %s!", line );
 			return 0;
 		}
+
+		buff.next=NULL;
+		strcpy( buff.dir, line );
+
 		if( MPC_CMD(cmd) == mpc_fav ) {
-			return markFAV( line );
+			addToFile( config->favname, line );
+			cnt=applyFAVlist( title, &buff );
 		}
 		else if( MPC_CMD(cmd) == mpc_dnp ) {
-			return markDNP( line );
+			addToFile( config->dnpname, line );
+			cnt=applyDNPlist( title, &buff );
 		}
 	}
-	return -1;
+
+	return cnt;
 }

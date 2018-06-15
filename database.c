@@ -318,7 +318,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 		while( dbrunner != dbroot );
 
 		/* round up */
-		if( ( mean%count ) > (count/3) ) {
+		if( ( mean%count ) > (count/2) ) {
 			mean=(mean/count)+1;
 		}
 		else {
