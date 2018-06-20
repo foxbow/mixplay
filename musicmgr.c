@@ -1150,6 +1150,8 @@ void dumpInfo( mptitle *root, int global, int skip ) {
 	for( pl=minplayed; pl <= maxplayed; pl++ ) {
 		unsigned int pcount=0;
 		unsigned int dnpcnt=0;
+		unsigned int favcnt=0;
+		char line[MAXPATHLEN];
 
 		do {
 			if( ( global || !( current->flags & MP_DNP ) ) && ( current->playcount == pl ) ) {
@@ -1157,52 +1159,42 @@ void dumpInfo( mptitle *root, int global, int skip ) {
 				if( current->flags & MP_DNP ) {
 					dnpcnt++;
 				}
+				if( current->flags & MP_FAV ) {
+					favcnt++;
+				}
 			}
-
 			if( global ) {
 				current=current->dbnext;
 			}
 			else {
 				current=current->plnext;
 			}
-		}
-		while( current != root );
+		} while( current != root );
 
-		if( pcount > 0 ) {
-			if( dnpcnt > 0 ) {
-				switch( pl ) {
-				case 0:
-					addMessage( 0, "Never played:\t%i titles (DNP: %i)", pcount, dnpcnt );
-					break;
+		if( dnpcnt != pcount ){
+			switch( pl ) {
+			case 0:
+				sprintf( line, "Never played\t%i", pcount);
+				break;
+			case 1:
+				sprintf( line, " Once played\t%i", pcount);
+				break;
+			case 2:
+				sprintf( line, "Twice played\t%i", pcount);
+				break;
+			default:
+				sprintf( line, "%5i times\t%i", pl, pcount);
+			}
 
-				case 1:
-					addMessage( 0, " Once played:\t%i titles (DNP: %i)", pcount, dnpcnt );
-					break;
-
-				case 2:
-					addMessage( 0, "Twice played:\t%i titles (DNP: %i)", pcount, dnpcnt );
-					break;
-
-				default:
-					addMessage( 0, "%5i\ttimes played:\t%i titles (DNP: %i)", pl, pcount, dnpcnt );
-				}
+			if ( favcnt == 0 ) {
+				addMessage( 0, "%s", line );
 			}
 			else {
-				switch( pl ) {
-				case 0:
-					addMessage( 0, "Never played:\t%i titles", pcount );
-					break;
-
-				case 1:
-					addMessage( 0, " Once played:\t%i titles", pcount );
-					break;
-
-				case 2:
-					addMessage( 0, "Twice played:\t%i titles", pcount );
-					break;
-
-				default:
-					addMessage( 0, "%5i\ttimes played:\t%i titles", pl, pcount );
+				if( favcnt < pcount ) {
+					addMessage( 0, "%s (%i favs)", line, favcnt );
+				}
+				else {
+					addMessage( 0, "%s (allfavs)", line );
 				}
 			}
 		}
