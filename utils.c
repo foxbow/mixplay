@@ -513,11 +513,7 @@ char *msgBuffAll( struct msgbuf_t *msgbuf ) {
 		lineno=(i+msgbuf->current)%MSGNUM;
 		while( strlen(buff)+strlen(msgbuf->msg[lineno]) >= len ) {
 			len=len+256;
-			buff=realloc( buff, len*sizeof( char ) );
-			if( NULL == buff ) {
-				pthread_mutex_unlock( msgbuf->msgLock );
-				fail( errno, "Can't increase message buffer" );
-			}
+			buff=frealloc( buff, len*sizeof( char ) );
 		}
 		strcat( buff, msgbuf->msg[lineno] );
 		strcat( buff, "\n" );

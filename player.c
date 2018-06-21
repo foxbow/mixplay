@@ -539,7 +539,7 @@ void *reader( void *cont ) {
 					break;
 
 				case 'T': /* TAG reply */
-					fail( F_FAIL, "Got TAG reply!" );
+					addMessage( 1, "Got TAG reply?!" );
 					break;
 
 				case 'J': /* JUMP reply */

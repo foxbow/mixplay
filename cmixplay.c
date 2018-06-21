@@ -114,7 +114,8 @@ int main( int argc, char **argv ) {
 		writeConfig( path );
 		config=readConfig();
 		if( config == NULL ) {
-			fail( F_FAIL, "Could not create config file!" );
+			printf( "Could not create config file!\n" );
+			return 1;
 		}
 	}
 

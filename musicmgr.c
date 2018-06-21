@@ -112,7 +112,8 @@ void addToFile( const char *path, const char *line ) {
 	fp=fopen( path, "a" );
 
 	if( NULL == fp ) {
-		fail( errno, "Could not open %s for writing ", path );
+		addMessage( 0, "Could not open %s for writing ", path );
+		return;
 	}
 
 	fputs( line, fp );
@@ -258,7 +259,9 @@ static int matchTitle( mptitle *title, const char* pat ) {
 			break;
 
 		default:
-			fail( F_FAIL, "Unknown range %c in %s!", pat[0], pat );
+			addMessage( 0, "Unknown range %c in %s!", pat[0], pat );
+			addMessage( 0, "Using display instead", pat[0], pat );
+			strlncpy( loname, title->display, 1024 );
 			break;
 		}
 	}
@@ -310,7 +313,8 @@ static int matchList( mptitle **result, mptitle **base, struct marklist_t *term 
 	int cnt=0;
 
 	if( NULL == *base ) {
-		fail( F_FAIL, "No music in list!" );
+		addMessage( 0, "No music in list!" );
+		return 0;
 	}
 
 	while( NULL != term ) {
@@ -348,7 +352,8 @@ mptitle *searchList( mptitle *base, struct marklist_t *term ) {
 	int cnt=0;
 
 	if( NULL == base ) {
-		fail( F_FAIL, "%s: No music loaded", __func__ );
+		addMessage( 0, "%s: No music loaded", __func__ );
+		return NULL;
 	}
 
 	cnt = matchList( &result, &base, term );
@@ -386,7 +391,8 @@ int applyDNPlist( mptitle *base, struct marklist_t *list ) {
 	int cnt=0;
 
 	if( NULL == base ) {
-		fail( F_FAIL, "%s: No music loaded", __func__ );
+		addMessage( 0, "%s: No music loaded", __func__ );
+		return -1;
 	}
 
 	if( NULL == list ) {
@@ -467,13 +473,10 @@ struct marklist_t *loadList( const char *path ) {
 
 	buff=falloc( MAXPATHLEN, sizeof( char ) );
 
-	if( !buff ) {
-		fail( errno, "%s: can't alloc buffer", __func__ );
-	}
-
 	file=fopen( path, "r" );
 
 	if( !file ) {
+		addMessage( 0, "Could not open %s", path );
 		return NULL;
 	}
 
@@ -491,7 +494,8 @@ struct marklist_t *loadList( const char *path ) {
 			}
 
 			if( !ptr ) {
-				fail( errno, "Could not add %s", buff );
+				addMessage( 0, "Could not add %s", buff );
+				goto cleanup;
 			}
 
 			strlncpy( ptr->dir, buff, MAXPATHLEN );
@@ -503,6 +507,7 @@ struct marklist_t *loadList( const char *path ) {
 
 	addMessage( 2, "Loaded %s with %i entries.", path, cnt );
 
+cleanup:
 	free( buff );
 	fclose( file );
 
@@ -552,14 +557,11 @@ mptitle *loadPlaylist( const char *path ) {
 
 	buff=falloc( MAXPATHLEN, sizeof( char ) );
 
-	if( !buff ) {
-		fail( errno, "%s: can't alloc buffer", __func__ );
-	}
-
 	fp=fopen( path, "r" );
 
 	if( !fp ) {
-		fail( errno, "Couldn't open playlist %s", path );
+		addMessage( 0, "Could not open playlist %s", path );
+		return NULL;
 	}
 
 	while( !feof( fp ) ) {
@@ -577,7 +579,7 @@ mptitle *loadPlaylist( const char *path ) {
 
 	fclose( fp );
 
-	addMessage( 3, "Loaded %s with %i entries.", path, cnt );
+	addMessage( 2, "Loaded %s with %i entries.", path, cnt );
 
 	return current->dbnext;
 }
@@ -591,7 +593,8 @@ static mptitle *plRemove( mptitle *entry ) {
 	mptitle *next=entry;
 
 	if( NULL == entry ) {
-		fail( F_FAIL, "plRemove() called with NULL!" );
+		addMessage( 0, "Cannot remove no title!" );
+		return entry;
 	}
 
 	addMessage( 2, "Removed: %s", entry->display );
@@ -664,7 +667,9 @@ mptitle *removeByPattern( mptitle *entry, const char *pat ) {
 		break;
 
 	default:
-		fail( F_FAIL, "Unknown pattern %s!", pat );
+		addMessage( 0, "Unknown pattern %s!", pat );
+		addMessage( 0, "Using display instead" );
+		strlncpy( &pattern[2], entry->display, NAMELEN );
 		break;
 	}
 
@@ -767,7 +772,8 @@ static mptitle *skipOver( mptitle *current ) {
 		marker=marker->dbnext;
 
 		if( marker == current ) {
-			fail( F_FAIL, "Ran out of titles!" );
+			addMessage( 0, "Ran out of titles!" );
+			return NULL;
 		}
 	}
 
@@ -848,7 +854,8 @@ mptitle *shuffleTitles( mptitle *base ) {
 		runner=skipOver(skipTitles( runner, skip, -1 ));
 
 		if( runner->flags & MP_MARK ) {
-			fail( F_FAIL, "%s is marked %i %i/%i!", runner->display, skip, i, num );
+			addMessage( 0, "%s is marked %i %i/%i!", runner->display, skip, i, num );
+			continue;
 		}
 
 
@@ -964,7 +971,8 @@ mptitle *shuffleTitles( mptitle *base ) {
 
 	/* Make sure something valid is returned */
 	if( NULL == end ) {
-		fail( F_FAIL, "No titles were inserted!" );
+		addMessage( 0, "No titles were inserted!" );
+		return NULL;
 	}
 
 	return end->plnext;
@@ -1047,7 +1055,8 @@ mptitle *recurse( char *curdir, mptitle *files ) {
 	num = getMusic( curdir, &entry );
 
 	if( num < 0 ) {
-		fail( errno, "getMusic failed in %s", curdir );
+		addMessage( 0, "getMusic failed in %s", curdir );
+		return files;
 	}
 
 	for( i=0; i<num; i++ ) {
@@ -1063,7 +1072,8 @@ mptitle *recurse( char *curdir, mptitle *files ) {
 	num=getDirs( curdir, &entry );
 
 	if( num < 0 ) {
-		fail( errno, "getDirs failed on %s", curdir );
+		addMessage( 0, "getDirs failed on %s", curdir );
+		return files;
 	}
 
 	for( i=0; i<num; i++ ) {
@@ -1084,7 +1094,8 @@ void dumpTitles( mptitle *root, const int pl ) {
 	mptitle *ptr=root;
 
 	if( NULL==root ) {
-		fail( F_FAIL, "NO LIST" );
+		printf( "NO LIST!\n" );
+		return;
 	}
 
 	do {
@@ -1214,7 +1225,7 @@ void dumpInfo( mptitle *root, int global, int skip ) {
  * Returns -1 when the target runs out of space.
  */
 static int copyTitle( mptitle *title, const char* target, const unsigned int index ) {
-	int in, out;
+	int in=-1, out=-1, rv=-1;
 	size_t len;
 	char filename[MAXPATHLEN];
 	struct stat st;
@@ -1224,31 +1235,44 @@ static int copyTitle( mptitle *title, const char* target, const unsigned int ind
 	in=open( title->path, O_RDONLY );
 
 	if( -1 == in ) {
-		fail( errno, "Couldn't open %s for reading", title->path );
+		addMessage( 0, "Couldn't open %s for reading", title->path );
+		goto cleanup;
 	}
 
 	if( -1 == fstat( in, &st ) ) {
-		fail( errno, "Couldn't stat %s", title->path );
+		addMessage( 0, "Couldn't stat %s", title->path );
+		goto cleanup;
 	}
 	len=st.st_size;
 
 	out=open( filename, O_CREAT|O_WRONLY|O_EXCL );
 
 	if( -1 == out ) {
-		fail( errno, "Couldn't open %s for writing", filename );
+		addMessage( 0, "Couldn't open %s for writing", filename );
+		goto cleanup;
 	}
 
-	addMessage( 2, "Copy %s to %s", title->display, filename );
+	addMessage( 1, "Copy %s to %s", title->display, filename );
 
-	if( -1 == sendfile( out, in, NULL, len ) ) {
-		if( errno == EOVERFLOW ) return -1;
-		fail( errno, "Could not copy %s", title->path );
+	rv = sendfile( out, in, NULL, len );
+	if( rv == -1 ) {
+		if( errno == EOVERFLOW ) {
+			addMessage( 0, "Target ran out of space!" );
+		}
+		else{
+			addMessage( 0, "Could not copy %s", title->path );
+		}
 	}
 
-	close( in );
-	close( out );
+cleanup:
+	if( in != -1 ) {
+		close( in );
+	}
+	if( out != -1 ) {
+		close( out );
+	}
 
-	return 0;
+	return rv;
 }
 
 /**
@@ -1272,7 +1296,7 @@ int fillstick( mptitle *root, const char *target, int fav ) {
 	}
 	while( current != root );
 
-	addMessage( 1, "Copied %i titles to %s", index, target );
+	addMessage( 0, "Copied %i titles to %s", index, target );
 	return index;
 }
 

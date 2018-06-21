@@ -108,7 +108,8 @@ int main( int argc, char **argv ) {
 			addMessage( 0, "Setting default configuration values and initializing..." );
 			setProfile( control );
 			if( control->root == NULL ) {
-				fail( F_FAIL, "No music found at %s!", control->musicdir );
+				addMessage( 0, "No music found at %s!", control->musicdir );
+				return -1;
 			}
 			addMessage( 0, "Initialization successful!" );
 			writeConfig( argv[optind] );
@@ -119,7 +120,7 @@ int main( int argc, char **argv ) {
 	case 4: /* playlist */
 		break;
 	default:
-		fail( F_FAIL, "Unknown argument!\n", argv[optind] );
+		addMessage( 0, "Unknown argument!\n", argv[optind] );
 		return -1;
 	}
 
