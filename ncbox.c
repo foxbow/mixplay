@@ -279,7 +279,7 @@ void drawframe( mptitle *current, const char *status, int stream ) {
 	refresh();
 }
 
-void nc_updateHook( void ) {
+void nc_updateHook( void *ign ) {
 	mpconfig *control=getConfig();
 	char status[MP_MSGLEN];
 	int i;

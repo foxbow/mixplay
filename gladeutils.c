@@ -180,7 +180,7 @@ static int g_progressEnd( void *data ) {
 /**
  * extended progress handling for gmixplay
  */
-void g_progressHook( const char *msg ) {
+void g_progressHook( void *msg ) {
 	if( msg == NULL ) {
 		if( getConfig()->inUI ) {
 			gdk_threads_add_idle( g_progressEnd, NULL );
@@ -380,7 +380,7 @@ static int g_updateUI( void *data ) {
  *
  * needed to keep updateUI() GUI independent
  */
-void g_updateHook( void ) {
+void g_updateHook( void *msg ) {
 	mpconfig *control=getConfig();
 	if( control->inUI ) {
 		if( control->status == mpc_quit ) {

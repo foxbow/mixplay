@@ -19,7 +19,7 @@ void drawbox( int r0, int c0, int r1, int c1 );
 int popUpActive( void );
 void popDown( void );
 void drawframe( mptitle *current, const char *status, int stream );
-void nc_updateHook( void );
+void nc_updateHook( void * );
 /* void fail( int error, const char* msg, ... ); */
 
 #endif /* NCBOX_H_ */

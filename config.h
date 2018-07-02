@@ -131,8 +131,8 @@ char *getMessage( void );
 
 void progressStart( char *msg, ... );
 void progressEnd( void );
-void addProgressHook( void (*func)( const char* ) );
-void addUpdateHook( void (*func)( void ) );
+void addProgressHook( void (*func)( void *arg ) );
+void addUpdateHook( void (*func)( void *arg ) );
 void updateUI( void );
 
 const char *mpcString( mpcmd rawcmd );

@@ -32,23 +32,14 @@ static mpconfig *c_config=NULL;
 /**
  * the progress function list
  */
-typedef struct _progressFunc_t _progressFunc;
-struct _progressFunc_t {
-	void (*func)( const char* );
-	_progressFunc *next;
+typedef struct _mpFunc_t _mpFunc;
+struct _mpFunc_t {
+	void (*func)( void * );
+	_mpFunc *next;
 };
 
-static _progressFunc *_pfunc=NULL;
-
-/**
- * the update function list
- */
-typedef struct _updateFunc_t _updateFunc;
-struct _updateFunc_t {
-	void (*func)( void );
-	_updateFunc *next;
-};
-static _updateFunc *_ufunc=NULL;
+static _mpFunc *_pfunc=NULL;
+static _mpFunc *_ufunc=NULL;
 
 static const char *mpc_command[] = {
 		"mpc_play",
@@ -620,20 +611,26 @@ void muteVerbosity() {
 	setVerbosity(0);
 }
 
-void addProgressHook( void (*func)( const char* ) ){
-	_progressFunc *pos=_pfunc;
+static void addHook( void (*func)( void* ), _mpFunc **list ) {
+	_mpFunc *pos=*list;
 	if( pos == NULL ) {
-		_pfunc=falloc(1,  sizeof(_progressFunc) );
-		pos=_pfunc;
+		*list=falloc(1,  sizeof(_mpFunc) );
+		pos=*list;
 	}
 	else {
 		while( pos->next != NULL ) {
 			pos=pos->next;
 		}
-		pos->next=falloc(1,  sizeof(_progressFunc) );
+		pos->next=falloc(1,  sizeof(_mpFunc) );
 		pos=pos->next;
 	}
 	pos->func=func;
+	pos->next=NULL;
+}
+
+
+void addProgressHook( void (*func)( void * ) ){
+	addHook( func, &_pfunc );
 }
 
 /*
@@ -642,7 +639,7 @@ void addProgressHook( void (*func)( const char* ) ){
 void progressStart( char* msg, ... ) {
 	va_list args;
 	char *line;
-	_progressFunc *pos=_pfunc;
+	_mpFunc *pos=_pfunc;
 
 	line=falloc( 512, sizeof( char ) );
 
@@ -663,7 +660,7 @@ void progressStart( char* msg, ... ) {
  * end a progress display
  */
 void progressEnd( void ) {
-	_progressFunc *pos=_pfunc;
+	_mpFunc *pos=_pfunc;
 
 	addMessage( 0, "Done." );
 	while( pos != NULL ) {
@@ -675,29 +672,17 @@ void progressEnd( void ) {
 /**
  * register an update function
  */
-void addUpdateHook( void (*func)( void ) ){
-	_updateFunc *pos=_ufunc;
-	if( pos == NULL ) {
-		_ufunc=falloc(1,  sizeof(_updateFunc) );
-		pos=_ufunc;
-	}
-	else {
-		while( pos->next != NULL ) {
-			pos=pos->next;
-		}
-		pos->next=falloc(1,  sizeof(_updateFunc) );
-		pos=pos->next;
-	}
-	pos->func=func;
+void addUpdateHook( void (*func)( void * ) ){
+	addHook( func, &_ufunc );
 }
 
 /**
  * run all registered update functions
  */
 void updateUI() {
-	_updateFunc *pos=_ufunc;
+	_mpFunc *pos=_ufunc;
 	while( pos != NULL ) {
-		pos->func();
+		pos->func(NULL);
 		pos=pos->next;
 	}
 }
