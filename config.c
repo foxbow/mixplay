@@ -244,7 +244,7 @@ int getArgs( int argc, char ** argv ){
  *
  * this will also start the communication thread is remote=2
  */
-int initAll( int dispatch ) {
+int initAll( ) {
 	mpconfig *control;
 	pthread_t tid;
 
@@ -260,14 +260,8 @@ int initAll( int dispatch ) {
 		/* make sure the mpg123 instances have a chance to start up */
 		sleep( 1 );
 		if( NULL == control->root ) {
-			if( dispatch ) {
-				/* Runs as thread to have updates in the UI */
-				pthread_create( &tid, NULL, setProfile, ( void * )control );
-			}
-			else {
-				/* todo: would it hurt to run this as thread every time? */
-				setProfile( control );
-			}
+			/* Runs as thread to have updates in the UI */
+			pthread_create( &tid, NULL, setProfile, ( void * )control );
 		}
 		else {
 			control->active=0;

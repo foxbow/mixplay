@@ -136,7 +136,7 @@ int main( int argc, char **argv ) {
 
 	addUpdateHook( &s_updateHook );
 	control->inUI=1;
-	initAll( 0 );
+	initAll( );
 	pthread_join( control->stid, NULL );
 	control->inUI=0;
 	addMessage( 0, "Server terminated" );

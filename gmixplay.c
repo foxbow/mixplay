@@ -90,7 +90,7 @@ int main( int argc, char **argv ) {
 	buildUI( control );
 	addProgressHook( &g_progressHook );
 	addUpdateHook( &g_updateHook );
-	initAll( 1 );
+	initAll( );
 
 	/* Start main loop */
 	control->inUI=-1;

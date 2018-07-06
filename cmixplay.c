@@ -126,7 +126,7 @@ int main( int argc, char **argv ) {
 		config->remote=0;
 	}
 
-	initAll( 0 );
+	initAll( );
 
 	/* Start curses mode */
 	initscr();

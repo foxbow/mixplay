@@ -139,5 +139,5 @@ const char *mpcString( mpcmd rawcmd );
 const mpcmd mpcCommand( const char *val );
 void setCommand( mpcmd rawcmd );
 int getArgs( int argc, char ** argv );
-int initAll( int );
+int initAll( void );
 #endif /* _CONFIG_H_ */
