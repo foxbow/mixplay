@@ -18,6 +18,7 @@
 #include "utils.h"
 
 #include <arpa/inet.h>
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -81,6 +82,12 @@ static char *strdec( char *target, const char *src ) {
 		}
 	}
 
+	/* cut off trailing blanks */
+	j=j-1;
+	while( j>0 && isblank(target[j]) ) {
+		target[j]=0;
+		j--;
+	}
 	return target;
 }
 
@@ -165,7 +172,7 @@ static void *clientHandler(void *args ) {
 						if( arg != NULL ) {
 							arg++;
 						}
-						if( strstr( pos, "/status" ) == pos ) {
+						if( strstr( pos, "/status " ) == pos ) {
 							state=1;
 						}
 						else if( strstr( pos, "/cmd/" ) == pos ) {
@@ -233,7 +240,7 @@ static void *clientHandler(void *args ) {
 							/* ignore for now */
 							send( sock, "HTTP/1.1 204 No Content\015\012\015\012", 28, 0 );
 						}
-						else if( strstr( pos, "/config") == pos ) {
+						else if( strstr( pos, "/config ") == pos ) {
 							state=6;
 						}
 						else {

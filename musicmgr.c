@@ -260,7 +260,7 @@ static int matchTitle( mptitle *title, const char* pat ) {
 
 		default:
 			addMessage( 0, "Unknown range %c in %s!", pat[0], pat );
-			addMessage( 0, "Using display instead", pat[0], pat );
+			addMessage( 0, "Using display instead" );
 			strlncpy( loname, title->display, 1024 );
 			break;
 		}
@@ -273,9 +273,13 @@ static int matchTitle( mptitle *title, const char* pat ) {
 	if( fuzzy ) {
 		return checkMatch( loname, lopat );
 	}
-
 	else {
-		return ( NULL != strstr( loname, lopat ) );
+		if( strstr( loname, lopat ) != NULL ) {
+			return -1;
+		}
+		else {
+			return 0;
+		}
 	}
 }
 
@@ -443,15 +447,15 @@ int applyFAVlist( mptitle *root, struct marklist_t *favourites ) {
 					runner->flags|=MP_FAV;
 					cnt++;
 				}
-				break;
+				ptr=NULL;
 			}
-
-			ptr=ptr->next;
+			else {
+				ptr=ptr->next;
+			}
 		}
 
 		runner=runner->dbnext;
-	}
-	while ( runner != root );
+	} while ( runner != root );
 
 	if( cnt > 1 ) {
 		addMessage( 0, "Marked %i favourites", cnt );

@@ -277,8 +277,11 @@ function setVolume( vol ) {
 	sendCMD( 0x15, vol );
 }
 
-function sendRange( cmd, term="" ) {
+function sendRange( cmd, term="", search=0 ) {
 	var e=document.getElementById('range');
+	if( search == 1 ) {
+		e=document.getElementById('srange');
+	}
 	var range=e.options[e.selectedIndex].value;
 	if( isstream ) return;
 	if( ( range != 0x0100 ) && ( range != 0x0500 ) ) {
@@ -288,11 +291,11 @@ function sendRange( cmd, term="" ) {
 	sendCMD( cmd, term );
 }
 
-function sendArg( cmd ) {
+function sendArg( cmd, search=0 ) {
 	if( isstream ) return;
 	var term=document.getElementById('text').value;
 	if( term.length > 1 ) {
-		sendRange( cmd, term );
+		sendRange( cmd, term, search );
 	}
 	else {
 		alert("Need at least two letters!");
