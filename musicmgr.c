@@ -274,12 +274,7 @@ static int matchTitle( mptitle *title, const char* pat ) {
 		return checkMatch( loname, lopat );
 	}
 	else {
-		if( strstr( loname, lopat ) != NULL ) {
-			return -1;
-		}
-		else {
-			return 0;
-		}
+		return ( strstr( loname, lopat ) != NULL );
 	}
 }
 

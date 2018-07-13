@@ -309,7 +309,7 @@ void *setProfile( void *data ) {
 	/* if we're not in player context, start playing automatically */
 	control->status=mpc_start;
 	if( !pthread_mutex_trylock( &cmdlock ) ) {
-		addMessage( 1, "Autoplay" );
+		addMessage( 0, "Start play" );
 		control->command=mpc_start;
 	}
 

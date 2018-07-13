@@ -243,6 +243,9 @@ static void *clientHandler(void *args ) {
 						else if( strstr( pos, "/config ") == pos ) {
 							state=6;
 						}
+						else if( strstr( pos, "/version " ) == pos ) {
+							state=7;
+						}
 						else {
 							addMessage( 0, "Illegal get %s", pos );
 							send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
@@ -331,6 +334,11 @@ static void *clientHandler(void *args ) {
 				strcat( commdata, jsonLine );
 				len=strlen(commdata);
 				sfree( &jsonLine );
+				break;
+			case 7: /* get current build version */
+				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
+						(int)strlen(VERSION), VERSION );
+				len=strlen(commdata);
 				break;
 			default:
 				len=0;
