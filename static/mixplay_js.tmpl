@@ -7,6 +7,10 @@ var msglines=["","","","","","","","","","","","","","",""];
 var msgpos=0;
 var active=0;
 
+function showInfo() {
+	alert( "Running mixplayd version ~~MP_VERSION~~" );
+}
+
 /* stop updates and make sure that error messages do not stack */
 function fail( msg ) {
 	if( doUpdate != 0 ) {
