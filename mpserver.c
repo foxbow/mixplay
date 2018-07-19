@@ -285,18 +285,23 @@ static void *clientHandler(void *args ) {
 				break;
 			case 2: /* set command */
 				if( cmd != mpc_idle ) {
+					if( ( cmd == mpc_dbinfo ) || ( cmd == mpc_dbclean) ||
+							( cmd == mpc_doublets ) ||
+							( MPC_CMD(cmd) == mpc_search ) ) {
+						if( setCurClient( sock ) == -1 ) {
+							addMessage( 1, "%s was blocked!", mpcString(cmd) );
+							sprintf( commdata, "HTTP/1.1 503 Service Unavailable\015\012\015\012" );
+							len=strlen(commdata);
+							running=0;
+							break;
+						}
+						clmsg=config->msg->count;
+					}
+					setCommand(cmd);
 					if( okreply ) {
 						sprintf( commdata, "HTTP/1.1 204 No Content\015\012\015\012" );
 						len=strlen( commdata );
 					}
-					if( ( cmd == mpc_dbinfo ) || ( cmd == mpc_dbclean) ||
-							( cmd == mpc_doublets ) ||
-							( MPC_CMD(cmd) == mpc_search ) ) {
-						setCurClient( sock );
-						/* setCurClient may block so we need to skip messages */
-						clmsg=config->msg->count;
-					}
-					setCommand(cmd);
 				}
 				else {
 					sprintf( commdata, "HTTP/1.1 400 Invalid Command\015\012\015\012" );

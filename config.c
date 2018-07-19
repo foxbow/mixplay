@@ -551,7 +551,7 @@ void addMessage( int v, char *msg, ... ) {
 			if( c_config->inUI ) {
 				msgBuffAdd( c_config->msg, line );
 				if( v < getDebug() ) {
-					fprintf( stderr, "D %s\n", line );
+					fprintf( stderr, "d%i %s\n", v, line );
 				}
 			}
 			else {
@@ -559,7 +559,7 @@ void addMessage( int v, char *msg, ... ) {
 			}
 		}
 		else if( v < getDebug() ) {
-			fprintf( stderr, "D %s\n", line );
+			fprintf( stderr, "D%i %s\n", v, line );
 		}
 	}
 
@@ -661,6 +661,11 @@ void progressEnd( void ) {
 		pos->func( NULL );
 		pos=pos->next;
 	}
+}
+
+void progressMsg( char *msg ) {
+	progressStart( "%s", msg );
+	progressEnd();
 }
 
 /**

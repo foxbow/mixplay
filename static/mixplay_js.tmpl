@@ -98,11 +98,17 @@ function sendCMD( cmd, arg="" ) {
 		( code == '0010' ) ) )return;
 	
 	xmlhttp.onreadystatechange=function() {
-		if ( xmlhttp.readyState==4 && xmlhttp.status!=204 ) {
-			if( xmlhttp.status == 0 ) {
+		if ( xmlhttp.readyState==4  ) {
+			switch( xmlhttp.status ) {
+			case 0:
 				fail( "CMD Error: connection lost!" );
-			}
-			else {
+				break;
+			case 204:
+				break;
+			case 503:
+				alert( "Sorry, we're busy!" );
+				break;
+			default: 
 				fail( "Received Error "+xmlhttp.status+" after sending 0x"+code );
 			}
 		}

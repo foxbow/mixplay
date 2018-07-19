@@ -19,7 +19,22 @@
 #include "player.h"
 #include "config.h"
 
-static pthread_mutex_t cmdlock=PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t _pcmdlock=PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t _asynclock=PTHREAD_MUTEX_INITIALIZER;
+
+/**
+ * returns TRUE when no asynchronous operation is running but does not
+ * lock async operations.
+ */
+static int asyncTest() {
+	int ret=0;
+	addMessage( 1, "Async test" );
+	if( pthread_mutex_trylock( &_asynclock ) != EBUSY ) {
+		pthread_mutex_unlock( &_asynclock );
+		ret=-1;
+	}
+	return ret;
+}
 
 /**
  * adjusts the master volume
@@ -112,7 +127,7 @@ static void setStream( mpconfig *control, const char* stream, const char *name )
  * also makes sure that commands are queued
  */
 void setPCommand(  mpcmd cmd ) {
-	pthread_mutex_lock( &cmdlock );
+	pthread_mutex_lock( &_pcmdlock );
 	getConfig()->command=cmd;
 }
 
@@ -308,7 +323,7 @@ void *setProfile( void *data ) {
 
 	/* if we're not in player context, start playing automatically */
 	control->status=mpc_start;
-	if( !pthread_mutex_trylock( &cmdlock ) ) {
+	if( pthread_mutex_trylock( &_pcmdlock ) != EBUSY ) {
 		addMessage( 0, "Start play" );
 		control->command=mpc_start;
 	}
@@ -342,6 +357,123 @@ static void playCount( mpconfig *control ) {
 		db=dbOpen( control->dbname );
 		dbPutTitle( db, control->current );
 		dbClose( db );
+	}
+}
+
+/**
+ * asnchronous functions to run in the background and allow updates being sent to the
+ * client
+ */
+static void *plCheckDoublets( void *arg ) {
+	mpconfig *control=(mpconfig *)arg;
+	int i;
+
+	progressStart( "Filesystem Cleanup" );
+
+	addMessage( 0, "Checking for doubles.." );
+	i=dbNameCheck( control->dbname );
+	if( i > 0 ) {
+		addMessage( 0, "Deleted %i titles", i );
+		addMessage( 0, "Restarting player.." );
+		setProfile( control );
+		control->current = control->root;
+	}
+	else {
+		addMessage( 0, "No titles deleted" );
+	}
+	progressEnd( );
+	pthread_mutex_unlock( &_asynclock );;
+	return NULL;
+}
+
+static void *plDbClean( void *arg ) {
+	mpconfig *control=(mpconfig *) arg;
+	int order=0;
+	int i;
+	progressStart( "Database Cleanup" );
+
+	addMessage( 0, "Checking for deleted titles.." );
+	i=dbCheckExist( control->dbname );
+
+	if( i > 0 ) {
+		addMessage( 0, "Removed %i titles", i );
+		order=1;
+	}
+	else {
+		addMessage( 0, "No titles removed" );
+	}
+
+	addMessage( 0, "Checking for new titles.." );
+	i=dbAddTitles( control->dbname, control->musicdir );
+
+	if( i > 0 ) {
+		addMessage( 0, "Added %i new titles", i );
+		order=1;
+	}
+	else {
+		addMessage( 0, "No titles to be added" );
+	}
+
+	if( 1 == order ) {
+		addMessage( 0, "Restarting player.." );
+		control->status=mpc_start;
+		setProfile( control );
+		control->current = control->root;
+	}
+
+	progressEnd( );
+	pthread_mutex_unlock( &_asynclock );;
+	return NULL;
+}
+
+static void *plDbInfo( void *arg ) {
+	mpconfig *control=(mpconfig *) arg;
+	progressStart( "Database Info" );
+	addMessage( 0, "Music dir: %s", control->musicdir );
+	dumpInfo( control->root, -1, control->skipdnp );
+	progressEnd();
+	pthread_mutex_unlock( &_asynclock );;
+	return NULL;
+}
+
+static void *plSetProfile( void *arg ) {
+	mpconfig *control=(mpconfig *) arg;
+	control->status=mpc_start;
+	if( control->dbname[0] == 0 ) {
+		readConfig( );
+	}
+	setProfile( control );
+	control->current = control->root;
+	sfree( &(control->argument) );
+	writeConfig(NULL);
+	pthread_mutex_unlock( &_asynclock );;
+	return NULL;
+}
+
+static void *plShuffle( void *arg ) {
+	mpconfig *control=(mpconfig *) arg;
+	progressStart("Shuffling...");
+	control->status=mpc_start;
+	control->root=shuffleTitles(control->root);
+	control->current=control->root;
+	progressEnd();
+	pthread_mutex_unlock( &_asynclock );;
+	return NULL;
+}
+
+/**
+ * run the given command asynchronously to allow updates during execution
+ * if channel is != -1 then playing the song will be paused during execution
+ */
+static void asyncRun( void *cmd(void *), mpconfig *control ) {
+	pthread_t pid;
+	if( pthread_mutex_trylock( &_asynclock ) == EBUSY ) {
+		addMessage( 0, "Sorry, still blocked!" );
+	}
+	else {
+		if( pthread_create( &pid, NULL, cmd, (void*)control ) < 0) {
+			addMessage( 0, "Could not create async thread!" );
+		}
 	}
 }
 
@@ -697,11 +829,13 @@ void *reader( void *cont ) {
 			}
 		} /* fgets() > 0 */
 
-		pthread_mutex_trylock( &cmdlock );
-		cmd=MPC_CMD(control->command);
-
-		if( cmd != mpc_idle ) {
+		if ( pthread_mutex_trylock( &_pcmdlock ) == EBUSY ) {
+			while( (cmd=MPC_CMD(control->command)) == mpc_idle ) printf("retry\n");
 			addMessage(  2, "MPC %s", mpcString(cmd) );
+			control->command=mpc_idle;
+		}
+		else {
+			cmd=mpc_idle;
 		}
 
 		/* get the target title for fav and dnp commands */
@@ -742,98 +876,58 @@ void *reader( void *cont ) {
 			break;
 
 		case mpc_prev:
-			order=-1;
-			write( p_command[fdset][1], "STOP\n", 6 );
+			if( asyncTest() ) {
+				order=-1;
+				write( p_command[fdset][1], "STOP\n", 6 );
+			}
 			break;
 
 		case mpc_next:
-			order=1;
+			if( asyncTest() ) {
+				order=1;
 
-			if( ( control->current->key != 0 ) && !( control->current->flags & ( MP_SKPD|MP_CNTD ) ) ) {
-				control->current->skipcount++;
-				control->current->flags |= MP_SKPD;
-				/* updateCurrent( control ); - done in STOP handling */
+				if( ( control->current->key != 0 ) && !( control->current->flags & ( MP_SKPD|MP_CNTD ) ) ) {
+					control->current->skipcount++;
+					control->current->flags |= MP_SKPD;
+					/* updateCurrent( control ); - done in STOP handling */
+				}
+
+				write( p_command[fdset][1], "STOP\n", 6 );
 			}
-
-			write( p_command[fdset][1], "STOP\n", 6 );
 			break;
 
 		case mpc_doublets:
-			write( p_command[fdset][1], "STOP\n", 6 );
-			progressStart( "Filesystem Cleanup" );
-
-			addMessage( 0, "Checking for doubles.." );
-			i=dbNameCheck( control->dbname );
-			if( i > 0 ) {
-				addMessage( 0, "Deleted %i titles", i );
-				addMessage( 0, "Restarting player.." );
-				setProfile( control );
-				control->current = control->root;
-			}
-			else {
-				addMessage( 0, "No titles deleted" );
-			}
-			progressEnd( );
-			sendplay( p_command[fdset][1], control );
-
+			asyncRun( plCheckDoublets, control );
 			break;
 
 		case mpc_dbclean:
-			progressStart( "Database Cleanup" );
-			order=0;
-			write( p_command[fdset][1], "STOP\n", 6 );
-
-			addMessage( 0, "Checking for deleted titles.." );
-			i=dbCheckExist( control->dbname );
-
-			if( i > 0 ) {
-				addMessage( 0, "Removed %i titles", i );
-				order=1;
-			}
-			else {
-				addMessage( 0, "No titles removed" );
-			}
-
-			addMessage( 0, "Checking for new titles.." );
-			i=dbAddTitles( control->dbname, control->musicdir );
-
-			if( i > 0 ) {
-				addMessage( 0, "Added %i new titles", i );
-				order=1;
-			}
-			else {
-				addMessage( 0, "No titles to be added" );
-			}
-
-			if( 1 == order ) {
-				addMessage( 0, "Restarting player.." );
-				control->status=mpc_start;
-				setProfile( control );
-				control->current = control->root;
-			}
-
-			progressEnd( );
-			sendplay( p_command[fdset][1], control );
+			asyncRun( plDbClean, control );
 			break;
 
 		case mpc_stop:
-			order=0;
-			write( p_command[fdset][1], "STOP\n", 6 );
+			if( asyncTest() ) {
+				order=0;
+				write( p_command[fdset][1], "STOP\n", 6 );
+			}
 			break;
 
 		case mpc_dnp:
-			next=title->plnext;
-			handleRangeCmd( title, control->command );
-			while( next->plnext == next ) {
-				next=title->dbnext;
+			if( asyncTest() ) {
+				next=title->plnext;
+				handleRangeCmd( title, control->command );
+				while( next->plnext == next ) {
+					next=title->dbnext;
+				}
+				control->current=next->plprev;
+				order=1;
+				write( p_command[fdset][1], "STOP\n", 6 );
 			}
-			control->current=next->plprev;
-			order=1;
-			write( p_command[fdset][1], "STOP\n", 6 );
 			break;
 
 		case mpc_fav:
-			handleRangeCmd( title, control->command );
+			if( asyncTest() ) {
+				handleRangeCmd( title, control->command );
+			}
 			break;
 
 		case mpc_repl:
@@ -842,159 +936,150 @@ void *reader( void *cont ) {
 
 		case mpc_QUIT:
 		case mpc_quit:
-			control->status=mpc_quit;
+			if( asyncTest() ) {
+				control->status=mpc_quit;
+			}
 			/* The player does not know about the main App so anything setting mcp_quit
 			 * MUST make sure that the main app terminates as well ! */
 			break;
 
 		case mpc_profile:
-			if( control->argument == NULL ) {
-				progressStart( "No profile given!" );
-				progressEnd();
+			if( asyncTest() ) {
+				if( control->argument == NULL ) {
+					progressMsg( "No profile given!" );
+				}
+				else {
+					profile=atoi( control->argument );
+					if( ( profile != 0 ) && ( profile != control->active ) ) {
+						control->active=profile;
+						asyncRun( plSetProfile, control );
+					}
+				}
 			}
-			else {
-				profile=atoi( control->argument );
-				if( ( profile != 0 ) && ( profile != control->active ) ) {
+			break;
+
+		case mpc_newprof:
+			if ( asyncTest() ) {
+				if( control->argument == NULL ) {
+					progressMsg( "No profile given!" );
+				}
+				else if(control->playstream){
+					control->streams++;
+					control->stream=frealloc(control->stream, control->streams*sizeof( char * ) );
+					control->stream[control->streams-1]=falloc( strlen(control->current->path)+1, sizeof( char ) );
+					strcpy( control->stream[control->streams-1], control->current->path );
+					control->sname=frealloc(control->sname, control->streams*sizeof( char * ) );
+					control->sname[control->streams-1]=control->argument;
+					control->active=-(control->streams);
+					writeConfig( NULL );
+					control->argument=NULL;
+				}
+				else {
+					control->profiles++;
+					control->profile=realloc( control->profile, control->profiles*sizeof(char*) );
+					control->profile[control->profiles-1]=control->argument;
+					control->active=control->profiles;
+					writeConfig( NULL );
+					control->argument=NULL;
+
 					write( p_command[fdset][1], "STOP\n", 6 );
 					control->status=mpc_start;
 					if( control->dbname[0] == 0 ) {
 						readConfig( );
 					}
-					control->active=profile;
+					control->active=control->profiles+2;
 					setProfile( control );
 					control->current = control->root;
 					sendplay( p_command[fdset][1], control );
-					sfree( &(control->argument) );
-					writeConfig(NULL);
 				}
-			}
-
-			break;
-
-		case mpc_newprof:
-			if( control->argument == NULL ) {
-				progressStart( "No profile given!" );
-				progressEnd();
-			}
-			else if(control->playstream){
-				control->streams++;
-				control->stream=frealloc(control->stream, control->streams*sizeof( char * ) );
-				control->stream[control->streams-1]=falloc( strlen(control->current->path)+1, sizeof( char ) );
-				strcpy( control->stream[control->streams-1], control->current->path );
-				control->sname=frealloc(control->sname, control->streams*sizeof( char * ) );
-				control->sname[control->streams-1]=control->argument;
-				control->active=-(control->streams);
-				writeConfig( NULL );
-				control->argument=NULL;
-			}
-			else {
-				control->profiles++;
-				control->profile=realloc( control->profile, control->profiles*sizeof(char*) );
-				control->profile[control->profiles-1]=control->argument;
-				control->active=control->profiles;
-				writeConfig( NULL );
-				control->argument=NULL;
-
-				write( p_command[fdset][1], "STOP\n", 6 );
-				control->status=mpc_start;
-				if( control->dbname[0] == 0 ) {
-					readConfig( );
-				}
-				control->active=control->profiles+2;
-				setProfile( control );
-				control->current = control->root;
-				sendplay( p_command[fdset][1], control );
 			}
 			break;
 
 		case mpc_remprof:
-			if( control->argument == NULL ) {
-				progressStart( "No profile given!" );
-				progressEnd();
-			}
-			else {
-				profile=atoi( control->argument );
-				if( profile == 0 ) {
-					progressStart( "Cannot remove empty profile!" );
-					progressEnd();
-				}
-				if( profile > 0 ) {
-					if( profile == control->active ) {
-						progressStart( "Cannot remove active profile!" );
-						progressEnd();
-					}
-					else if( profile > control->profiles ) {
-						progressStart( "Profile #%i does not exist!", profile );
-						progressEnd();
-					}
-					else {
-						free( control->profile[profile-1] );
-						for(i=profile;i<control->profiles;i++) {
-							control->profile[i-1]=control->profile[i];
-						}
-						control->profiles--;
-
-						if( control->active > profile ) {
-							control->active--;
-						}
-						writeConfig(NULL);
-					}
+			if( asyncTest() ) {
+				if( control->argument == NULL ) {
+					progressMsg( "No profile given!" );
 				}
 				else {
-					profile=(-profile);
-					if( profile > control->streams ) {
-						progressStart( "Stream #%i does not exist!", profile );
-						progressEnd();
+					profile=atoi( control->argument );
+					if( profile == 0 ) {
+						progressMsg( "Cannot remove empty profile!" );
+					}
+					if( profile > 0 ) {
+						if( profile == control->active ) {
+							progressMsg( "Cannot remove active profile!" );
+						}
+						else if( profile > control->profiles ) {
+							progressStart( "Profile #%i does not exist!", profile );
+							progressEnd();
+						}
+						else {
+							free( control->profile[profile-1] );
+							for(i=profile;i<control->profiles;i++) {
+								control->profile[i-1]=control->profile[i];
+							}
+							control->profiles--;
+
+							if( control->active > profile ) {
+								control->active--;
+							}
+							writeConfig(NULL);
+						}
 					}
 					else {
-						free( control->stream[profile-1] );
-						free( control->sname[profile-1] );
-						for(i=profile;i<control->streams;i++) {
-							control->stream[i-1]=control->stream[i];
-							control->sname[i-1]=control->sname[i];
+						profile=(-profile);
+						if( profile > control->streams ) {
+							progressStart( "Stream #%i does not exist!", profile );
+							progressEnd();
 						}
-						control->streams--;
-						control->profiles--;
-						if( profile == control->active ) {
-							control->active=0;
-						}
-						else if( control->active < -profile ) {
-							control->active++;
-						}
+						else {
+							free( control->stream[profile-1] );
+							free( control->sname[profile-1] );
+							for(i=profile;i<control->streams;i++) {
+								control->stream[i-1]=control->stream[i];
+								control->sname[i-1]=control->sname[i];
+							}
+							control->streams--;
+							control->profiles--;
+							if( profile == control->active ) {
+								control->active=0;
+							}
+							else if( control->active < -profile ) {
+								control->active++;
+							}
 
-						writeConfig(NULL);
+							writeConfig(NULL);
+						}
 					}
 				}
 			}
+
 			break;
 
 		case mpc_path:
-			if( control->argument == NULL ) {
-				progressStart( "No path given!" );
-				progressEnd();
-			}
-			else {
-				/* todo: stop player? */
-				if( setArgument( control->argument ) ){
-					control->active = 0;
-					control->current = control->root;
-					if( control->status == mpc_start ) {
-						write( p_command[fdset][1], "STOP\n", 6 );
-					}
-					else {
-						control->status=mpc_start;
-						sendplay( p_command[fdset][1], control );
-					}
+			if( asyncTest() ) {
+				if( control->argument == NULL ) {
+					progressMsg( "No path given!" );
 				}
-				sfree( &(control->argument) );
+				else {
+					if( setArgument( control->argument ) ){
+						control->active = 0;
+						control->current = control->root;
+						if( control->status == mpc_start ) {
+							write( p_command[fdset][1], "STOP\n", 6 );
+						}
+						else {
+							control->status=mpc_start;
+							sendplay( p_command[fdset][1], control );
+						}
+					}
+					sfree( &(control->argument) );
+				}
 			}
 			break;
 
 		case mpc_shuffle:
-			control->status=mpc_start;
-			control->root=shuffleTitles(control->root);
-			control->current=control->root;
-			sendplay( p_command[fdset][1], control );
+			asyncRun( plShuffle, control );
 			break;
 
 		case mpc_ivol:
@@ -1016,35 +1101,34 @@ void *reader( void *cont ) {
 			break;
 
 		case mpc_dbinfo:
-			progressStart( "Database Info" );
-			addMessage( 0, "Music dir: %s", control->musicdir );
-			dumpInfo( control->root, -1, control->skipdnp );
-			progressEnd();
+			asyncRun( plDbInfo, control );
 			break;
 
 		case mpc_longsearch:
 		case mpc_search:
-			if( control->argument == NULL ) {
-				progressStart( "Nothing to search for!" );
-			}
-			else if( addRangePrefix( line, control->command ) == 0 ) {
-				strcat( line, control->argument );
-				addMessage( 2, "Searchstring: %s", line );
-				if( ( cmd == mpc_longsearch ) ||
-						( MPC_RANGE(control->command) == mpc_album ) ||
-						( MPC_RANGE(control->command) == mpc_artist ) ) {
-					progressStart( "Looking for %s", control->argument );
-					i=searchPlay(title, line, -1, 0 );
-					addMessage( 0, "Found %i titles", i );
+			if( asyncTest() ) {
+				if( control->argument == NULL ) {
+					progressStart( "Nothing to search for!" );
 				}
-				else {
-					if( searchPlay(title, line, 1, 0 ) == 0 ) {
-						progressStart( "Nothing found for %s", control->argument );
+				else if( addRangePrefix( line, control->command ) == 0 ) {
+					strcat( line, control->argument );
+					addMessage( 2, "Searchstring: %s", line );
+					if( ( cmd == mpc_longsearch ) ||
+							( MPC_RANGE(control->command) == mpc_album ) ||
+							( MPC_RANGE(control->command) == mpc_artist ) ) {
+						progressStart( "Looking for %s", control->argument );
+						i=searchPlay(title, line, -1, 0 );
+						addMessage( 0, "Found %i titles", i );
 					}
+					else {
+						if( searchPlay(title, line, 1, 0 ) == 0 ) {
+							progressStart( "Nothing found for %s", control->argument );
+						}
+					}
+					sfree( &(control->argument) );
 				}
-				sfree( &(control->argument) );
+				progressEnd();
 			}
-			progressEnd();
 			break;
 
 
@@ -1071,7 +1155,7 @@ void *reader( void *cont ) {
 		}
 
 		control->command=mpc_idle;
-		pthread_mutex_unlock( &cmdlock );
+		pthread_mutex_unlock( &_pcmdlock );
 
 		/* notify UI that something has changed */
 		if( update ) {
@@ -1084,7 +1168,7 @@ void *reader( void *cont ) {
 		kill( pid[i], SIGTERM );
 	}
 
-	addMessage( 2, "Reader stopped" );
+	addMessage( 1, "Reader stopped" );
 
 	return NULL;
 }

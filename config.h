@@ -131,6 +131,7 @@ char *getMessage( void );
 
 void progressStart( char *msg, ... );
 void progressEnd( void );
+void progressMsg( char *msg );
 void addProgressHook( void (*func)( void *arg ) );
 void addUpdateHook( void (*func)( void *arg ) );
 void updateUI( void );

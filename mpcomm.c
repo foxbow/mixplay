@@ -16,7 +16,7 @@
 #include <errno.h>
 #include <unistd.h>
 
-static pthread_mutex_t _cmdlock=PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t _scmdlock=PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t _clientlock=PTHREAD_MUTEX_INITIALIZER;
 static int _curclient=-1;
 
@@ -25,9 +25,12 @@ static int _curclient=-1;
  * other requests to set an exclusive client will be blocked
  * until the current client is unlocked
  */
-void setCurClient( int client ) {
-	pthread_mutex_lock( &_clientlock );
+int setCurClient( int client ) {
+	if( pthread_mutex_trylock( &_clientlock ) == EBUSY ) {
+		return -1;
+	}
 	_curclient=client;
+	return 0;
 }
 
 int isCurClient( int client ) {
@@ -52,7 +55,7 @@ void unlockClient( int client ) {
  * sets the command to be sent to mixplayd
  */
 void setSCommand( mpcmd cmd ) {
-	pthread_mutex_lock( &_cmdlock );
+	pthread_mutex_lock( &_scmdlock );
 	getConfig()->command=cmd;
 }
 
@@ -425,7 +428,7 @@ void *netreader( void *control ) {
 		commdata[0]=0;
 
 		/* check current command */
-		pthread_mutex_trylock( &_cmdlock );
+		pthread_mutex_trylock( &_scmdlock );
 		switch( MPC_CMD(config->command) ) {
 		case mpc_quit:
 			config->status=mpc_quit;
@@ -481,7 +484,7 @@ void *netreader( void *control ) {
 			}
 		}
 
-		pthread_mutex_unlock( &_cmdlock );
+		pthread_mutex_unlock( &_scmdlock );
 	}
 
 	addMessage( 1, "Disconnected");
