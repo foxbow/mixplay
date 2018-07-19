@@ -829,9 +829,17 @@ void *reader( void *cont ) {
 			}
 		} /* fgets() > 0 */
 
+		/*
+		 * check if a command is set and read that command until it is not mpc_idle
+		 * this is a very unlikely race condition that _pcmdlock is locked and
+		 * the command is not yet set but it may happen and we want to make sure no
+		 * command is dropped.
+		 */
 		if ( pthread_mutex_trylock( &_pcmdlock ) == EBUSY ) {
-			while( (cmd=MPC_CMD(control->command)) == mpc_idle ) printf("retry\n");
-			addMessage(  2, "MPC %s", mpcString(cmd) );
+			while( (cmd=MPC_CMD(control->command)) == mpc_idle ) {
+				addMessage( 1, "Idling on command read" );
+			}
+			addMessage( 2, "MPC %s", mpcString(cmd) );
 			control->command=mpc_idle;
 		}
 		else {
