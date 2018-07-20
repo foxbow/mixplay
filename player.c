@@ -836,15 +836,15 @@ void *reader( void *cont ) {
 		 * command is dropped.
 		 */
 		if ( pthread_mutex_trylock( &_pcmdlock ) == EBUSY ) {
-			while( (cmd=MPC_CMD(control->command)) == mpc_idle ) {
+			while( control->command == mpc_idle ) {
 				addMessage( 1, "Idling on command read" );
 			}
-			addMessage( 2, "MPC %s", mpcString(cmd) );
-			control->command=mpc_idle;
+			addMessage( 1, "MPC %s / %04x", mpcString(control->command), control->command );
 		}
 		else {
-			cmd=mpc_idle;
+			control->command=mpc_idle;
 		}
+		cmd=MPC_CMD(control->command);
 
 		/* get the target title for fav and dnp commands */
 		title=control->current;

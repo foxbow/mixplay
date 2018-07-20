@@ -11,7 +11,6 @@ This is destined to run on a headless box and supply the stereo with a constant 
 * do-not-play lists
 * shuffle play that avoids the same artist twice in a row
 * shuffle will play each title before shuffling again
-* keyword play
 * URL stream play
 * playlist support
 * MP3 tag suport with guessing mechanism on missing tags
@@ -102,5 +101,5 @@ cmd = 000F RRRR CCCC CCCC
 args are set with the '?' operator. 
 Examples: 
 * set the volume to 50%: <server>:<port>/cmd/0015?50
-* search for a title named like 'lov hurs': <server>:<port>/cmd/1113?love+hurs
+* search for a title named like 'lov hurs': <server>:<port>/cmd/1113?lov+hurs
 

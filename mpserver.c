@@ -290,9 +290,8 @@ static void *clientHandler(void *args ) {
 							( MPC_CMD(cmd) == mpc_search ) ) {
 						if( setCurClient( sock ) == -1 ) {
 							addMessage( 1, "%s was blocked!", mpcString(cmd) );
-							sprintf( commdata, "HTTP/1.1 503 Service Unavailable\015\012\015\012" );
+							sprintf( commdata, "HTTP/1.1 503 Service Unavailable\015\012Content-Length: 0\015\012\015\012" );
 							len=strlen(commdata);
-							running=0;
 							break;
 						}
 						clmsg=config->msg->count;
