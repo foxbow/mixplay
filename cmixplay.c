@@ -47,7 +47,7 @@ void activity( const char *msg, ... ) {
  * error - errno that was set
  *		 F_FAIL = print message w/o errno and exit
  */
-void fail( int error, const char* msg, ... ) {
+void fail( const int error, const char* msg, ... ) {
 	va_list args;
 	char line[512];
 
@@ -310,6 +310,7 @@ int main( int argc, char **argv ) {
 	addMessage( 2, "Dropped out of the main loop" );
 
 	pthread_join( config->rtid, NULL );
+	pthread_join( config->stid, NULL );
 
 	if( config->changed ) {
 		writeConfig( NULL );

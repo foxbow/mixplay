@@ -50,7 +50,7 @@ void activity( const char *msg, ... ) {
  * error - errno that was set
  *		 F_FAIL = print message w/o errno and exit
  */
-void fail( int error, const char* msg, ... ) {
+void fail( const int error, const char* msg, ... ) {
 	va_list args;
 	va_start( args, msg );
 
@@ -138,6 +138,7 @@ int main( int argc, char **argv ) {
 	control->inUI=1;
 	initAll( );
 	pthread_join( control->stid, NULL );
+	pthread_join( control->rtid, NULL );
 	control->inUI=0;
 	addMessage( 0, "Server terminated" );
 	freeConfig( );

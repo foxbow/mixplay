@@ -25,8 +25,8 @@ static int _curclient=-1;
  * other requests to set an exclusive client will be blocked
  * until the current client is unlocked
  *
- * Even if it may look tempting, queuing the calls will not
- * work!
+ * Even if it may look tempting, queuing the calls is not
+ * worth the effort!
  */
 int setCurClient( int client ) {
 	if( pthread_mutex_trylock( &_clientlock ) == EBUSY ) {

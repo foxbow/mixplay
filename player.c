@@ -76,6 +76,7 @@ static long controlVolume( long volume, int abs ) {
 	elem = snd_mixer_find_selem(handle, sid);
 	if( elem == NULL) {
 		addMessage( 0, "Can't find channel %s!", handle );
+		snd_mixer_detach(handle, "default");
 		snd_mixer_close(handle);
 		config->volume=-1;
 		return -1;
@@ -96,7 +97,9 @@ static long controlVolume( long volume, int abs ) {
 	snd_mixer_selem_set_playback_volume_all(elem, ( retval * max ) / 100);
 	config->volume=retval;
 
+	snd_mixer_detach(handle, "default");
 	snd_mixer_close(handle);
+	snd_config_update_free_global();
 
 	return retval;
 }

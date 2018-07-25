@@ -108,7 +108,7 @@ static void *clientHandler(void *args ) {
 	char *pos, *end, *arg;
 	mpcmd cmd=mpc_idle;
 	static const char *mtype;
-	char playing[MAXPATHLEN];
+	char playing[MAXPATHLEN]="";
 	size_t commsize=MP_BLKSIZE;
 	ssize_t retval=0;
 	ssize_t recvd=0;
@@ -458,5 +458,7 @@ void *mpserver( void *data ) {
 		}
 	}
 	addMessage( 0, "Dropped out of the main loop" );
+	/* todo this may return before the threads are done cleaning up.. */
+	sleep(1);
 	return NULL;
 }

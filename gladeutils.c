@@ -56,7 +56,7 @@ void activity( const char *msg, ... ) {
  * msg - Message to print
  * error - errno that was set or 0 for no error to print
  */
-void fail( int error, const char* msg, ... ) {
+void fail( const int error, const char* msg, ... ) {
 	va_list args;
 	char *line;
 	GtkWidget *dialog;

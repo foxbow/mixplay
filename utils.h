@@ -42,7 +42,7 @@ typedef struct msgbuf_t msgbuf;
  * These functions need to be implemented in the UI
  * See: ncbox.c, gladeutils.c
  */
-void fail( int error, const char* msg, ... );
+void fail( const int error, const char* msg, ... );
 void activity( const char *msg, ... );
 
 /**
@@ -54,6 +54,7 @@ char *msgBuffGet( msgbuf *msgbuf );
 const char *msgBuffPeek( msgbuf *msgbuf, unsigned long msgno );
 char *msgBuffAll(  msgbuf *msgbuf );
 void  msgBuffClear( msgbuf *msgbuf );
+void msgBuffDiscard( struct msgbuf_t *msgbuf );
 
 /**
  * General utility functions

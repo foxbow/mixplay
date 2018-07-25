@@ -262,6 +262,7 @@ int initAll( ) {
 		if( NULL == control->root ) {
 			/* Runs as thread to have updates in the UI */
 			pthread_create( &tid, NULL, setProfile, ( void * )control );
+			pthread_detach( tid );
 		}
 		else {
 			control->active=0;
@@ -412,10 +413,12 @@ mpconfig *readConfig( ) {
 			}
 		}
 		while( !feof( fp ) );
+
+		fclose(fp);
 		return c_config;
 	}
 
-   	return NULL;
+	return NULL;
 }
 
 /**
@@ -509,8 +512,14 @@ void freeConfigContents() {
 		sfree( &(c_config->sname[i]) );
 	}
 	c_config->streams=0;
+	sfree( (char **)&(c_config->channel) );
+
 	sfree( (char **)&(c_config->stream) );
 	sfree( (char **)&(c_config->sname) );
+
+	sfree( (char **)&(c_config->host) );
+
+	msgBuffDiscard( c_config->msg );
 }
 
 /**
@@ -520,7 +529,7 @@ void freeConfig( ) {
 	assert( c_config != NULL );
 	freeConfigContents( );
 	c_config->root=cleanTitles( c_config->root );
-	sfree( (char **)c_config );
+	free( c_config );
 	c_config=NULL;
 }
 
