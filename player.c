@@ -36,33 +36,34 @@ static int asyncTest() {
 	return ret;
 }
 
-/**
- * adjusts the master volume
- * if volume is 0 the current volume is returned without changing it
- * otherwise it's changed by 'volume'
- * if abs is 0 'volume' is regarded as a relative value
- * if ALSA does not work or the current card cannot be selected -1 is returned
- */
-static long controlVolume( long volume, int abs ) {
-	long min, max;
-	snd_mixer_t *handle;
-	snd_mixer_elem_t *elem;
-	snd_mixer_selem_id_t *sid;
-	long retval = 0;
-	char *channel;
-	mpconfig *config;
-	config=getConfig();
-	channel=config->channel;
+static snd_mixer_t *handle=NULL;
+static snd_mixer_elem_t *elem=NULL;
 
+/**
+ * disconnects from the mixer and frees all resources
+ */
+static void closeAudio( ) {
+	if( handle != NULL ) {
+		snd_mixer_detach(handle, "default");
+		snd_mixer_close(handle);
+		snd_config_update_free_global();
+		handle=NULL;
+	}
+}
+
+/**
+ * tries to connect to the mixer
+ */
+static long openAudio( const char *channel ) {
+	snd_mixer_selem_id_t *sid=NULL;
 	if( channel == NULL || strlen( channel ) == 0 ) {
-		config->volume=-1;
+		addMessage( 0, "No audio channel set" );
 		return -1;
 	}
 
 	snd_mixer_open(&handle, 0);
 	if( handle == NULL ) {
 		addMessage( 1, "No ALSA support" );
-		config->volume=-1;
 		return -1;
 	}
 
@@ -74,20 +75,48 @@ static long controlVolume( long volume, int abs ) {
 	snd_mixer_selem_id_set_index(sid, 0);
 	snd_mixer_selem_id_set_name(sid, channel );
 	elem = snd_mixer_find_selem(handle, sid);
+	/**
+	 * for some reason this can't be free'd explicitly.. ALSA is weird!
+	 * snd_mixer_selem_id_free(sid);
+	 */
 	if( elem == NULL) {
 		addMessage( 0, "Can't find channel %s!", handle );
-		snd_mixer_detach(handle, "default");
-		snd_mixer_close(handle);
-		config->volume=-1;
+		closeAudio();
 		return -1;
 	}
 
+	return 0;
+}
+
+/**
+ * adjusts the master volume
+ * if volume is 0 the current volume is returned without changing it
+ * otherwise it's changed by 'volume'
+ * if abs is 0 'volume' is regarded as a relative value
+ * if ALSA does not work or the current card cannot be selected -1 is returned
+ */
+static long controlVolume( long volume, int absolute ) {
+	long min, max;
+	long retval = 0;
+	char *channel;
+	mpconfig *config;
+	config=getConfig();
+	channel=config->channel;
+
+	if( handle == NULL ) {
+		if( openAudio( channel ) == -1 ) {
+			config->volume=-1;
+			return -1;
+		}
+	}
+
 	snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
-	if( abs != 0 ) {
+	if( absolute != 0 ) {
 		retval=volume;
 	}
 	else {
-		snd_mixer_selem_get_playback_volume(elem, SND_MIXER_SCHN_MONO, &retval );
+		snd_mixer_handle_events(handle);
+		snd_mixer_selem_get_playback_volume(elem, SND_MIXER_SCHN_FRONT_LEFT, &retval );
 		retval=(( retval * 100 ) / max)+1;
 		retval+=volume;
 	}
@@ -96,10 +125,6 @@ static long controlVolume( long volume, int abs ) {
 	if( retval > 100 ) retval=100;
 	snd_mixer_selem_set_playback_volume_all(elem, ( retval * max ) / 100);
 	config->volume=retval;
-
-	snd_mixer_detach(handle, "default");
-	snd_mixer_close(handle);
-	snd_config_update_free_global();
 
 	return retval;
 }
@@ -1175,6 +1200,7 @@ void *reader( void *cont ) {
 	}
 	while ( control->status != mpc_quit );
 
+	closeAudio();
 	for( i=0; i <= control->fade; i++ ) {
 		kill( pid[i], SIGTERM );
 	}

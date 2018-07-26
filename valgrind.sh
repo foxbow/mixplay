@@ -1,1 +1,2 @@
-valgrind --show-leak-kinds=definite --leak-check=full bin/gmixplay
+#!/bin/bash
+valgrind --show-leak-kinds=definite,possible,indirect --leak-check=full bin/mixplayd -d
