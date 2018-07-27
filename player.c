@@ -139,7 +139,8 @@ static long controlVolume( long volume, int absolute ) {
 /**
  * sets the given stream
  */
-static void setStream( mpconfig *control, const char* stream, const char *name ) {
+void setStream( const char* stream, const char *name ) {
+	mpconfig *control=getConfig();
 	control->root=cleanTitles( control->root );
 	control->root=insertTitle( NULL, stream );
 	strncpy( control->root->title, name, NAMELEN );
@@ -159,80 +160,6 @@ void setPCommand(  mpcmd cmd ) {
 	getConfig()->command=cmd;
 }
 
-/**
- * parse arguments given to the application
- * also handles playing of a single file, a directory, a playlist or an URL
- */
-int setArgument( const char *arg ) {
-	char line [MAXPATHLEN];
-	int  i;
-	mpconfig *control=getConfig();
-
-	control->active=0;
-	if( isURL( arg ) ) {
-		addMessage( 1, "URL: %s", arg );
-		control->playstream=1;
-		line[0]=0;
-
-		if( endsWith( arg, ".m3u" ) ||
-				endsWith( arg, ".pls" ) ) {
-			fail( F_FAIL, "Only direct stream support" );
-			strcpy( line, "@" );
-		}
-
-		strncat( line, arg, MAXPATHLEN );
-		control->root=cleanTitles( control->root );
-		control->current=control->root;
-		setStream( control, line, "Waiting for stream info..." );
-		return 1;
-	}
-	else if( endsWith( arg, ".mp3" ) ) {
-		addMessage( 1, "Single file: %s", arg );
-		/* play single song... */
-		control->root=cleanTitles( control->root );
-		control->root=insertTitle( NULL, arg );
-		control->current=control->root;
-		return 2;
-	}
-	else if( isDir( arg ) ) {
-		addMessage( 1, "Directory: %s", arg );
-		control->root=cleanTitles( control->root );
-		strncpy( line, arg, MAXPATHLEN );
-		control->root=recurse( line, NULL );
-		if( control->root != NULL ) {
-			control->current=control->root;
-			do {
-				control->current->plnext=control->current->dbnext;
-				control->current->plprev=control->current->dbprev;
-				control->current=control->current->dbnext;
-			} while( control->current != control->root );
-		}
-		return 3;
-	}
-	else if ( endsWith( arg, ".m3u" ) ||
-			  endsWith( arg, ".pls" ) ) {
-		if( NULL != strrchr( arg, '/' ) ) {
-			strcpy( line, arg );
-			i=strlen( line );
-
-			while( line[i] != '/' ) {
-				i--;
-			}
-
-			line[i]=0;
-			chdir( line );
-		}
-
-		addMessage( 1, "Playlist: %s", arg );
-		cleanTitles( control->root );
-		control->root=loadPlaylist( arg );
-		control->current=control->root;
-		return 4;
-	}
-
-	fail( F_FAIL, "Illegal argument '%s'!", arg );
-	return -1;
-}
 
 /**
  * make mpeg123 play the given title
@@ -277,7 +204,7 @@ void *setProfile( void *data ) {
 		}
 
 		control->playstream=1;
-		setStream( control, control->stream[active], control->sname[active] );
+		setStream( control->stream[active], control->sname[active] );
 	}
 	else if( active > 0 ){
 		active=active-1;

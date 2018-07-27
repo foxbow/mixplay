@@ -139,6 +139,7 @@ void updateUI( void );
 const char *mpcString( mpcmd rawcmd );
 const mpcmd mpcCommand( const char *val );
 void setCommand( mpcmd rawcmd );
+int  setArgument( const char *arg );
 int getArgs( int argc, char ** argv );
 int initAll( void );
 #endif /* _CONFIG_H_ */
