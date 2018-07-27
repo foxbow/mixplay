@@ -899,11 +899,11 @@ void *reader( void *cont ) {
 
 		case mpc_QUIT:
 		case mpc_quit:
+			/* The player does not know about the main App so anything setting mcp_quit
+			 * MUST make sure that the main app terminates as well ! */
 			if( asyncTest() ) {
 				control->status=mpc_quit;
 			}
-			/* The player does not know about the main App so anything setting mcp_quit
-			 * MUST make sure that the main app terminates as well ! */
 			break;
 
 		case mpc_profile:
@@ -1128,8 +1128,9 @@ void *reader( void *cont ) {
 	while ( control->status != mpc_quit );
 
 	closeAudio();
-	for( i=0; i <= control->fade; i++ ) {
-		kill( pid[i], SIGTERM );
+	/* stop player(s) gracefully */
+	for( i=0; i<control->fade; i++) {
+		write( p_command[fdset][i], "QUIT\n", 6 );
 	}
 
 	addMessage( 1, "Reader stopped" );
