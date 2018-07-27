@@ -8,7 +8,7 @@
 	border: 0;
 }
 
-#current {
+#current,#playpack {
 	background-color: #ddd;
 	padding-top: 5px;	
 	padding-bottom: 5px;
