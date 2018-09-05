@@ -14,21 +14,28 @@ function showInfo() {
 
 /* scroll long texts */
 function scrollToggle( ) {
-	var to=1000;
+	var to=0;
+	if (doUpdate == 0) return;
 	for (var i = 0; i < scrolls.length; i++) {
 		var element=scrolls[i].element;
 		if( scrolls[i].offset.charAt(0) == '-' ) {
 			if( element.style.right == scrolls[i].offset ) {
 				element.style.right="0px";
-				to=to+4000;
+				to=-1;
 			}
 			else {
 				element.style.right = scrolls[i].offset;
-				to=to+9000;
+				to=1;
 			}
 		}
 	}
-	setTimeout( "scrollToggle()", to )
+	switch(to) {
+		case -1: setTimeout( "scrollToggle()", 2000 );
+			break;
+		case 1: setTimeout( "scrollToggle()", 7000 );
+			break;
+		defaut: setTimeout( "scrollToggle()", 1000 );
+	}
 }
 
 /* enables scrolling on texts that are longer than the parent container */
