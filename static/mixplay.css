@@ -2,10 +2,26 @@
 	text-align: center;
 }
 
+.scroll {
+	position: relative;
+	height: 40px;
+	width: 100%;
+	overflow: hidden;
+}
+
+.scroll p {
+	position: absolute;
+	font-size: 150%;
+	white-space: nowrap;
+	padding-top: 5px;
+	padding-bottom: 5px;
+	margin: 0px;
+	text-align: left;
+}
+
 #title, #prev, #next {
 	font-size : 150%;
-	padding: 2px;
-	border: 0;
+	white-space: nowrap;
 }
 
 #current,#playpack {

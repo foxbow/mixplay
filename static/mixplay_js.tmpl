@@ -6,9 +6,67 @@ var isstream=0;
 var msglines=["","","","","","","","","","","","","","",""];
 var msgpos=0;
 var active=0;
+var scrolls=[];
 
 function showInfo() {
 	alert( "Running mixplayd version ~~MP_VERSION~~" );
+}
+
+/* scroll long texts */
+function scrollToggle( ) {
+	for (var i = 0; i < scrolls.length; i++) {
+		var element=scrolls[i].element;
+		if( scrolls[i].offset.charAt(0) == '-' ) {
+			if( element.style.right == scrolls[i].offset ) {
+				element.style.right="0px";
+			}
+			else {
+				element.style.right = scrolls[i].offset;
+			}
+		}
+	}
+	setTimeout( "scrollToggle()", 4000 )
+}
+
+/* enables scrolling on texts that are longer than the parent container */
+function setScrolls( ) {
+	for( var i=0; i < scrolls.length; i++ ) {
+		var scroll=scrolls[i];
+		var element=scroll.element;
+		element.style.left="auto";
+		element.style.right="auto";
+		var off_right=getComputedStyle(element).right;
+		var right=parseInt(off_right,10);
+		scroll.offset=off_right;
+		if( off_right.charAt(0) == '-' ) {
+			element.style.right = off_right;
+			element.offsetHeight;
+			element.style.transition = 'right 3s ease-in-out';
+//			element.style.textAlign='left';
+//			element.style.left="auto";
+		}
+		else {
+			element.style.left=(right/2)+"px";
+//			element.style.textAlign='center';
+//			element.style.right="auto";
+		}
+	}
+}
+
+/* sets up the scroller object */
+function initScroll(index,id) {
+	if( scrolls[index] == undefined ) {
+		var element=document.getElementById(id);
+		var scroll={"id":id,"element":element,"offset":"0px"};
+		scrolls[index]=scroll;
+	}
+}
+
+/* start scrollers onload - see HTML */
+function initScrolls() {
+	initScroll(0, 'prev');
+	initScroll(1, 'title');
+	initScroll(2, 'next');
 }
 
 /* stop updates and make sure that error messages do not stack */
@@ -176,6 +234,7 @@ function updateUI( ){
 						else {
 							document.getElementById( 'fav' ).disabled=false;		  			
 						}
+						setScrolls();
 					}
 					isstream=data.playstream;
 
@@ -348,4 +407,6 @@ function remProf() {
 
 }
 
+/* start the UI update thread loops */
 updateUI();
+scrollToggle();

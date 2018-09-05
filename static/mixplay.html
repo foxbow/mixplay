@@ -5,22 +5,22 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" >
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" type="text/css" href="/mixplay.css" >
-    <script type="text/javascript" src="mixplay.js"></script>
+    <script type="text/javascript" src="/mixplay.js"></script>
     <title>Mixplay</title>
   </head>
-  <body>
+  <body onload='initScrolls()'>
     <div id='main' onselectstart='return false' onwheel='volWheel(event)'>
-      <div id='prev' onclick='sendCMD(0x02)'>prev</div>
+      <div class='scroll' onclick='sendCMD(0x02)'><p id='prev'>prev</p></div>
       <div id='current' onclick='sendCMD(0x00)'>
         <div id='artist'>artist</div>
-        <div id='title' >title</div>
+        <div class='scroll'><p id='title'>title</p></div>
         <div id='album' >album</div>
         <div id='genre' >genre</div>
       </div>
       <div id='playpack' onclick='sendCMD(0x05)'>
         <div id='playtime'>00:00</div> <progress id='progress' value='0' max='100'></progress><div id='remtime'>00:00</div>
       </div>
-      <div id='next' onclick='sendCMD(0x03)'>next</div>
+      <div class='scroll' onclick='sendCMD(0x03)'><p id='next'>next</p></div>
       <div id='playstr'>
         <div id='splaytime'>00:00</div>
       </div>
