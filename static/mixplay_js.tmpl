@@ -14,18 +14,21 @@ function showInfo() {
 
 /* scroll long texts */
 function scrollToggle( ) {
+	var to=1000;
 	for (var i = 0; i < scrolls.length; i++) {
 		var element=scrolls[i].element;
 		if( scrolls[i].offset.charAt(0) == '-' ) {
 			if( element.style.right == scrolls[i].offset ) {
 				element.style.right="0px";
+				to=to+4000;
 			}
 			else {
 				element.style.right = scrolls[i].offset;
+				to=to+9000;
 			}
 		}
 	}
-	setTimeout( "scrollToggle()", 4000 )
+	setTimeout( "scrollToggle()", to )
 }
 
 /* enables scrolling on texts that are longer than the parent container */

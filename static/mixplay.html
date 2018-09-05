@@ -8,7 +8,7 @@
     <script type="text/javascript" src="/mixplay.js"></script>
     <title>Mixplay</title>
   </head>
-  <body onload='initScrolls()'>
+  <body onload='initScrolls()' onresize='setScrolls()'>
     <div id='main' onselectstart='return false' onwheel='volWheel(event)'>
       <div class='scroll' onclick='sendCMD(0x02)'><p id='prev'>prev</p></div>
       <div id='current' onclick='sendCMD(0x00)'>
