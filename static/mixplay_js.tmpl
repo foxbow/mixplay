@@ -8,11 +8,17 @@ var msgpos=0;
 var active=0;
 var scrolls=[];
 
+/*
+ * pops up the current build ID
+ */
 function showInfo() {
 	alert( "Running mixplayd version ~~MP_VERSION~~" );
 }
 
-/* scroll long texts */
+/* 
+ * check if a long text needs to be scrolled and then scroll into the
+ * proper direction 
+ */
 function scrollToggle( ) {
 	var to=0;
 	if (doUpdate == 0) return;
@@ -38,7 +44,10 @@ function scrollToggle( ) {
 	}
 }
 
-/* enables scrolling on texts that are longer than the parent container */
+/*
+ * enables scrolling on texts that are longer than the parent container 
+ * and centers shorter texts 
+ */
 function setScrolls( ) {
 	for( var i=0; i < scrolls.length; i++ ) {
 		var scroll=scrolls[i];
@@ -52,18 +61,16 @@ function setScrolls( ) {
 			element.style.right = off_right;
 			element.offsetHeight;
 			element.style.transition = 'right 3s ease-in-out';
-//			element.style.textAlign='left';
-//			element.style.left="auto";
 		}
 		else {
 			element.style.left=(right/2)+"px";
-//			element.style.textAlign='center';
-//			element.style.right="auto";
 		}
 	}
 }
 
-/* sets up the scroller object */
+/*
+ * sets up the scroller object 
+ */
 function initScroll(index,id) {
 	if( scrolls[index] == undefined ) {
 		var element=document.getElementById(id);
@@ -72,14 +79,18 @@ function initScroll(index,id) {
 	}
 }
 
-/* start scrollers onload - see HTML */
+/*
+ * start scrollers onload - see HTML
+ */
 function initScrolls() {
 	initScroll(0, 'prev');
 	initScroll(1, 'title');
 	initScroll(2, 'next');
 }
 
-/* stop updates and make sure that error messages do not stack */
+/*
+ * stop updates and make sure that error messages do not stack
+ */
 function fail( msg ) {
 	if( doUpdate != 0 ) {
 		doUpdate=0;
@@ -87,7 +98,9 @@ function fail( msg ) {
 	}
 }
 
-/* set profile to sanitized value */
+/*
+ * set profile to sanitized value
+ */
 function setProf() {
 	var e=document.getElementById("profiles");
 	var id=e.value;
@@ -99,7 +112,9 @@ function setProf() {
 	}
 }
 
-/* toggle visibility of extra panes */
+/*
+ * toggle visibility of extra panes
+ */
 function toggleVisibility( element ) {
 	e=document.getElementById( element );
 	if( e.style.display=='none') {
@@ -113,7 +128,9 @@ function toggleVisibility( element ) {
 	}
 }
 
-/* stop the server - this should really not be here =) */
+/*
+ * stop the server - this should really not be here =)
+ */
 function killServer() {
 	if( confirm("Do you really want to stop the Server?") ) {
 		sendCMD(0x11);
@@ -121,7 +138,9 @@ function killServer() {
 	}
 }
 
-/* add a line of text to the message pane. Acts as ringbuffer */
+/* 
+ * add a line of text to the message pane. Acts as ringbuffer
+ */
 function addText(text) {
 	var line="";
 	var numlines=15;
@@ -149,7 +168,9 @@ function addText(text) {
 	}
 }
 
-/* send a command with optional argument to the server */
+/*
+ * send a command with optional argument to the server
+ */
 function sendCMD( cmd, arg="" ) {
 	var xmlhttp=new XMLHttpRequest();
 	var code=Number(cmd).toString(16);
@@ -203,12 +224,16 @@ function volWheel( e ) {
 	}
 }
 
-/* change text in an element */
+/*
+ * change text in an element
+ */
 function setElement( e, val ) {
 	document.getElementById( e ).innerHTML=val;
 }
 
-/* show/hide an element */
+/*
+ * show/hide an element
+ */
 function setVisible( e, i ) {
 	if( i == 0 ) {
 		document.getElementById( e ).style.display='none';
@@ -218,7 +243,10 @@ function setVisible( e, i ) {
 	}
 }
 
-/* get current status from the server and update the UI elements with the data */
+/*
+ * get current status from the server and update the UI elements with the data
+ * handles different types of status replies
+ */
 function updateUI( ){
 	var xmlhttp=new XMLHttpRequest();
 	xmlhttp.onreadystatechange=function() {
@@ -230,6 +258,7 @@ function updateUI( ){
 						fail( "Version clash, expected "+mpver+" and got "+data.version );
 						return;
 					}
+					/* full update */
 					if( data.type == 3 ) {
 						document.title=data.current.artist+" - "+data.current.title;
 						setElement( 'title', data.current.title );
@@ -246,6 +275,7 @@ function updateUI( ){
 						}
 						setScrolls();
 					}
+					/* standdard update */
 					isstream=data.playstream;
 
 					setVisible( 'prev', !isstream );
@@ -304,13 +334,18 @@ function updateUI( ){
 	xmlhttp.send();
 }
 
-/* shows the current profile/channel in the profile select dropdown */ 
+/*
+ * shows the current profile/channel in the profile select dropdown
+ */ 
 function setActive( id ) {
 	var s=document.getElementById("profiles");
 	s.value=id;
 }
 
-/* gets the basic configuration of the server */
+/*
+ * gets the basic configuration of the server
+ * this should only happen once at start
+ */
 function getConfig() {
 	var xmlhttp=new XMLHttpRequest();
 	xmlhttp.onreadystatechange=function() {
@@ -352,10 +387,16 @@ function getConfig() {
 	xmlhttp.send();
 }
 
+/*
+ * set volume to a fixed value
+ */
 function setVolume( vol ) {
 	sendCMD( 0x15, vol );
 }
 
+/*
+ * send command with range info (FAV/DNP)
+ */
 function sendRange( cmd, term="", search=0 ) {
 	var e=document.getElementById('range');
 	if( search == 1 ) {
@@ -370,6 +411,9 @@ function sendRange( cmd, term="", search=0 ) {
 	sendCMD( cmd, term );
 }
 
+/*
+ * send command with argument set in the 'text' element (Search)
+ */
 function sendArg( cmd, search=0 ) {
 	if( isstream ) return;
 	var term=document.getElementById('text').value;
@@ -381,6 +425,9 @@ function sendArg( cmd, search=0 ) {
 	}
 }
 
+/*
+ * creates a new profile or loads a channel
+ */
 function createLoad() {
 	var term=document.getElementById('ptext').value;
 	var asking="";
@@ -406,6 +453,9 @@ function createLoad() {
 	}
 }
 
+/*
+ * removes the current profile
+ */
 function remProf() {
 	var id=document.getElementById("profiles").value;
 	if( id != 0 ) {
@@ -417,6 +467,8 @@ function remProf() {
 
 }
 
-/* start the UI update thread loops */
+/* 
+ * start the UI update thread loops */
+ */
 updateUI();
 scrollToggle();
