@@ -930,7 +930,7 @@ restart:
  * If there are more than 10 previous titles, those get pruned.
  * While there are less that 10 next titles, titles will be added.
  */
-void plCheck() {
+void plCheck( int del ) {
 	int cnt=0;
 	mpplaylist *pl=getConfig()->playlist;
 	mpplaylist *buf=pl;
@@ -951,6 +951,16 @@ void plCheck() {
 
 		pl=getConfig()->playlist;
 		while( pl->next != NULL ) {
+			if( ( del != 0 ) && ( access( pl->title->path, F_OK ) != 0 ) ) {
+				buf=pl->prev;
+				pl->prev->next=pl->next;
+				if( pl->next != NULL ) {
+					pl->next->prev=pl->prev;
+				}
+				free(pl);
+				pl=buf;
+				cnt--;
+			}
 			pl=pl->next;
 			cnt++;
 		}

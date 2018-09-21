@@ -257,7 +257,7 @@ void *setProfile( void *data ) {
 		}
 		applyDNPlist( control->root, dnplist );
 		applyFAVlist( control->root, favourites );
-		plCheck();
+		plCheck( 0 );
 		cleanList( dnplist );
 		cleanList( favourites );
 		control->playstream=0;
@@ -349,7 +349,7 @@ static void *plDbClean( void *arg ) {
 
 	if( i > 0 ) {
 		addMessage( 0, "Removed %i titles", i );
-		order=1;
+		plCheck( 1 );
 	}
 	else {
 		addMessage( 0, "No titles removed" );
@@ -360,17 +360,9 @@ static void *plDbClean( void *arg ) {
 
 	if( i > 0 ) {
 		addMessage( 0, "Added %i new titles", i );
-		order=1;
 	}
 	else {
 		addMessage( 0, "No titles to be added" );
-	}
-
-	if( 1 == order ) {
-		addMessage( 0, "Restarting player.." );
-		control->status=mpc_start;
-		setProfile( control );
-		control->current->title = control->root;
 	}
 
 	progressEnd( );
@@ -679,7 +671,7 @@ void *reader( void *cont ) {
 							}
 							else {
 								control->current=control->current->next;
-								plCheck();
+								plCheck( 0 );
 								/* swap player if we want to fade */
 								if( control->fade ) {
 									fdset=fdset?0:1;
@@ -814,7 +806,7 @@ void *reader( void *cont ) {
 
 		switch( cmd ) {
 		case mpc_start:
-			plCheck();
+			plCheck( 0 );
 			if( control->status == mpc_start ) {
 				write( p_command[fdset][1], "STOP\n", 6 );
 			}
@@ -830,7 +822,7 @@ void *reader( void *cont ) {
 				control->status=( mpc_play == control->status )?mpc_idle:mpc_play;
 			}
 			else {
-				plCheck();
+				plCheck( 0 );
 				if( control->current != NULL ) {
 					addMessage( 1, "Autoplay.." );
 					sendplay( p_command[fdset][1], control );
@@ -877,7 +869,7 @@ void *reader( void *cont ) {
 		case mpc_dnp:
 			if( asyncTest() ) {
 				handleRangeCmd( title, control->command );
-				plCheck();
+				plCheck( 0 );
 				order=0;
 				write( p_command[fdset][1], "STOP\n", 6 );
 			}

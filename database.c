@@ -294,7 +294,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 	dbroot=dbGetMusic( dbname );
 
 	db=dbOpen( dbname );
-	addMessage( 1, "Calculating mean playcount..." );
+	addMessage( 1, "Calculating proper playcount..." );
 
 	if( NULL != dbroot ) {
 		dbrunner=dbroot;
@@ -302,19 +302,19 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 		do {
 			if( !( dbrunner->flags & MP_DNP ) ) {
 				count++;
-				mean+=dbrunner->playcount;
+				if( dbrunner->flags & MP_FAV ) {
+					mean+=dbrunner->playcount/2;
+				}
+				else {
+					mean+=dbrunner->playcount;
+				}
 			}
 			dbrunner=dbrunner->next;
 		}
 		while( dbrunner != dbroot );
 
-		/* round up */
-		if( ( mean%count ) > (count/2) ) {
-			mean=(mean/count)+1;
-		}
-		else {
-			mean=(mean/count);
-		}
+		/* round down so new titles have a slightly better chance to be played */
+		mean=(mean/count);
 	}
 
 	/* scan directory */

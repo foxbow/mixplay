@@ -60,7 +60,7 @@ mpplaylist *addToPL( mptitle *title, mpplaylist *target );
 void moveEntry( mpplaylist *entry, mpplaylist *pos );
 mpplaylist *cleanPlaylist( mpplaylist *pl );
 mpplaylist *addPLDummy( mpplaylist *pl, const char *name );
-void plCheck();
+void plCheck( int del );
 
 mptitle *recurse( char *curdir, mptitle *files );
 mptitle *shuffleTitles( mptitle *base );
