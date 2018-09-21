@@ -133,7 +133,7 @@ function toggleVisibility( element ) {
  */
 function killServer() {
 	if( confirm("Do you really want to stop the Server?") ) {
-		sendCMD(0x11);
+		sendCMD(0x10);
 		doUpdate=0;
 	}
 }
@@ -217,10 +217,10 @@ function sendCMD( cmd, arg="" ) {
  */
 function volWheel( e ) {
 	if( e.deltaY < 0 ) {
-		sendCMD( 0x0d );
+		sendCMD( 0x0c);
 	}
 	else if( e.deltaY > 0 ) {
-		sendCMD( 0x0e );
+		sendCMD( 0x0d );
 	}
 }
 
@@ -266,6 +266,12 @@ function updateUI( ){
 						setElement( 'artist', data.current.artist );
 						setElement( 'album', data.current.album );
 						setElement( 'genre', data.current.genre );
+						if( data.next.length > 0 ) {
+						}
+							setElement( 'next', data.next[0].artist+" - "+data.next[0].title );
+						else {
+							setElement( 'next', "---" );
+						}
 						setElement( 'next', data.next.artist+" - "+data.next.title );
 						if( data.current.flags & 1 )  {
 							document.getElementById( 'fav' ).disabled=true;
@@ -391,7 +397,7 @@ function getConfig() {
  * set volume to a fixed value
  */
 function setVolume( vol ) {
-	sendCMD( 0x15, vol );
+	sendCMD( 0x14, vol );
 }
 
 /*
@@ -436,7 +442,7 @@ function createLoad() {
 	}
 	else {
 		if( term.toLowerCase().startsWith("http") ) {
-			sendCMD( 0x17, term );
+			sendCMD( 0x16, term );
 		}
 		else {
 			if( isstream ) {
@@ -446,7 +452,7 @@ function createLoad() {
 				asking="Create new profile "+term+" ?"
 			}
 			if( confirm( asking ) ) {
-				sendCMD( 0x16, term );
+				sendCMD( 0x15, term );
 				doUpdate=-1;
 			}
 		}
@@ -460,7 +466,7 @@ function remProf() {
 	var id=document.getElementById("profiles").value;
 	if( id != 0 ) {
 		if( confirm( "Remove Profile #"+id+"?" ) ) {
-			sendCMD( 0x18,id );
+			sendCMD( 0x17,id );
 			doUpdate=-1;
 		}
 	}
@@ -468,7 +474,7 @@ function remProf() {
 }
 
 /* 
- * start the UI update thread loops */
+ * start the UI update thread loops
  */
 updateUI();
 scrollToggle();

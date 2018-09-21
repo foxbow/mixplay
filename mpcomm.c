@@ -114,31 +114,57 @@ static void jsonGetTitle( jsonObject *jo, const char *key, mptitle *title ) {
 }
 
 /**
- * turns a list of titles into a jsonObject.
+ * turns a playlist into a jsonObject.
  */
-jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mptitle *root ) {
-	jsonObject *title;
-	mptitle *cur=root;
+static jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mpplaylist *pl ) {
+	jsonObject *title=NULL;
 	char ikey[20];
 	int index=0;
 
-	jo=jsonInitArr( jo, key );
-	while( cur != NULL ) {
+	while( pl != NULL ) {
 		sprintf( ikey, "%i", index );
-		title=jsonAddTitle( title, ikey, cur );
-		if( index == 0 ) {
-			jo=jsonAddArr( NULL, key, title );
+		title=jsonAddTitle( title, ikey, pl->title );
+		pl=pl->next;
+		index++;
+	}
+	jo=jsonAddArr( jo, key, title );
+
+	return jo;
+}
+
+int jsonGetTitles( jsonObject *jo, const char *key, mpplaylist *pl ) {
+	mpplaylist *buf=NULL;
+	char ikey[20]="0";
+	int index=0;
+
+	while( jsonPeek( jo, ikey ) != json_null ) {
+		if( pl->next == NULL ) {
+			pl->next=falloc(1, sizeof(mpplaylist) );
+			pl->next->next=NULL;
+			pl->next->prev=pl;
+			pl->title=falloc(1,sizeof(mptitle) );
 		}
-		if( cur->plnext == root ) {
-			cur=NULL;
-		}
-		else {
-			cur=cur->plnext;
-		}
+		pl=pl->next;
+		jsonGetTitle( jo, ikey, pl->title );
 		index++;
 	}
 
-	return jo;
+	/* remove playlist elements that were not updated */
+	pl=pl->next;
+	while( pl != NULL ) {
+		if( pl->prev != NULL ) {
+			pl->prev->next=NULL;
+		}
+		buf=pl->next;
+		if( buf != NULL ) {
+			buf->prev=NULL;
+		}
+		free(pl->title);
+		free(pl);
+		pl=buf;
+	}
+
+	return index;
 }
 
 /**
@@ -148,20 +174,21 @@ jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mptitle *root ) {
 char *serializeStatus( unsigned long *count, int clientid, int fullstat ) {
 	mpconfig *data=getConfig();
 	jsonObject *jo=NULL;
+	mpplaylist *current=data->current;
 
 	jo=jsonAddInt( jo, "version", MPCOMM_VER );
 
 	if( fullstat ) {
 		jsonAddInt( jo, "type", MPCOMM_FULLSTAT );
-		if( data->current != NULL ) {
-			jsonAddTitle( jo, "prev", data->current->plprev );
-			jsonAddTitle( jo, "current", data->current );
-			jsonAddTitle( jo, "next", data->current->plnext );
+		if( current != NULL ) {
+			jsonAddTitle( jo, "prev", current->prev->title );
+			jsonAddTitle( jo, "current", data->current->title );
+			jsonAddTitles( jo, "next", current->next );
 		}
 		else {
 			jsonAddTitle( jo, "prev", NULL );
 			jsonAddTitle( jo, "current", NULL );
-			jsonAddTitle( jo, "next", NULL );
+			jsonAddTitles( jo, "next", NULL );
 		}
 	}
 	else {
@@ -271,16 +298,15 @@ static int deserializeStatus( jsonObject *jo ) {
 
 	if( data->current == NULL ) {
 		/* dummy path to fill artist, album, title */
-		data->current=insertTitle( data->current, "server/mixplayd/title" );
-		data->root=data->current;
-		addToPL( data->current, data->current );
-		addToPL( insertTitle( data->current, "server/mixplayd/title" ), data->current );
-		addToPL( insertTitle( data->current, "server/mixplayd/title" ), data->current );
+		data->current=addPLDummy( NULL, "server/mixplayd/title" );
+		addPLDummy( data->current, "server/mixplayd/title" );
+		addPLDummy( data->current, "server/mixplayd/title" );
+		addPLDummy( data->current, "server/mixplayd/title" );
 	}
 	if( jsonGetInt(jo, "type" ) == MPCOMM_FULLSTAT ) {
-		jsonGetTitle( jo, "prev", data->current->plprev );
-		jsonGetTitle( jo, "current", data->current );
-		jsonGetTitle( jo, "next", data->current->plnext );
+		jsonGetTitle( jo, "prev", data->current->prev->title );
+		jsonGetTitle( jo, "current", data->current->title );
+		jsonGetTitle( jo, "next", data->current->next->title );
 	}
 	data->active=jsonGetInt( jo, "active");
 	data->playstream=jsonGetInt( jo, "playstream" );

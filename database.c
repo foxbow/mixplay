@@ -29,7 +29,7 @@ static mptitle *findTitle( mptitle *base, const char *path ) {
 			return runner;
 		}
 
-		runner=runner->dbnext;
+		runner=runner->next;
 	}
 	while ( runner != base );
 
@@ -56,7 +56,7 @@ static void dbDump( const char *dbname, mptitle *root ) {
 		runner->key=index;
 		dbPutTitle( db, runner );
 		index++;
-		runner=runner->dbnext;
+		runner=runner->next;
 	}
 	while( runner != root );
 
@@ -77,15 +77,10 @@ static int mp3Exists( const mptitle *title ) {
 static mptitle *removeTitle( mptitle *entry ) {
 	mptitle *next=NULL;
 
-	if( entry->plnext != entry ) {
-		entry->plnext->plprev=entry->plprev;
-		entry->plprev->plnext=entry->plnext;
-	}
-
-	if( entry->dbnext != entry ) {
-		next=entry->dbnext;
-		entry->dbnext->dbprev=entry->dbprev;
-		entry->dbprev->dbnext=entry->dbnext;
+	if( entry->next != entry ) {
+		next=entry->next;
+		entry->next->prev=entry->prev;
+		entry->prev->next=entry->next;
 	}
 
 	free( entry );
@@ -184,18 +179,14 @@ static mptitle *addDBTitle( struct dbentry_t dbentry, mptitle *root, unsigned in
 
 	if( NULL == root ) {
 		root=entry;
-		root->dbprev=root;
-		root->dbnext=root;
-		root->plnext=root;
-		root->plprev=root;
+		root->prev=root;
+		root->next=root;
 	}
 	else {
-		entry->dbnext=root->dbnext;
-		entry->dbprev=root;
-		root->dbnext->dbprev=entry;
-		root->dbnext=entry;
-		entry->plnext=entry;
-		entry->plprev=entry;
+		entry->next=root->next;
+		entry->prev=root;
+		root->next->prev=entry;
+		root->next=entry;
 	}
 
 	return entry;
@@ -241,7 +232,7 @@ mptitle *dbGetMusic( const char *dbname ) {
 
 	addMessage( 1, "Loaded %i titles from the database", index-1 );
 
-	return ( dbroot?dbroot->dbnext:NULL );
+	return ( dbroot?dbroot->next:NULL );
 }
 
 /**
@@ -262,14 +253,14 @@ int dbCheckExist( const char *dbname ) {
 
 		if( !mp3Exists( runner ) ) {
 			if( root == runner ) {
-				root=runner->dbprev;
+				root=runner->prev;
 			}
 
 			runner=removeTitle( runner );
 			num++;
 		}
 		else {
-			runner=runner->dbnext;
+			runner=runner->next;
 		}
 	}
 	while( ( runner != NULL ) && ( root != runner ) );
@@ -313,7 +304,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 				count++;
 				mean+=dbrunner->playcount;
 			}
-			dbrunner=dbrunner->dbnext;
+			dbrunner=dbrunner->next;
 		}
 		while( dbrunner != dbroot );
 
@@ -329,7 +320,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 	/* scan directory */
 	addMessage( 1, "Scanning..." );
 	fsroot=recurse( basedir, NULL );
-	fsroot=fsroot->dbnext;
+	fsroot=fsroot->next;
 
 	addMessage( 1, "Adding titles..." );
 
@@ -396,10 +387,10 @@ int dbNameCheck( const char *dbname ) {
 	root=dbGetMusic( dbname );
 
 	currentEntry=root;
-	while( currentEntry->dbnext != root ) {
+	while( currentEntry->next != root ) {
 		activity("Namechecking - %i", count );
 		if( !(currentEntry->flags & MP_MARK) ) {
-			runner=currentEntry->dbnext;
+			runner=currentEntry->next;
 			do {
 				if( !(runner->flags & MP_MARK ) ) {
 					if( strcmp( runner->display, currentEntry->display ) == 0 ) {
@@ -461,11 +452,11 @@ int dbNameCheck( const char *dbname ) {
 					runner=root;
 				}
 				else {
-					runner=runner->dbnext;
+					runner=runner->next;
 				}
 			} while( runner != root );
 		}
-		currentEntry=currentEntry->dbnext;
+		currentEntry=currentEntry->next;
 	}
 	fprintf( fp, "\necho Remember to clean the database!\n\n" );
 

@@ -39,30 +39,28 @@ static int checkSim( const char *txt1, const char *txt2 ) {
  * always resets the marked flag and
  * resets the counted and skipped flag on all titles if at least 50% of the titles have been counted
  */
-void newCount( mptitle *root ) {
-	unsigned int num=0, count=0;
+void newCount( ) {
+	mptitle *root=getConfig()->root;
 	mptitle *runner = root;
+	mpplaylist *pl=getConfig()->current;
 
-	do {
-		num++;
-
-		if( runner-> flags | MP_CNTD ) {
-			count++;
-		}
-
-		runner=runner->dbnext;
+	if( pl == NULL ) {
+		return;
 	}
-	while( runner != root );
 
 	do {
 		activity("Unmarking");
-		runner-> flags &= ~MP_MARK;
-		if( ( 100*count )/num > 50 ) {
-			runner->flags &= ~(MP_CNTD|MP_SKPD);
-		}
-		runner=runner->dbnext;
-	}
-	while( runner != root );
+		runner-> flags &= ~(MP_MARK|MP_CNTD|MP_SKPD);
+		runner=runner->next;
+	} while( runner != root );
+
+	/*
+	 * Mark the last titles to avoid quick repeats.
+	 */
+	do {
+		pl->title->flags |= MP_MARK;
+		pl=pl->prev;
+	} while ( pl != NULL );
 }
 
 /**
@@ -73,11 +71,11 @@ mptitle *cleanTitles( mptitle *root ) {
 	mptitle *runner=root;
 
 	if( NULL != root ) {
-		root->dbprev->dbnext=NULL;
+		root->prev->next=NULL;
 
 		while( runner != NULL ) {
 			activity("Cleaning");
-			root=runner->dbnext;
+			root=runner->next;
 			free( runner );
 			runner=root;
 		}
@@ -125,46 +123,118 @@ void addToFile( const char *path, const char *line ) {
 	fclose( fp );
 }
 
+mpplaylist *cleanPlaylist( mpplaylist *pl ) {
+	mpplaylist *next=NULL;
+
+	if( pl == NULL ) {
+		return NULL;
+	}
+
+	while( pl->prev != NULL ) {
+		pl=pl->prev;
+	}
+
+	while( pl != NULL ){
+		next=pl->next;
+		if( getConfig()->root == NULL ) {
+			free( pl->title );
+		}
+		free(pl);
+		pl=next;
+	}
+
+	return NULL;
+}
+
+mpplaylist *addPLDummy( mpplaylist *pl, const char *name ){
+	mpplaylist *buf;
+	mptitle *title=falloc(1, sizeof(mptitle));
+
+	if( pl == NULL ) {
+		pl=falloc(1, sizeof(mpplaylist));
+	}
+	else {
+		buf=pl->prev;
+		pl->prev=falloc(1,sizeof(mpplaylist));
+		pl->prev->prev=buf;
+		pl->prev->next=pl;
+		if( buf != NULL ) {
+			buf->next=pl->prev;
+		}
+		pl=pl->prev;
+	}
+	strip( title->display, name, MAXPATHLEN );
+	strip( title->title, name, NAMELEN );
+
+	pl->title=title;
+
+	return pl;
+}
+
+/**
+ * appends a title to the end of a playlist
+ * if pl is NULL a new Playlist is created
+ * this function either returns pl or the head of the new playlist
+ */
+mpplaylist *appendToPL( mptitle *title, mpplaylist *pl ) {
+	if( pl != NULL ) {
+		while( pl->next != NULL ) {
+			pl=pl->next;
+		}
+		addToPL( title, pl );
+	}
+	else {
+		pl=addToPL( title, NULL );
+	}
+	return pl;
+}
 
 /**
  * inserts a title into the playlist chain. Creates a new playlist
- * startpoint if no target is set.
+ * if no target is set.
+ * This function returns a pointer to the added element.
  */
-mptitle *addToPL( mptitle *title, mptitle *target ) {
+mpplaylist *addToPL( mptitle *title, mpplaylist *target ) {
+	mpplaylist *buf=NULL;
+
 	if( title->flags & MP_MARK ) {
 		addMessage( 0, "Trying to add %s twice! (%i)", title->display, title->flags );
 		return target;
 	}
 
+	buf=falloc(1, sizeof( mpplaylist ) );
+	memset( buf, 0, sizeof( mpplaylist ) );
+	buf->title=title;
+
 	if( NULL == target ) {
-		title->plnext=title;
-		title->plprev=title;
+		target=buf;
 	}
 	else {
-		title->plnext=target->plnext;
-		title->plprev=target;
-		target->plnext->plprev=title;
-		target->plnext=title;
-		target->flags |= MP_MARK;
+		buf->next=target->next;
+		target->next=buf;
+		buf->prev=target;
 	}
 
 	title->flags |= MP_MARK;
-	return title;
+	return buf;
 }
 
 /*
- * removes a title from the current playlist chain.
+ * removes a title from the current playlist chain and returns the next title
  */
-static int remFromPL( mptitle *title ) {
-	if( title->plnext == title ) {
-		return 0;
+static mpplaylist *remFromPL( mpplaylist *pltitle ) {
+	mpplaylist *ret=pltitle->next;
+
+	if( pltitle->prev != NULL ) {
+		pltitle->prev->next=pltitle->next;
 	}
-	title->plprev->plnext=title->plnext;
-	title->plnext->plprev=title->plprev;
-	title->plprev=title;
-	title->plnext=title;
-	title->flags&=~MP_MARK;
-	return 1;
+	if( pltitle->next != NULL ) {
+		pltitle->next->prev=pltitle->prev;
+	}
+	free(pltitle);
+	pltitle->title->flags&=~MP_MARK;
+
+	return ret;
 }
 
 /**
@@ -280,21 +350,25 @@ static int matchTitle( mptitle *title, const char* pat ) {
 
 /**
  * play the search results next
+ * TODO this should be turned into something like:
+ *   pl=searchPL( pat, num );
+ *   addToPL( pl, getConfig()->current );
  */
-int searchPlay( mptitle *root, const char *pat, unsigned num, const int global ) {
+int searchPlay( const char *pat, unsigned num, const int global ) {
+	mptitle *root=getConfig()->root;
 	mptitle *runner=root;
-	mptitle *pos=root;
+	mpplaylist *pl=getConfig()->current;
 	int cnt=0;
 	
 	do {
 		activity("searching");
 		if( matchTitle( runner, pat) && ( global || !( runner->flags & MP_DNP ) ) ){
-			moveEntry( runner, pos );
-			pos=runner;
+			pl=addToPL( runner,  pl );
+			pl=pl->next;
 			runner->flags|=(MP_CNTD|MP_SKPD);
 			cnt++;
 		}
-		runner=runner->dbnext;
+		runner=runner->next;
 	} while( ( runner != root ) && ( cnt < num ) );
 	
 	return cnt;
@@ -307,77 +381,40 @@ int searchPlay( mptitle *root, const char *pat, unsigned num, const int global )
  *
  * if the second char is anything else, the default (p=) is used.
  */
-static int matchList( mptitle **result, mptitle **base, struct marklist_t *term ) {
-	mptitle  *runner=*base;
+mpplaylist *matchList( struct marklist_t *term ) {
+	mptitle *base=getConfig()->root;
+	mptitle *runner=base;
+	mpplaylist *result=NULL;
 	int cnt=0;
 
-	if( NULL == *base ) {
+	if( base == NULL ) {
 		addMessage( 0, "No music in list!" );
-		return 0;
+		return NULL;
 	}
 
 	while( NULL != term ) {
-		while( runner->dbnext != *base ) {
+		while( runner->next != base ) {
 			activity( "Matching" );
 
 			if( !( runner->flags & ( MP_MARK | MP_DNP ) ) ) {
 				if( matchTitle( runner, term->dir ) ) {
-					*result=addToPL( runner, *result );
+					result=addToPL( runner, result );
 					cnt++;
 				}
 			}
 
-			runner=runner->dbnext;
+			runner=runner->next;
 		} /*  while( runner->next != base ); */
 
-		runner=runner->dbnext; /* start from the beginning */
+		runner=runner->next; /* start from the beginning */
 		term=term->next;
 	}
 
-	addMessage( 1, "Added %i titles", cnt );
-
-	return cnt;
-}
-
-/**
- * Search the music database at 'base' for all terms in the
- * marklist 'term' all other titles get marked.
- *
- * return the first entry in the playlist
- */
-mptitle *searchList( mptitle *base, struct marklist_t *term ) {
-	mptitle  *result=NULL;
-	mptitle  *runner=NULL;
-	int cnt=0;
-
-	if( NULL == base ) {
-		addMessage( 0, "%s: No music loaded", __func__ );
-		return NULL;
-	}
-
-	cnt = matchList( &result, &base, term );
-
 	addMessage( 1, "Created playlist with %i titles", cnt );
 
-	/* Mark every other title so they won't be shuffled. */
-	if( result != NULL ) {
-		runner=result;
-
-		do {
-			if( runner->plnext == runner ) {
-				runner->flags |= MP_MARK;
-			}
-			else {
-				runner->flags &= ~MP_MARK;
-			}
-
-			runner=runner->dbnext;
-		}
-		while( runner != result );
-	}
-
-	return result?result->plnext:NULL;
+	return result;
 }
+
 
 /**
  * applies the dnplist on a list of titles and marks matching titles
@@ -387,6 +424,7 @@ mptitle *searchList( mptitle *base, struct marklist_t *term ) {
 int applyDNPlist( mptitle *base, struct marklist_t *list ) {
 	mptitle  *pos = base;
 	struct marklist_t *ptr = list;
+	mpplaylist *pl=getConfig()->current;
 	int cnt=0;
 
 	if( NULL == base ) {
@@ -405,16 +443,27 @@ int applyDNPlist( mptitle *base, struct marklist_t *list ) {
 			if( matchTitle( pos, ptr->dir ) ) {
 				addMessage( 3, "[D] %s: %s", ptr->dir, pos->display );
 				pos->flags |= MP_DNP;
-				cnt=cnt+remFromPL(pos);
 				break;
 			}
 
 			ptr=ptr->next;
 		}
 
-		pos=pos->dbnext;
+		pos=pos->next;
 	}
 	while( pos != base );
+
+	while( pl != NULL ) {
+		if( pl->title->flags & MP_DNP ) {
+			if( pl == getConfig()->current ) {
+				getConfig()->current=pl->next;
+			}
+			pl=remFromPL(pl);
+		}
+		else {
+			pl=pl->next;
+		}
+	}
 
 	if( cnt > 1 ) {
 		addMessage( 0, "Marked %i titles as DNP", cnt );
@@ -449,7 +498,7 @@ int applyFAVlist( mptitle *root, struct marklist_t *favourites ) {
 			}
 		}
 
-		runner=runner->dbnext;
+		runner=runner->next;
 	} while ( runner != root );
 
 	if( cnt > 1 ) {
@@ -516,8 +565,8 @@ cleanup:
 /**
  * moves an entry in the playlist
  */
-void moveEntry( mptitle *entry, mptitle *pos ) {
-	if( pos->plnext == entry ) {
+void moveEntry( mpplaylist *entry, mpplaylist *pos ) {
+	if( pos->next == entry ) {
 		return;
 	}
 
@@ -525,23 +574,8 @@ void moveEntry( mptitle *entry, mptitle *pos ) {
 		return;
 	}
 
-	/* Move title that is not part of the current playlist? */
-	if( !( entry->flags & MP_MARK ) ) {
-		pos=addToPL( entry, pos );
-	}
-	else {
-		/* close gap in original position */
-		entry->plnext->plprev=entry->plprev;
-		entry->plprev->plnext=entry->plnext;
-
-		/* insert into new position */
-		entry->plnext=pos->plnext;
-		entry->plprev=pos;
-
-		/* fix links */
-		pos->plnext=entry;
-		entry->plnext->plprev=entry;
-	}
+	addToPL( entry->title, pos );
+	remFromPL( entry );
 }
 
 /**
@@ -571,8 +605,6 @@ mptitle *loadPlaylist( const char *path ) {
 			strip( titlePath, buff, MAXPATHLEN ); /* remove control chars like CR/LF */
 			current=insertTitle( current, titlePath );
 			/* turn list into playlist too */
-			current->plprev=current->dbprev;
-			current->plnext=current->dbnext;
 		}
 	}
 
@@ -580,51 +612,7 @@ mptitle *loadPlaylist( const char *path ) {
 
 	addMessage( 2, "Loaded %s with %i entries.", path, cnt );
 
-	return current->dbnext;
-}
-
-/**
- * remove a title from the playlist
- * will return the previous title on success. Will do nothing
- * if the title is the last on in the playlist.
- */
-static mptitle *plRemove( mptitle *entry ) {
-	mptitle *next=entry;
-
-	if( NULL == entry ) {
-		addMessage( 0, "Cannot remove no title!" );
-		return entry;
-	}
-
-	addMessage( 2, "Removed: %s", entry->display );
-	entry->flags |= MP_DNP;
-
-	if( entry->plnext != entry ) {
-		next=entry->plprev;
-		entry->plprev->plnext=entry->plnext;
-		entry->plnext->plprev=entry->plprev;
-		entry->plprev=entry;
-		entry->plnext=entry;
-	}
-
-	return next;
-}
-
-static mptitle *removeByPatLine( mptitle *base, const char *pattern ) {
-	mptitle *runner=base;
-	runner=base->plprev;
-
-	addMessage( 1, "Rule: %s", pattern );
-	while( runner != base ) {
-		if( matchTitle( runner, pattern ) ) {
-			runner=plRemove( runner );
-		}
-		else {
-			runner=runner->plprev;
-		}
-	}
-
-	return plRemove( base );
+	return current->next;
 }
 
 /**
@@ -635,8 +623,11 @@ static mptitle *removeByPatLine( mptitle *base, const char *pattern ) {
  * item will be returned. If entry was the last item in the list NULL will be
  * returned.
  */
-mptitle *removeByPattern( mptitle *entry, const char *pat ) {
+mpplaylist *removeByPattern( mpplaylist *plentry, const char *pat ) {
 	char pattern[NAMELEN+2];
+	mptitle *entry=plentry->title;
+	mptitle *runner=entry;
+
 	strncpy( pattern, pat, 2 );
 
 	switch( pattern[0] ){
@@ -672,7 +663,15 @@ mptitle *removeByPattern( mptitle *entry, const char *pat ) {
 		break;
 	}
 
-	return removeByPatLine( entry, pattern );
+	addMessage( 1, "Rule: %s", pattern );
+	do {
+		if( !(runner->flags & MP_DNP ) && matchTitle( runner, pattern ) ) {
+			runner->flags |= MP_DNP;
+		}
+		runner=runner->next;
+	} while( runner != entry );
+
+	return remFromPL(plentry);
 }
 
 /**
@@ -685,19 +684,15 @@ mptitle *insertTitle( mptitle *base, const char *path ) {
 
 	if( NULL == base ) {
 		base=root;
-		base->dbnext=base;
-		base->dbprev=base;
+		base->next=base;
+		base->prev=base;
 	}
 	else {
-		root->dbnext=base->dbnext;
-		root->dbprev=base;
-		base->dbnext=root;
-		root->dbnext->dbprev=root;
+		root->next=base->next;
+		root->prev=base;
+		base->next=root;
+		root->next->prev=root;
 	}
-
-	/* every title is it's own playlist */
-	root->plnext = root;
-	root->plprev = root;
 
 	strncpy( root->path, path, MAXPATHLEN );
 
@@ -714,8 +709,9 @@ mptitle *insertTitle( mptitle *base, const char *path ) {
  *
  * MP_DNP|MP_FAV will match any title where either flag is set
  */
-static unsigned long countTitles( mptitle *base, const unsigned int inc, const unsigned int exc ) {
+static unsigned long countTitles( const unsigned int inc, const unsigned int exc ) {
 	unsigned long cnt=0;
+	mptitle *base=getConfig()->root;
 	mptitle *runner=base;
 
 	if( NULL == base ) {
@@ -730,7 +726,7 @@ static unsigned long countTitles( mptitle *base, const unsigned int inc, const u
 			cnt++;
 		}
 
-		runner=runner->dbprev;
+		runner=runner->prev;
 	}
 	while( runner != base );
 
@@ -739,21 +735,24 @@ static unsigned long countTitles( mptitle *base, const unsigned int inc, const u
 
 /**
  * returns the lowest playcount of the current list
- *
- * global: 0 - ignore titles marked as MP_DNP, -1 - check all titles
  */
-unsigned int getLowestPlaycount( mptitle *base, const int global ) {
+unsigned int getLowestPlaycount( ) {
+	mptitle *base=getConfig()->root;
 	mptitle *runner=base;
 	unsigned int min=-1;
 
+	if( base == NULL ) {
+		addMessage( 0, "Trying to get lowest playcount from empty database!" );
+		return 0;
+	}
+
 	do {
-		if( global || !( runner->flags & MP_DNP ) ) {
+		if( !( runner->flags & MP_DNP ) ) {
 			if( runner->playcount < min ) {
 				min=runner->playcount;
 			}
 		}
-
-		runner=runner->dbnext;
+		runner=runner->next;
 	}
 	while( runner != base );
 
@@ -768,7 +767,7 @@ static mptitle *skipOver( mptitle *current ) {
 	mptitle *marker=current;
 
 	while( marker->flags & ( MP_DNP|MP_MARK ) ) {
-		marker=marker->dbnext;
+		marker=marker->next;
 
 		if( marker == current ) {
 			addMessage( 0, "Ran out of titles!" );
@@ -797,7 +796,7 @@ int DNPSkip( mptitle *base, const unsigned int level ) {
 			skipskip++;
 		}
 
-		runner=runner->dbnext;
+		runner=runner->next;
 	}
 	while( base != runner );
 
@@ -806,28 +805,21 @@ int DNPSkip( mptitle *base, const unsigned int level ) {
 }
 
 /**
- * mix a list of titles into a random order
+ * adds a new title to the current playlist
  *
  * Core functionality of the mixplay architecture:
  * - does not play the same artist twice in a row
  * - prefers titles with lower playcount
  */
-mptitle *shuffleTitles( mptitle *base ) {
-	mptitle *end=NULL;
-	mptitle *runner=base;
+mpplaylist *addNewTitle( ) {
+	mpplaylist *pl=getConfig()->current;
+	mptitle *runner=NULL;
 	mptitle *guard=NULL;
-	unsigned long num=0;
-	unsigned long i;
-	unsigned int nameskip=0;
-	unsigned int playskip=0;
-	unsigned int added=0;
-	unsigned int stuffed=0;
-	unsigned int cycles=0, maxcycles=0;
 	struct timeval tv;
-	unsigned long pcount=0;
-	char name[NAMELEN], lastname[NAMELEN]="";
-	unsigned long skip;
-
+	unsigned long num=0;
+	char *lastname;
+	unsigned int pcount=getLowestPlaycount( );
+	unsigned int cycles=0;
 	int valid=0;
 	/* 0 - nothing checked
 	   1 - namecheck okay
@@ -836,174 +828,157 @@ mptitle *shuffleTitles( mptitle *base ) {
 	  -1 - stuffing
 	*/
 
+	if( pl != NULL ) {
+		runner=pl->title;
+		lastname=runner->artist;
+	}
+	else {
+		runner=getConfig()->root;
+		valid=3;
+	}
+
+	pcount=
 	/* improve 'randomization' */
 	gettimeofday( &tv,NULL );
 	srand( getpid()*tv.tv_sec );
 
-	newCount( base );
-	num = countTitles( base, MP_ALL, MP_DNP ); /* |MP_MARK ); */
-	addMessage( 0, "Shuffling %i titles", num );
+restart:
+	num = countTitles( MP_ALL, MP_DNP );
 
-	for( i=0; i<num; i++ ) {
-		activity( "Shuffling " );
+	/* select a random title from the database */
+	/* skip forward until a title is found that is neither DNP nor MARK */
+	runner=skipOver(skipTitles( runner, RANDOM( num ) ));
 
-		/* select a random title from the database */
-		skip=RANDOM( num-i );
-		/* skip forward until a title is found the is neither DNP nor MARK */
-		runner=skipOver(skipTitles( runner, skip, -1 ));
+	if( runner->flags & MP_MARK ) {
+		addMessage( 0, "Next round!" );
+		newCount( );
+		goto restart;
+	}
 
-		if( runner->flags & MP_MARK ) {
-			addMessage( 0, "%s is marked %i %i/%i!", runner->display, skip, i, num );
-			continue;
-		}
+	cycles=0;
 
-
-		if( cycles>maxcycles ) {
-			maxcycles=cycles;
-		}
-
-		cycles=0;
-
-		if( valid != -1 ) {
-			valid=0; /* title has not passed any tests */
-		}
-
-		while( ( valid & 3 ) != 3 ) {
-			/* First title? That name is valid by default */
-			if( 0 == strlen( lastname ) ) {
-				valid=3;
-			}
-
-			/* title did not pass namecheck */
-			if( !( valid&1 ) ) {
-				guard=runner;
-				strlncpy( name, runner->artist, NAMELEN );
-
-				while( checkSim( name, lastname ) ) {
-					activity( "Nameskipping" );
-					runner=runner->dbnext;
-					runner=skipOver( runner );
-
-					if( guard==runner ) {
-						addMessage( 2, "Stopped nameskipping at %i/%i", i, num );
-						addMessage( 2, runner->display );
-						valid=-1; /* No more alternatives */
-						break;
-					}
-
-					strlncpy( name, runner->artist, NAMELEN );
-				}
-
-				if( ( valid != -1 ) && ( guard != runner ) ) {
-					nameskip++;
-					valid=1; /* we skipped and need to check playcount */
-				}
-				else {
-					valid |= 1; /* we did not skip, so if playcount was fine it's still fine */
-				}
-			}
-
+	while( ( valid & 3 ) != 3 ) {
+		/* title did not pass namecheck */
+		if( !( valid&1 ) ) {
 			guard=runner;
 
-			/* title did not pass playcountcheck and we are not in stuffing mode */
-			while( (valid & 2 ) != 2 ) {
-				if( runner->flags & MP_FAV ) {
-					if ( runner-> playcount <= 2*pcount ) {
-						valid|=2;
-					}
-				}
-				else {
-					if ( runner->playcount <= pcount ) {
-						valid|=2;
-					}
-				}
+			while( checkSim( runner->artist, lastname ) ) {
+				activity( "Nameskipping" );
+				runner=runner->next;
+				runner=skipOver( runner );
 
-				if( !( valid & 2 ) ) {
-					activity( "Playcountskipping" );
-					runner=runner->dbnext;
-					runner=skipOver( runner );
-					valid=0;
-
-					if( guard == runner ) {
-						valid=1;	/* we're back where we started and this one is valid by name */
-						pcount++;	/* allow more replays */
-						addMessage( 2, "Increasing maxplaycount to %li at %i", pcount, i );
-					}
+				if( guard==runner ) {
+					addMessage( 0, "Only %s left..", lastname );
+					newCount( );
+					goto restart;
+					break;
 				}
 			}
 
-			if( runner != guard ) {
-				playskip++;	/* we needed to skip */
+			if( guard != runner ) {
+				valid=1; /* we skipped and need to check playcount */
 			}
-
-			if( ++cycles > 10 ) {
-				addMessage( 2, "Looks like we ran into a loop in round %i/%i", i, num );
-				cycles=0;
-				pcount++;	/* allow replays */
-				addMessage( 2, "Increasing maxplaycount to %li", pcount );
+			else {
+				valid |= 1; /* we did not skip, so if playcount was fine it's still fine */
 			}
-		} /* while( valid != 3 ) */
-
-		/* title passed all tests */
-		if( valid == 3 ) {
-			addMessage( 3, "[+] (%i/%li/%3s) %s", runner->playcount, pcount, ONOFF( runner->flags&MP_FAV ), runner->display );
-			strlncpy( lastname, runner->artist, NAMELEN );
-			end = addToPL( runner, end );
-			added++;
 		}
 
-		/* runner needs to be stuffed into the playlist */
-		if( valid == -1 ) {
-			skip=RANDOM( i );
-			guard=skipTitles( end, skip, 0 );
-			addMessage( 2, "[*] (%i/%li/%3s) %s", runner->playcount, pcount, ONOFF( runner->flags&MP_FAV ), runner->display );
-			addToPL( runner, guard );
-			stuffed++;
+		guard=runner;
+
+		/* title did not pass playcountcheck and we are not in stuffing mode */
+		while( (valid & 2 ) != 2 ) {
+			if( runner->flags & MP_FAV ) {
+				if ( runner-> playcount <= 2*pcount ) {
+					valid|=2;
+				}
+			}
+			else {
+				if ( runner->playcount <= pcount ) {
+					valid|=2;
+				}
+			}
+
+			if( !( valid & 2 ) ) {
+				activity( "Playcountskipping" );
+				runner=runner->next;
+				runner=skipOver( runner );
+				valid=0;
+
+				if( guard == runner ) {
+					valid=1;	/* we're back where we started and this one is valid by name */
+					pcount++;	/* allow more replays */
+					addMessage( 2, "Increasing maxplaycount to %li", pcount );
+				}
+			}
+		}
+
+		if( ++cycles > 10 ) {
+			addMessage( 2, "Looks like we ran into a loop" );
+			cycles=0;
+			pcount++;	/* allow replays */
+			addMessage( 2, "Increasing maxplaycount to %li", pcount );
+		}
+	} /* while( valid != 3 ) */
+
+	addMessage( 3, "[+] (%i/%li/%3s) %s", runner->playcount, pcount, ONOFF( runner->flags&MP_FAV ), runner->display );
+
+	return appendToPL( runner, pl );
+}
+
+/**
+ * checks the current playlist.
+ * If there are more than 10 previous titles, those get pruned.
+ * While there are less that 10 next titles, titles will be added.
+ */
+void plCheck() {
+	int cnt=0;
+	mpplaylist *pl=getConfig()->playlist;
+	mpplaylist *buf=pl;
+	if( pl != NULL ) {
+		while( ( pl->prev != NULL ) && ( cnt < 10 ) ) {
+			pl=pl->prev;
+			cnt++;
+		}
+
+		buf=pl->prev;
+		pl->prev=NULL;
+
+		while( buf != NULL ) {
+			pl=buf->prev;
+			free( buf );
+			buf=pl;
+		}
+
+		pl=getConfig()->playlist;
+		while( pl->next != NULL ) {
+			pl=pl->next;
+			cnt++;
 		}
 	}
 
-	addMessage( 1, "Added %i titles", added );
-	addMessage( 1, "Skipped %i titles to avoid artist repeats", nameskip );
-	addMessage( 1, "Skipped %i titles to keep playrate even (max=%i)", playskip, pcount );
-	addMessage( 1, "Stuffed %i titles into playlist", stuffed );
-	addMessage( 1, "Had a maximum of %i cycles", maxcycles );
-
-	/* Make sure something valid is returned */
-	if( NULL == end ) {
-		addMessage( 0, "No titles were inserted!" );
-		return NULL;
+	while( cnt < 10 ) {
+		pl=addNewTitle();
+		if( getConfig()->current == NULL ) {
+			getConfig()->current = pl;
+		}
+		cnt++;
 	}
-
-	return end->plnext;
 }
 
 /**
  * skips the given number of titles
- * global - select if titles should be skipped in the playlist or the database
  */
-mptitle *skipTitles( mptitle *current, long num, const int global ) {
+mptitle *skipTitles( mptitle *current, long num ) {
 	if( NULL == current ) {
 		return NULL;
 	}
 
-	while( num > 0 ) {
-		if( global ) {
-			current=current->dbnext;
-		}
-		else {
-			current=current->plnext;
-		}
-		num--;
+	for( ; num > 0; num-- ) {
+		current=current->next;
 	}
 
-	while( num < 0 ) {
-		if( global ) {
-			current=current->dbprev;
-		}
-		else {
-			current=current->plprev;
-		}
-		num++;
+	for( ; num < 0; num++ ) {
+		current=current->prev;
 	}
 
 	return current;
@@ -1027,7 +1002,7 @@ mptitle *getTitle( unsigned int key ) {
 			if( runner->key == key ) {
 				return runner;
 			}
-			runner=runner->dbnext;
+			runner=runner->next;
 		} while( runner != root );
 	}
 	return NULL;
@@ -1087,36 +1062,10 @@ mptitle *recurse( char *curdir, mptitle *files ) {
 }
 
 /**
- * just for debugging purposes!
- */
-void dumpTitles( mptitle *root, const int pl ) {
-	mptitle *ptr=root;
-
-	if( NULL==root ) {
-		printf( "NO LIST!\n" );
-		return;
-	}
-
-	do {
-		printf( "[%04i] %s: %s - %s (%s)\n", ptr->key, ptr->path, ptr->artist, ptr->title, ptr->album );
-
-		if( pl ) {
-			ptr=ptr->plnext;
-		}
-		else {
-			ptr=ptr->dbnext;
-		}
-	}
-	while( ptr != root );
-
-	/* addMessage( 0, "END DUMP" ); */
-}
-
-/**
  * does a database scan and dumps information about playrate
  * favourites and DNPs
  */
-void dumpInfo( mptitle *root, int global, int skip ) {
+void dumpInfo( mptitle *root, int skip ) {
 	mptitle *current=root;
 	unsigned int maxplayed=0;
 	unsigned int minplayed=-1; /* UINT_MAX; */
@@ -1134,7 +1083,7 @@ void dumpInfo( mptitle *root, int global, int skip ) {
 			dnp++;
 		}
 
-		if( global || !( current->flags &MP_DNP ) ) {
+		if( !( current->flags &MP_DNP ) ) {
 			if( current->playcount < minplayed ) {
 				minplayed=current->playcount;
 			}
@@ -1148,12 +1097,7 @@ void dumpInfo( mptitle *root, int global, int skip ) {
 			}
 		}
 
-		if( global ) {
-			current=current->dbnext;
-		}
-		else {
-			current=current->plnext;
-		}
+		current=current->next;
 	}
 	while( current != root );
 
@@ -1164,7 +1108,7 @@ void dumpInfo( mptitle *root, int global, int skip ) {
 		char line[MAXPATHLEN];
 
 		do {
-			if( ( global || !( current->flags & MP_DNP ) ) && ( current->playcount == pl ) ) {
+			if( !( current->flags & MP_DNP ) && ( current->playcount == pl ) ) {
 				pcount++;
 				if( current->flags & MP_DNP ) {
 					dnpcnt++;
@@ -1173,12 +1117,7 @@ void dumpInfo( mptitle *root, int global, int skip ) {
 					favcnt++;
 				}
 			}
-			if( global ) {
-				current=current->dbnext;
-			}
-			else {
-				current=current->plnext;
-			}
+			current=current->next;
 		} while( current != root );
 
 		if( dnpcnt != pcount ){
@@ -1211,11 +1150,7 @@ void dumpInfo( mptitle *root, int global, int skip ) {
 	}
 
 	addMessage( 0, "%4i\tfavourites", fav );
-
-	if( global ) {
-		addMessage( 0, "%4i\tdo not plays", dnp );
-	}
-
+	addMessage( 0, "%4i\tdo not plays", dnp );
 	addMessage( 0, "%4i\tskipped", skipped );
 }
 
@@ -1276,9 +1211,11 @@ cleanup:
 
 /**
  * copies the titles in the current playlist onto the target
- * if fav is true, only favourites are copied
+ * only favourites are copied
+ *
+ * TODO this does not make any sense with the new playlist structure
  */
-int fillstick( mptitle *root, const char *target, int fav ) {
+int fillstick( mptitle *root, const char *target ) {
 	unsigned int index=0;
 	mptitle *current;
 
@@ -1286,42 +1223,17 @@ int fillstick( mptitle *root, const char *target, int fav ) {
 
 	do {
 		activity( "Copy title #%03i", index );
-		if( fav && ( current->flags & MP_FAV ) ) {
+		if( current->flags & MP_FAV ) {
 			if( copyTitle( current, target, index++ ) == -1 ) {
 				break;
 			}
 		}
-		current=current->plnext;
+		current=current->next;
 	}
 	while( current != root );
 
 	addMessage( 0, "Copied %i titles to %s", index, target );
 	return index;
-}
-
-/*
- * writes the current titles as playlist
- */
-int writePlaylist( mptitle *root, const char *path ) {
-	mptitle *current=root;
-	FILE *fp;
-	int count=0;
-
-	fp=fopen( path, "w" );
-	if( fp == NULL ) {
-		addMessage( 0, "Could not access %s\n%s", path, strerror( errno ) );
-		return -1;
-	}
-
-	do {
-		fprintf( fp, "%s\n", current->path );
-		current=current->plnext;
-		count++;
-	} while( current != root );
-
-	fclose( fp );
-
-	return count;
 }
 
 int addRangePrefix( char *line, mpcmd cmd ) {

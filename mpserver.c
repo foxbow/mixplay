@@ -34,7 +34,7 @@ static int filePost( int sock, const char *fname ) {
 	int fd;
 	fd=open( fname, O_RDONLY );
 	if( fd != -1 ) {
-		sendfile( sock, fd, 0, 10240 );
+		sendfile( sock, fd, 0, 40960 );
 		close(fd);
 		return 0;
 	}
@@ -264,8 +264,8 @@ static void *clientHandler(void *args ) {
 			memset( commdata, 0, commsize );
 			switch( state ) {
 			case 1: /* get update */
-				if( strcmp( config->current->display, playing ) ) {
-					strcpy( playing, config->current->display );
+				if( strcmp( config->current->title->display, playing ) ) {
+					strcpy( playing, config->current->title->display );
 					fullstat=-1;
 				}
 

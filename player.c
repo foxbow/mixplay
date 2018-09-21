@@ -141,13 +141,10 @@ static long controlVolume( long volume, int absolute ) {
  */
 void setStream( const char* stream, const char *name ) {
 	mpconfig *control=getConfig();
-	control->root=cleanTitles( control->root );
-	control->root=insertTitle( NULL, stream );
-	strncpy( control->root->title, name, NAMELEN );
-	insertTitle( control->root, control->root->title );
-	addToPL( control->root->dbnext, control->root );
-	strncpy( control->root->dbnext->display, "---", 3 );
-	control->current=control->root;
+	control->root=cleanTitles(control->root);
+	control->current=cleanPlaylist( control->current );
+	control->current=addPLDummy( control->current, stream );
+	control->current=addPLDummy( control->current, name );
 	addMessage( 1, "Play Stream %s (%s)", name, stream );
 }
 
@@ -168,7 +165,7 @@ static void sendplay( int fdset, mpconfig *control ) {
 	char line[MAXPATHLEN]="load ";
 	assert( control->current != NULL );
 
-	strncat( line, control->current->path, MAXPATHLEN );
+	strncat( line, control->current->title->path, MAXPATHLEN );
 	strncat( line, "\n", MAXPATHLEN );
 
 	if ( write( fdset, line, MAXPATHLEN ) < strlen( line ) ) {
@@ -260,7 +257,7 @@ void *setProfile( void *data ) {
 		}
 		applyDNPlist( control->root, dnplist );
 		applyFAVlist( control->root, favourites );
-		control->root=shuffleTitles( control->root );
+		plCheck();
 		cleanList( dnplist );
 		cleanList( favourites );
 		control->playstream=0;
@@ -301,16 +298,16 @@ static void playCount( mpconfig *control ) {
 		return;
 	}
 
-	if( ( control->current->key != 0 ) && !( control->current->flags & MP_CNTD ) ) {
-		control->current->flags |= MP_CNTD; /* make sure a title is only counted once per session */
-		control->current->playcount++;
+	if( ( control->current->title->key != 0 ) && !( control->current->title->flags & MP_CNTD ) ) {
+		control->current->title->flags |= MP_CNTD; /* make sure a title is only counted once per session */
+		control->current->title->playcount++;
 
-		if( !( control->current->flags & MP_SKPD ) && ( control->current->skipcount > 0 ) ) {
-			control->current->skipcount--;
+		if( !( control->current->title->flags & MP_SKPD ) && ( control->current->title->skipcount > 0 ) ) {
+			control->current->title->skipcount--;
 		}
 
 		db=dbOpen( control->dbname );
-		dbPutTitle( db, control->current );
+		dbPutTitle( db, control->current->title );
 		dbClose( db );
 	}
 }
@@ -331,7 +328,7 @@ static void *plCheckDoublets( void *arg ) {
 		addMessage( 0, "Deleted %i titles", i );
 		addMessage( 0, "Restarting player.." );
 		setProfile( control );
-		control->current = control->root;
+		control->current->title = control->root;
 	}
 	else {
 		addMessage( 0, "No titles deleted" );
@@ -373,7 +370,7 @@ static void *plDbClean( void *arg ) {
 		addMessage( 0, "Restarting player.." );
 		control->status=mpc_start;
 		setProfile( control );
-		control->current = control->root;
+		control->current->title = control->root;
 	}
 
 	progressEnd( );
@@ -385,7 +382,7 @@ static void *plDbInfo( void *arg ) {
 	mpconfig *control=(mpconfig *) arg;
 	progressStart( "Database Info" );
 	addMessage( 0, "Music dir: %s", control->musicdir );
-	dumpInfo( control->root, -1, control->skipdnp );
+	dumpInfo( control->root, control->skipdnp );
 	progressEnd();
 	pthread_mutex_unlock( &_asynclock );;
 	return NULL;
@@ -398,23 +395,25 @@ static void *plSetProfile( void *arg ) {
 		readConfig( );
 	}
 	setProfile( control );
-	control->current = control->root;
+	control->current->title = control->root;
 	sfree( &(control->argument) );
 	writeConfig(NULL);
 	pthread_mutex_unlock( &_asynclock );;
 	return NULL;
 }
 
+#ifdef OBSOLETE
 static void *plShuffle( void *arg ) {
 	mpconfig *control=(mpconfig *) arg;
 	progressStart("Shuffling...");
 	control->status=mpc_start;
 	control->root=shuffleTitles(control->root);
-	control->current=control->root;
+	control->current->title=control->root;
 	progressEnd();
 	pthread_mutex_unlock( &_asynclock );;
 	return NULL;
 }
+#endif
 
 /**
  * run the given command asynchronously to allow updates during execution
@@ -442,7 +441,6 @@ static void asyncRun( void *cmd(void *), mpconfig *control ) {
  */
 void *reader( void *cont ) {
 	mpconfig	*control;
-	mptitle 	*next;
 	mptitle		*title=NULL;
 	fd_set			fds;
 	struct timeval	to;
@@ -553,9 +551,9 @@ void *reader( void *cont ) {
 						break;
 					case 'E':
 						fail( F_FAIL, "ERROR: %s\nIndex: %i\nName: %s\nPath: %s", line,
-							control->current->key,
-							control->current->display,
-							control->current->path );
+							control->current->title->key,
+							control->current->title->display,
+							control->current->title->path );
 						break;
 					case 'F':
 						if( outvol > 0 ) {
@@ -593,31 +591,31 @@ void *reader( void *cont ) {
 					/* ICY stream info */
 					if( NULL != strstr( line, "ICY-" ) ) {
 						if( NULL != strstr( line, "ICY-NAME: " ) ) {
-							strip( control->current->album, line+13, NAMELEN );
+							strip( control->current->title->album, line+13, NAMELEN );
 							update=-1;
 						}
 
 						if( NULL != ( a = strstr( line, "StreamTitle" ) ) ) {
-							if( control->current->plnext == control->current ) {
+							if( control->current->next == control->current ) {
 								fail( F_FAIL, "Messed up playlist!" );
 							}
 
 							addMessage( 3, "%s", a );
 							a = a + 13;
 							*strchr( a, '\'' ) = '\0';
-							strncpy( control->current->plnext->artist, control->current->artist, NAMELEN );
-							strncpy( control->current->plnext->title, control->current->title, NAMELEN );
-							strncpy( control->current->plnext->display, control->current->display, MAXPATHLEN );
-							strip( control->current->display, a, MAXPATHLEN );
+							strncpy( control->current->next->title->artist, control->current->title->artist, NAMELEN );
+							strncpy( control->current->next->title->title, control->current->title->title, NAMELEN );
+							strncpy( control->current->next->title->display, control->current->title->display, MAXPATHLEN );
+							strip( control->current->title->display, a, MAXPATHLEN );
 
 							if( NULL != ( t = strstr( a, " - " ) ) ) {
 								*t=0;
 								t=t+3;
-								strip( control->current->artist, a, NAMELEN );
-								strip( control->current->title, t, NAMELEN );
+								strip( control->current->title->artist, a, NAMELEN );
+								strip( control->current->title->title, t, NAMELEN );
 							}
 							else {
-								strip( control->current->title, a, NAMELEN );
+								strip( control->current->title->title, a, NAMELEN );
 							}
 							update=-1;
 						}
@@ -676,11 +674,12 @@ void *reader( void *cont ) {
 							/* should the playcount be increased? */
 							playCount( control );
 
-							if( control->current->plnext == control->current ) {
+							if( control->current->next == control->current ) {
 								control->status=mpc_idle; /* Single song: STOP */
 							}
 							else {
-								control->current=control->current->plnext;
+								control->current=control->current->next;
+								plCheck();
 								/* swap player if we want to fade */
 								if( control->fade ) {
 									fdset=fdset?0:1;
@@ -717,24 +716,23 @@ void *reader( void *cont ) {
 							if( control->fade == 0 ) {
 								playCount( control );
 							}
-							addMessage(2,"skipping %i",order);
-							next = skipTitles( control->current, order, 0 );
-							addMessage(2,"skipped");
 
-							if ( next == control->current ) {
-								control->status=mpc_idle; /* stop */
-								addMessage(2,"Single title");
-							}
-							else {
-								addMessage(2,"Next title");
-								if( ( order==1 ) && ( next == control->root ) ) {
-									addMessage(2,"Shuffle!");
-									progressStart( "Reshuffling" );
-									control->root=shuffleTitles( control->root );
-									progressEnd();
-									next=control->root;
+							if( order < 0 ) {
+								if( control->current->prev != NULL ) {
+									control->current=control->current->prev;
 								}
-								control->current=next;
+							}
+
+							if( order > 0 ) {
+								if( control->current->next != NULL ) {
+									control->current=control->current->next;
+								}
+								else {
+									control->status=mpc_idle; /* stop */
+								}
+							}
+
+							if( control->status != mpc_idle ) {
 								sendplay( p_command[fdset][1], control );
 							}
 
@@ -767,9 +765,9 @@ void *reader( void *cont ) {
 				case 'E':
 					addMessage( 0, "%s!", line );
 					addMessage( 1, "Index: %i\nName: %s\nPath: %s",
-							  control->current->key,
-							  control->current->display,
-							  control->current->path );
+							  control->current->title->key,
+							  control->current->title->display,
+							  control->current->title->path );
 					control->status=mpc_idle;
 					break;
 
@@ -802,19 +800,21 @@ void *reader( void *cont ) {
 		cmd=MPC_CMD(control->command);
 
 		/* get the target title for fav and dnp commands */
-		title=control->current;
-		if( ( cmd == mpc_fav ) || ( cmd == mpc_dnp ) ) {
-			if( control->argument != NULL ) {
-				if( ( title=getTitle( atoi( control->argument ) ) ) == NULL ) {
-					title=control->current;
+		if( control->current != NULL ) {
+			title=control->current->title;
+			if( ( cmd == mpc_fav ) || ( cmd == mpc_dnp ) ) {
+				if( control->argument != NULL ) {
+					if( ( title=getTitle( atoi( control->argument ) ) ) == NULL ) {
+						title=control->current->title;
+					}
+					sfree( &(control->argument) );
 				}
-				sfree( &(control->argument) );
 			}
 		}
 
 		switch( cmd ) {
 		case mpc_start:
-			control->current = control->root;
+			plCheck();
 			if( control->status == mpc_start ) {
 				write( p_command[fdset][1], "STOP\n", 6 );
 			}
@@ -830,7 +830,7 @@ void *reader( void *cont ) {
 				control->status=( mpc_play == control->status )?mpc_idle:mpc_play;
 			}
 			else {
-				control->current = control->root;
+				plCheck();
 				if( control->current != NULL ) {
 					addMessage( 1, "Autoplay.." );
 					sendplay( p_command[fdset][1], control );
@@ -849,9 +849,9 @@ void *reader( void *cont ) {
 			if( asyncTest() ) {
 				order=1;
 
-				if( ( control->current->key != 0 ) && !( control->current->flags & ( MP_SKPD|MP_CNTD ) ) ) {
-					control->current->skipcount++;
-					control->current->flags |= MP_SKPD;
+				if( ( control->current->title->key != 0 ) && !( control->current->title->flags & ( MP_SKPD|MP_CNTD ) ) ) {
+					control->current->title->skipcount++;
+					control->current->title->flags |= MP_SKPD;
 					/* updateCurrent( control ); - done in STOP handling */
 				}
 
@@ -876,13 +876,9 @@ void *reader( void *cont ) {
 
 		case mpc_dnp:
 			if( asyncTest() ) {
-				next=title->plnext;
 				handleRangeCmd( title, control->command );
-				while( next->plnext == next ) {
-					next=title->dbnext;
-				}
-				control->current=next->plprev;
-				order=1;
+				plCheck();
+				order=0;
 				write( p_command[fdset][1], "STOP\n", 6 );
 			}
 			break;
@@ -929,8 +925,8 @@ void *reader( void *cont ) {
 				else if(control->playstream){
 					control->streams++;
 					control->stream=frealloc(control->stream, control->streams*sizeof( char * ) );
-					control->stream[control->streams-1]=falloc( strlen(control->current->path)+1, sizeof( char ) );
-					strcpy( control->stream[control->streams-1], control->current->path );
+					control->stream[control->streams-1]=falloc( strlen(control->current->title->path)+1, sizeof( char ) );
+					strcpy( control->stream[control->streams-1], control->current->title->path );
 					control->sname=frealloc(control->sname, control->streams*sizeof( char * ) );
 					control->sname[control->streams-1]=control->argument;
 					control->active=-(control->streams);
@@ -952,7 +948,7 @@ void *reader( void *cont ) {
 					}
 					control->active=control->profiles+2;
 					setProfile( control );
-					control->current = control->root;
+					control->current->title = control->root;
 					sendplay( p_command[fdset][1], control );
 				}
 			}
@@ -1027,7 +1023,7 @@ void *reader( void *cont ) {
 				else {
 					if( setArgument( control->argument ) ){
 						control->active = 0;
-						control->current = control->root;
+						control->current->title = control->root;
 						if( control->status == mpc_start ) {
 							write( p_command[fdset][1], "STOP\n", 6 );
 						}
@@ -1039,10 +1035,6 @@ void *reader( void *cont ) {
 					sfree( &(control->argument) );
 				}
 			}
-			break;
-
-		case mpc_shuffle:
-			asyncRun( plShuffle, control );
 			break;
 
 		case mpc_ivol:
@@ -1080,11 +1072,11 @@ void *reader( void *cont ) {
 							( MPC_RANGE(control->command) == mpc_album ) ||
 							( MPC_RANGE(control->command) == mpc_artist ) ) {
 						progressStart( "Looking for %s", control->argument );
-						i=searchPlay(title, line, -1, 0 );
+						i=searchPlay( line, -1, 0 );
 						addMessage( 0, "Found %i titles", i );
 					}
 					else {
-						if( searchPlay(title, line, 1, 0 ) == 0 ) {
+						if( searchPlay( line, 1, 0 ) == 0 ) {
 							progressStart( "Nothing found for %s", control->argument );
 						}
 					}
