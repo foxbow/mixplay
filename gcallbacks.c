@@ -61,7 +61,7 @@ void markfav( GtkButton *button, gpointer data ) {
 	mpconfig *mpcontrol=getConfig();
 
 	/* remember the current title even if the player already jumped to the next title */
-	title = mpcontrol->current;
+	title = mpcontrol->current->title;
 
 	dialog = gtk_message_dialog_new(
 				 GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
@@ -99,7 +99,7 @@ void dnpStart( GtkButton *button, gpointer data ) {
 	GtkWidget *dialog;
 	int reply;
 	mpconfig *mpcontrol=getConfig();
-	mptitle  *current = mpcontrol->current;
+	mptitle  *current = mpcontrol->current->title;
 
 	dialog = gtk_message_dialog_new(
 				 GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
@@ -150,12 +150,11 @@ void playPause( GtkButton *button, gpointer data ) {
 					 GTK_MESSAGE_INFO,
 					 GTK_BUTTONS_NONE,
 					 "Pause" );
-		if( mpcontrol->current->key != 0 || mpcontrol->remote ) {
+		if( mpcontrol->current->title->key != 0 || mpcontrol->remote ) {
 			gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
 									"Play",   mpc_play,
 									"_Replay", mpc_repl,
 									"_DNP",	mpc_dnp,
-									"_Shuffle",mpc_shuffle,
 									"_Quit",   mpc_quit,
 									NULL );
 		}
@@ -176,10 +175,6 @@ void playPause( GtkButton *button, gpointer data ) {
 
 		case mpc_quit:
 			gtk_main_quit();
-			break;
-
-		case mpc_shuffle:
-			setCommand( reply );
 			break;
 
 		case mpc_repl:
@@ -220,7 +215,7 @@ void infoStart( GtkButton *button, gpointer data ) {
 	int reply;
 	mpconfig *mpcontrol=getConfig();
 
-	if( mpcontrol->current->key != 0 || mpcontrol->remote ) {
+	if( mpcontrol->current->title->key != 0 || mpcontrol->remote ) {
 		dialog = gtk_message_dialog_new(
 				 GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
 				 GTK_DIALOG_DESTROY_WITH_PARENT,
@@ -351,11 +346,6 @@ void profileStart( GtkButton *button, gpointer data ) {
 		gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
 								"_Search", 3,
 								NULL );
-		if( mpcontrol->remote == 0 ) {
-			gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
-									"_Fillstick", 4,
-									NULL );
-		}
 	}
 	if( mpcontrol->remote == 0) {
 		if( mpcontrol->root->key == 0 ) {
@@ -366,11 +356,6 @@ void profileStart( GtkButton *button, gpointer data ) {
 		else {
 			gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
 									"_Browse", 1,
-									NULL );
-		}
-		if( mpcontrol->playstream == 0 ) {
-			gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
-									"_Shuffle", mpc_shuffle,
 									NULL );
 		}
 		gtk_dialog_add_buttons( GTK_DIALOG( dialog ),
@@ -517,37 +502,6 @@ void profileStart( GtkButton *button, gpointer data ) {
 
 		mpcontrol->active = profile;
 		break;
-	case 4: /* Fillstick */
-		dialog = gtk_file_chooser_dialog_new ( "Select Target",
-											   GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
-											   GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
-											   "_Cancel",
-											   GTK_RESPONSE_CANCEL,
-											   "Favourites",
-											   GTK_RESPONSE_ACCEPT,
-											   NULL );
-		gtk_dialog_add_button(GTK_DIALOG(dialog), "All", 1);
-
-		if( MP_GLDATA->fullscreen ) {
-			gtk_window_fullscreen( GTK_WINDOW( dialog ) );
-		}
-
-		selected=gtk_dialog_run( GTK_DIALOG ( dialog ) );
-		if ( ( selected == GTK_RESPONSE_ACCEPT ) || ( selected == 1 ) ){
-			path=falloc( MAXPATHLEN, sizeof( char ) );
-			strncpy( path, gtk_file_chooser_get_filename( GTK_FILE_CHOOSER( dialog ) ), MAXPATHLEN );
-		}
-		gtk_widget_destroy ( dialog );
-
-		progressStart( "Fillstick" );
-		addMessage( 0, "Copying to %s", path );
-		fillstick( mpcontrol->current, path, ( selected == GTK_RESPONSE_ACCEPT ) );
-		progressEnd( );
-
-		sfree( &path );
-
-		mpcontrol->active = profile;
-		break;
 
 	case 5: /* remote */
 	case 6: /* locale */
@@ -571,10 +525,7 @@ void profileStart( GtkButton *button, gpointer data ) {
 			}
 		}
 		break;
-	case mpc_shuffle:
-		setCommand( mpc_shuffle );
-		mpcontrol->active = profile;
-		break;
+
 	default:
 		mpcontrol->active = profile;
 	}

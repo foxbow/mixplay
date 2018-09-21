@@ -160,12 +160,12 @@ void drawbox( int r0, int c0, int r1, int c1 ) {
 	mvvline( r0 + 1, c1, VER, r1 - r0 - 1 );
 }
 
-void drawframe( mptitle *current, const char *status, int stream ) {
+void drawframe( mpplaylist *current, const char *status, int stream ) {
 	int i, maxlen, pos;
 	int row, col;
 	int middle;
 	char buff[MAXPATHLEN];
-	mptitle *runner;
+	mpplaylist *runner;
 
 	if( popUpActive() ) {
 		return;
@@ -192,7 +192,7 @@ void drawframe( mptitle *current, const char *status, int stream ) {
 		dhline( middle-1, 1, col-3 );
 
 		if( NULL != current ) {
-			strip( buff, current->album, maxlen );
+			strip( buff, current->title->album, maxlen );
 		}
 		else {
 			strip( buff, "mixplay "VERSION, maxlen );
@@ -203,9 +203,9 @@ void drawframe( mptitle *current, const char *status, int stream ) {
 
 		/* Set the current playing title */
 		if( NULL != current ) {
-			strip( buff, current->display, maxlen );
+			strip( buff, current->title->display, maxlen );
 
-			if( current->flags & MP_FAV ) {
+			if( current->title->flags & MP_FAV ) {
 				attron( A_BOLD );
 			}
 
@@ -231,17 +231,17 @@ void drawframe( mptitle *current, const char *status, int stream ) {
 		/* song list */
 		if( NULL != current ) {
 			/* previous songs */
-			runner=current->plprev;
+			runner=current->prev;
 
 			for( i=middle-2; i>0; i-- ) {
 				if( current != runner ) {
-					strip( buff, runner->display, maxlen );
+					strip( buff, runner->title->display, maxlen );
 
-					if( runner->flags & MP_FAV ) {
+					if( runner->title->flags & MP_FAV ) {
 						attron( A_BOLD );
 					}
 
-					runner=runner->plprev;
+					runner=runner->prev;
 				}
 				else {
 					strcpy( buff, "---" );
@@ -253,17 +253,17 @@ void drawframe( mptitle *current, const char *status, int stream ) {
 			}
 
 			/* past songs */
-			runner=current->plnext;
+			runner=current->next;
 
 			for( i=middle+2; i<row-2; i++ ) {
 				if( current != runner ) {
-					strip( buff, runner->display, maxlen );
+					strip( buff, runner->title->display, maxlen );
 
-					if( runner->flags & MP_FAV ) {
+					if( runner->title->flags & MP_FAV ) {
 						attron( A_BOLD );
 					}
 
-					runner=runner->plnext;
+					runner=runner->next;
 				}
 				else {
 					strcpy( buff, "---" );
