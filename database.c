@@ -12,6 +12,22 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+mptitle *getTitleByIndex( unsigned int index ) {
+	mptitle *root=getConfig()->root;
+	mptitle *run=root;
+	if( root == NULL ) {
+		return NULL;
+	}
+
+	do {
+		if( run->key == index ) {
+			return run;
+		}
+		run=run->next;
+	} while ( root != run );
+
+	return NULL;
+}
 /**
  * 	searches for a given path in the mixplay entry list
  */

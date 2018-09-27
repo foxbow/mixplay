@@ -30,6 +30,7 @@ enum _mpcmd_t {
 	mpc_fav,
 	mpc_dnp,
 	mpc_doublets,
+	mpc_NOP,
 	mpc_ivol,
 	mpc_dvol,
 	mpc_fskip,

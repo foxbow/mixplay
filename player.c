@@ -340,7 +340,6 @@ static void *plCheckDoublets( void *arg ) {
 
 static void *plDbClean( void *arg ) {
 	mpconfig *control=(mpconfig *) arg;
-	int order=0;
 	int i;
 	progressStart( "Database Cleanup" );
 

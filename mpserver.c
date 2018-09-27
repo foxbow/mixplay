@@ -16,6 +16,7 @@
 #include "player.h"
 #include "config.h"
 #include "utils.h"
+#include "database.h"
 
 #include <arpa/inet.h>
 #include <ctype.h>
@@ -34,7 +35,7 @@ static int filePost( int sock, const char *fname ) {
 	int fd;
 	fd=open( fname, O_RDONLY );
 	if( fd != -1 ) {
-		sendfile( sock, fd, 0, 40960 );
+		while ( sendfile( sock, fd, 0, 4096 ) == 4096 );
 		close(fd);
 		return 0;
 	}
@@ -118,6 +119,7 @@ static void *clientHandler(void *args ) {
 	int fullstat=-1;
 	int okreply=-1;
 	int rawcmd;
+	mptitle *title=NULL;
 
 	commdata=falloc( commsize, sizeof( char ) );
 
@@ -236,9 +238,25 @@ static void *clientHandler(void *args ) {
 							mtype="application/javascript; charset=utf-8";
 							state=5;
 						}
+						else if( strstr( pos, "/title/" ) == pos ) {
+							addMessage( 1, "received: %s", pos );
+							pos+=7;
+							title=getTitleByIndex( atoi( pos ) );
+							if( title != NULL ) {
+								fname=title->path;
+								state=8;
+							}
+							else {
+								send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
+								state=0;
+								running=0;
+							}
+						}
 						else if( strstr( pos, "/favicon.ico " ) == pos ) {
 							/* ignore for now */
 							send( sock, "HTTP/1.1 204 No Content\015\012\015\012", 28, 0 );
+							state=0;
+							running=0;
 						}
 						else if( strstr( pos, "/config ") == pos ) {
 							state=6;
@@ -344,6 +362,20 @@ static void *clientHandler(void *args ) {
 						(int)strlen(VERSION), VERSION );
 				len=strlen(commdata);
 				break;
+				/* todo: attachment or inline? */
+			case 8: /* send mp3 */
+				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: audio/mpeg;\015\012"
+						"Content-Disposition: attachment; filename=\"%s.mp3\"\015\012\015\012", title->display );
+				send(sock , commdata, strlen(commdata), 0);
+				/* a download request is a one-shot and does not interfere with the 'playing' buffer */
+				strncpy( playing, config->musicdir, MAXPATHLEN );
+				strncat(playing, title->path, MAXPATHLEN-strlen(playing) );
+				filePost( sock, playing );
+				title=NULL;
+				len=0;
+				running=0;
+				break;
+
 			default:
 				len=0;
 			}
