@@ -119,6 +119,7 @@ static void *clientHandler(void *args ) {
 	int fullstat=-1;
 	int okreply=-1;
 	int rawcmd;
+	int index=0;
 	mptitle *title=NULL;
 
 	commdata=falloc( commsize, sizeof( char ) );
@@ -241,7 +242,13 @@ static void *clientHandler(void *args ) {
 						else if( strstr( pos, "/title/" ) == pos ) {
 							addMessage( 1, "received: %s", pos );
 							pos+=7;
-							title=getTitleByIndex( atoi( pos ) );
+							index=atoi(pos);
+							if( index == 0 ) {
+								title=config->current->title;
+							}
+							else {
+								title=getTitleByIndex( index );
+							}
 							if( title != NULL ) {
 								fname=title->path;
 								state=8;
@@ -367,10 +374,8 @@ static void *clientHandler(void *args ) {
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: audio/mpeg;\015\012"
 						"Content-Disposition: attachment; filename=\"%s.mp3\"\015\012\015\012", title->display );
 				send(sock , commdata, strlen(commdata), 0);
-				/* a download request is a one-shot and does not interfere with the 'playing' buffer */
-				strncpy( playing, config->musicdir, MAXPATHLEN );
-				strncat(playing, title->path, MAXPATHLEN-strlen(playing) );
-				filePost( sock, playing );
+				/* todo: title->path should be relative to config->musicdir */
+				filePost( sock, title->path );
 				title=NULL;
 				len=0;
 				running=0;

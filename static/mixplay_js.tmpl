@@ -267,12 +267,11 @@ function updateUI( ){
 						setElement( 'album', data.current.album );
 						setElement( 'genre', data.current.genre );
 						if( data.next.length > 0 ) {
-						}
 							setElement( 'next', data.next[0].artist+" - "+data.next[0].title );
-						else {
-							setElement( 'next', "---" );
 						}
-						setElement( 'next', data.next.artist+" - "+data.next.title );
+						else {
+							setElement( 'next', "- - -" );
+						}
 						if( data.current.flags & 1 )  {
 							document.getElementById( 'fav' ).disabled=true;
 						}

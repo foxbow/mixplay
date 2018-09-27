@@ -70,11 +70,12 @@
       <input id='newprof' type='button' onclick='createLoad()' value='New/Load' >
     </div>
     <div id='tools' style='display: none; width:100%;' >
-      <em>Tools:<em><br>
+      <em>Tools:</em><br>
       <input id='rescan' type='button' onclick='sendCMD(0x08)' value='ReScan' >
       <input id='dbinfo' type='button' onclick='sendCMD(0x12)' value='DBInfo' >
       <input id='version' type='button' onclick='showInfo()' value='Info' >
-      <input id='stop' type='button' onclick='killServer()' value='STOP' >
+      <input id='stop' type='button' onclick='killServer()' value='STOP' ><br>
+      <a href="/title/0" id='download' class='download'>Download the current title</a>
     </div>
     <div id='msgs' style='display: none;' width='100%'>
       <em>Messages:</em><br>

@@ -79,11 +79,11 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mptitle 
 		jsonAddInt( val, "skipcount", title->skipcount );
 	}
 	else {
-		val=jsonAddStr( NULL, "artist", "---" );
-		jsonAddStr( val, ",album", "---" );
-		jsonAddStr( val, ",title", "---" );
-		jsonAddInt( val, ",flags", 0 );
-		jsonAddStr( val, "genre", "---" );
+		val=jsonAddStr( NULL, "artist", "-" );
+		jsonAddStr( val, ",album", "-" );
+		jsonAddStr( val, "title", "-" );
+		jsonAddInt( val, "flags", 0 );
+		jsonAddStr( val, "genre", "-" );
 		jsonAddInt( val, "playcount", 0 );
 		jsonAddInt( val, "skipcount", 0 );
 	}
@@ -132,6 +132,11 @@ static jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mpplaylist *p
 	return jo;
 }
 
+/**
+ * appends titles to the given playlist
+ * caveat: pl must not be NULL!
+ * todo: enable fetching into an empty list
+ */
 int jsonGetTitles( jsonObject *jo, const char *key, mpplaylist *pl ) {
 	mpplaylist *buf=NULL;
 	char ikey[20]="0";
@@ -181,7 +186,12 @@ char *serializeStatus( unsigned long *count, int clientid, int fullstat ) {
 	if( fullstat ) {
 		jsonAddInt( jo, "type", MPCOMM_FULLSTAT );
 		if( current != NULL ) {
-			jsonAddTitle( jo, "prev", current->prev->title );
+			if( current->prev != NULL ) {
+				jsonAddTitle( jo, "prev", current->prev->title );
+			}
+			else {
+				jsonAddTitle( jo, "prev", NULL );
+			}
 			jsonAddTitle( jo, "current", data->current->title );
 			jsonAddTitles( jo, "next", current->next );
 		}
@@ -306,7 +316,7 @@ static int deserializeStatus( jsonObject *jo ) {
 	if( jsonGetInt(jo, "type" ) == MPCOMM_FULLSTAT ) {
 		jsonGetTitle( jo, "prev", data->current->prev->title );
 		jsonGetTitle( jo, "current", data->current->title );
-		jsonGetTitle( jo, "next", data->current->next->title );
+		jsonGetTitles( jo, "next", data->current );
 	}
 	data->active=jsonGetInt( jo, "active");
 	data->playstream=jsonGetInt( jo, "playstream" );

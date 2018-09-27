@@ -52,3 +52,14 @@
 #remtime {
 	float: right;
 }
+
+a.download {
+	text-decoration: none;
+	color: #000;
+	background-color: #eee;
+	border: solid;
+	margin: 1px;
+	padding: 3px;
+	border-width: thin;
+	position: absolute;
+}
