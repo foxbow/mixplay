@@ -63,13 +63,11 @@ mpplaylist *addPLDummy( mpplaylist *pl, const char *name );
 void plCheck( int del );
 
 mptitle *recurse( char *curdir, mptitle *files );
-mptitle *shuffleTitles( mptitle *base );
 mptitle *rewindTitles( mptitle *base );
 mptitle *loadPlaylist( const char *path );
 mptitle *insertTitle( mptitle *base, const char *path );
 mptitle *skipTitles( mptitle *current, long num );
 mptitle *searchList( mptitle *base, struct marklist_t *term );
-mptitle *getTitle( unsigned int key );
 mptitle *cleanTitles( mptitle *root );
 
 int DNPSkip( mptitle *base, const unsigned int level );

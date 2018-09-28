@@ -104,6 +104,12 @@ install-service: install-mixplayd
 
 install: $(INST)
 
+mpplayer_html.h: static/mpplayer.html
+	xxd -i static/mpplayer.html > mpplayer_html.h
+
+mpplayer_js.h: static/mpplayer.js
+	xxd -i static/mpplayer.js > mpplayer_js.h
+
 mixplayd_html.h: static/mixplay.html
 	xxd -i static/mixplay.html > mixplayd_html.h
 

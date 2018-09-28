@@ -9,6 +9,8 @@
 
 #include "mpserver.h"
 #include "mpcomm.h"
+#include "mpplayer_html.h"
+#include "mpplayer_js.h"
 #include "mixplayd_html.h"
 #include "mprc_html.h"
 #include "mixplayd_js.h"
@@ -239,6 +241,20 @@ static void *clientHandler(void *args ) {
 							mtype="application/javascript; charset=utf-8";
 							state=5;
 						}
+						else if( strstr( pos, "/mpplayer.html " ) == pos ) {
+							fname="static/mpplayer.html";
+							fdata=static_mpplayer_html;
+							flen=static_mpplayer_html_len;
+							mtype="text/html; charset=utf-8";
+							state=5;
+						}
+						else if( strstr( pos, "/mpplayer.js " ) == pos ) {
+							fname="static/mpplayer.js";
+							fdata=static_mpplayer_js;
+							flen=static_mpplayer_js_len;
+							mtype="application/javascript; charset=utf-8";
+							state=5;
+						}
 						else if( strstr( pos, "/title/" ) == pos ) {
 							addMessage( 1, "received: %s", pos );
 							pos+=7;
@@ -249,7 +265,11 @@ static void *clientHandler(void *args ) {
 							else {
 								title=getTitleByIndex( index );
 							}
-							if( title != NULL ) {
+
+							if( strstr( pos, "info " ) == pos ) {
+								state=9;
+							}
+							else if( title != NULL ) {
 								fname=title->path;
 								state=8;
 							}
@@ -368,6 +388,7 @@ static void *clientHandler(void *args ) {
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
 						(int)strlen(VERSION), VERSION );
 				len=strlen(commdata);
+				running=0;
 				break;
 				/* todo: attachment or inline? */
 			case 8: /* send mp3 */
@@ -378,6 +399,14 @@ static void *clientHandler(void *args ) {
 				filePost( sock, title->path );
 				title=NULL;
 				len=0;
+				running=0;
+				break;
+
+			case 9: /* return "artist - title" line */
+				snprintf( playing, MAXPATHLEN, "%s - %s", title->artist, title->title );
+				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
+						(int)strlen(playing), playing );
+				len=strlen(commdata);
 				running=0;
 				break;
 

@@ -795,7 +795,7 @@ void *reader( void *cont ) {
 			title=control->current->title;
 			if( ( cmd == mpc_fav ) || ( cmd == mpc_dnp ) ) {
 				if( control->argument != NULL ) {
-					if( ( title=getTitle( atoi( control->argument ) ) ) == NULL ) {
+					if( ( title=getTitleByIndex(atoi( control->argument ) ) ) == NULL ) {
 						title=control->current->title;
 					}
 					sfree( &(control->argument) );

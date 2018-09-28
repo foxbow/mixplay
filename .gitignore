@@ -59,3 +59,5 @@ core
 
 # Logfiles
 *.log
+/mpplayer_js.h
+/mpplayer_html.h

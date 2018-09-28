@@ -829,6 +829,9 @@ mpplaylist *addNewTitle( ) {
 	*/
 
 	if( pl != NULL ) {
+		while( pl->next != NULL ) {
+			pl=pl->next;
+		}
 		runner=pl->title;
 		lastname=runner->artist;
 	}
@@ -992,30 +995,6 @@ mptitle *skipTitles( mptitle *current, long num ) {
 	}
 
 	return current;
-}
-
-/*
- * returns the title with the given index
- */
-mptitle *getTitle( unsigned int key ) {
-	mptitle *root=NULL;
-	mptitle *runner=NULL;
-
-	if( key == 0 ) {
-		return NULL;
-	}
-
-	root=getConfig()->root;
-	if( root != NULL ) {
-		runner=root;
-		do {
-			if( runner->key == key ) {
-				return runner;
-			}
-			runner=runner->next;
-		} while( runner != root );
-	}
-	return NULL;
 }
 
 /*
