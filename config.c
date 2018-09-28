@@ -54,7 +54,7 @@ static const char *mpc_command[] = {
 		"mpc_fav",
 		"mpc_dnp",
 		"mpc_doublets",
-		"mpc_shuffle",
+		"mpc_NOP",
 		"mpc_ivol",
 		"mpc_dvol",
 		"mpc_bskip",
@@ -144,11 +144,29 @@ static void printUsage( char *name ) {
 	addMessage( 0, "		   URL, path, mp3 file, playlist\n" );
 }
 
+static mpplaylist *titleToPlaylist( mptitle *title, mpplaylist *pl ) {
+	mptitle *guard=title;
+
+	pl=cleanPlaylist(pl);
+
+	do {
+		pl=appendToPL( title, pl );
+		title=title->next;
+	} while( title != guard );
+
+	while( pl->prev != NULL ) {
+		pl=pl->prev;
+	}
+
+	return pl;
+}
+
 /**
  * parse arguments given to the application
  * also handles playing of a single file, a directory, a playlist or an URL
  */
 int setArgument( const char *arg ) {
+	mptitle *title=NULL;
 	char line [MAXPATHLEN];
 	int  i;
 	mpconfig *control=getConfig();
@@ -166,31 +184,26 @@ int setArgument( const char *arg ) {
 		}
 
 		strncat( line, arg, MAXPATHLEN );
-		control->root=cleanTitles( control->root );
-		control->current=control->root;
 		setStream( line, "Waiting for stream info..." );
 		return 1;
 	}
 	else if( endsWith( arg, ".mp3" ) ) {
 		addMessage( 1, "Single file: %s", arg );
 		/* play single song... */
-		control->root=cleanTitles( control->root );
-		control->root=insertTitle( NULL, arg );
-		control->current=control->root;
+		title=insertTitle( NULL, arg );
+		if( title != NULL ) {
+			cleanTitles( control->root );
+			control->current=titleToPlaylist( title, control->current );
+		}
 		return 2;
 	}
 	else if( isDir( arg ) ) {
 		addMessage( 1, "Directory: %s", arg );
-		control->root=cleanTitles( control->root );
 		strncpy( line, arg, MAXPATHLEN );
-		control->root=recurse( line, NULL );
-		if( control->root != NULL ) {
-			control->current=control->root;
-			do {
-				control->current->plnext=control->current->dbnext;
-				control->current->plprev=control->current->dbprev;
-				control->current=control->current->dbnext;
-			} while( control->current != control->root );
+		title=recurse( line, NULL );
+		if( title != NULL ) {
+			cleanTitles( control->root );
+			control->current=titleToPlaylist( title, control->current );
 		}
 		return 3;
 	}
@@ -209,9 +222,11 @@ int setArgument( const char *arg ) {
 		}
 
 		addMessage( 1, "Playlist: %s", arg );
-		cleanTitles( control->root );
-		control->root=loadPlaylist( arg );
-		control->current=control->root;
+		title=loadPlaylist( arg );
+		if( title != NULL ) {
+			cleanTitles( control->root );
+			control->current=titleToPlaylist( title, control->current );
+		}
 		return 4;
 	}
 
@@ -322,8 +337,10 @@ int getArgs( int argc, char ** argv ){
 int initAll( ) {
 	mpconfig *control;
 	pthread_t tid;
-
+	struct timespec ts;
 	control=getConfig();
+	ts.tv_sec=0;
+	ts.tv_nsec=250000;
 
 	if ( control->remote == 1 ) {
 		pthread_create( &control->rtid, NULL, netreader, (void *)control );
@@ -333,7 +350,7 @@ int initAll( ) {
 		/* start the actual player */
 		pthread_create( &control->rtid, NULL, reader, (void *)control );
 		/* make sure the mpg123 instances have a chance to start up */
-		sleep( 1 );
+		nanosleep(&ts, NULL);
 		if( NULL == control->root ) {
 			/* Runs as thread to have updates in the UI */
 			pthread_create( &tid, NULL, setProfile, ( void * )control );

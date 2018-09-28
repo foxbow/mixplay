@@ -185,16 +185,16 @@ int main( int argc, char **argv ) {
 						break;
 
 					case 'i':
-						if( 0 != config->current->key ) {
+						if( 0 != config->current->title->key ) {
 							popUp( 0, "%s\nGenre: %s\nKey: %04i\nplaycount: %i\nskipcount: %i\nCount: %s - Skip: %s",
-								   config->current->path, config->current->genre,
-								   config->current->key, config->current->playcount,
-								   config->current->skipcount,
-								   ONOFF( ~( config->current->flags )&MP_CNTD ),
-								   ONOFF( ~( config->current->flags )&MP_SKPD ) );
+								   config->current->title->path, config->current->title->genre,
+								   config->current->title->key, config->current->title->playcount,
+								   config->current->title->skipcount,
+								   ONOFF( ~( config->current->title->flags )&MP_CNTD ),
+								   ONOFF( ~( config->current->title->flags )&MP_SKPD ) );
 						}
 						else {
-							popUp( 2, config->current->path );
+							popUp( 2, config->current->title->path );
 						}
 
 						break;
@@ -269,7 +269,7 @@ int main( int argc, char **argv ) {
 						}
 						else {
 							config->argument=calloc( sizeof(char), 10);
-							snprintf( config->argument, 9, "%i", config->current->key );
+							snprintf( config->argument, 9, "%i", config->current->title->key );
 							setCommand( mpc_dnp|mpc_title );
 						}
 						break;
@@ -281,7 +281,7 @@ int main( int argc, char **argv ) {
 						}
 						else {
 							config->argument=calloc( sizeof(char), 10);
-							snprintf( config->argument, 9, "%i", config->current->key );
+							snprintf( config->argument, 9, "%i", config->current->title->key );
 							setCommand( mpc_dnp|mpc_album );
 						}
 						break;
@@ -292,7 +292,7 @@ int main( int argc, char **argv ) {
 						}
 						else {
 							config->argument=calloc( sizeof(char), 10);
-							snprintf( config->argument, 9, "%i", config->current->key );
+							snprintf( config->argument, 9, "%i", config->current->title->key );
 							setCommand( mpc_fav|mpc_title );
 						}
 						break;

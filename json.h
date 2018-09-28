@@ -46,6 +46,7 @@ struct _jsonObject_t {
 int jsonHasError( void );
 char *jsonGetError( void );
 
+jsonType jsonPeek( jsonObject *jo, char *key );
 int	jsonGetInt( jsonObject *jo, const char *key );
 int	jsonCopyStr( jsonObject *jo, const char *key, char *buf, int size );
 char  *jsonGetStr( jsonObject *jo, const char *key );

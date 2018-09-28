@@ -245,7 +245,7 @@ static int infoLine( char *line, const mptitle *title, const int len ) {
  */
 static int g_updateUI( void *data ) {
 	mpconfig *control;
-	mptitle *runner;
+	mpplaylist *runner;
 	int i=0;
 	char	buff[2*MAXPATHLEN];
 	gboolean	usedb;
@@ -276,36 +276,38 @@ static int g_updateUI( void *data ) {
 	/* do we have volume control? */
 	gtk_widget_set_visible( MP_GLDATA->widgets->volume, (control->volume > -1) );
 
-	if( ( NULL != control->current ) && ( 0 != strlen( control->current->path ) ) ) {
+	if( ( NULL != control->current ) &&
+			(control->current->title != NULL) &&
+			( 0 != strlen( control->current->title->path ) ) ) {
 		usedb=( control->root->key || !control->playstream )?TRUE:FALSE;
 		/* These depend on a database */
 		gtk_widget_set_visible( MP_GLDATA->widgets->button_fav, usedb );
 
 		gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->title_current ),
-								control->current->title );
+								control->current->title->title );
 
 		if( usedb ) {
-			infoLine( buff, control->current->plprev, MAXPATHLEN );
+			infoLine( buff, control->current->prev->title, MAXPATHLEN );
 			gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_prev, buff );
-			infoLine( buff, control->current, MAXPATHLEN );
+			infoLine( buff, control->current->title, MAXPATHLEN );
 			gtk_widget_set_tooltip_text( MP_GLDATA->widgets->title_current, buff );
-			infoLine( buff, control->current->plnext, MAXPATHLEN );
+			infoLine( buff, control->current->next->title, MAXPATHLEN );
 			gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_next, buff );
 		}
 		else {
-			gtk_widget_set_tooltip_text( MP_GLDATA->widgets->title_current, control->current->path );
+			gtk_widget_set_tooltip_text( MP_GLDATA->widgets->title_current, control->current->title->path );
 			gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_prev, NULL );
 			gtk_widget_set_tooltip_text( MP_GLDATA->widgets->button_next, NULL );
 		}
 
-		runner=control->current->plnext->plnext;
+		runner=control->current->next->next;
 		buff[0]=0;
-		while( ( runner != control->current->plprev ) && i < 5 ) {
+		while( ( runner != NULL ) && i < 5 ) {
 			if( i > 0 ) {
 				strcat( buff, "\n" );
 			}
-			strcat( buff, runner->display );
-			runner=runner->plnext;
+			strcat( buff, runner->title->display );
+			runner=runner->next;
 			i++;
 		}
 		if( strlen(buff) > 0 ) {
@@ -314,23 +316,23 @@ static int g_updateUI( void *data ) {
 
 		gtk_widget_set_sensitive( MP_GLDATA->widgets->title_current, ( control->status == mpc_play ) );
 		gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->artist_current ),
-							control->current->artist );
+							control->current->title->artist );
 		gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->album_current ),
-							control->current->album );
+							control->current->title->album );
 		gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->genre_current ),
-							control->current->genre );
+							control->current->title->genre );
 
-		setButtonLabel( MP_GLDATA->widgets->button_prev, control->current->plprev->display );
+		setButtonLabel( MP_GLDATA->widgets->button_prev, control->current->prev->title->display );
 
 		if( getDebug() > 1 ) {
-			sprintf( buff, "%2i %s", control->current->skipcount, control->current->plnext->display );
+			sprintf( buff, "%2i %s", control->current->title->skipcount, control->current->next->title->display );
 			setButtonLabel( MP_GLDATA->widgets->button_next, buff );
 		}
 		else {
-			setButtonLabel( MP_GLDATA->widgets->button_next, control->current->plnext->display );
+			setButtonLabel( MP_GLDATA->widgets->button_next, control->current->next->title->display );
 		}
 
-		gtk_widget_set_sensitive( MP_GLDATA->widgets->button_fav, ( !( control->current->flags & MP_FAV ) ) );
+		gtk_widget_set_sensitive( MP_GLDATA->widgets->button_fav, ( !( control->current->title->flags & MP_FAV ) ) );
 
 		if( 0 != control->remote ) {
 			snprintf( buff, MAXPATHLEN, "%s@%s",
@@ -356,7 +358,7 @@ static int g_updateUI( void *data ) {
 		}
 
 		gtk_window_set_title ( GTK_WINDOW( MP_GLDATA->widgets->mixplay_main ),
-							   control->current->display );
+							   control->current->title->display );
 	}
 
 	if( control->argument == NULL ) {

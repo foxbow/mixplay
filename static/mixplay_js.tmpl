@@ -217,7 +217,7 @@ function sendCMD( cmd, arg="" ) {
  */
 function volWheel( e ) {
 	if( e.deltaY < 0 ) {
-		sendCMD( 0x0d );
+		sendCMD( 0x0d);
 	}
 	else if( e.deltaY > 0 ) {
 		sendCMD( 0x0e );
@@ -266,7 +266,12 @@ function updateUI( ){
 						setElement( 'artist', data.current.artist );
 						setElement( 'album', data.current.album );
 						setElement( 'genre', data.current.genre );
-						setElement( 'next', data.next.artist+" - "+data.next.title );
+						if( data.next.length > 0 ) {
+							setElement( 'next', data.next[0].artist+" - "+data.next[0].title );
+						}
+						else {
+							setElement( 'next', "- - -" );
+						}
 						if( data.current.flags & 1 )  {
 							document.getElementById( 'fav' ).disabled=true;
 						}
@@ -468,7 +473,7 @@ function remProf() {
 }
 
 /* 
- * start the UI update thread loops */
+ * start the UI update thread loops
  */
 updateUI();
 scrollToggle();

@@ -646,6 +646,18 @@ static jsonObject *jsonFollowPath( jsonObject *jo, const char *key ) {
 }
 
 /*
+ * returns the jsonType of the current object
+ * can also be used to check if an object exists - i.e. array indices
+ */
+jsonType jsonPeek( jsonObject *jo, char *key ) {
+	jo=jsonFollowPath( jo, key );
+	if( jo == NULL ) {
+		return json_null;
+	}
+	return jo->type;
+}
+
+/*
  * returns the int value of key
  */
 int jsonGetInt( jsonObject *jo, const char *key ) {

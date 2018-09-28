@@ -9,6 +9,8 @@
 
 #include "mpserver.h"
 #include "mpcomm.h"
+#include "mpplayer_html.h"
+#include "mpplayer_js.h"
 #include "mixplayd_html.h"
 #include "mprc_html.h"
 #include "mixplayd_js.h"
@@ -16,6 +18,7 @@
 #include "player.h"
 #include "config.h"
 #include "utils.h"
+#include "database.h"
 
 #include <arpa/inet.h>
 #include <ctype.h>
@@ -34,7 +37,7 @@ static int filePost( int sock, const char *fname ) {
 	int fd;
 	fd=open( fname, O_RDONLY );
 	if( fd != -1 ) {
-		sendfile( sock, fd, 0, 10240 );
+		while ( sendfile( sock, fd, 0, 4096 ) == 4096 );
 		close(fd);
 		return 0;
 	}
@@ -118,6 +121,8 @@ static void *clientHandler(void *args ) {
 	int fullstat=-1;
 	int okreply=-1;
 	int rawcmd;
+	int index=0;
+	mptitle *title=NULL;
 
 	commdata=falloc( commsize, sizeof( char ) );
 
@@ -236,9 +241,49 @@ static void *clientHandler(void *args ) {
 							mtype="application/javascript; charset=utf-8";
 							state=5;
 						}
+						else if( strstr( pos, "/mpplayer.html " ) == pos ) {
+							fname="static/mpplayer.html";
+							fdata=static_mpplayer_html;
+							flen=static_mpplayer_html_len;
+							mtype="text/html; charset=utf-8";
+							state=5;
+						}
+						else if( strstr( pos, "/mpplayer.js " ) == pos ) {
+							fname="static/mpplayer.js";
+							fdata=static_mpplayer_js;
+							flen=static_mpplayer_js_len;
+							mtype="application/javascript; charset=utf-8";
+							state=5;
+						}
+						else if( strstr( pos, "/title/" ) == pos ) {
+							addMessage( 1, "received: %s", pos );
+							pos+=7;
+							index=atoi(pos);
+							if( index == 0 ) {
+								title=config->current->title;
+							}
+							else {
+								title=getTitleByIndex( index );
+							}
+
+							if( strstr( pos, "info " ) == pos ) {
+								state=9;
+							}
+							else if( title != NULL ) {
+								fname=title->path;
+								state=8;
+							}
+							else {
+								send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
+								state=0;
+								running=0;
+							}
+						}
 						else if( strstr( pos, "/favicon.ico " ) == pos ) {
 							/* ignore for now */
 							send( sock, "HTTP/1.1 204 No Content\015\012\015\012", 28, 0 );
+							state=0;
+							running=0;
 						}
 						else if( strstr( pos, "/config ") == pos ) {
 							state=6;
@@ -264,8 +309,8 @@ static void *clientHandler(void *args ) {
 			memset( commdata, 0, commsize );
 			switch( state ) {
 			case 1: /* get update */
-				if( strcmp( config->current->display, playing ) ) {
-					strcpy( playing, config->current->display );
+				if( strcmp( config->current->title->display, playing ) ) {
+					strcpy( playing, config->current->title->display );
 					fullstat=-1;
 				}
 
@@ -343,7 +388,28 @@ static void *clientHandler(void *args ) {
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
 						(int)strlen(VERSION), VERSION );
 				len=strlen(commdata);
+				running=0;
 				break;
+				/* todo: attachment or inline? */
+			case 8: /* send mp3 */
+				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: audio/mpeg;\015\012"
+						"Content-Disposition: attachment; filename=\"%s.mp3\"\015\012\015\012", title->display );
+				send(sock , commdata, strlen(commdata), 0);
+				/* todo: title->path should be relative to config->musicdir */
+				filePost( sock, title->path );
+				title=NULL;
+				len=0;
+				running=0;
+				break;
+
+			case 9: /* return "artist - title" line */
+				snprintf( playing, MAXPATHLEN, "%s - %s", title->artist, title->title );
+				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
+						(int)strlen(playing), playing );
+				len=strlen(commdata);
+				running=0;
+				break;
+
 			default:
 				len=0;
 			}

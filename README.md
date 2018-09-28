@@ -84,7 +84,7 @@ cmd = 000F RRRR CCCC CCCC
 * 0x09 - mark as favourite according to upper bytes
 * 0x0a - mark as do not play according to upper bytes
 * 0x0b - find double titles*
-* 0x0c - shuffle current playlist
+* 0x0c - *unused*
 * 0x0d - increase volume
 * 0x0e - decrease volume
 * 0x0f - fast forward
@@ -96,7 +96,8 @@ cmd = 000F RRRR CCCC CCCC
 * 0x15 - set volume +arg <0..100>
 * 0x16 - create new profile +arg <string>
 * 0x17 - play path/url <string>
-* 0x18 - idle / max command*
+* 0x18 - delete profile/channel <string>
+* 0x19 - idle / max command*
 
 args are set with the '?' operator. 
 Examples: 

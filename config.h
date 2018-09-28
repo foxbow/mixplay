@@ -30,7 +30,7 @@ enum _mpcmd_t {
 	mpc_fav,
 	mpc_dnp,
 	mpc_doublets,
-	mpc_shuffle,
+	mpc_NOP,
 	mpc_ivol,
 	mpc_dvol,
 	mpc_fskip,
@@ -84,7 +84,9 @@ struct _mpcontrol_t {
 	char **stream;				/* stream URLs */
 	char **sname;				/* stream names */
 	mptitle *root;				/* the root title */
-	mptitle *current;			/* the current title */
+	mpplaylist *playlist;		/* the current playlist */
+	mpplaylist *buflist;		/* buffer list to contain searchresults etc */
+	mpplaylist *current;		/* the current title */
 	char *dbname;				/* path to the database */
 	char *favname;				/* path to the favourites */
 	char *dnpname;				/* path to the DNPlist */

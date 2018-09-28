@@ -31,6 +31,7 @@ int dbAddTitles( const char *dbname, char *basedir );
 void dbClose( int db );
 void dbBackup( const char *dbname );
 int dbNameCheck( const char *dbname );
+mptitle *getTitleByIndex( unsigned int index );
 
 /* void dbDump( const char *dbname, mptitle *root ); */
 
