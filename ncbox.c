@@ -234,7 +234,7 @@ void drawframe( mpplaylist *current, const char *status, int stream ) {
 			runner=current->prev;
 
 			for( i=middle-2; i>0; i-- ) {
-				if( current != runner ) {
+				if( runner != NULL ) {
 					strip( buff, runner->title->display, maxlen );
 
 					if( runner->title->flags & MP_FAV ) {
@@ -256,7 +256,7 @@ void drawframe( mpplaylist *current, const char *status, int stream ) {
 			runner=current->next;
 
 			for( i=middle+2; i<row-2; i++ ) {
-				if( current != runner ) {
+				if( runner != NULL ) {
 					strip( buff, runner->title->display, maxlen );
 
 					if( runner->title->flags & MP_FAV ) {

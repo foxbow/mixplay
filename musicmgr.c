@@ -123,6 +123,9 @@ void addToFile( const char *path, const char *line ) {
 	fclose( fp );
 }
 
+/**
+ * deletes the current playlist
+ */
 mpplaylist *cleanPlaylist( mpplaylist *pl ) {
 	mpplaylist *next=NULL;
 
@@ -177,11 +180,13 @@ mpplaylist *addPLDummy( mpplaylist *pl, const char *name ){
  * this function either returns pl or the head of the new playlist
  */
 mpplaylist *appendToPL( mptitle *title, mpplaylist *pl ) {
-	if( pl != NULL ) {
-		while( pl->next != NULL ) {
-			pl=pl->next;
+	mpplaylist *runner=pl;
+
+	if( runner != NULL ) {
+		while( runner->next != NULL ) {
+			runner=runner->next;
 		}
-		addToPL( title, pl );
+		addToPL( title, runner );
 	}
 	else {
 		pl=addToPL( title, NULL );
@@ -192,7 +197,7 @@ mpplaylist *appendToPL( mptitle *title, mpplaylist *pl ) {
 /**
  * inserts a title into the playlist chain. Creates a new playlist
  * if no target is set.
- * This function returns a pointer to the added element.
+ * This function returns a valid target
  */
 mpplaylist *addToPL( mptitle *title, mpplaylist *target ) {
 	mpplaylist *buf=NULL;
@@ -216,7 +221,7 @@ mpplaylist *addToPL( mptitle *title, mpplaylist *target ) {
 	}
 
 	title->flags |= MP_MARK;
-	return buf;
+	return target;
 }
 
 /*
@@ -466,7 +471,7 @@ int applyDNPlist( mptitle *base, struct marklist_t *list ) {
 	}
 
 	if( cnt > 1 ) {
-		addMessage( 0, "Marked %i titles as DNP", cnt );
+		addMessage( 1, "Marked %i titles as DNP", cnt );
 	}
 
 	return cnt;
@@ -502,7 +507,7 @@ int applyFAVlist( mptitle *root, struct marklist_t *favourites ) {
 	} while ( runner != root );
 
 	if( cnt > 1 ) {
-		addMessage( 0, "Marked %i favourites", cnt );
+		addMessage( 1, "Marked %i favourites", cnt );
 	}
 
 	return cnt;
@@ -810,9 +815,10 @@ int DNPSkip( mptitle *base, const unsigned int level ) {
  * Core functionality of the mixplay architecture:
  * - does not play the same artist twice in a row
  * - prefers titles with lower playcount
+ *
+ * returns the head of the (new/current) playlist
  */
-mpplaylist *addNewTitle( ) {
-	mpplaylist *pl=getConfig()->current;
+mpplaylist *addNewTitle( mpplaylist *pl ) {
 	mptitle *runner=NULL;
 	mptitle *guard=NULL;
 	struct timeval tv;
@@ -840,7 +846,6 @@ mpplaylist *addNewTitle( ) {
 		valid=3;
 	}
 
-	pcount=
 	/* improve 'randomization' */
 	gettimeofday( &tv,NULL );
 	srand( getpid()*tv.tv_sec );
@@ -932,12 +937,16 @@ restart:
  * checks the current playlist.
  * If there are more than 10 previous titles, those get pruned.
  * While there are less that 10 next titles, titles will be added.
+ *
+ * todo: make this also work on other playlists
  */
 void plCheck( int del ) {
 	int cnt=0;
-	mpplaylist *pl=getConfig()->playlist;
+	mpplaylist *pl=getConfig()->current;
 	mpplaylist *buf=pl;
+
 	if( pl != NULL ) {
+
 		while( ( pl->prev != NULL ) && ( cnt < 10 ) ) {
 			pl=pl->prev;
 			cnt++;
@@ -952,17 +961,22 @@ void plCheck( int del ) {
 			buf=pl;
 		}
 
-		pl=getConfig()->playlist;
+		cnt=0;
+		pl=getConfig()->current;
+		/* go to the end of the playlist */
 		while( pl->next != NULL ) {
-			if( ( del != 0 ) && ( access( pl->title->path, F_OK ) != 0 ) ) {
-				buf=pl->prev;
-				pl->prev->next=pl->next;
-				if( pl->next != NULL ) {
-					pl->next->prev=pl->prev;
+			/* clean up on the way? */
+			if( del != 0 ) {
+				if ( ( pl->title->flags | MP_DNP ) || ( access( pl->title->path, F_OK ) != 0 ) ) {
+					buf=pl->prev;
+					pl->prev->next=pl->next;
+					if( pl->next != NULL ) {
+						pl->next->prev=pl->prev;
+					}
+					free(pl);
+					pl=buf;
+					cnt--;
 				}
-				free(pl);
-				pl=buf;
-				cnt--;
 			}
 			pl=pl->next;
 			cnt++;
@@ -970,9 +984,9 @@ void plCheck( int del ) {
 	}
 
 	while( cnt < 10 ) {
-		pl=addNewTitle();
+		pl=addNewTitle( getConfig()->current );
 		if( getConfig()->current == NULL ) {
-			getConfig()->current = pl;
+			getConfig()->current=pl;
 		}
 		cnt++;
 	}

@@ -119,8 +119,6 @@ int main( int argc, char **argv ) {
 		}
 	}
 
-	setVerbosity(1);
-
 	if( ( getArgs( argc, argv ) != 0 ) && ( config->remote == 1 ) ) {
 		addMessage( 0, "Disabling remote connection" );
 		config->remote=0;

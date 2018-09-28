@@ -187,12 +187,13 @@ void *setProfile( void *data ) {
 	int num;
 	int lastver;
 	int64_t active;
+	int64_t cactive;
 	mpconfig *control=( mpconfig * )data ;
 
-	active=control->active;
+	cactive=control->active;
 
-	if( active < 0 ) {
-		active = -(active+1);
+	if( cactive < 0 ) {
+		active = -(cactive+1);
 
 		if( active >= control->streams ) {
 			addMessage( 0, "Stream #%i does no exist!", active );
@@ -203,8 +204,8 @@ void *setProfile( void *data ) {
 		control->playstream=1;
 		setStream( control->stream[active], control->sname[active] );
 	}
-	else if( active > 0 ){
-		active=active-1;
+	else if( cactive > 0 ){
+		active=cactive-1;
 
 		if( active > control->profiles ) {
 			addMessage ( 0, "Profile #%i does no exist!", active );
@@ -276,11 +277,11 @@ void *setProfile( void *data ) {
 	/* if we're not in player context, start playing automatically */
 	control->status=mpc_start;
 	if( pthread_mutex_trylock( &_pcmdlock ) != EBUSY ) {
-		addMessage( 0, "Start play" );
+		addMessage( 1, "Start play" );
 		control->command=mpc_start;
 	}
 
-	if( ( control->active != active ) && !control->remote ) {
+	if( ( control->active != cactive ) && !control->remote ) {
 		control->changed = -1;
 	}
 	return NULL;
@@ -326,9 +327,7 @@ static void *plCheckDoublets( void *arg ) {
 	i=dbNameCheck( control->dbname );
 	if( i > 0 ) {
 		addMessage( 0, "Deleted %i titles", i );
-		addMessage( 0, "Restarting player.." );
-		setProfile( control );
-		control->current->title = control->root;
+		plCheck( 1 );
 	}
 	else {
 		addMessage( 0, "No titles deleted" );
@@ -392,19 +391,6 @@ static void *plSetProfile( void *arg ) {
 	pthread_mutex_unlock( &_asynclock );;
 	return NULL;
 }
-
-#ifdef OBSOLETE
-static void *plShuffle( void *arg ) {
-	mpconfig *control=(mpconfig *) arg;
-	progressStart("Shuffling...");
-	control->status=mpc_start;
-	control->root=shuffleTitles(control->root);
-	control->current->title=control->root;
-	progressEnd();
-	pthread_mutex_unlock( &_asynclock );;
-	return NULL;
-}
-#endif
 
 /**
  * run the given command asynchronously to allow updates during execution
@@ -717,6 +703,7 @@ void *reader( void *cont ) {
 							if( order > 0 ) {
 								if( control->current->next != NULL ) {
 									control->current=control->current->next;
+									plCheck(0);
 								}
 								else {
 									control->status=mpc_idle; /* stop */

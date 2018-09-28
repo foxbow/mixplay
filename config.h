@@ -84,7 +84,6 @@ struct _mpcontrol_t {
 	char **stream;				/* stream URLs */
 	char **sname;				/* stream names */
 	mptitle *root;				/* the root title */
-	mpplaylist *playlist;		/* the current playlist */
 	mpplaylist *buflist;		/* buffer list to contain searchresults etc */
 	mpplaylist *current;		/* the current title */
 	char *dbname;				/* path to the database */
