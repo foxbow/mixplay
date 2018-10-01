@@ -70,7 +70,8 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mptitle 
 	jsonObject *val=NULL;
 
 	if( title != NULL ) {
-		val=jsonAddStr( NULL, "artist", title->artist );
+		val=jsonAddInt( NULL, "key", title->key );
+		jsonAddStr( val, "artist", title->artist );
 		jsonAddStr( val, "album", title->album );
 		jsonAddStr( val, "title", title->title );
 		jsonAddInt( val, "flags", title->flags );
@@ -79,8 +80,9 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mptitle 
 		jsonAddInt( val, "skipcount", title->skipcount );
 	}
 	else {
-		val=jsonAddStr( NULL, "artist", "-" );
-		jsonAddStr( val, ",album", "-" );
+		val=jsonAddInt( NULL, "key", 0 );
+		jsonAddStr( val, "artist", "-" );
+		jsonAddStr( val, "album", "-" );
 		jsonAddStr( val, "title", "-" );
 		jsonAddInt( val, "flags", 0 );
 		jsonAddStr( val, "genre", "-" );
@@ -98,6 +100,7 @@ static void jsonGetTitle( jsonObject *jo, const char *key, mptitle *title ) {
 	to=jsonGetObj( jo, key);
 
 	if( to != NULL ) {
+		title->key=jsonGetInt( to, "key" );
 		jsonCopyStr(to, "artist", title->artist, NAMELEN );
 		jsonCopyStr(to, "album", title->album, NAMELEN );
 		jsonCopyStr(to, "title", title->title, NAMELEN );
@@ -118,16 +121,21 @@ static void jsonGetTitle( jsonObject *jo, const char *key, mptitle *title ) {
  */
 static jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mpplaylist *pl ) {
 	jsonObject *title=NULL;
+	jsonObject *ret=NULL;
 	char ikey[20];
-	int index=0;
+	int i=0;
 
 	while( pl != NULL ) {
-		sprintf( ikey, "%i", index );
+		sprintf( ikey, "%i", i );
 		title=jsonAddTitle( title, ikey, pl->title );
+		if( i == 0 ) {
+			ret=title;
+		}
 		pl=pl->next;
-		index++;
+		i++;
 	}
-	jo=jsonAddArr( jo, key, title );
+
+	jo=jsonAddArr( jo, key, ret );
 
 	return jo;
 }
@@ -176,15 +184,15 @@ int jsonGetTitles( jsonObject *jo, const char *key, mpplaylist *pl ) {
  * put data to be sent over into the buff
  * adds messages only if any are available for the client
 **/
-char *serializeStatus( unsigned long *count, int clientid, int fullstat ) {
+char *serializeStatus( unsigned long *count, int clientid, int type ) {
 	mpconfig *data=getConfig();
 	jsonObject *jo=NULL;
 	mpplaylist *current=data->current;
 
 	jo=jsonAddInt( jo, "version", MPCOMM_VER );
+	jsonAddInt( jo, "type", type );
 
-	if( fullstat ) {
-		jsonAddInt( jo, "type", MPCOMM_FULLSTAT );
+	if( type == MPCOMM_FULLSTAT ) {
 		if( current != NULL ) {
 			if( current->prev != NULL ) {
 				jsonAddTitle( jo, "prev", current->prev->title );
@@ -201,8 +209,10 @@ char *serializeStatus( unsigned long *count, int clientid, int fullstat ) {
 			jsonAddTitles( jo, "next", NULL );
 		}
 	}
-	else {
-		jsonAddInt( jo, "type", MPCOMM_STAT );
+	else if ( type == MPCOMM_RESULT ) {
+		jsonAddTitles(jo, "titles", data->found->titles );
+		jsonAddStrs(jo, "artists", data->found->artists, data->found->anum);
+		jsonAddStrs(jo, "albums", data->found->albums, data->found->lnum);
 	}
 	jsonAddInt( jo, "playstream", data->playstream );
 	jsonAddInt( jo, "active", data->active );
@@ -358,6 +368,9 @@ static int deserialize( char *json ) {
 			retval=deserializeConfig( jo );
 			break;
 
+		case MPCOMM_RESULT: /* searchresults */
+			addMessage( 0, "Cannot handle search results yet!" );
+			break;
 		default:
 			addMessage( 1, "Unknown reply type!" );
 		}

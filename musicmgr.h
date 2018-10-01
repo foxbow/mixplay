@@ -7,6 +7,7 @@
 
 #define NAMELEN 64
 #define MAXPATHLEN 256
+#define MAXSEARCH 100
 
 #define RANDOM(x) ((unsigned)rand()%(x))
 
@@ -40,6 +41,18 @@ struct playlist_t {
 	mpplaylist *next;
 };
 
+typedef struct searchresults_t searchresults;
+struct searchresults_t {
+	unsigned tnum;
+	unsigned anum;
+	unsigned lnum;
+	mpplaylist *titles;
+	char **artists;
+	char **albums;
+	char **alart;
+	int send;
+};
+
 struct marklist_t {
 	char dir[MAXPATHLEN+2];
 	struct marklist_t *next;
@@ -67,8 +80,9 @@ mptitle *rewindTitles( mptitle *base );
 mptitle *loadPlaylist( const char *path );
 mptitle *insertTitle( mptitle *base, const char *path );
 mptitle *skipTitles( mptitle *current, long num );
-mptitle *searchList( mptitle *base, struct marklist_t *term );
 mptitle *cleanTitles( mptitle *root );
+int search( const char *pat, const int global, const int fill );
+int playResults( mpcmd range, int index, int insert );
 
 int DNPSkip( mptitle *base, const unsigned int level );
 int applyDNPlist( mptitle *base, struct marklist_t *list );

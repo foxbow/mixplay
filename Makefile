@@ -1,6 +1,6 @@
 CC=gcc
 VERSION=$(shell git describe --tags --abbrev=1 --dirty=-dev --always)
-MPCOMM_VER=13
+MPCOMM_VER=14
 CCFLAGS=-DMPCOMM_VER="${MPCOMM_VER}"
 CCFLAGS+=-DVERSION=\"${VERSION}\"
 CCFLAGS+=-Wall -pedantic -Werror -g
@@ -66,6 +66,7 @@ distclean: clean
 	rm -f gmixplay_app.h
 	rm -f mprc_html.h
 	rm -f mixplayd_*.h
+	rm -f mpplayer_*.h
 	rm -f *~
 	rm -f core
 

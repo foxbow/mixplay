@@ -54,7 +54,7 @@ static const char *mpc_command[] = {
 		"mpc_fav",
 		"mpc_dnp",
 		"mpc_doublets",
-		"mpc_NOP",
+		"mpc_insert",
 		"mpc_ivol",
 		"mpc_dvol",
 		"mpc_bskip",
@@ -62,7 +62,7 @@ static const char *mpc_command[] = {
 		"mpc_QUIT",
 		"mpc_dbinfo",
 		"mpc_search",
-		"mpc_longsearch",
+		"mpc_append",
 		"mpc_setvol",
 		"mpc_newprof",
 		"mpc_path",
@@ -430,6 +430,7 @@ mpconfig *readConfig( ) {
 	if( c_config == NULL ) {
 		c_config=falloc( 1, sizeof( mpconfig ) );
 		c_config->msg=msgBuffInit();
+		c_config->found=falloc(1,sizeof(searchresults));
 	}
 
 	/* Set some default values */
@@ -621,6 +622,18 @@ void freeConfig( ) {
 	assert( c_config != NULL );
 	freeConfigContents( );
 	c_config->root=cleanTitles( c_config->root );
+	c_config->current=cleanPlaylist( c_config->current );
+	c_config->found->titles=cleanPlaylist( c_config->found->titles );
+	if( c_config->found->artists != NULL ) {
+		free( c_config->found->artists );
+	}
+	if( c_config->found->albums != NULL ) {
+		free( c_config->found->albums );
+	}
+	if( c_config->found->alart != NULL ) {
+		free( c_config->found->alart );
+	}
+	free( c_config->found );
 	free( c_config );
 	c_config=NULL;
 }

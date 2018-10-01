@@ -13,6 +13,7 @@
 #define MPCOMM_STAT 1
 #define MPCOMM_CONFIG 2
 #define MPCOMM_FULLSTAT 3
+#define MPCOMM_RESULT 4
 
 
 #define MP_BLKSIZE 512

@@ -19,8 +19,8 @@
 static char _jsonError[512];
 
 /* forward definitions of cyclic dependencies in static functions */
-static char *jsonWriteObj( jsonObject *jo, char *json, int len );
-static char *jsonWriteArr( jsonObject *jo, char *json, int len );
+static char *jsonWriteObj( jsonObject *jo, char *json, int *len );
+static char *jsonWriteArr( jsonObject *jo, char *json, int *len );
 static int jsonParseObject( char *json, jsonObject **jo );
 static int jsonParseArray( char *json, jsonObject **jo );
 
@@ -946,13 +946,15 @@ jsonObject *jsonRead( char *json ) {
 }
 
 static char *sizeCheck( char *json, int *len ) {
+	char *ret=NULL;
 	if( strlen( json ) > (*len)-JSON_LOWATER ) {
 		*len=(*len)+JSON_INCBUFF;
-		json=realloc( json, *len );
-		if( json == NULL ) {
+		ret=realloc( json, *len );
+		if( ret == NULL ) {
 			jsonFail( "Out of Memory!" );
 			return NULL;
 		}
+		json=ret;
 	}
 	return json;
 }
@@ -961,10 +963,10 @@ static char *sizeCheck( char *json, int *len ) {
  * encodes a value into JSON notation
  * "strval"|numval|{objval}|[arr],[val]
  */
-static char *jsonWriteVal( jsonObject *jo, char *json, int len ) {
+static char *jsonWriteVal( jsonObject *jo, char *json, int *len ) {
 	switch( jo->type ) {
 	case json_string:
-		json=sizeCheck( json, &len );
+		json=sizeCheck( json, len );
 		strcat( json, "\"" );
 		strcat( json, jo->val );
 		strcat( json, "\"" );
@@ -994,22 +996,23 @@ static char *jsonWriteVal( jsonObject *jo, char *json, int len ) {
 }
 
 /**
- * encodes a key,value tupel into JSON notation
- * "key",value
+ * encodes a stream of key,value tupels into JSON notation
+ * "key":value[,"key":value]*
  */
-static char *jsonWriteKeyVal( jsonObject *jo, char *json, int len ) {
-	json=sizeCheck( json, &len );
-	strcat( json, "\"" );
-	strcat( json, jo->key );
-	strcat( json, "\":" );
+static char *jsonWriteKeyVal( jsonObject *jo, char *json, int *len ) {
+	while( jo != NULL) {
+		json=sizeCheck( json, len );
+		strcat( json, "\"" );
+		strcat( json, jo->key );
+		strcat( json, "\":" );
 
-	json=jsonWriteVal( jo, json, len );
+		json=jsonWriteVal( jo, json, len );
 
-	if( jo->next != NULL ) {
-		strcat( json, "," );
-		json=jsonWriteKeyVal( jo->next, json, len );
+		if( jo->next != NULL ) {
+			strcat( json, "," );
+		}
+		jo=jo->next;
 	}
-
 	return json;
 }
 
@@ -1017,8 +1020,8 @@ static char *jsonWriteKeyVal( jsonObject *jo, char *json, int len ) {
  * encodes an array into JSON notation
  * [val],[val],...
  */
-static char *jsonWriteArr( jsonObject *jo, char *json, int len ) {
-	json=sizeCheck( json, &len );
+static char *jsonWriteArr( jsonObject *jo, char *json, int *len ) {
+	json=sizeCheck( json, len );
 	strcat( json, "[" );
 	while( jo != NULL ) {
 		json=jsonWriteVal( jo, json, len );
@@ -1035,8 +1038,8 @@ static char *jsonWriteArr( jsonObject *jo, char *json, int len ) {
  * encodes an object into JSON notation
  * {key,value}
  */
-static char *jsonWriteObj( jsonObject *jo, char *json, int len ) {
-	json=sizeCheck( json, &len );
+static char *jsonWriteObj( jsonObject *jo, char *json, int *len ) {
+	json=sizeCheck( json, len );
 	strcat( json, "{" );
 	json=jsonWriteKeyVal( jo, json, len );
 	strcat( json, "}" );
@@ -1054,7 +1057,7 @@ char *jsonToString( jsonObject *jo ) {
 		jsonFail( "Out of memory!" );
 		return NULL;
 	}
-	json=jsonWriteObj( jo, json, len );
+	json=jsonWriteObj( jo, json, &len );
 	jsonDiscard( jo );
 	return json;
 }

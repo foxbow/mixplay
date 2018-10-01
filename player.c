@@ -421,6 +421,7 @@ void *reader( void *cont ) {
 	mptitle		*title=NULL;
 	fd_set			fds;
 	struct timeval	to;
+	struct timespec ts;
 	int64_t	i, key;
 	int		invol=80;
 	int		outvol=80;
@@ -437,6 +438,7 @@ void *reader( void *cont ) {
 	pid_t	pid[2];
 	mpcmd	cmd=mpc_idle;
 	int		update=0;
+	int		insert=0;
 
 	control=( mpconfig * )cont;
 	assert( control->fade < 2 );
@@ -447,6 +449,9 @@ void *reader( void *cont ) {
 		addMessage( 1, "No crossfading" );
 		fade=0;
 	}
+
+	ts.tv_nsec=250000;
+	ts.tv_sec=0;
 
 	/* start the needed mpg123 instances */
 	/* start the player processes */
@@ -1037,7 +1042,6 @@ void *reader( void *cont ) {
 			asyncRun( plDbInfo, control );
 			break;
 
-		case mpc_longsearch:
 		case mpc_search:
 			if( asyncTest() ) {
 				if( control->argument == NULL ) {
@@ -1046,16 +1050,16 @@ void *reader( void *cont ) {
 				else if( addRangePrefix( line, control->command ) == 0 ) {
 					strcat( line, control->argument );
 					addMessage( 2, "Searchstring: %s", line );
-					if( ( cmd == mpc_longsearch ) ||
-							( MPC_RANGE(control->command) == mpc_album ) ||
-							( MPC_RANGE(control->command) == mpc_artist ) ) {
-						progressStart( "Looking for %s", control->argument );
-						i=searchPlay( line, -1, 0 );
-						addMessage( 0, "Found %i titles", i );
+					progressStart( "Looking for %s", control->argument );
+					i=search( line, 0, -1 );
+					if( i == 0 ) {
+						addMessage( 0, "Nothing found!" );
 					}
 					else {
-						if( searchPlay( line, 1, 0 ) == 0 ) {
-							progressStart( "Nothing found for %s", control->argument );
+						addMessage( 0, "Found %i titles", i );
+						/* make sure the reply was sent */
+						while( control->found->send == -1 ) {
+							nanosleep( &ts, NULL );
 						}
 					}
 					sfree( &(control->argument) );
@@ -1064,6 +1068,20 @@ void *reader( void *cont ) {
 			}
 			break;
 
+		case mpc_insert:
+			insert=-1;
+			/* no break */
+
+		case mpc_append:
+			if( control->argument == NULL ) {
+				addMessage( 0, "No index set!" );
+			}
+			else {
+				playResults( MPC_RANGE( control->command ), atoi( control->argument ), insert );
+				sfree( &(control->argument) );
+			}
+			insert=0;
+			break;
 
 		case mpc_setvol:
 			if( control->argument != NULL ) {

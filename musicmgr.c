@@ -354,29 +354,72 @@ static int matchTitle( mptitle *title, const char* pat ) {
 }
 
 /**
- * play the search results next
- * TODO this should be turned into something like:
- *   pl=searchPL( pat, num );
- *   addToPL( pl, getConfig()->current );
+ * fills the global searchresult structure with the results of the given search.
+ * Returns the number of found titles.
+ * pat - pattern to search for
+ * global - include DNP
+ * fill - fill artist and album results
  */
-int searchPlay( const char *pat, unsigned num, const int global ) {
+int search( const char *pat, const int global, const int fill ) {
 	mptitle *root=getConfig()->root;
 	mptitle *runner=root;
-	mpplaylist *pl=getConfig()->current;
+	searchresults *res=getConfig()->found;
+	int i=0;
+	int found=0;
 	int cnt=0;
-	
+
+	/* free buffer playlist, the arrays will not get lost due to the realloc later */
+	cleanPlaylist(res->titles);
+	res->tnum=0;
+	res->anum=0;
+	res->lnum=0;
+
 	do {
 		activity("searching");
 		if( matchTitle( runner, pat) && ( global || !( runner->flags & MP_DNP ) ) ){
-			pl=addToPL( runner,  pl );
-			pl=pl->next;
-			runner->flags|=(MP_CNTD|MP_SKPD);
+			res->titles=addToPL( runner, res->titles );
+			if( fill ) {
+				/* check for new artist */
+				found=0;
+				for( i=0; i<res->anum; i++ ) {
+					if( strcmp( res->artists[i], runner->artist )==0 ) {
+						found = -1;
+						break;
+					}
+				}
+				if( found == 0 ) {
+					res->anum++;
+					res->artists=frealloc( res->artists, res->anum*sizeof(char*) );
+					res->artists[res->anum-1]=runner->artist;
+				}
+
+				/* check for new album */
+				found=0;
+				for( i=0; i<res->lnum; i++ ) {
+					if( strcmp( res->albums[i], runner->album )==0 ) {
+						found = -1;
+						break;
+					}
+				}
+				if( found == 0 ) {
+					res->lnum++;
+					res->albums=frealloc( res->albums, res->anum*sizeof(char*) );
+					res->albums[res->anum-1]=runner->album;
+					res->alart=frealloc( res->alart, res->anum*sizeof(char*) );
+					res->alart[res->anum-1]=runner->artist;
+				}
+			}
 			cnt++;
 		}
 		runner=runner->next;
-	} while( ( runner != root ) && ( cnt < num ) );
-	
-	return cnt;
+	} while( ( runner != root ) && ( cnt < MAXSEARCH ) );
+
+	res->tnum=cnt;
+	res->send=-1;
+
+addMessage( 1, "titles: %i, artists %i, albums %i", res->tnum, res->anum, res->lnum );
+
+	return res->tnum;
 }
 
 /**
@@ -1313,4 +1356,80 @@ int handleRangeCmd( mptitle *title, mpcmd cmd ) {
 	}
 
 	return cnt;
+}
+
+/**
+ * adds searchresults to the playlist
+ * range - title-display/artist/album
+ * cnt - which entry (-1 = all)
+ * insert - play next or append to the end of the playlist
+ */
+int playResults( mpcmd range, int cnt, int insert ) {
+	mpconfig   *config=getConfig();
+	mpplaylist *pos=config->current;
+	mpplaylist *title=config->found->titles;
+	mpplaylist *end=title;
+	char line[MAXPATHLEN]="";
+
+
+	if( ( range == mpc_title ) || ( range == mpc_display ) ) {
+		/* should not happen but better safe than sorry! */
+		if( config->found->tnum == 0 ) {
+			addMessage( 0, "No results to be added!" );
+			return 0;
+		}
+
+		/* insert results at current pos or at the end? */
+		if( insert == 0 ) {
+			while( pos->next != NULL ) {
+				pos=pos->next;
+			}
+		}
+
+		/* play all results */
+		if( cnt == -1 ) {
+			while( end->next != NULL ) {
+				end=end->next;
+			}
+
+			if( pos->next != NULL ) {
+				pos->next->prev=end;
+			}
+			end->next=pos->next;
+			pos->next=title;
+			title->prev=pos;
+			config->found->titles=NULL;
+			return config->found->tnum;
+		}
+
+		/* play only one */
+		while( cnt > 0 ) {
+			title=title->next;
+			if( title == NULL ) {
+				addMessage( 0, "resultlist is too short!" );
+				return 0;
+			}
+			cnt--;
+		}
+		/* allow adding of already marked titles */
+		title->title->flags &= ~MP_MARK;
+		addToPL( title->title, pos );
+		return 1;
+	}
+
+	addRangePrefix( line, range );
+	switch( range ) {
+	case mpc_artist:
+		strcat( line, config->found->artists[cnt] );
+		break;
+	case mpc_album:
+		strcat( line, config->found->albums[cnt] );
+		break;
+	default:
+		addMessage(0, "Unexpected %s in playResults()!", mpcString(range) );
+		return 0;
+		break;
+	}
+	search( line, -1, 0 );
+	return playResults( mpc_title, -1, insert );
 }

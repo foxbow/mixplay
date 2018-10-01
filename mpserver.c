@@ -118,7 +118,7 @@ static void *clientHandler(void *args ) {
 	static const char *fname;
 	static const unsigned char *fdata;
 	unsigned int flen;
-	int fullstat=-1;
+	int fullstat=MPCOMM_FULLSTAT;
 	int okreply=-1;
 	int rawcmd;
 	int index=0;
@@ -207,7 +207,7 @@ static void *clientHandler(void *args ) {
 							}
 
 							if( MPC_CMD(cmd) == mpc_fav ) {
-								fullstat=-1;
+								fullstat=MPCOMM_FULLSTAT;
 							}
 
 							state=2;
@@ -311,14 +311,16 @@ static void *clientHandler(void *args ) {
 			case 1: /* get update */
 				if( strcmp( config->current->title->display, playing ) ) {
 					strcpy( playing, config->current->title->display );
-					fullstat=-1;
+					fullstat=MPCOMM_FULLSTAT;
 				}
 
 				if( isCurClient( sock ) ) {
-					fullstat=-1;
+					fullstat=MPCOMM_FULLSTAT;
+				}
+				if( config->found->send == -1 ) {
+					fullstat=MPCOMM_RESULT;
 				}
 				jsonLine=serializeStatus( &clmsg, sock, fullstat );
-				fullstat=0;
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012", (int)strlen(jsonLine) );
 				while( ( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
 					commsize+=MP_BLKSIZE;
@@ -427,6 +429,10 @@ static void *clientHandler(void *args ) {
 						addMessage( 1, "send failed" );
 					}
 				}
+				if( fullstat == MPCOMM_RESULT ) {
+					config->found->send=0;
+				}
+				fullstat=MPCOMM_STAT;
 			}
 		} /* if running & !mpc_start */
 	}
