@@ -1361,7 +1361,7 @@ int playResults( mpcmd range, const char *arg, const int insert ) {
 
 	while(1) {
 		if( ( range == mpc_title ) || ( range == mpc_display ) ) {
-			// Play the current resultlist
+			/* Play the current resultlist */
 			if( key == 0 ) {
 				/* should not happen but better safe than sorry! */
 				if( config->found->tnum == 0 ) {
