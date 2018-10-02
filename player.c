@@ -1046,23 +1046,16 @@ void *reader( void *cont ) {
 			if( asyncTest() ) {
 				if( control->argument == NULL ) {
 					progressStart( "Nothing to search for!" );
+					progressEnd();
 				}
 				else {
-					progressStart( "Looking for %s", control->argument );
 					i=search( control->argument, MPC_RANGE(control->command), 0 );
-					if( i == 0 ) {
-						addMessage( 0, "Nothing found!" );
+					while( control->found->send == -1 ) {
+						nanosleep( &ts, NULL );
 					}
-					else {
-						addMessage( 0, "Found %i titles", i );
-						/* make sure the reply was sent */
-						while( control->found->send == -1 ) {
-							nanosleep( &ts, NULL );
-						}
-					}
+					progressEnd();
 					sfree( &(control->argument) );
 				}
-				progressEnd();
 			}
 			break;
 

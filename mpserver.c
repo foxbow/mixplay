@@ -206,7 +206,9 @@ static void *clientHandler(void *args ) {
 								strdec( config->argument, pos );
 							}
 
-							if( MPC_CMD(cmd) == mpc_fav ) {
+							if( ( MPC_CMD(cmd) == mpc_fav ) ||
+									( MPC_CMD(cmd) == mpc_insert ) ||
+									( MPC_CMD(cmd) == mpc_append ) ) {
 								fullstat=MPCOMM_FULLSTAT;
 							}
 
@@ -309,17 +311,14 @@ static void *clientHandler(void *args ) {
 			memset( commdata, 0, commsize );
 			switch( state ) {
 			case 1: /* get update */
-				if( strcmp( config->current->title->display, playing ) ) {
+				if( config->found->send == -1 ) {
+					fullstat=MPCOMM_RESULT;
+				}
+				else if( strcmp( config->current->title->display, playing ) ) {
 					strcpy( playing, config->current->title->display );
 					fullstat=MPCOMM_FULLSTAT;
 				}
 
-				if( isCurClient( sock ) ) {
-					fullstat=MPCOMM_FULLSTAT;
-				}
-				if( config->found->send == -1 ) {
-					fullstat=MPCOMM_RESULT;
-				}
 				jsonLine=serializeStatus( &clmsg, sock, fullstat );
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012", (int)strlen(jsonLine) );
 				while( ( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
@@ -332,6 +331,7 @@ static void *clientHandler(void *args ) {
 				break;
 			case 2: /* set command */
 				if( cmd != mpc_idle ) {
+					/* check commands that lock the reply channel */
 					if( ( cmd == mpc_dbinfo ) || ( cmd == mpc_dbclean) ||
 							( cmd == mpc_doublets ) ||
 							( MPC_CMD(cmd) == mpc_search ) ) {
@@ -431,8 +431,8 @@ static void *clientHandler(void *args ) {
 				}
 				if( fullstat == MPCOMM_RESULT ) {
 					config->found->send=0;
+					fullstat=MPCOMM_STAT;
 				}
-				fullstat=MPCOMM_STAT;
 			}
 		} /* if running & !mpc_start */
 	}

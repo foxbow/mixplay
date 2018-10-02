@@ -116,15 +116,34 @@ function setProf() {
  * toggle visibility of extra panes
  */
 function toggleVisibility( element ) {
-	e=document.getElementById( element );
-	if( e.style.display=='none') {
-		if( element == 'msgs' ) { 
-			document.getElementById('showmsgs').value="\u2630 Messages"
+	for( i=0; i<4; i++ ) {
+		e=document.getElementById( "extra"+i );
+		if( i == element ) {
+			if( e.style.display=='none') {
+				if( element == 'msgs' ) { 
+					document.getElementById('showmsgs').value="\u2630 Messages"
+				}
+				e.style.display='block';
+			}
+			else {
+				e.style.display='none';
+			}
 		}
-		e.style.display='block';
+		else {
+			e.style.display='none';
+		}
 	}
-	else {
-		e.style.display='none';
+}
+
+function toggleResults( element ) {
+	for( i=0; i<3; i++ ) {
+		e=document.getElementById( "search"+i );
+		if( i == element ) {
+			e.style.display='block';
+		}
+		else {
+			e.style.display='none';
+		}
 	}
 }
 
@@ -144,7 +163,7 @@ function killServer() {
 function addText(text) {
 	var line="";
 	var numlines=15;
-	e=document.getElementById('msgs');
+	e=document.getElementById('extra3');
 
 	if( msgpos < numlines ) {
 		msglines[msgpos]=text;
@@ -160,7 +179,7 @@ function addText(text) {
 	for( i=0; i<numlines; i++ ) {
 		line+=msglines[i]+"<br>\n";
 	}
-	document.getElementById('msgs').innerHTML=line;
+	e.innerHTML=line;
 
 	f=document.getElementById('showmsgs');
 	if( e.style.display=='none') {
@@ -248,6 +267,7 @@ function setVisible( e, i ) {
  * handles different types of status replies
  */
 function updateUI( ){
+	var e;
 	var xmlhttp=new XMLHttpRequest();
 	xmlhttp.onreadystatechange=function() {
 		if (xmlhttp.readyState==4 ) {
@@ -276,14 +296,47 @@ function updateUI( ){
 							document.getElementById( 'fav' ).disabled=true;
 						}
 						else {
-							document.getElementById( 'fav' ).disabled=false;		  			
+							document.getElementById( 'fav' ).disabled=false;
 						}
 						setScrolls();
 					}
 
 					/* search results */
 					else if( data.type == 4 ) {
-						/* do something! */
+						/* rather use sendArg() than <a href> tags! */
+						e=document.getElementById('search0');
+						e.style.display='block';
+						if( data.titles.length > 0 ) {
+							e.innerHTML="<a href='/cmd/010c?0'>Play all</a><br/>";
+							for( i=0; i<data.titles.length; i++ ) {
+								e.innerHTML+="<input class='cmd' type='button' onclick='sendCMD( 0x010c, "+data.titles[i].key+")' value='"+data.titles[i].artist+" - "+data.titles[i].title+"' ><br/>"
+							}
+						}
+						else {
+							e.innerHTML="<em>Nothing found!</em>";
+						}
+						e=document.getElementById('search1');
+						e.style.display='none';
+						if( data.artists.length > 0 ) {
+							e.innerHTML="";
+							for( i=0; i<data.artists.length; i++ ) {
+								e.innerHTML+="<input class='cmd' type='button' onclick='sendCMD( 0x020c, \""+data.artists[i]+"\")' value='"+data.artists[i]+"' ><br/>"
+							}
+						}
+						else {
+							e.innerHTML="<em>No artists found!</em>";
+						}
+						e=document.getElementById('search2');
+						e.style.display='none';
+						if( data.albums.length > 0 ) {
+							e.innerHTML="";
+							for( i=0; i<data.albums.length; i++ ) {
+								e.innerHTML+="<input class='cmd' type='button' onclick='sendCMD( 0x040c, \""+data.albums[i]+"\")' value='"+data.albart[i]+" - "+data.albums[i]+"' ><br/>"
+							}
+						}
+						else {
+							e.innerHTML="<em>No albums found!</em>";
+						}
 					}
 
 					/* standdard update */
@@ -314,7 +367,7 @@ function updateUI( ){
 					}
 
 					document.getElementById( 'vol' ).value=data.volume;
-					if( data.msg != "" ) {
+					if( ( data.msg != "" ) && ( data.msg != "Done." ) ) {
 						addText(data.msg);
 					}
 				}

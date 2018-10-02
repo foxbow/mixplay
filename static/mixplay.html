@@ -42,12 +42,12 @@
         &#x1F50A; <input id='vol' type='range' min='0' max='100' step='1' value='0' oninput='setVolume( this.value )' onwheel='return false'>
       </div>
     </div> <!-- main -->
-    <input id='showsearch' style='border: none; background: none;' type='button' onclick='toggleVisibility("search")' value='&#x2630; Search' >
-    <input id='showprofile' style='border: none; background: none;' type='button' onclick='toggleVisibility("profile")' value='&#x2630; Profile' >
-    <input id='showtools' style='border: none; background: none;' type='button' onclick='toggleVisibility("tools")' value='&#x2630; Tools' >
-    <input id='showmsgs' style='border: none; background: none;' type='button' onclick='toggleVisibility("msgs")' value='&#x2630; Messages' >
-    <div id='search' style='display: none; width:100%;' >
-      <em>Search:</em><br>
+    <input id='showsearch'class='cmd' type='button' onclick='toggleVisibility("0")' value='&#x2630; Search' >
+    <input id='showprofile'class='cmd' type='button' onclick='toggleVisibility("1")' value='&#x2630; Profile' >
+    <input id='showtools'class='cmd' type='button' onclick='toggleVisibility("2")' value='&#x2630; Tools' >
+    <input id='showmsgs'class='cmd' type='button' onclick='toggleVisibility("3")' value='&#x2630; Messages' >
+    <div id='extra0' style='display: none; width:100%;' >
+      <em>Search:</em><br/>
       <select label='Range' id='srange'>
         <option value='0x0100' selected>Title</option>
         <option value='0x0700'>Global</option>
@@ -55,8 +55,16 @@
       <input id='text' type='text'><br>
       <input id='search' type='button' onclick='sendArg(0x13)' value='Search' >
       <input id='search' type='button' onclick='sendArg(0x2013)' value='Fuzzy' >
+      <br/>
+      <em>Results:</em>
+      <input id='ctrl0'class='cmd' type='button' onclick='toggleResults("0")' value='&#x2630; Titles' >
+      <input id='ctrl1'class='cmd' type='button' onclick='toggleResults("1")' value='&#x2630; Artists' >
+      <input id='ctrl2'class='cmd' type='button' onclick='toggleResults("2")' value='&#x2630; Albums' >
+      <div id='search0' style='display: none; width:100%;'></div>
+      <div id='search1' style='display: none; width:100%;'></div>
+      <div id='search2' style='display: none; width:100%;'></div>
     </div>
-    <div id='profile' style='display: none; width:100%;' >
+    <div id='extra1' style='display: none; width:100%;' >
       <em>Profiles:</em><br>
       <select label='Profile' id='profiles'>
       </select>
@@ -65,7 +73,7 @@
       <input id='ptext' type='text'>
       <input id='newprof' type='button' onclick='createLoad()' value='New/Load' >
     </div>
-    <div id='tools' style='display: none; width:100%;' >
+    <div id='extra2' style='display: none; width:100%;' >
       <em>Tools:</em><br>
       <input id='rescan' type='button' onclick='sendCMD(0x08)' value='ReScan' >
       <input id='dbinfo' type='button' onclick='sendCMD(0x12)' value='DBInfo' >
@@ -73,7 +81,7 @@
       <input id='stop' type='button' onclick='killServer()' value='STOP' ><br>
       <a href="/title/0" id='download' class='download'>Download the current title</a>
     </div>
-    <div id='msgs' style='display: none;' width='100%'>
+    <div id='extra3' style='display: none;' width='100%'>
       <em>Messages:</em><br>
     </div>
   </body>

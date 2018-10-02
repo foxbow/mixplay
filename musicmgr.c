@@ -438,9 +438,7 @@ int search( const char *pat, const mpcmd range, const int global ) {
 		runner=runner->next;
 	} while( runner != root );
 
-	if( res->tnum > 0 ) {
-		res->send=-1;
-	}
+	res->send=-1;
 
 	return cnt;
 }

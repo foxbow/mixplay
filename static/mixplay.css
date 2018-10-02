@@ -63,3 +63,9 @@ a.download {
 	border-width: thin;
 	position: absolute;
 }
+
+.cmd {
+	border: none; 
+	background: none;
+}
+
