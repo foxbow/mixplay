@@ -20,6 +20,7 @@
 #include <sys/sendfile.h>
 #include <fcntl.h>
 
+#include "database.h"
 /**
  * compares two strings
  * uses the shorter string as pattern and the longer as the matchset.
@@ -179,17 +180,17 @@ mpplaylist *addPLDummy( mpplaylist *pl, const char *name ){
  * if pl is NULL a new Playlist is created
  * this function either returns pl or the head of the new playlist
  */
-mpplaylist *appendToPL( mptitle *title, mpplaylist *pl ) {
+mpplaylist *appendToPL( mptitle *title, mpplaylist *pl, const int mark ) {
 	mpplaylist *runner=pl;
 
 	if( runner != NULL ) {
 		while( runner->next != NULL ) {
 			runner=runner->next;
 		}
-		addToPL( title, runner );
+		addToPL( title, runner, mark );
 	}
 	else {
-		pl=addToPL( title, NULL );
+		pl=addToPL( title, NULL, mark );
 	}
 	return pl;
 }
@@ -199,12 +200,11 @@ mpplaylist *appendToPL( mptitle *title, mpplaylist *pl ) {
  * if no target is set.
  * This function returns a valid target
  */
-mpplaylist *addToPL( mptitle *title, mpplaylist *target ) {
+mpplaylist *addToPL( mptitle *title, mpplaylist *target, const int mark ) {
 	mpplaylist *buf=NULL;
 
-	if( title->flags & MP_MARK ) {
+	if( mark && ( title->flags & MP_MARK ) ) {
 		addMessage( 0, "Trying to add %s twice! (%i)", title->display, title->flags );
-		return target;
 	}
 
 	buf=falloc(1, sizeof( mpplaylist ) );
@@ -220,7 +220,9 @@ mpplaylist *addToPL( mptitle *title, mpplaylist *target ) {
 		buf->prev=target;
 	}
 
-	title->flags |= MP_MARK;
+	if( mark ) {
+		title->flags |= MP_MARK;
+	}
 	return target;
 }
 
@@ -353,6 +355,19 @@ static int matchTitle( mptitle *title, const char* pat ) {
 	}
 }
 
+static int isMatch( const char *term, const char *pat, int fuzzy ) {
+	char loterm[MAXPATHLEN];
+
+	strlncpy( loterm, term, MAXPATHLEN );
+
+	if( fuzzy ){
+		return checkMatch( loterm, pat);
+	}
+	else {
+		return ( strstr( loterm, pat ) != NULL );
+	}
+}
+
 /**
  * fills the global searchresult structure with the results of the given search.
  * Returns the number of found titles.
@@ -360,109 +375,75 @@ static int matchTitle( mptitle *title, const char* pat ) {
  * global - include DNP
  * fill - fill artist and album results
  */
-int search( const char *pat, const int global, const int fill ) {
+int search( const char *pat, const mpcmd range, const int global ) {
 	mptitle *root=getConfig()->root;
 	mptitle *runner=root;
 	searchresults *res=getConfig()->found;
 	int i=0;
 	int found=0;
 	int cnt=0;
-
 	/* free buffer playlist, the arrays will not get lost due to the realloc later */
-	cleanPlaylist(res->titles);
+	res->titles=cleanPlaylist(res->titles);
 	res->tnum=0;
 	res->anum=0;
 	res->lnum=0;
 
 	do {
 		activity("searching");
-		if( matchTitle( runner, pat) && ( global || !( runner->flags & MP_DNP ) ) ){
-			res->titles=addToPL( runner, res->titles );
-			if( fill ) {
+		found=0;
+		if( global || !(runner->flags & MP_DNP) ) {
+			if( MPC_ISTITLE(range) && isMatch( runner->title, pat, MPC_ISFUZZY(range)  )) {
+				found=-1;
+			}
+			if( MPC_ISARTIST(range) && isMatch( runner->artist, pat, MPC_ISFUZZY(range) ) ) {
+				found=-1;
 				/* check for new artist */
-				found=0;
-				for( i=0; i<res->anum; i++ ) {
-					if( strcmp( res->artists[i], runner->artist )==0 ) {
-						found = -1;
-						break;
-					}
-				}
-				if( found == 0 ) {
+
+				for( i=0; (i<res->anum) && strcmp( res->artists[i], runner->artist ); i++ );
+
+				if( i == res->anum ) {
 					res->anum++;
 					res->artists=frealloc( res->artists, res->anum*sizeof(char*) );
-					res->artists[res->anum-1]=runner->artist;
+					res->artists[i]=runner->artist;
 				}
+			}
+			if( MPC_ISDISPLAY( range ) && isMatch( runner->display, pat, MPC_ISFUZZY(range) ) ) {
+				found=-1;
+			}
+			if( MPC_ISALBUM(range) && isMatch( runner->album, pat, MPC_ISFUZZY(range) ) ) {
+				found=-1;
 
-				/* check for new album */
-				found=0;
-				for( i=0; i<res->lnum; i++ ) {
-					if( strcmp( res->albums[i], runner->album )==0 ) {
-						found = -1;
-						break;
-					}
-				}
-				if( found == 0 ) {
+				/*
+				 * two artists may have an album with the same name!
+				 * todo this is definitely problem in playResults()
+				 *  */
+				for( i=0; (i<res->lnum) &&
+				( strcmp( res->albums[i], runner->album ) &&
+						strcmp( res->albart[i], runner->artist ) ); i++ );
+
+				if( i == res->lnum ) {
 					res->lnum++;
 					res->albums=frealloc( res->albums, res->anum*sizeof(char*) );
-					res->albums[res->anum-1]=runner->album;
-					res->alart=frealloc( res->alart, res->anum*sizeof(char*) );
-					res->alart[res->anum-1]=runner->artist;
+					res->albums[i]=runner->album;
+					res->albart=frealloc( res->albart, res->anum*sizeof(char*) );
+					res->albart[i]=runner->artist;
 				}
 			}
-			cnt++;
+
+			if( ( found == -1 ) && ( cnt++ < MAXSEARCH ) ) {
+				res->titles=appendToPL( runner, res->titles, 0 );
+				res->tnum++;
+			}
 		}
 		runner=runner->next;
-	} while( ( runner != root ) && ( cnt < MAXSEARCH ) );
+	} while( runner != root );
 
-	res->tnum=cnt;
-	res->send=-1;
-
-addMessage( 1, "titles: %i, artists %i, albums %i", res->tnum, res->anum, res->lnum );
-
-	return res->tnum;
-}
-
-/**
- * range is set via entry:
- * first char:  talgd[p] (Title, Artist, aLbum, Genre, Display[, Path] )
- * second char: =*
- *
- * if the second char is anything else, the default (p=) is used.
- */
-mpplaylist *matchList( struct marklist_t *term ) {
-	mptitle *base=getConfig()->root;
-	mptitle *runner=base;
-	mpplaylist *result=NULL;
-	int cnt=0;
-
-	if( base == NULL ) {
-		addMessage( 0, "No music in list!" );
-		return NULL;
+	if( res->tnum > 0 ) {
+		res->send=-1;
 	}
 
-	while( NULL != term ) {
-		while( runner->next != base ) {
-			activity( "Matching" );
-
-			if( !( runner->flags & ( MP_MARK | MP_DNP ) ) ) {
-				if( matchTitle( runner, term->dir ) ) {
-					result=addToPL( runner, result );
-					cnt++;
-				}
-			}
-
-			runner=runner->next;
-		} /*  while( runner->next != base ); */
-
-		runner=runner->next; /* start from the beginning */
-		term=term->next;
-	}
-
-	addMessage( 1, "Created playlist with %i titles", cnt );
-
-	return result;
+	return cnt;
 }
-
 
 /**
  * applies the dnplist on a list of titles and marks matching titles
@@ -622,7 +603,7 @@ void moveEntry( mpplaylist *entry, mpplaylist *pos ) {
 		return;
 	}
 
-	addToPL( entry->title, pos );
+	addToPL( entry->title, pos, 0 );
 	remFromPL( entry );
 }
 
@@ -973,7 +954,7 @@ restart:
 
 	addMessage( 3, "[+] (%i/%li/%3s) %s", runner->playcount, pcount, ONOFF( runner->flags&MP_FAV ), runner->display );
 
-	return appendToPL( runner, pl );
+	return appendToPL( runner, pl, -1 );
 }
 
 /**
@@ -1361,75 +1342,60 @@ int handleRangeCmd( mptitle *title, mpcmd cmd ) {
 /**
  * adds searchresults to the playlist
  * range - title-display/artist/album
- * cnt - which entry (-1 = all)
+ * arg - either a title key or a string
  * insert - play next or append to the end of the playlist
  */
-int playResults( mpcmd range, int cnt, int insert ) {
+int playResults( mpcmd range, const char *arg, const int insert ) {
 	mpconfig   *config=getConfig();
 	mpplaylist *pos=config->current;
-	mpplaylist *title=config->found->titles;
-	mpplaylist *end=title;
+	mpplaylist *end=config->found->titles;
+	mptitle *title=NULL;
+	int key=atoi(arg);
+
 	char line[MAXPATHLEN]="";
 
-
-	if( ( range == mpc_title ) || ( range == mpc_display ) ) {
-		/* should not happen but better safe than sorry! */
-		if( config->found->tnum == 0 ) {
-			addMessage( 0, "No results to be added!" );
-			return 0;
+	/* insert results at current pos or at the end? */
+	if( insert == 0 ) {
+		while( pos->next != NULL ) {
+			pos=pos->next;
 		}
-
-		/* insert results at current pos or at the end? */
-		if( insert == 0 ) {
-			while( pos->next != NULL ) {
-				pos=pos->next;
-			}
-		}
-
-		/* play all results */
-		if( cnt == -1 ) {
-			while( end->next != NULL ) {
-				end=end->next;
-			}
-
-			if( pos->next != NULL ) {
-				pos->next->prev=end;
-			}
-			end->next=pos->next;
-			pos->next=title;
-			title->prev=pos;
-			config->found->titles=NULL;
-			return config->found->tnum;
-		}
-
-		/* play only one */
-		while( cnt > 0 ) {
-			title=title->next;
-			if( title == NULL ) {
-				addMessage( 0, "resultlist is too short!" );
-				return 0;
-			}
-			cnt--;
-		}
-		/* allow adding of already marked titles */
-		title->title->flags &= ~MP_MARK;
-		addToPL( title->title, pos );
-		return 1;
 	}
 
-	addRangePrefix( line, range );
-	switch( range ) {
-	case mpc_artist:
-		strcat( line, config->found->artists[cnt] );
-		break;
-	case mpc_album:
-		strcat( line, config->found->albums[cnt] );
-		break;
-	default:
-		addMessage(0, "Unexpected %s in playResults()!", mpcString(range) );
-		return 0;
-		break;
+	while(1) {
+		if( ( range == mpc_title ) || ( range == mpc_display ) ) {
+			// Play the current resultlist
+			if( key == 0 ) {
+				/* should not happen but better safe than sorry! */
+				if( config->found->tnum == 0 ) {
+					addMessage( 0, "No results to be added!" );
+					return 0;
+				}
+
+				while( end->next != NULL ) {
+					end=end->next;
+				}
+
+				if( pos->next != NULL ) {
+					pos->next->prev=end;
+				}
+
+				end->next=pos->next;
+				pos->next=config->found->titles;
+				pos->next->prev=pos;
+				return config->found->tnum;
+			}
+
+			/* play only one */
+			title=getTitleByIndex(key);
+			/* allow adding of already marked titles but mark them after adding! */
+			title->flags &= ~MP_MARK;
+			addToPL( title, pos, 1 );
+
+			return 1;
+		}
+
+		search( line, range, 0 );
+		range=mpc_title;
+		key=0;
 	}
-	search( line, -1, 0 );
-	return playResults( mpc_title, -1, insert );
 }

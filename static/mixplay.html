@@ -28,9 +28,9 @@
        <select label='Range' id='range'>
          <option value='0x0100'>Title</option>
          <option value='0x0200'>Artist</option>
-         <option value='0x0300'>Album</option>
-         <option value='0x0400'>Genre</option>
-         <option value='0x0500' selected>Display</option>
+         <option value='0x0400'>Album</option>
+         <option value='0x1000'>Genre</option>
+         <option value='0x0800' selected>Display</option>
        </select>
        <br>
        <input id='dnp' type='button' onclick='sendRange(0x0a)' value='DNP' >
@@ -49,16 +49,12 @@
     <div id='search' style='display: none; width:100%;' >
       <em>Search:</em><br>
       <select label='Range' id='srange'>
-         <option value='0x0100'>Title</option>
-         <option value='0x0200'>Artist</option>
-         <option value='0x0300'>Album</option>
-         <option value='0x0400'>Genre</option>
-         <option value='0x0500' selected>Display</option>
-       </select>
-      
+        <option value='0x0100' selected>Title</option>
+        <option value='0x0700'>Global</option>
+      </select>
       <input id='text' type='text'><br>
-      <input id='search' type='button' onclick='sendArg(0x13,1)' value='Search' >
-      <input id='search' type='button' onclick='sendArg(0x1013,1)' value='Fuzzy' >
+      <input id='search' type='button' onclick='sendArg(0x13)' value='Search' >
+      <input id='search' type='button' onclick='sendArg(0x2013)' value='Fuzzy' >
     </div>
     <div id='profile' style='display: none; width:100%;' >
       <em>Profiles:</em><br>

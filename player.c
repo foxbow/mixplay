@@ -1047,11 +1047,9 @@ void *reader( void *cont ) {
 				if( control->argument == NULL ) {
 					progressStart( "Nothing to search for!" );
 				}
-				else if( addRangePrefix( line, control->command ) == 0 ) {
-					strcat( line, control->argument );
-					addMessage( 2, "Searchstring: %s", line );
+				else {
 					progressStart( "Looking for %s", control->argument );
-					i=search( line, 0, -1 );
+					i=search( control->argument, MPC_RANGE(control->command), 0 );
 					if( i == 0 ) {
 						addMessage( 0, "Nothing found!" );
 					}
@@ -1074,10 +1072,10 @@ void *reader( void *cont ) {
 
 		case mpc_append:
 			if( control->argument == NULL ) {
-				addMessage( 0, "No index set!" );
+				addMessage( 0, "No play info set!" );
 			}
 			else {
-				playResults( MPC_RANGE( control->command ), atoi( control->argument ), insert );
+				playResults( MPC_RANGE( control->command ), control->argument, insert );
 				sfree( &(control->argument) );
 			}
 			insert=0;

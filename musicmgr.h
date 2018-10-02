@@ -49,7 +49,7 @@ struct searchresults_t {
 	mpplaylist *titles;
 	char **artists;
 	char **albums;
-	char **alart;
+	char **albart;
 	int send;
 };
 
@@ -68,8 +68,8 @@ void addToFile( const char *path, const char *line );
 /**
  * playlist functions
  */
-mpplaylist *appendToPL( mptitle *title, mpplaylist *pl );
-mpplaylist *addToPL( mptitle *title, mpplaylist *target );
+mpplaylist *appendToPL( mptitle *title, mpplaylist *pl, const int mark );
+mpplaylist *addToPL( mptitle *title, mpplaylist *target, const int mark );
 void moveEntry( mpplaylist *entry, mpplaylist *pos );
 mpplaylist *cleanPlaylist( mpplaylist *pl );
 mpplaylist *addPLDummy( mpplaylist *pl, const char *name );
@@ -81,8 +81,8 @@ mptitle *loadPlaylist( const char *path );
 mptitle *insertTitle( mptitle *base, const char *path );
 mptitle *skipTitles( mptitle *current, long num );
 mptitle *cleanTitles( mptitle *root );
-int search( const char *pat, const int global, const int fill );
-int playResults( mpcmd range, int index, int insert );
+int search( const char *pat, const mpcmd range, const int global );
+int playResults( mpcmd range, const char *arg, const int insert );
 
 int DNPSkip( mptitle *base, const unsigned int level );
 int applyDNPlist( mptitle *base, struct marklist_t *list );

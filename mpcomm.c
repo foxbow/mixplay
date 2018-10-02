@@ -213,6 +213,7 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 		jsonAddTitles(jo, "titles", data->found->titles );
 		jsonAddStrs(jo, "artists", data->found->artists, data->found->anum);
 		jsonAddStrs(jo, "albums", data->found->albums, data->found->lnum);
+		jsonAddStrs(jo, "albart", data->found->albart, data->found->lnum);
 	}
 	jsonAddInt( jo, "playstream", data->playstream );
 	jsonAddInt( jo, "active", data->active );

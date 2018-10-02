@@ -45,11 +45,11 @@ enum _mpcmd_t {
 	mpc_remprof,
 	mpc_idle,
 	mpc_title=1<<8,
-	mpc_artist=2<<8,
-	mpc_album=3<<8,
-	mpc_genre=4<<8,
-	mpc_display=5<<8,
-	mpc_fuzzy=1<<12
+	mpc_artist=1<<9,
+	mpc_album=1<<10,
+	mpc_display=1<<11,
+	mpc_genre=1<<12,
+	mpc_fuzzy=1<<13
 };
 typedef enum _mpcmd_t mpcmd;
 
@@ -62,12 +62,12 @@ typedef enum _mpcmd_t mpcmd;
 /* extract raw command */
 #define MPC_CMD(x)   (x&0x00ff)
 /* determine range */
-#define MPC_RANGE(x) (x&0x0f00)
-#define MPC_ISTITLE(x) (MPC_RANGE(x)==mpc_title)
-#define MPC_ISARTIST(x) (MPC_RANGE(x)==mpc_artist)
-#define MPC_ISALBUM(x) (MPC_RANGE(x)==mpc_album)
-#define MPC_ISGENRE(x) (MPC_RANGE(x)==mpc_genre)
-#define MPC_ISDISPLAY(x) (MPC_RANGE(x)==mpc_display)
+#define MPC_RANGE(x) (x&0xff00)
+#define MPC_ISTITLE(x) (MPC_RANGE(x)&mpc_title)
+#define MPC_ISARTIST(x) (MPC_RANGE(x)&mpc_artist)
+#define MPC_ISALBUM(x) (MPC_RANGE(x)&mpc_album)
+#define MPC_ISGENRE(x) (MPC_RANGE(x)&mpc_genre)
+#define MPC_ISDISPLAY(x) (MPC_RANGE(x)&mpc_display)
 /* shall it be fuzzy */
 #define MPC_ISFUZZY(x) (x & mpc_fuzzy )
 

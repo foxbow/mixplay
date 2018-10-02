@@ -150,7 +150,7 @@ static mpplaylist *titleToPlaylist( mptitle *title, mpplaylist *pl ) {
 	pl=cleanPlaylist(pl);
 
 	do {
-		pl=appendToPL( title, pl );
+		pl=appendToPL( title, pl, -1 );
 		title=title->next;
 	} while( title != guard );
 
@@ -630,8 +630,8 @@ void freeConfig( ) {
 	if( c_config->found->albums != NULL ) {
 		free( c_config->found->albums );
 	}
-	if( c_config->found->alart != NULL ) {
-		free( c_config->found->alart );
+	if( c_config->found->albart != NULL ) {
+		free( c_config->found->albart );
 	}
 	free( c_config->found );
 	free( c_config );
