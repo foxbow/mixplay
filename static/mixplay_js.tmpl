@@ -116,7 +116,7 @@ function setProf() {
  * toggle visibility of extra panes
  */
 function toggleVisibility( element ) {
-	for( i=0; i<4; i++ ) {
+	for( i=0; i<5; i++ ) {
 		e=document.getElementById( "extra"+i );
 		if( i == element ) {
 			if( e.style.display=='none') {
@@ -288,6 +288,11 @@ function updateUI( ){
 						setElement( 'genre', data.current.genre );
 						if( data.next.length > 0 ) {
 							setElement( 'next', data.next[0].artist+" - "+data.next[0].title );
+							e=document.getElementById('extra4');
+							e.innerHTML="";
+							for( i=1; i<data.next.length; i++ ) {
+								e.innerHTML+="<input class='cmd' type='button' onclick='sendCMD( 0x0003, "+(i+1)+")' value='"+data.next[i].artist+" - "+data.next[i].title+"' ><br/>"
+							}
 						}
 						else {
 							setElement( 'next', "- - -" );

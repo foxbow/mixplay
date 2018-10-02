@@ -706,11 +706,12 @@ void *reader( void *cont ) {
 							}
 
 							if( order > 0 ) {
-								if( control->current->next != NULL ) {
+								while( ( control->current->next != NULL ) && order > 0 ) {
 									control->current=control->current->next;
 									plCheck(0);
+									order--;
 								}
-								else {
+								if( control->current->next == NULL ) {
 									control->status=mpc_idle; /* stop */
 								}
 							}
@@ -831,6 +832,10 @@ void *reader( void *cont ) {
 		case mpc_next:
 			if( asyncTest() ) {
 				order=1;
+				if( control->argument != NULL ) {
+					order=atoi(control->argument);
+					sfree(&(control->argument));
+				}
 
 				if( ( control->current->title->key != 0 ) && !( control->current->title->flags & ( MP_SKPD|MP_CNTD ) ) ) {
 					control->current->title->skipcount++;
