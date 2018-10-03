@@ -55,7 +55,7 @@ void setTitle( const char* title ) {
 **/
 char *strip( char *buff, const char *text, const size_t maxlen ) {
 	int len=strlen( text );
-	int bpos=0, tpos=0;
+	int tpos=0;
 	/* clear target buffer */
 	memset( buff, 0, maxlen );
 
@@ -64,25 +64,17 @@ char *strip( char *buff, const char *text, const size_t maxlen ) {
 		tpos++;
 	}
 
-	/* Filter out all extended characters */
-	while( ( 0 != text[tpos] )  && ( bpos < ( maxlen-1 ) ) ) {
-/*		if( isascii( text[tpos]) ) { */
-		if( isprint( text[tpos] ) ) {
-			buff[bpos]=text[tpos];
-			bpos++;
-		}
-
-		tpos++;
-	}
+	len=MIN(strlen(text+tpos),maxlen);
+	strncpy( buff, text+tpos, len );
 
 	/* Make sure string ends with a 0 */
-	buff[bpos]=0;
-	bpos--;
+	buff[len]=0;
+	len--;
 
 	/* Cut off trailing spaces and special chars */
-	while( ( bpos > 0 ) && ( iscntrl( buff[bpos] ) || isspace( buff[bpos] ) ) ) {
-		buff[bpos]=0;
-		bpos --;
+	while( ( len > 0 ) && ( iscntrl( buff[len] ) || isspace( buff[len] ) ) ) {
+		buff[len]=0;
+		len--;
 	}
 
 	return buff;
@@ -382,7 +374,8 @@ void *falloc( size_t num, size_t size ) {
 	result=calloc( num, size );
 
 	if( NULL == result ) {
-		fail( errno, "Sorry.." );
+		addMessage( 0,"Sorry, can't falloc (%i)!", errno );
+		abort();
 	}
 
 	return result;
@@ -395,7 +388,8 @@ void *frealloc( void *old, size_t size ) {
 	void *newval=NULL;
 	newval=realloc( old, size );
 	if( newval == NULL ) {
-		fail( errno, "Sorry.." );
+		addMessage( 0, "Sorry, can't realloc (%i)!", errno );
+		abort();
 	}
 	return newval;
 }

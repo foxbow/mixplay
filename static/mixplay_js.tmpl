@@ -20,28 +20,23 @@ function showInfo() {
  * proper direction 
  */
 function scrollToggle( ) {
-	var to=0;
+	var to=1000;
 	if (doUpdate == 0) return;
 	for (var i = 0; i < scrolls.length; i++) {
 		var element=scrolls[i].element;
 		if( scrolls[i].offset.charAt(0) == '-' ) {
 			if( element.style.right == scrolls[i].offset ) {
 				element.style.right="0px";
-				to=-1;
+				to=5000;
 			}
 			else {
 				element.style.right = scrolls[i].offset;
-				to=1;
+				to=10000;
 			}
 		}
 	}
-	switch(to) {
-		case -1: setTimeout( "scrollToggle()", 2000 );
-			break;
-		case 1: setTimeout( "scrollToggle()", 7000 );
-			break;
-		defaut: setTimeout( "scrollToggle()", 1000 );
-	}
+	
+	setTimeout( "scrollToggle()", to );
 }
 
 /*
@@ -94,6 +89,8 @@ function initScrolls() {
 function fail( msg ) {
 	if( doUpdate != 0 ) {
 		doUpdate=0;
+		/* pull main to front */
+		toggleVisibility('5');
 		alert( msg );
 	}
 }
@@ -105,6 +102,8 @@ function setProf() {
 	var e=document.getElementById("profiles");
 	var id=e.value;
 	if( id != 0 ) {
+		/* pull main to front */
+		toggleVisibility('5');
 		sendCMD( 0x06,id );
 	}
 	else {
@@ -113,35 +112,41 @@ function setProf() {
 }
 
 /*
- * toggle visibility of extra panes
+ * toggle main UI tabs
  */
 function toggleVisibility( element ) {
-	for( i=0; i<5; i++ ) {
+var e;
+var b;
+	for( i=0; i<6; i++ ) {
 		e=document.getElementById( "extra"+i );
+		b=document.getElementById( "show"+i );
 		if( i == element ) {
-			if( e.style.display=='none') {
-				if( element == 'msgs' ) { 
-					document.getElementById('showmsgs').value="\u2630 Messages"
-				}
-				e.style.display='block';
+			if( i == '3' ) { 
+				b.value="\u2630 Messages"
 			}
-			else {
-				e.style.display='none';
-			}
+			b.style.backgroundColor='#ddd';
+			e.style.display='block';
 		}
 		else {
 			e.style.display='none';
+			b.style.backgroundColor='#fff';
 		}
 	}
 }
 
+/**
+ * toggle search result tabs
+ */
 function toggleResults( element ) {
 	for( i=0; i<3; i++ ) {
 		e=document.getElementById( "search"+i );
+		b=document.getElementById( "ctrl"+i );
 		if( i == element ) {
+			b.style.backgroundColor='#ddd';
 			e.style.display='block';
 		}
 		else {
+			b.style.backgroundColor='#fff';
 			e.style.display='none';
 		}
 	}
@@ -152,6 +157,8 @@ function toggleResults( element ) {
  */
 function killServer() {
 	if( confirm("Do you really want to stop the Server?") ) {
+		/* pull main to front */
+		toggleVisibility('5');
 		sendCMD(0x11);
 		doUpdate=0;
 	}
@@ -181,7 +188,7 @@ function addText(text) {
 	}
 	e.innerHTML=line;
 
-	f=document.getElementById('showmsgs');
+	f=document.getElementById('show3');
 	if( e.style.display=='none') {
 		f.value="\u2630 Messages *"
 	}
@@ -203,8 +210,16 @@ function sendCMD( cmd, arg="" ) {
 		( code == '0003' ) ||  
 		( code == '0005' ) ||
 		( code == '000f' ) ||  
-		( code == '0010' ) ) )return;
-	
+		( code == '0010' ) ) ) return;
+		
+	/* these commands should pull main to front */
+	if( ( code == '0003' ) ||
+	    ( code == '010c' ) ) toggleVisibility('5');
+
+	/* These command should pull the messages to front */
+	if( ( code == '0008' ) ||
+	    ( code == '0012' ) ) toggleVisibility('3');
+
 	xmlhttp.onreadystatechange=function() {
 		if ( xmlhttp.readyState==4  ) {
 			switch( xmlhttp.status ) {
@@ -291,7 +306,7 @@ function updateUI( ){
 							e=document.getElementById('extra4');
 							e.innerHTML="";
 							for( i=1; i<data.next.length; i++ ) {
-								e.innerHTML+="<input class='cmd' type='button' onclick='sendCMD( 0x0003, "+(i+1)+")' value='"+data.next[i].artist+" - "+data.next[i].title+"' ><br/>"
+								e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0003, "+(i+1)+")'>"+data.next[i].artist+" - "+data.next[i].title+"</p>";
 							}
 						}
 						else {
@@ -314,7 +329,7 @@ function updateUI( ){
 						if( data.titles.length > 0 ) {
 							e.innerHTML="<a href='/cmd/010c?0'>Play all</a><br/>";
 							for( i=0; i<data.titles.length; i++ ) {
-								e.innerHTML+="<input class='cmd' type='button' onclick='sendCMD( 0x010c, "+data.titles[i].key+")' value='"+data.titles[i].artist+" - "+data.titles[i].title+"' ><br/>"
+								e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x010c, "+data.titles[i].key+")'>"+data.titles[i].artist+" - "+data.titles[i].title+"</p>"
 							}
 						}
 						else {
@@ -325,7 +340,7 @@ function updateUI( ){
 						if( data.artists.length > 0 ) {
 							e.innerHTML="";
 							for( i=0; i<data.artists.length; i++ ) {
-								e.innerHTML+="<input class='cmd' type='button' onclick='sendCMD( 0x020c, \""+data.artists[i]+"\")' value='"+data.artists[i]+"' ><br/>"
+								e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0213, \""+data.artists[i]+"\")'>"+data.artists[i]+"</p>"
 							}
 						}
 						else {
@@ -336,7 +351,7 @@ function updateUI( ){
 						if( data.albums.length > 0 ) {
 							e.innerHTML="";
 							for( i=0; i<data.albums.length; i++ ) {
-								e.innerHTML+="<input class='cmd' type='button' onclick='sendCMD( 0x040c, \""+data.albums[i]+"\")' value='"+data.albart[i]+" - "+data.albums[i]+"' ><br/>"
+								e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0413, \""+data.albums[i]+"\")'>"+data.albart[i]+" - "+data.albums[i]+"</p>"
 							}
 						}
 						else {
@@ -388,7 +403,7 @@ function updateUI( ){
 				setTimeout("updateUI()",333);
 			}
 			else {
-				document.getElementById('main').style.backgroundColor="#daa";
+				document.getElementById('extra5').style.backgroundColor="#daa";
 				document.getElementById('current').style.backgroundColor="#daa";
 			}
 		}
@@ -516,6 +531,8 @@ function createLoad() {
 				doUpdate=-1;
 			}
 		}
+		/* pull main to front */
+		toggleVisibility('5');
 	}
 }
 

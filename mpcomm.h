@@ -15,7 +15,6 @@
 #define MPCOMM_FULLSTAT 3
 #define MPCOMM_RESULT 4
 
-
 #define MP_BLKSIZE 512
 #define MP_PORT 2347
 

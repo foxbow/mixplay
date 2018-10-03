@@ -621,7 +621,6 @@ void freeConfigContents() {
 void freeConfig( ) {
 	assert( c_config != NULL );
 	freeConfigContents( );
-	c_config->root=cleanTitles( c_config->root );
 	c_config->current=cleanPlaylist( c_config->current );
 	c_config->found->titles=cleanPlaylist( c_config->found->titles );
 	if( c_config->found->artists != NULL ) {
@@ -633,6 +632,8 @@ void freeConfig( ) {
 	if( c_config->found->albart != NULL ) {
 		free( c_config->found->albart );
 	}
+	/* free root last so playlist cleanup does not double free titles */
+	c_config->root=cleanTitles( c_config->root );
 	free( c_config->found );
 	free( c_config );
 	c_config=NULL;

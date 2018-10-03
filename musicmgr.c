@@ -410,7 +410,8 @@ int search( const char *pat, const mpcmd range, const int global ) {
 			if( MPC_ISDISPLAY( range ) && isMatch( runner->display, pat, MPC_ISFUZZY(range) ) ) {
 				found=-1;
 			}
-			if( MPC_ISALBUM(range) && isMatch( runner->album, pat, MPC_ISFUZZY(range) ) ) {
+			/* if title or artist matched, also add the album, unless we look for albums explicitly */
+			if( ( found && !MPC_ISALBUM(range) ) || ( MPC_ISALBUM(range) && isMatch( runner->album, pat, MPC_ISFUZZY(range) ) ) ) {
 				found=-1;
 
 				/*
@@ -423,9 +424,9 @@ int search( const char *pat, const mpcmd range, const int global ) {
 
 				if( i == res->lnum ) {
 					res->lnum++;
-					res->albums=frealloc( res->albums, res->anum*sizeof(char*) );
+					res->albums=frealloc( res->albums, res->lnum*sizeof(char*) );
 					res->albums[i]=runner->album;
-					res->albart=frealloc( res->albart, res->anum*sizeof(char*) );
+					res->albart=frealloc( res->albart, res->lnum*sizeof(char*) );
 					res->albart[i]=runner->artist;
 				}
 			}
@@ -492,9 +493,7 @@ int applyDNPlist( mptitle *base, struct marklist_t *list ) {
 		}
 	}
 
-	if( cnt > 1 ) {
-		addMessage( 1, "Marked %i titles as DNP", cnt );
-	}
+	addMessage( 1, "Marked %i titles as DNP", cnt );
 
 	return cnt;
 }
@@ -528,9 +527,7 @@ int applyFAVlist( mptitle *root, struct marklist_t *favourites ) {
 		runner=runner->next;
 	} while ( runner != root );
 
-	if( cnt > 1 ) {
-		addMessage( 1, "Marked %i favourites", cnt );
-	}
+	addMessage( 1, "Marked %i favourites", cnt );
 
 	return cnt;
 }
@@ -1350,8 +1347,6 @@ int playResults( mpcmd range, const char *arg, const int insert ) {
 	mptitle *title=NULL;
 	int key=atoi(arg);
 
-	char line[MAXPATHLEN]="";
-
 	/* insert results at current pos or at the end? */
 	if( insert == 0 ) {
 		while( pos->next != NULL ) {
@@ -1359,41 +1354,38 @@ int playResults( mpcmd range, const char *arg, const int insert ) {
 		}
 	}
 
-	while(1) {
-		if( ( range == mpc_title ) || ( range == mpc_display ) ) {
-			/* Play the current resultlist */
-			if( key == 0 ) {
-				/* should not happen but better safe than sorry! */
-				if( config->found->tnum == 0 ) {
-					addMessage( 0, "No results to be added!" );
-					return 0;
-				}
-
-				while( end->next != NULL ) {
-					end=end->next;
-				}
-
-				if( pos->next != NULL ) {
-					pos->next->prev=end;
-				}
-
-				end->next=pos->next;
-				pos->next=config->found->titles;
-				pos->next->prev=pos;
-				return config->found->tnum;
+	if( ( range == mpc_title ) || ( range == mpc_display ) ) {
+		/* Play the current resultlist */
+		if( key == 0 ) {
+			/* should not happen but better safe than sorry! */
+			if( config->found->tnum == 0 ) {
+				addMessage( 0, "No results to be added!" );
+				return 0;
 			}
 
-			/* play only one */
-			title=getTitleByIndex(key);
-			/* allow adding of already marked titles but mark them after adding! */
-			title->flags &= ~MP_MARK;
-			addToPL( title, pos, 1 );
+			while( end->next != NULL ) {
+				end=end->next;
+			}
 
-			return 1;
+			if( pos->next != NULL ) {
+				pos->next->prev=end;
+			}
+
+			end->next=pos->next;
+			pos->next=config->found->titles;
+			pos->next->prev=pos;
+			return config->found->tnum;
 		}
 
-		search( line, range, 0 );
-		range=mpc_title;
-		key=0;
+		/* play only one */
+		title=getTitleByIndex(key);
+		/* allow adding of already marked titles but mark them after adding! */
+		title->flags &= ~MP_MARK;
+		addToPL( title, pos, 1 );
+
+		return 1;
 	}
+
+	addMessage( 0, "Range not supported!" );
+	return 0;
 }

@@ -9,7 +9,13 @@
     <title>Mixplay</title>
   </head>
   <body onload='initScrolls()' onresize='setScrolls()'>
-    <div id='main' onselectstart='return false' onwheel='volWheel(event)'>
+    <input id='show5' style='background-color: #ddd;' class='cmd' type='button' onclick='toggleVisibility("5")' value='&#x2630; Main' >
+    <input id='show0' class='cmd' type='button' onclick='toggleVisibility("0")' value='&#x2630; Search' >
+    <input id='show1' class='cmd' type='button' onclick='toggleVisibility("1")' value='&#x2630; Profile' >
+    <input id='show2' class='cmd' type='button' onclick='toggleVisibility("2")' value='&#x2630; Tools' >
+    <input id='show4' class='cmd' type='button' onclick='toggleVisibility("4")' value='&#x2630; Playlist' >
+    <input id='show3' class='cmd' type='button' onclick='toggleVisibility("3")' value='&#x2630; Messages' >
+    <div id='extra5' onselectstart='return false' onwheel='volWheel(event)'>
       <div class='scroll' onclick='sendCMD(0x02)'><p id='prev'>prev</p></div>
       <div id='current' onclick='sendCMD(0x00)'>
         <div id='artist'>artist</div>
@@ -42,11 +48,6 @@
         &#x1F50A; <input id='vol' type='range' min='0' max='100' step='1' value='0' oninput='setVolume( this.value )' onwheel='return false'>
       </div>
     </div> <!-- main -->
-    <input id='showsearch'class='cmd' type='button' onclick='toggleVisibility("0")' value='&#x2630; Search' >
-    <input id='showprofile'class='cmd' type='button' onclick='toggleVisibility("1")' value='&#x2630; Profile' >
-    <input id='showtools'class='cmd' type='button' onclick='toggleVisibility("2")' value='&#x2630; Tools' >
-    <input id='showmsgs'class='cmd' type='button' onclick='toggleVisibility("3")' value='&#x2630; Messages' >
-    <input id='showplaylist'class='cmd' type='button' onclick='toggleVisibility("4")' value='&#x2630; Playlist' >
     <div id='extra0' style='display: none; width:100%;' >
       <em>Search:</em><br/>
       <select label='Range' id='srange'>
@@ -58,9 +59,9 @@
       <input id='search' type='button' onclick='sendArg(0x2013)' value='Fuzzy' >
       <br/>
       <em>Results:</em>
-      <input id='ctrl0'class='cmd' type='button' onclick='toggleResults("0")' value='&#x2630; Titles' >
-      <input id='ctrl1'class='cmd' type='button' onclick='toggleResults("1")' value='&#x2630; Artists' >
-      <input id='ctrl2'class='cmd' type='button' onclick='toggleResults("2")' value='&#x2630; Albums' >
+      <input id='ctrl0' class='cmd' style='background-color: #ddd;'  type='button' onclick='toggleResults("0")' value='&#x2630; Titles' >
+      <input id='ctrl1' class='cmd' type='button' onclick='toggleResults("1")' value='&#x2630; Artists' >
+      <input id='ctrl2' class='cmd' type='button' onclick='toggleResults("2")' value='&#x2630; Albums' >
       <div id='search0' style='display: none; width:100%;'></div>
       <div id='search1' style='display: none; width:100%;'></div>
       <div id='search2' style='display: none; width:100%;'></div>

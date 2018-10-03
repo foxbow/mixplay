@@ -61,6 +61,9 @@ static int jsonParseFail( const char *func, const char *str, const int i, const 
 	return jsonFail( "%s#%i: Found invalid '%c' in JSON pos %i\n%s", func, state, str[i], i, str );
 }
 
+/*
+ * todo proper handling of \uXXXX
+ */
 static char *jsonEncode( const char *val ) {
 	int len=0;
 	char *ret=NULL;
@@ -126,10 +129,7 @@ static char *jsonEncode( const char *val ) {
 			break;
 		/* no explicit encoding of extended chars yet! */
 		default:
-			if(isprint(val[ip])) {
-				ret[op++]=val[ip];
-			}
-			jsonParseFail( __func__, val, ip, 0 );
+			ret[op++]=val[ip];
 		}
 	}
 	ret[op]=0;
@@ -137,6 +137,9 @@ static char *jsonEncode( const char *val ) {
 	return ret;
 }
 
+/*
+ * todo proper handling of \uXXXX
+ */
 static int jsonDecodeInto( const char *val, char *ret, int len ) {
 	int ip=0;
 	int op=0;

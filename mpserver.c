@@ -112,13 +112,14 @@ static void *clientHandler(void *args ) {
 	mpcmd cmd=mpc_idle;
 	static const char *mtype;
 	char playing[MAXPATHLEN]="";
+	char line[MAXPATHLEN]="";
 	size_t commsize=MP_BLKSIZE;
 	ssize_t retval=0;
 	ssize_t recvd=0;
 	static const char *fname;
 	static const unsigned char *fdata;
 	unsigned int flen;
-	int fullstat=MPCOMM_FULLSTAT;
+	int fullstat=MPCOMM_STAT;
 	int okreply=-1;
 	int rawcmd;
 	int index=0;
@@ -204,6 +205,7 @@ static void *clientHandler(void *args ) {
 									config->argument=falloc( strlen( pos )+2, sizeof( char ) );
 								}
 								strdec( config->argument, pos );
+								addMessage( 1, "Decoded arg: %s", config->argument );
 							}
 
 							if( ( MPC_CMD(cmd) == mpc_fav ) ||
@@ -314,6 +316,13 @@ static void *clientHandler(void *args ) {
 				if( config->found->send == -1 ) {
 					fullstat=MPCOMM_RESULT;
 				}
+				/* 
+				 * During initialization there may be no current title 
+				 * make sure that standard update is sent.
+				 */
+				else if( config->current == NULL ) {
+					fullstat=MPCOMM_STAT;
+				}
 				else if( strcmp( config->current->title->display, playing ) ) {
 					strcpy( playing, config->current->title->display );
 					fullstat=MPCOMM_FULLSTAT;
@@ -405,9 +414,9 @@ static void *clientHandler(void *args ) {
 				break;
 
 			case 9: /* return "artist - title" line */
-				snprintf( playing, MAXPATHLEN, "%s - %s", title->artist, title->title );
+				snprintf( line, MAXPATHLEN, "%s - %s", title->artist, title->title );
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
-						(int)strlen(playing), playing );
+						(int)strlen(line), line );
 				len=strlen(commdata);
 				running=0;
 				break;
@@ -431,8 +440,8 @@ static void *clientHandler(void *args ) {
 				}
 				if( fullstat == MPCOMM_RESULT ) {
 					config->found->send=0;
-					fullstat=MPCOMM_STAT;
 				}
+				fullstat=MPCOMM_STAT;
 			}
 		} /* if running & !mpc_start */
 	}
