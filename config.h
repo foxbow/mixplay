@@ -105,13 +105,15 @@ struct _mpcontrol_t {
 	int verbosity;
 	int debug;
 	struct msgbuf_t *msg;		/* generic message buffer */
-	int inUI;					/* flag to show if the UI is active */
 	void *data;					/* extended data for gmixplay */
 	char *host;
 	int  port;
 	int remote;
-	int changed;
-	int isDaemon;
+	/* flags */
+	int inUI:1;					/* flag to show if the UI is active */
+	int changed:1;
+	int isDaemon:1;
+	int dbDirty:1;
 };
 
 void writeConfig( const char *musicpath );

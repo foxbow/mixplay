@@ -12,6 +12,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+void dbMarkDirty( void ) {
+	getConfig()->dbDirty=-1;
+}
+
 mptitle *getTitleByIndex( unsigned int index ) {
 	mptitle *root=getConfig()->root;
 	mptitle *run=root;
@@ -50,33 +54,6 @@ static mptitle *findTitle( mptitle *base, const char *path ) {
 	while ( runner != base );
 
 	return NULL;
-}
-
-/**
- * Creates a backup of the current database file and dumps the
- * current reindexed database in a new file
- */
-static void dbDump( const char *dbname, mptitle *root ) {
-	int db;
-	unsigned int index=1;
-	mptitle *runner=root;
-
-	if( NULL == root ) {
-		fail( F_FAIL, "Not dumping an empty database!" );
-	}
-
-	dbBackup( dbname );
-	db=dbOpen( dbname );
-
-	do {
-		runner->key=index;
-		dbPutTitle( db, runner );
-		index++;
-		runner=runner->next;
-	}
-	while( runner != root );
-
-	dbClose( db );
 }
 
 /**
@@ -153,7 +130,7 @@ int dbOpen( const char *path ) {
 /**
  * adds/overwrites a title to/in the database
  */
-int dbPutTitle( int db, mptitle *title ) {
+static int dbPutTitle( int db, mptitle *title ) {
 	struct dbentry_t dbentry;
 
 	if( 0 == db ) {
@@ -212,7 +189,7 @@ static mptitle *addDBTitle( struct dbentry_t dbentry, mptitle *root, unsigned in
  * move the current database file into a backup
  * tries to delete the backup first
  */
-void dbBackup( const char *dbname ) {
+static void dbBackup( const char *dbname ) {
 	char backupname[MAXPATHLEN]="";
 	addMessage( 1, "Backing up database" );
 
@@ -282,7 +259,7 @@ int dbCheckExist( const char *dbname ) {
 	while( ( runner != NULL ) && ( root != runner ) );
 
 	if( num > 0 ) {
-		dbDump( dbname, root );
+		dbMarkDirty();
 		addMessage( 1, "Removed %i titles", num );
 	}
 	else {
@@ -305,11 +282,9 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 	unsigned int count=0, mean=0;
 
 	int num=0;
-	int db=0;
 
 	dbroot=dbGetMusic( dbname );
 
-	db=dbOpen( dbname );
 	addMessage( 1, "Calculating proper playcount..." );
 
 	if( NULL != dbroot ) {
@@ -347,7 +322,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 		if( NULL == dbrunner ) {
 			fillTagInfo( basedir, fsroot );
 			fsroot->playcount=mean;
-			dbPutTitle( db,fsroot );
+			dbMarkDirty();
 			num++;
 		}
 
@@ -355,7 +330,6 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 	}
 
 	addMessage( 1, "Added %i titles with playcount %i to %s", num, mean, dbname );
-	dbClose( db );
 	return num;
 }
 
@@ -489,4 +463,31 @@ int dbNameCheck( const char *dbname ) {
 void dbClose( int db ) {
 	close( db );
 	return;
+}
+
+/**
+ * Creates a backup of the current database file and dumps the
+ * current reindexed database in a new file
+ */
+void dbWrite( const char *dbname, mptitle *root ) {
+	int db;
+	unsigned int index=1;
+	mptitle *runner=root;
+
+	if( NULL == root ) {
+		fail( F_FAIL, "Not dumping an empty database!" );
+	}
+
+	dbBackup( dbname );
+	db=dbOpen( dbname );
+
+	do {
+		runner->key=index;
+		dbPutTitle( db, runner );
+		index++;
+		runner=runner->next;
+	}
+	while( runner != root );
+
+	dbClose( db );
 }

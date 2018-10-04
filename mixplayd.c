@@ -135,7 +135,7 @@ int main( int argc, char **argv ) {
 	}
 
 	addUpdateHook( &s_updateHook );
-	control->inUI=1;
+	control->inUI=-1;
 	initAll( );
 	pthread_join( control->stid, NULL );
 	pthread_join( control->rtid, NULL );

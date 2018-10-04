@@ -293,8 +293,6 @@ void *setProfile( void *data ) {
  * back into the db.
  */
 static void playCount( mpconfig *control ) {
-	int db;
-
 	if( control->playstream ) {
 		return;
 	}
@@ -307,9 +305,7 @@ static void playCount( mpconfig *control ) {
 			control->current->title->skipcount--;
 		}
 
-		db=dbOpen( control->dbname );
-		dbPutTitle( db, control->current->title );
-		dbClose( db );
+		dbMarkDirty();
 	}
 }
 
@@ -1115,6 +1111,11 @@ void *reader( void *cont ) {
 	/* stop player(s) gracefully */
 	for( i=0; i<control->fade; i++) {
 		write( p_command[fdset][i], "QUIT\n", 6 );
+	}
+
+	if( control->dbDirty ) {
+		addMessage( 0, "Updating Database" );
+		dbWrite(control->dbname, control->root );
 	}
 
 	addMessage( 1, "Reader stopped" );
