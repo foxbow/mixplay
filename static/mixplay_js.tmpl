@@ -304,8 +304,9 @@ function updateUI( ){
 						if( data.next.length > 0 ) {
 							setElement( 'next', data.next[0].artist+" - "+data.next[0].title );
 							e=document.getElementById('extra4');
-							e.innerHTML="";
-							for( i=1; i<data.next.length; i++ ) {
+							e.innerHTML="<p class='cmd' onclick='sendCMD( 0x0002 )'>"+data.prev.artist+" - "+data.prev.title+"</p>";							
+							e.innerHTML+="<p class='cmd'><em>"+data.current.artist+" - "+data.current.title+"</em></p>";
+							for( i=0; i<data.next.length; i++ ) {
 								e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0003, "+(i+1)+")'>"+data.next[i].artist+" - "+data.next[i].title+"</p>";
 							}
 						}

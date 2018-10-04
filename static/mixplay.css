@@ -65,6 +65,8 @@ a.download {
 }
 
 .cmd {
+	margin-top: 4px;
+	margin-bottom: 4px;
 	border: none; 
 	background: none;
 }
