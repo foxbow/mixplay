@@ -58,7 +58,6 @@
       <input id='search' type='button' onclick='sendArg(0x13)' value='Search' >
       <input id='search' type='button' onclick='sendArg(0x2013)' value='Fuzzy' >
       <br/>
-      <em>Results:</em>
       <input id='ctrl0' class='cmd' style='background-color: #ddd;'  type='button' onclick='toggleResults("0")' value='&#x2630; Titles' >
       <input id='ctrl1' class='cmd' type='button' onclick='toggleResults("1")' value='&#x2630; Artists' >
       <input id='ctrl2' class='cmd' type='button' onclick='toggleResults("2")' value='&#x2630; Albums' >
@@ -80,14 +79,14 @@
       <input id='rescan' type='button' onclick='sendCMD(0x08)' value='ReScan' >
       <input id='dbinfo' type='button' onclick='sendCMD(0x12)' value='DBInfo' >
       <input id='version' type='button' onclick='showInfo()' value='Info' >
-      <input id='stop' type='button' onclick='killServer()' value='STOP' ><br>
-      <a href="/title/0" id='download' class='download'>Download the current title</a>
+      <input id='stop' type='button' onclick='killServer()' value='STOP' >
+      <input id='download' type='button' onclick='download(0)' value='Download' >
     </div>
     <div id='extra3' style='display: none;' width='100%'>
-      <em>Messages:</em><br>
+      <em>No messages.</em><br>
     </div>
     <div id='extra4' style='display: none;' width='100%'>
-      <em>Playlist:</em><br>
+      <em>No Playlist.</em><br>
     </div>
   </body>
 </html>

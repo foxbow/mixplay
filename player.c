@@ -439,7 +439,7 @@ void *reader( void *cont ) {
 	control=( mpconfig * )cont;
 	assert( control->fade < 2 );
 
-	addMessage( 2, "Reader starting" );
+	addMessage( 1, "Reader starting" );
 
 	if( control->fade == 0 ) {
 		addMessage( 1, "No crossfading" );
@@ -676,10 +676,10 @@ void *reader( void *cont ) {
 
 					switch ( cmd ) {
 					case 0: /* STOP */
-						addMessage(2,"Player stopped!");
+						addMessage(2,"Player %i stopped", fdset );
 						/* player was not yet fully initialized, start again */
 						if( control->status == mpc_start ) {
-							addMessage(2,"Restart..");
+							addMessage(2,"Restart player %i..", fdset );
 							sendplay( p_command[fdset][1], control );
 						}
 						/* stream stopped playing? */
@@ -689,7 +689,7 @@ void *reader( void *cont ) {
 						}
 						/* we're playing a playlist */
 						else {
-							addMessage(2,"Title change");
+							addMessage(2,"Title change on player %i", fdset );
 							/* should the playcount be increased? */
 							if( control->fade == 0 ) {
 								playCount( control );
@@ -732,7 +732,7 @@ void *reader( void *cont ) {
 						break;
 
 					default:
-						addMessage( 0, "Unknown status %i!\n%s", cmd, line );
+						addMessage( 0, "Unknown status %i on player %i!\n%s", cmd, fdset, line );
 						break;
 					}
 
@@ -743,7 +743,7 @@ void *reader( void *cont ) {
 					break;
 
 				case 'E':
-					addMessage( 0, "%s!", line );
+					addMessage( 0, "Player %i: %s!", fdset, line );
 					addMessage( 1, "Index: %i\nName: %s\nPath: %s",
 							  control->current->title->key,
 							  control->current->title->display,
@@ -752,13 +752,13 @@ void *reader( void *cont ) {
 					break;
 
 				default:
-					addMessage( 0, "Warning!\n%s", line );
+					addMessage( 0, "Player %i: Warning!\n%s", fdset, line );
 					break;
 				} /* case line[1] */
 			} /* if line starts with '@' */
 			else {
 				/* verbosity 1 as sometimes tags appear here which confuses on level 0 */
-				addMessage( 1, "MPG123: %s", line );
+				addMessage( 1, "Player %i - MPG123: %s", fdset, line );
 			}
 		} /* fgets() > 0 */
 
@@ -1113,7 +1113,7 @@ void *reader( void *cont ) {
 		write( p_command[fdset][i], "QUIT\n", 6 );
 	}
 
-	if( control->dbDirty ) {
+	if( control->dbDirty == -1 ) {
 		addMessage( 0, "Updating Database" );
 		dbWrite(control->dbname, control->root );
 	}

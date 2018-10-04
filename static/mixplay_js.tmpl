@@ -27,11 +27,11 @@ function scrollToggle( ) {
 		if( scrolls[i].offset.charAt(0) == '-' ) {
 			if( element.style.right == scrolls[i].offset ) {
 				element.style.right="0px";
-				to=5000;
+				to=10000;
 			}
 			else {
 				element.style.right = scrolls[i].offset;
-				to=10000;
+				to=15000;
 			}
 		}
 	}
@@ -55,7 +55,7 @@ function setScrolls( ) {
 		if( off_right.charAt(0) == '-' ) {
 			element.style.right = off_right;
 			element.offsetHeight;
-			element.style.transition = 'right 3s ease-in-out';
+			element.style.transition = 'right 5s ease-in-out';
 		}
 		else {
 			element.style.left=(right/2)+"px";
@@ -266,7 +266,7 @@ function setElement( e, val ) {
 }
 
 /*
- * show/hide an element
+ * show/hide a <div>
  */
 function setVisible( e, i ) {
 	if( i == 0 ) {
@@ -274,6 +274,18 @@ function setVisible( e, i ) {
 	}
 	else {
 		document.getElementById( e ).style.display='block';
+	}
+}
+
+/*
+ * show/hide an inline element
+ */
+function enableTab( e, i ) {
+	if( i == 0 ) {
+		document.getElementById( e ).style.display='none';
+	}
+	else {
+		document.getElementById( e ).style.display='inline';
 	}
 }
 
@@ -305,7 +317,7 @@ function updateUI( ){
 							setElement( 'next', data.next[0].artist+" - "+data.next[0].title );
 							e=document.getElementById('extra4');
 							e.innerHTML="<p class='cmd' onclick='sendCMD( 0x0002 )'>"+data.prev.artist+" - "+data.prev.title+"</p>";							
-							e.innerHTML+="<p class='cmd'><em>"+data.current.artist+" - "+data.current.title+"</em></p>";
+							e.innerHTML+="<p class='cmd' style='background-color: #ddd;' ><em>"+data.current.artist+" - "+data.current.title+"</em></p>";
 							for( i=0; i<data.next.length; i++ ) {
 								e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0003, "+(i+1)+")'>"+data.next[i].artist+" - "+data.next[i].title+"</p>";
 							}
@@ -367,6 +379,7 @@ function updateUI( ){
 					setVisible( 'ctrl', !isstream );
 					setVisible( 'playstr', isstream );
 					setVisible( 'playpack', !isstream );
+					enableTab( 'show0', !isstream );
 					if( isstream ) {
 						setElement( 'splaytime', data.playtime );
 					}
@@ -404,8 +417,9 @@ function updateUI( ){
 				setTimeout("updateUI()",333);
 			}
 			else {
-				document.getElementById('extra5').style.backgroundColor="#daa";
-				document.getElementById('current').style.backgroundColor="#daa";
+				document.open();
+      			document.write("<h1>Server disconnected!</h1>");
+      			document.close();
 			}
 		}
 	}
@@ -549,6 +563,13 @@ function remProf() {
 		}
 	}
 
+}
+
+/*
+ * download a title by key (0=current)
+ */
+function download(key=0) {
+	window.location="/title/"+key;
 }
 
 /* 

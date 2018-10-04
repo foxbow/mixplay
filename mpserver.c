@@ -394,6 +394,7 @@ static void *clientHandler(void *args ) {
 				strcat( commdata, jsonLine );
 				len=strlen(commdata);
 				sfree( &jsonLine );
+				fullstat=MPCOMM_CONFIG;
 				break;
 			case 7: /* get current build version */
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
@@ -441,7 +442,13 @@ static void *clientHandler(void *args ) {
 				if( fullstat == MPCOMM_RESULT ) {
 					config->found->send=0;
 				}
-				fullstat=MPCOMM_STAT;
+				/* Make sure that a new player gets a fullstat at startup */
+				if( fullstat == MPCOMM_CONFIG ) {
+					fullstat=MPCOMM_FULLSTAT;
+				}
+				else {
+					fullstat=MPCOMM_STAT;
+				}
 			}
 		} /* if running & !mpc_start */
 	}
@@ -466,14 +473,12 @@ void *mpserver( void *data ) {
 	struct timeval		to;
 	int 		mainsocket ,client_sock ,alen ,*new_sock;
 	struct sockaddr_in server , client;
-	int 		port=MP_PORT;
 	mpconfig	*control;
 	int devnull=0;
 
 	control=getConfig( );
 	/* server can never be remote */
 	control->remote=2;
-
 
 	mainsocket = socket(AF_INET , SOCK_STREAM , 0);
 	if (mainsocket == -1) {
@@ -483,16 +488,16 @@ void *mpserver( void *data ) {
 
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = INADDR_ANY;
-	server.sin_port = htons( port );
+	server.sin_port = htons( control->port );
 
 	if( bind(mainsocket,(struct sockaddr *)&server , sizeof(server)) < 0) {
-		fail( errno, "bind() failed!" );
+		fail( errno, "bind to port %i failed!", control->port );
 		return NULL;
 	}
 	addMessage( 1, "bind() done");
 
 	listen(mainsocket , 3);
-	addMessage( 0, "Listening on port %i", port );
+	addMessage( 0, "Listening on port %i", control->port );
 
 	/* redirect stdin/out/err in demon mode */
 	if( control->isDaemon ) {
