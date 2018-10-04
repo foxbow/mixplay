@@ -787,11 +787,16 @@ unsigned int getLowestPlaycount( ) {
  * skips the global list until a title is found that has not been marked
  * and is not marked as DNP
  */
-static mptitle *skipOver( mptitle *current ) {
+static mptitle *skipOver( mptitle *current, int dir ) {
 	mptitle *marker=current;
 
 	while( marker->flags & ( MP_DNP|MP_MARK ) ) {
-		marker=marker->next;
+		if( dir > 0 ) {
+			marker=marker->next;
+		}
+		else {
+			marker=marker->prev;
+		}
 
 		if( marker == current ) {
 			addMessage( 0, "Ran out of titles!" );
@@ -829,6 +834,25 @@ int DNPSkip( mptitle *base, const unsigned int level ) {
 }
 
 /**
+ * skips the given number of titles
+ */
+static mptitle *skipTitles( mptitle *current, long num ) {
+	if( NULL == current ) {
+		return NULL;
+	}
+
+	for( ; num > 0; num-- ) {
+		current=skipOver(current->next,1);
+	}
+
+	for( ; num < 0; num++ ) {
+		current=skipOver(current->next,-1);
+	}
+
+	return current;
+}
+
+/**
  * adds a new title to the current playlist
  *
  * Core functionality of the mixplay architecture:
@@ -858,25 +882,25 @@ mpplaylist *addNewTitle( mpplaylist *pl ) {
 			pl=pl->next;
 		}
 		runner=pl->title;
-		lastname=runner->artist;
+		lastname=pl->title->artist;
 	}
 	else {
 		runner=getConfig()->root;
 		valid=3;
 	}
-
 	/* improve 'randomization' */
 	gettimeofday( &tv,NULL );
 	srand( getpid()*tv.tv_sec );
 
 restart:
-	num = countTitles( MP_ALL, MP_DNP );
+	num = countTitles( MP_ALL, MP_DNP|MP_MARK );
 
 	/* select a random title from the database */
 	/* skip forward until a title is found that is neither DNP nor MARK */
-	runner=skipOver(skipTitles( runner, RANDOM( num ) ));
+	runner=skipTitles( runner, RANDOM( num ) );
 
-	if( runner->flags & MP_MARK ) {
+	if( runner==NULL ) {
+		runner=pl->title;
 		addMessage( 0, "Next round!" );
 		newCount( );
 		goto restart;
@@ -885,22 +909,24 @@ restart:
 	cycles=0;
 
 	while( ( valid & 3 ) != 3 ) {
+		addMessage( 3, "Last %s / %s , valid=%i", lastname, runner->artist, valid );
 		/* title did not pass namecheck */
-		if( !( valid&1 ) ) {
+		if( ( valid & 1 ) != 1 ) {
 			guard=runner;
 
 			while( checkSim( runner->artist, lastname ) ) {
+				addMessage( 3, "%s = %s", runner->artist, lastname );
 				activity( "Nameskipping" );
-				runner=runner->next;
-				runner=skipOver( runner );
+				runner=skipOver( runner->next, 1 );
 
-				if( guard==runner ) {
+				if( (runner == guard ) || ( runner == NULL ) ) {
 					addMessage( 0, "Only %s left..", lastname );
 					newCount( );
 					goto restart;
 					break;
 				}
 			}
+			addMessage( 3, "%s != %s", runner->artist, lastname );
 
 			if( guard != runner ) {
 				valid=1; /* we skipped and need to check playcount */
@@ -913,6 +939,7 @@ restart:
 		guard=runner;
 
 		/* title did not pass playcountcheck and we are not in stuffing mode */
+		addMessage( 3, "Skip from %s (%i)", runner->display, valid );
 		while( (valid & 2 ) != 2 ) {
 			if( runner->flags & MP_FAV ) {
 				if ( runner-> playcount <= 2*pcount ) {
@@ -925,19 +952,18 @@ restart:
 				}
 			}
 
-			if( !( valid & 2 ) ) {
+			if( ( valid & 2 ) != 2 ) {
 				activity( "Playcountskipping" );
-				runner=runner->next;
-				runner=skipOver( runner );
+				runner=skipOver( runner->next, 1 );
 				valid=0;
 
-				if( guard == runner ) {
-					valid=1;	/* we're back where we started and this one is valid by name */
+				if( (runner == NULL ) || ( guard == runner ) ) {
 					pcount++;	/* allow more replays */
 					addMessage( 2, "Increasing maxplaycount to %li", pcount );
 				}
 			}
 		}
+		addMessage( 3, " to %s (%i)", runner->display, valid );
 
 		if( ++cycles > 10 ) {
 			addMessage( 2, "Looks like we ran into a loop" );
@@ -1009,25 +1035,6 @@ void plCheck( int del ) {
 		}
 		cnt++;
 	}
-}
-
-/**
- * skips the given number of titles
- */
-mptitle *skipTitles( mptitle *current, long num ) {
-	if( NULL == current ) {
-		return NULL;
-	}
-
-	for( ; num > 0; num-- ) {
-		current=current->next;
-	}
-
-	for( ; num < 0; num++ ) {
-		current=current->prev;
-	}
-
-	return current;
 }
 
 /*

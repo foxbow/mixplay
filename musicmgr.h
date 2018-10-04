@@ -79,7 +79,6 @@ mptitle *recurse( char *curdir, mptitle *files );
 mptitle *rewindTitles( mptitle *base );
 mptitle *loadPlaylist( const char *path );
 mptitle *insertTitle( mptitle *base, const char *path );
-mptitle *skipTitles( mptitle *current, long num );
 mptitle *cleanTitles( mptitle *root );
 int search( const char *pat, const mpcmd range, const int global );
 int playResults( mpcmd range, const char *arg, const int insert );

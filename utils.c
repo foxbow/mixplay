@@ -325,31 +325,46 @@ static int fncmp( const char *str, const char *pat ) {
  */
 int checkMatch( const char* name, const char* pat ) {
 	int len;
-	char loname[1024];
+	char *loname;
+	char *lopat;
 	int trigger;
+	int retval=0;
 
-	strlncpy( loname, name, 1024 );
+	loname=falloc( strlen(name)+1, 1 );
+	lopat=falloc( strlen(pat)+1, 1 );
 
-	len=MIN( strlen( loname ), strlen( pat ) );
-	trigger=70;
+	strlncpy( loname, name, strlen(name) );
+	strlncpy( lopat, pat, strlen(pat) );
 
-	if( len <= 20 ) {
-		trigger=80;
+	/* substring is always a match! */
+	if( strstr( loname, lopat ) != NULL ) {
+		retval=-1;
 	}
 
-	if( len <= 10 ) {
-		trigger=88;
+	if( retval == 0 ) {
+		len=MIN( strlen( loname ), strlen( pat ) );
+		trigger=70;
+
+		if( len <= 20 ) {
+			trigger=80;
+		}
+
+		if( len <= 10 ) {
+			trigger=88;
+		}
+
+		if( len <= 5 ) {
+			trigger=100;
+		}
+
+		if( trigger <= fncmp( loname, pat ) ) {
+			retval=-1;
+		}
 	}
 
-	if( len <= 5 ) {
-		trigger=100;
-	}
-
-	if( trigger <= fncmp( loname, pat ) ) {
-		return -1;
-	}
-
-	return 0;
+	free( loname );
+	free( lopat );
+	return retval;
 }
 
 /**
