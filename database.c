@@ -271,6 +271,25 @@ int dbCheckExist( const char *dbname ) {
 	return num;
 }
 
+static int dbAddTitle( int db, mptitle *title ) {
+    struct dbentry_t dbentry;
+
+    if( 0 == db ) {
+        fail( F_FAIL, "%s - Database not open", __func__ );
+    }
+
+    lseek( db, 0, SEEK_END );
+
+    entry2db( title, &dbentry );
+
+    if( write( db, &dbentry, DBESIZE ) != DBESIZE ) {
+        fail( errno, "Could not write entry %s!", title->path );
+    }
+
+    return 0;
+}
+
+
 /**
  * adds new titles to the database
  * the new titles will have a playcount set to blend into the mix
@@ -281,7 +300,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 	mptitle *dbrunner;
 	unsigned int count=0, mean=0;
 
-	int num=0;
+	int num=0, db=-1;
 
 	dbroot=dbGetMusic( dbname );
 
@@ -315,6 +334,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 
 	addMessage( 1, "Adding titles..." );
 
+	db=dbOpen( dbname );
 	while( NULL != fsroot ) {
 		activity( "Adding" );
 		dbrunner = findTitle( dbroot, fsroot->path );
@@ -322,12 +342,13 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 		if( NULL == dbrunner ) {
 			fillTagInfo( basedir, fsroot );
 			fsroot->playcount=mean;
-			dbMarkDirty();
+			dbAddTitle( db, fsroot );
 			num++;
 		}
 
 		fsroot=removeTitle( fsroot );
 	}
+	dbClose( db );
 
 	addMessage( 1, "Added %i titles with playcount %i to %s", num, mean, dbname );
 	return num;
