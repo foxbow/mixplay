@@ -300,7 +300,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 	mptitle *dbrunner;
 	unsigned int count=0, mean=0;
 
-	int num=0, db=-1;
+	int num=0, db=0;
 
 	dbroot=dbGetMusic( dbname );
 
@@ -330,6 +330,11 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 	/* scan directory */
 	addMessage( 1, "Scanning..." );
 	fsroot=recurse( basedir, NULL );
+	if( fsroot == NULL ) {
+		addMessage( 0, "No music found in %s!", basedir );
+		return 0;
+	}
+
 	fsroot=fsroot->next;
 
 	addMessage( 1, "Adding titles..." );
@@ -340,7 +345,6 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 		dbrunner = findTitle( dbroot, fsroot->path );
 
 		if( NULL == dbrunner ) {
-			fillTagInfo( basedir, fsroot );
 			fsroot->playcount=mean;
 			dbAddTitle( db, fsroot );
 			num++;

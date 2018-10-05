@@ -4,6 +4,7 @@
 /* Default values */
 #include <stdlib.h>
 #include <pthread.h>
+#include <string.h>
 
 #define ONOFF(x) (x)?"ON":"OFF"
 
@@ -31,6 +32,17 @@ struct msgbuf_t {
 typedef struct msgbuf_t msgbuf;
 
 #include "config.h"
+
+/*
+ * for some reason Ubuntu does not know these?!
+ */
+#ifndef strlcpy
+size_t strlcpy( char *t,const  char *s, size_t l );
+#endif
+
+#ifndef strlcat
+size_t strlcat( char *t,const  char *s, size_t l );
+#endif
 
 /*
  * These functions need to be implemented in the UI

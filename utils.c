@@ -5,12 +5,27 @@
 #include "utils.h"
 #include <errno.h>
 #include <stdio.h>
-#include <string.h>
 #include <ctype.h>
 #include <stdarg.h>
 #include <unistd.h>
 #include <ncurses.h>
 #include <sys/stat.h>
+
+#ifndef strlcpy
+size_t strlcpy( char *t,const  char *s, size_t l ) {
+	strncpy( t, s, l );
+	t[l]=0;
+	return strlen(t);
+}
+#endif
+
+#ifndef strlcat
+size_t strlcat( char *t,const  char *s, size_t l ) {
+	strncat( t, s, l );
+	t[l]=0;
+	return strlen(t);
+}
+#endif
 
 /**
  * turn a relative path into an absolute path
@@ -24,7 +39,7 @@ char *abspath( char *path, const char *basedir, int len ) {
 	if( path[0] != '/' ) {
 		buff=falloc( len, sizeof( char ) );
 		snprintf( buff, len, "%s/%s", basedir, path );
-		strncpy( path, buff, len );
+		strlcpy( path, buff, len );
 		free( buff );
 	}
 
@@ -36,13 +51,12 @@ char *abspath( char *path, const char *basedir, int len ) {
  **/
 void setTitle( const char* title ) {
 	char buff[128];
-	strncpy( buff, "\033]2;", 128 );
-	strncat( buff, title, 128 );
-	strncat( buff, "\007\000", 128 );
+	strlcpy( buff, "\033]2;", 128 );
+	strlcat( buff, title, 128 );
+	strlcat( buff, "\007\000", 128 );
 	fputs( buff, stdout );
 	fflush( stdout );
 }
-
 
 /**
  * Strip spaces and special chars from the beginning and the end
@@ -65,11 +79,7 @@ char *strip( char *buff, const char *text, const size_t maxlen ) {
 	}
 
 	len=MIN(strlen(text+tpos),maxlen);
-	strncpy( buff, text+tpos, len );
-
-	/* Make sure string ends with a 0 */
-	buff[len]=0;
-	len--;
+	strlcpy( buff, text+tpos, len );
 
 	/* Cut off trailing spaces and special chars */
 	while( ( len > 0 ) && ( iscntrl( buff[len] ) || isspace( buff[len] ) ) ) {
@@ -198,10 +208,10 @@ char *toLower( char *text ) {
 }
 
 /**
- * works like strncpy but turns every character to lowercase
+ * works like strlcpy but turns every character to lowercase
  */
 int strlncpy( char *dest, const char *src, const size_t len ) {
-	strncpy( dest, src, len );
+	strlcpy( dest, src, len );
 	dest=toLower( dest );
 	return strlen( dest );
 }
@@ -210,7 +220,7 @@ int strlncpy( char *dest, const char *src, const size_t len ) {
  * works like strncat but turns every character to lowercase
  */
 int strlncat( char *dest, const char *src, const size_t len ) {
-	strncat( dest, src, len );
+	strlcat( dest, src, len );
 	dest=toLower( dest );
 	return strlen( dest );
 }

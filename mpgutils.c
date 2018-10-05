@@ -225,11 +225,16 @@ static char *getGenre( unsigned char num ) {
  * helperfunction to copy V2 tag data
  */
 static void tagCopy( char *target, mpg123_string *tag ) {
-	if( NULL == tag ) {
+	size_t len;
+	if( NULL == tag ){
+		return;
+	}
+	len=strlen( tag->p );
+	if( len == 0 ) {
 		return;
 	}
 
-	strip( target, tag->p, ( tag->fill < NAMELEN )?tag->fill:NAMELEN );
+	strip( target, tag->p, MIN( len, NAMELEN ) );
 }
 
 /**
@@ -244,12 +249,14 @@ static void genPathName( const char *basedir, mptitle *entry  ) {
 
 	blen=strlen( basedir );
 
+	/* trailing '/' should never happen! */
 	if( basedir[blen] == '/' ) {
-		blen=blen+1;
+		addMessage( 0, "getPathName called with %s", basedir );
+		blen=blen-1;
 	}
 
 	/* Create working copy of the path and cut off trailing / */
-	strip( curdir, ( entry->path )+blen, MAXPATHLEN );
+	strip( curdir, entry->path, MIN( blen, MAXPATHLEN ) );
 
 	/* cut off .mp3 */
 	if( endsWith( curdir, ".mp3" ) ) {
@@ -262,29 +269,29 @@ static void genPathName( const char *basedir, mptitle *entry  ) {
 	p=strrchr( curdir, '/' );
 
 	if( NULL == p ) {
-		strncpy( entry->title, curdir, NAMELEN );
+		strlcpy( entry->title, curdir, NAMELEN );
 	}
 	else {
 		p[0]=0;
-		strncpy( entry->title, p+1, NAMELEN );
+		strlcpy( entry->title, p+1, NAMELEN );
 
 		if( strlen( curdir ) > 1 ) {
 			p=strrchr( curdir, '/' );
 
 			if( NULL == p ) {
-				strncpy( entry->artist, curdir, NAMELEN );
+				strlcpy( entry->artist, curdir, NAMELEN );
 			}
 			else {
 				p[0]=0;
-				strncpy( entry->album, p+1, NAMELEN );
+				strlcpy( entry->album, p+1, NAMELEN );
 
 				p=strrchr( curdir, '/' );
 
 				if( NULL == p ) {
-					strncpy( entry->artist, curdir, NAMELEN );
+					strlcpy( entry->artist, curdir, NAMELEN );
 				}
 				else {
-					strncpy( entry->artist, p+1, NAMELEN );
+					strlcpy( entry->artist, p+1, NAMELEN );
 				}
 			}
 		}
@@ -299,6 +306,10 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, mptitle *title ) {
 	mpg123_id3v2 *v2;
 	int meta;
 
+	if( strlen(basedir) == 0 ) {
+		addMessage(0, "WOT?");
+		abort();
+	}
 	genPathName( basedir, title ); /* Set some default values as tag info may be incomplete */
 
 	if( mpg123_open( mh, title->path ) != MPG123_OK ) {
@@ -315,38 +326,44 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, mptitle *title ) {
 	}
 
 	if( mpg123_id3( mh, &v1, &v2 ) == MPG123_OK ) {
-		if( v2 != NULL ) { /* Prefer v2 tag data */
+		/* Prefer v2 tag data if available */
+		if( ( v2 != NULL ) && ( v2->title != NULL ) ){
 			tagCopy( title->title, v2->title );
 			tagCopy( title->artist, v2->artist );
 			tagCopy( title->album, v2->album );
 
 			if( v2->genre ) {
 				if( '(' == v2->genre->p[0] ) {
-					strncpy( title->genre, getGenre( atoi( &v2->genre->p[1] ) ), NAMELEN );
+					strlcpy( title->genre, getGenre( atoi( &v2->genre->p[1] ) ), NAMELEN );
 				}
 				else if( atoi( v2->genre->p ) > 0 ) {
-					strncpy( title->genre, getGenre( atoi( v2->genre->p ) ), NAMELEN );
+					strlcpy( title->genre, getGenre( atoi( v2->genre->p ) ), NAMELEN );
 				}
 				else if( strlen( v2->genre->p ) > 0 ) {
 					tagCopy( title->genre, v2->genre );
 				}
 				else {
-					strncpy( title->genre, "unset", 6 );
+					strlcpy( title->genre, "unset", 6 );
 				}
 			}
 			else {
-				strncpy( title->genre, "unset", 6 );
+				strlcpy( title->genre, "unset", 6 );
 			}
 		}
-		else if( v1 != NULL ) {
-			addMessage( 3, "ID3v1 Tags found!" );
+		/* otherwise try v1 data */
+		else if( ( v1 != NULL ) && ( strlen( v1->title ) != 0 ) ){
 			strip( title->title, v1->title, 32 );
-			strip( title->artist, v1->artist, 32 );
-			strip( title->album, v1->album, 32 );
-			strncpy( title->genre, getGenre( v1->genre ), NAMELEN );
+			if( strlen( v1->artist ) > 0 ) {
+				strip( title->artist, v1->artist, 32 );
+			}
+			if( strlen( v1->album ) > 0 ) {
+				strip( title->album, v1->album, 32 );
+			}
+			strlcpy( title->genre, getGenre( v1->genre ), NAMELEN );
 		}
+		/* or complain! */
 		else {
-			addMessage( 1, "ID3 OK but no tags in %s", title->path );
+			addMessage( 1, "ID3 OK but no tag info filled in %s", title->path );
 		}
 	}
 	else {

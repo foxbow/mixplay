@@ -789,7 +789,7 @@ mptitle *insertTitle( mptitle *base, const char *path ) {
 
 	strncpy( root->path, path, MAXPATHLEN );
 
-	fillTagInfo( "", root );
+	fillTagInfo( path, root );
 
 	return root;
 }
