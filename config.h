@@ -63,11 +63,16 @@ typedef enum _mpcmd_t mpcmd;
 #define MPC_CMD(x)   (x&0x00ff)
 /* determine range */
 #define MPC_RANGE(x) (x&0xff00)
-#define MPC_ISTITLE(x) (MPC_RANGE(x)&mpc_title)
-#define MPC_ISARTIST(x) (MPC_RANGE(x)&mpc_artist)
-#define MPC_ISALBUM(x) (MPC_RANGE(x)&mpc_album)
-#define MPC_ISGENRE(x) (MPC_RANGE(x)&mpc_genre)
-#define MPC_ISDISPLAY(x) (MPC_RANGE(x)&mpc_display)
+#define MPC_ISTITLE(x) (x & mpc_title)
+#define MPC_ISARTIST(x) (x & mpc_artist)
+#define MPC_ISALBUM(x) ( x & mpc_album)
+#define MPC_ISGENRE(x) ( x & mpc_genre)
+#define MPC_ISDISPLAY(x) ( x & mpc_display)
+#define MPC_EQTITLE(x) (MPC_RANGE(x)==mpc_title)
+#define MPC_EQARTIST(x) (MPC_RANGE(x)==mpc_artist)
+#define MPC_EQALBUM(x) (MPC_RANGE(x)==mpc_album)
+#define MPC_EQGENRE(x) (MPC_RANGE(x)==mpc_genre)
+#define MPC_EQDISPLAY(x) (MPC_RANGE(x)==mpc_display)
 /* shall it be fuzzy */
 #define MPC_ISFUZZY(x) (x & mpc_fuzzy )
 

@@ -90,7 +90,6 @@ function fail( msg ) {
 	if( doUpdate != 0 ) {
 		doUpdate=0;
 		/* pull main to front */
-		toggleVisibility('5');
 		alert( msg );
 	}
 }
@@ -123,6 +122,9 @@ var b;
 		if( i == element ) {
 			if( i == '3' ) { 
 				b.value="\u2630 Messages"
+			}
+			if( i == '0' ) {
+				setScrolls();
 			}
 			b.style.backgroundColor='#ddd';
 			e.style.display='block';
@@ -158,7 +160,6 @@ function toggleResults( element ) {
 function killServer() {
 	if( confirm("Do you really want to stop the Server?") ) {
 		/* pull main to front */
-		toggleVisibility('5');
 		sendCMD(0x11);
 		doUpdate=0;
 	}
@@ -213,8 +214,7 @@ function sendCMD( cmd, arg="" ) {
 		( code == '0010' ) ) ) return;
 		
 	/* these commands should pull main to front */
-	if( ( code == '0003' ) ||
-	    ( code == '010c' ) ) toggleVisibility('5');
+	if( code == '010c' ) toggleVisibility('5');
 
 	/* These command should pull the messages to front */
 	if( ( code == '0008' ) ||
@@ -336,9 +336,7 @@ function updateUI( ){
 
 					/* search results */
 					else if( data.type == 4 ) {
-						/* rather use sendArg() than <a href> tags! */
 						e=document.getElementById('search0');
-						e.style.display='block';
 						if( data.titles.length > 0 ) {
 							e.innerHTML="<a href='/cmd/010c?0'>Play all</a><br/>";
 							for( i=0; i<data.titles.length; i++ ) {
@@ -346,10 +344,9 @@ function updateUI( ){
 							}
 						}
 						else {
-							e.innerHTML="<em>Nothing found!</em>";
+							e.innerHTML="<em>No titles found!</em>";
 						}
 						e=document.getElementById('search1');
-						e.style.display='none';
 						if( data.artists.length > 0 ) {
 							e.innerHTML="";
 							for( i=0; i<data.artists.length; i++ ) {
@@ -360,7 +357,6 @@ function updateUI( ){
 							e.innerHTML="<em>No artists found!</em>";
 						}
 						e=document.getElementById('search2');
-						e.style.display='none';
 						if( data.albums.length > 0 ) {
 							e.innerHTML="";
 							for( i=0; i<data.albums.length; i++ ) {
@@ -417,9 +413,8 @@ function updateUI( ){
 				setTimeout("updateUI()",333);
 			}
 			else {
-				document.open();
-      			document.write("<h1>Server disconnected!</h1>");
-      			document.close();
+				document.body.style.backgroundColor='#daa'
+				document.getElementById('current').style.backgroundColor="#daa";
 			}
 		}
 	}
@@ -569,7 +564,9 @@ function remProf() {
  * download a title by key (0=current)
  */
 function download(key=0) {
-	window.location="/title/"+key;
+	if( confirm( "Download "+getElementById('title').innerHTML+" ?" ) ) {
+		window.location="/title/"+key;
+	}
 }
 
 /* 

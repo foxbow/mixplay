@@ -15,6 +15,7 @@
     <input id='show2' class='cmd' type='button' onclick='toggleVisibility("2")' value='&#x2630; Tools' >
     <input id='show4' class='cmd' type='button' onclick='toggleVisibility("4")' value='&#x2630; Playlist' >
     <input id='show3' class='cmd' type='button' onclick='toggleVisibility("3")' value='&#x2630; Messages' >
+    <!-- main -->
     <div id='extra5' onselectstart='return false' onwheel='volWheel(event)'>
       <div class='scroll' onclick='sendCMD(0x02)'><p id='prev'>prev</p></div>
       <div id='current' onclick='sendCMD(0x00)'>
@@ -48,6 +49,7 @@
         &#x1F50A; <input id='vol' type='range' min='0' max='100' step='1' value='0' oninput='setVolume( this.value )' onwheel='return false'>
       </div>
     </div> <!-- main -->
+    <!-- search -->
     <div id='extra0' style='display: none; width:100%;' >
       <em>Search:</em><br/>
       <select label='Range' id='srange'>
@@ -61,9 +63,9 @@
       <input id='ctrl0' class='cmd' style='background-color: #ddd;'  type='button' onclick='toggleResults("0")' value='&#x2630; Titles' >
       <input id='ctrl1' class='cmd' type='button' onclick='toggleResults("1")' value='&#x2630; Artists' >
       <input id='ctrl2' class='cmd' type='button' onclick='toggleResults("2")' value='&#x2630; Albums' >
-      <div id='search0' style='display: none; width:100%;'></div>
-      <div id='search1' style='display: none; width:100%;'></div>
-      <div id='search2' style='display: none; width:100%;'></div>
+      <div id='search0' style='display: block; width:100%;'><em>No titles found!</em></div>
+      <div id='search1' style='display: none; width:100%;'><em>No artists found!</em></div>
+      <div id='search2' style='display: none; width:100%;'><em>No albums found!</em></div>
     </div>
     <div id='extra1' style='display: none; width:100%;' >
       <em>Profiles:</em><br>

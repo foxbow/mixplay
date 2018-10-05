@@ -21,18 +21,75 @@
 #include <fcntl.h>
 
 #include "database.h"
-/**
- * compares two strings
- * uses the shorter string as pattern and the longer as the matchset.
- * Used to make sure that a remix is still considered a match, be it original artist or mixer.
- * returns -1 (true) on match and 0 on mismatch
+
+/*
+ * checks if pat has a matching in text. If text is shorter than pat then
+ * the test fails.
  */
-static int checkSim( const char *txt1, const char *txt2 ) {
-	if( strlen( txt1 )> strlen( txt2 ) ) {
-		return checkMatch( txt1, txt2 );
+static int patMatch( const char *text, const char *pat ) {
+	char *lotext;
+	char *lopat;
+	int best=0;
+	int res;
+	int plen=strlen( pat );
+	int tlen=strlen( text );
+	int i, j;
+	int guard;
+
+	/* The pattern must not be longer than the text! */
+	if( tlen < plen ) {
+		return 0;
+	}
+
+	/* prepare the pattern */
+	lopat=falloc( strlen(pat)+3, 1 );
+	strlncpy( lopat+1, pat, plen );
+	lopat[0]=-1;
+	lopat[plen+1]=-1;
+
+	/* prepare the text */
+	lotext=falloc( tlen+1, 1 );
+	strlncpy( lotext, text, tlen );
+
+	/* check */
+	for( i=0; i<= ( tlen-plen ); i++ ) {
+		res=0;
+		for ( j = i; j < plen+i; j++ ) {
+			if( ( lotext[j] == pat[j-i-1] ) ||
+				( lotext[j] == pat[j-i] ) ||
+				( lotext[j] == pat[j-i+1] ) ) {
+				res++;
+			}
+			if( res > best ) {
+				best=res;
+			}
+		}
+	}
+
+	/* tweak matchlevel to get along with special cases */
+	guard=75+(20*plen)/tlen;
+
+	if( guard > 100 ) guard=100;
+	/* compute percentual match */
+	res=(100*best)/plen;
+	if( res >= guard ) {
+		addMessage( 4, "%s - %s - %i/%i", lotext, lopat, res, guard );
+	}
+	free( lotext );
+	free(lopat);
+	return ( res >= guard );
+}
+
+/*
+ * symmetric patMatch that checks if text is shorter than pattern
+ * used for title checking in addNewTitle
+ */
+static int checkSim( const char *text, const char *pat ) {
+	if( strlen( text ) < strlen( pat ) ) {
+		return patMatch( pat, text );
 	}
 	else {
-		return checkMatch( txt2, txt1 );
+		return patMatch( text, pat );
 	}
 }
 
@@ -301,11 +358,10 @@ static int getDirs( const char *cd, struct dirent ***dirlist ) {
 static int matchTitle( mptitle *title, const char* pat ) {
 	int fuzzy=0;
 	char loname[1024];
-	char lopat[1024];
+	char *lopat;
+	int res=0;
 
 	if( ( '=' == pat[1] ) || ( '*' == pat[1] ) ) {
-		strlncpy( lopat, &pat[2], 1024 );
-
 		if( '*' == pat[1] ) {
 			fuzzy=-1;
 		}
@@ -344,26 +400,32 @@ static int matchTitle( mptitle *title, const char* pat ) {
 	}
 	else {
 		strlncpy( loname, title->display, 1024 );
-		strlncpy( lopat, pat, 1024 );
 	}
 
 	if( fuzzy ) {
-		return checkMatch( loname, lopat );
+		res=patMatch( loname, pat+2 );
 	}
 	else {
-		return ( strstr( loname, lopat ) != NULL );
+		lopat=falloc( strlen( pat+1 ), 1 );
+		strlncpy( lopat, pat+2, strlen( pat+2 ) );
+		res=( strstr( loname, lopat ) != NULL );
+		free( lopat );
 	}
+
+	return res;
 }
 
-static int isMatch( const char *term, const char *pat, int fuzzy ) {
+/*
+ * matches term with pattern in search
+ */
+static int isMatch( const char *term, const char *pat, const int fuzzy ) {
 	char loterm[MAXPATHLEN];
 
-	strlncpy( loterm, term, MAXPATHLEN );
-
 	if( fuzzy ){
-		return checkMatch( loterm, pat);
+		return patMatch( term, pat);
 	}
 	else {
+		strlncpy( loterm, term, MAXPATHLEN );
 		return ( strstr( loterm, pat ) != NULL );
 	}
 }
@@ -392,11 +454,19 @@ int search( const char *pat, const mpcmd range, const int global ) {
 		activity("searching");
 		found=0;
 		if( global || !(runner->flags & MP_DNP) ) {
+			/* check for title/display */
 			if( MPC_ISTITLE(range) && isMatch( runner->title, pat, MPC_ISFUZZY(range)  )) {
 				found=-1;
 			}
-			if( MPC_ISARTIST(range) && isMatch( runner->artist, pat, MPC_ISFUZZY(range) ) ) {
+			if( MPC_ISDISPLAY( range ) && isMatch( runner->display, pat, MPC_ISFUZZY(range) ) ) {
 				found=-1;
+			}
+			/* check for artist, if title matched, also add artist */
+			if( ( found && MPC_EQTITLE( range ) ) || ( MPC_ISARTIST(range) && isMatch( runner->artist, pat, MPC_ISFUZZY(range) ) ) ) {
+				/* Only add title if search asks only for artist */
+				if( MPC_EQARTIST( range ) ) {
+					found=-1;
+				}
 				/* check for new artist */
 
 				for( i=0; (i<res->anum) && strcmp( res->artists[i], runner->artist ); i++ );
@@ -407,12 +477,11 @@ int search( const char *pat, const mpcmd range, const int global ) {
 					res->artists[i]=runner->artist;
 				}
 			}
-			if( MPC_ISDISPLAY( range ) && isMatch( runner->display, pat, MPC_ISFUZZY(range) ) ) {
-				found=-1;
-			}
-			/* if title or artist matched, also add the album, unless we look for albums explicitly */
-			if( ( found && !MPC_ISALBUM(range) ) || ( MPC_ISALBUM(range) && isMatch( runner->album, pat, MPC_ISFUZZY(range) ) ) ) {
-				found=-1;
+			/* if title or artist matched, also add the album */
+			if( ( found && MPC_EQTITLE( range ) ) || ( MPC_ISALBUM(range) && isMatch( runner->album, pat, MPC_ISFUZZY(range) ) ) ) {
+				if( MPC_EQALBUM( range ) ) {
+					found=-1;
+				}
 
 				/*
 				 * two artists may have an album with the same name!
@@ -866,7 +935,7 @@ mpplaylist *addNewTitle( mpplaylist *pl ) {
 	mptitle *guard=NULL;
 	struct timeval tv;
 	unsigned long num=0;
-	char *lastname;
+	char *lastpat;
 	unsigned int pcount=getLowestPlaycount( );
 	unsigned int cycles=0;
 	int valid=0;
@@ -882,7 +951,7 @@ mpplaylist *addNewTitle( mpplaylist *pl ) {
 			pl=pl->next;
 		}
 		runner=pl->title;
-		lastname=pl->title->artist;
+		lastpat=pl->title->artist ;
 	}
 	else {
 		runner=getConfig()->root;
@@ -909,24 +978,23 @@ restart:
 	cycles=0;
 
 	while( ( valid & 3 ) != 3 ) {
-		addMessage( 3, "Last %s / %s , valid=%i", lastname, runner->artist, valid );
 		/* title did not pass namecheck */
 		if( ( valid & 1 ) != 1 ) {
 			guard=runner;
 
-			while( checkSim( runner->artist, lastname ) ) {
-				addMessage( 3, "%s = %s", runner->artist, lastname );
+			while( checkSim( runner->artist, lastpat ) ) {
+				addMessage( 3, "%s = %s", runner->artist, lastpat );
 				activity( "Nameskipping" );
 				runner=skipOver( runner->next, 1 );
 
 				if( (runner == guard ) || ( runner == NULL ) ) {
-					addMessage( 0, "Only %s left..", lastname );
+					addMessage( 0, "Only %s left..", lastpat );
 					newCount( );
 					goto restart;
 					break;
 				}
 			}
-			addMessage( 3, "%s != %s", runner->artist, lastname );
+			addMessage( 3, "%s != %s", runner->artist, lastpat );
 
 			if( guard != runner ) {
 				valid=1; /* we skipped and need to check playcount */
@@ -937,9 +1005,7 @@ restart:
 		}
 
 		guard=runner;
-
 		/* title did not pass playcountcheck and we are not in stuffing mode */
-		addMessage( 3, "Skip from %s (%i)", runner->display, valid );
 		while( (valid & 2 ) != 2 ) {
 			if( runner->flags & MP_FAV ) {
 				if ( runner-> playcount <= 2*pcount ) {
@@ -963,7 +1029,6 @@ restart:
 				}
 			}
 		}
-		addMessage( 3, " to %s (%i)", runner->display, valid );
 
 		if( ++cycles > 10 ) {
 			addMessage( 2, "Looks like we ran into a loop" );

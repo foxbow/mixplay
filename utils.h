@@ -7,10 +7,6 @@
 
 #define ONOFF(x) (x)?"ON":"OFF"
 
-#define CMP_CHARS 127
-#define CMP_BITS (CMP_CHARS*CMP_CHARS)
-#define CMP_ARRAYLEN ((CMP_BITS%8==0)?CMP_BITS/8:(CMP_BITS/8)+1)
-
 #define F_FAIL -1
 
 #ifndef MAX
@@ -19,8 +15,6 @@
 #ifndef MIN
 #define MIN(x,y) ((x)<(y)?(x):(y))
 #endif
-/* Represents a string as a bit array */
-typedef unsigned char* strval_t;
 
 #define MSGNUM 20
 
@@ -69,7 +63,6 @@ int isURL( const char *uri );
 int isDir( const char *path );
 int readline( char *line, size_t len, int fd );
 char *abspath( char *path, const char *basedir, int len );
-int checkMatch( const char* name, const char* pat );
 void *falloc( size_t num, size_t size );
 void *frealloc( void *old, size_t size );
 void sfree( char **ptr );
