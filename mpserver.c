@@ -316,11 +316,8 @@ static void *clientHandler(void *args ) {
 				if( config->found->send == -1 ) {
 					fullstat=MPCOMM_RESULT;
 				}
-				/* 
-				 * During initialization there may be no current title 
-				 * make sure that standard update is sent.
-				 */
-				else if( config->current == NULL ) {
+				/* do not miss a fullupdate, the searchresult can wait a moment */
+				if( config->current == NULL ) {
 					fullstat=MPCOMM_STAT;
 				}
 				else if( strcmp( config->current->title->display, playing ) ) {
@@ -329,6 +326,14 @@ static void *clientHandler(void *args ) {
 				}
 
 				jsonLine=serializeStatus( &clmsg, sock, fullstat );
+				if( fullstat == MPCOMM_FULLSTAT ) {
+					fullstat=MPCOMM_STAT;
+				}
+				/* Make sure that a new player gets a fullstat at startup */
+				if( fullstat == MPCOMM_CONFIG ) {
+					fullstat=MPCOMM_FULLSTAT;
+				}
+
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012", (int)strlen(jsonLine) );
 				while( ( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
 					commsize+=MP_BLKSIZE;
@@ -407,8 +412,9 @@ static void *clientHandler(void *args ) {
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: audio/mpeg;\015\012"
 						"Content-Disposition: attachment; filename=\"%s.mp3\"\015\012\015\012", title->display );
 				send(sock , commdata, strlen(commdata), 0);
-				/* todo: title->path should be relative to config->musicdir */
-				filePost( sock, title->path );
+				strlcpy( line, config->musicdir, MAXPATHLEN );
+				strlcat( line, title->path, MAXPATHLEN );
+				filePost( sock, line );
 				title=NULL;
 				len=0;
 				running=0;
@@ -441,12 +447,6 @@ static void *clientHandler(void *args ) {
 				}
 				if( fullstat == MPCOMM_RESULT ) {
 					config->found->send=0;
-				}
-				/* Make sure that a new player gets a fullstat at startup */
-				if( fullstat == MPCOMM_CONFIG ) {
-					fullstat=MPCOMM_FULLSTAT;
-				}
-				else {
 					fullstat=MPCOMM_STAT;
 				}
 			}

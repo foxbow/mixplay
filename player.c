@@ -162,13 +162,14 @@ void setPCommand(  mpcmd cmd ) {
  * make mpeg123 play the given title
  */
 static void sendplay( int fdset, mpconfig *control ) {
-	char line[MAXPATHLEN]="load ";
+	char line[MAXPATHLEN+5]="load ";
 	assert( control->current != NULL );
 
-	strncat( line, control->current->title->path, MAXPATHLEN );
-	strncat( line, "\n", MAXPATHLEN );
+	strlcat( line, control->musicdir, MAXPATHLEN+5 );
+	strlcat( line, control->current->title->path, MAXPATHLEN+5 );
+	strlcat( line, "\n", MAXPATHLEN+5 );
 
-	if ( write( fdset, line, MAXPATHLEN ) < strlen( line ) ) {
+	if ( write( fdset, line, MAXPATHLEN+5 ) < strlen( line ) ) {
 		fail( F_FAIL, "Could not write\n%s", line );
 	}
 

@@ -43,21 +43,21 @@ static int patMatch( const char *text, const char *pat ) {
 
 	/* prepare the pattern */
 	lopat=falloc( strlen(pat)+3, 1 );
-	strlncpy( lopat+1, pat, plen );
+	strlncpy( lopat+1, pat, plen+1 );
 	lopat[0]=-1;
 	lopat[plen+1]=-1;
 
 	/* prepare the text */
 	lotext=falloc( tlen+1, 1 );
-	strlncpy( lotext, text, tlen );
+	strlncpy( lotext, text, tlen+1 );
 
 	/* check */
 	for( i=0; i<= ( tlen-plen ); i++ ) {
 		res=0;
 		for ( j = i; j < plen+i; j++ ) {
-			if( ( lotext[j] == pat[j-i-1] ) ||
-				( lotext[j] == pat[j-i] ) ||
-				( lotext[j] == pat[j-i+1] ) ) {
+			if( ( lotext[j] == lopat[j-i-1] ) ||
+				( lotext[j] == lopat[j-i] ) ||
+				( lotext[j] == lopat[j-i+1] ) ) {
 				res++;
 			}
 			if( res > best ) {
@@ -407,7 +407,7 @@ static int matchTitle( mptitle *title, const char* pat ) {
 	}
 	else {
 		lopat=falloc( strlen( pat+1 ), 1 );
-		strlncpy( lopat, pat+2, strlen( pat+2 ) );
+		strlncpy( lopat, pat+2, strlen( pat+2 )+1 );
 		res=( strstr( loname, lopat ) != NULL );
 		free( lopat );
 	}
@@ -768,7 +768,8 @@ mpplaylist *removeByPattern( mpplaylist *plentry, const char *pat ) {
 }
 
 /**
- * Insert an entry into the database list
+ * Insert an entry into the database list and fill it with
+ * path and if available, mp3 tag info.
  */
 mptitle *insertTitle( mptitle *base, const char *path ) {
 	mptitle *root;
@@ -786,10 +787,16 @@ mptitle *insertTitle( mptitle *base, const char *path ) {
 		base->next=root;
 		root->next->prev=root;
 	}
-
-	strncpy( root->path, path, MAXPATHLEN );
-
-	fillTagInfo( path, root );
+	
+	/* remove musicdir from path */
+	if( ( getConfig()->musicdir != NULL ) && 
+			( strstr( path, getConfig()->musicdir ) != path ) ) {
+		strlcpy( root->path, path, MAXPATHLEN );
+	}
+	else {
+		strlcpy( root->path, path+strlen(getConfig()->musicdir), MAXPATHLEN );
+	}
+	fillTagInfo( root );
 
 	return root;
 }

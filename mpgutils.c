@@ -12,6 +12,7 @@
 #include <mpg123.h>
 #include <string.h>
 #include <stdio.h>
+#include <ctype.h>
 
 /* default genres by number */
 char *genres[192] = {
@@ -221,20 +222,29 @@ static char *getGenre( unsigned char num ) {
 	return genres[num];
 }
 
+/*
+ * helper to filter out lines that consists only of spaces
+ */
+static size_t txtlen( const char *line ) {
+	size_t ret=0;
+	size_t len=strlen( line );
+	while( isspace( line[ret] ) ) ret++;
+	return( len-ret );
+}	
+
 /**
  * helperfunction to copy V2 tag data
  */
-static void tagCopy( char *target, mpg123_string *tag ) {
-	size_t len;
+static int tagCopy( char *target, mpg123_string *tag ) {
 	if( NULL == tag ){
-		return;
+		return 0;
 	}
-	len=strlen( tag->p );
-	if( len == 0 ) {
-		return;
+	if ( txtlen( tag->p ) == 0 ) {
+		return 0;
 	}
 
-	strip( target, tag->p, MIN( len, NAMELEN ) );
+	strip( target, tag->p, NAMELEN );
+	return strlen(target);
 }
 
 /**
@@ -242,21 +252,20 @@ static void tagCopy( char *target, mpg123_string *tag ) {
  * Either it's Artist/Album for directories or just the Artist from an mp3
  * Used as base settings in case no mp3 tag info is available
  */
-static void genPathName( const char *basedir, mptitle *entry  ) {
+static void genPathName( mptitle *entry  ) {
 	char *p;
 	char curdir[MAXPATHLEN];
 	int blen=0;
 
-	blen=strlen( basedir );
+	blen=strlen( entry->path );
 
 	/* trailing '/' should never happen! */
-	if( basedir[blen] == '/' ) {
-		addMessage( 0, "getPathName called with %s", basedir );
+	if( entry->path[blen] == '/' ) {
+		addMessage( 0, "getPathName called with %s", entry->path );
 		blen=blen-1;
 	}
 
-	/* Create working copy of the path and cut off trailing / */
-	strip( curdir, entry->path, MIN( blen, MAXPATHLEN ) );
+	strlcpy( curdir, entry->path, MIN( blen+1, MAXPATHLEN ) );
 
 	/* cut off .mp3 */
 	if( endsWith( curdir, ".mp3" ) ) {
@@ -269,12 +278,12 @@ static void genPathName( const char *basedir, mptitle *entry  ) {
 	p=strrchr( curdir, '/' );
 
 	if( NULL == p ) {
+		addMessage( 1, "Only title for %s", curdir );
 		strlcpy( entry->title, curdir, NAMELEN );
 	}
 	else {
 		p[0]=0;
 		strlcpy( entry->title, p+1, NAMELEN );
-
 		if( strlen( curdir ) > 1 ) {
 			p=strrchr( curdir, '/' );
 
@@ -284,9 +293,7 @@ static void genPathName( const char *basedir, mptitle *entry  ) {
 			else {
 				p[0]=0;
 				strlcpy( entry->album, p+1, NAMELEN );
-
 				p=strrchr( curdir, '/' );
-
 				if( NULL == p ) {
 					strlcpy( entry->artist, curdir, NAMELEN );
 				}
@@ -296,24 +303,27 @@ static void genPathName( const char *basedir, mptitle *entry  ) {
 			}
 		}
 	}
+	
 }
 
 /**
  * read tag data from the file
  */
-static void fillInfo( mpg123_handle *mh, const char *basedir, mptitle *title ) {
+static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 	mpg123_id3v1 *v1;
 	mpg123_id3v2 *v2;
 	int meta;
+	char path[MAXPATHLEN];
+	char *p;
 
-	if( strlen(basedir) == 0 ) {
-		addMessage(0, "WOT?");
-		abort();
-	}
-	genPathName( basedir, title ); /* Set some default values as tag info may be incomplete */
-
-	if( mpg123_open( mh, title->path ) != MPG123_OK ) {
-		addMessage( 1, "Could not open %s as MP3 file", title->path );
+	/* Set some default values as tag info may be incomplete */
+	genPathName( title );
+	
+	strlcpy( path, getConfig()->musicdir, MAXPATHLEN );
+	strlcat( path, title->path, MAXPATHLEN );
+	
+	if( mpg123_open( mh, path ) != MPG123_OK ) {
+		addMessage( 1, "Could not open %s as MP3 file", path );
 		return;
 	}
 
@@ -336,11 +346,13 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, mptitle *title ) {
 				if( '(' == v2->genre->p[0] ) {
 					strlcpy( title->genre, getGenre( atoi( &v2->genre->p[1] ) ), NAMELEN );
 				}
-				else if( atoi( v2->genre->p ) > 0 ) {
+				else if( ( v2->genre->p[0] == '0' ) || atoi( v2->genre->p ) > 0 ) {
 					strlcpy( title->genre, getGenre( atoi( v2->genre->p ) ), NAMELEN );
 				}
 				else if( strlen( v2->genre->p ) > 0 ) {
-					tagCopy( title->genre, v2->genre );
+					if( tagCopy( title->genre, v2->genre ) == 1 ) {
+						addMessage( 1, "%s is a genre? check %s", title->genre, title->path );
+					}
 				}
 				else {
 					strlcpy( title->genre, "unset", 6 );
@@ -351,23 +363,45 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, mptitle *title ) {
 			}
 		}
 		/* otherwise try v1 data */
-		else if( ( v1 != NULL ) && ( strlen( v1->title ) != 0 ) ){
-			strip( title->title, v1->title, 32 );
-			if( strlen( v1->artist ) > 0 ) {
+		else if( v1 != NULL )  {
+			if ( txtlen( v1->title ) > 0 ) {
+				strip( title->title, v1->title, 32 );
+			}
+
+			if( txtlen( v1->artist ) > 1 ) {
 				strip( title->artist, v1->artist, 32 );
 			}
-			if( strlen( v1->album ) > 0 ) {
+			if( txtlen( v1->album ) > 1 ) {
 				strip( title->album, v1->album, 32 );
 			}
 			strlcpy( title->genre, getGenre( v1->genre ), NAMELEN );
 		}
-		/* or complain! */
 		else {
-			addMessage( 1, "ID3 OK but no tag info filled in %s", title->path );
+			addMessage( 2, "No MP3 tag info for %s", title->title );
 		}
 	}
 	else {
 		addMessage( 0, "Tag parse error in %s", title->path );
+	}
+
+	/* todo: this can certainly be done more elegant. */	
+
+	/* check for titles named in the "artist - title" scheme */
+	p=strstr( title->title, " - " );
+	if( p != NULL ) {
+		strlcpy( title->artist, title->title, NAMELEN );
+		p=strstr( title->artist, " - " );
+		p[0]=0;
+		strlcpy( title->title, p+3, NAMELEN );
+	}
+
+	/* check for titles named in the "artist - title" scheme */
+	p=strstr( title->title, " / " );
+	if( p != NULL ) {
+		strlcpy( title->artist, title->title, NAMELEN );
+		p=strstr( title->artist, " / " );
+		p[0]=0;
+		strlcpy( title->title, p+3, NAMELEN );
 	}
 
 	snprintf( title->display, MAXPATHLEN, "%s - %s", title->artist, title->title );
@@ -377,17 +411,17 @@ static void fillInfo( mpg123_handle *mh, const char *basedir, mptitle *title ) {
 /**
  * read tags for a single title
  */
-int fillTagInfo( const char *basedir, mptitle *title ) {
+int fillTagInfo( mptitle *title ) {
 	mpg123_handle* mh;
-
 	/* Do not try to scan non mp3 files */
 	if( !isMusic( title->path) ) return 0;
 	mpg123_init();
 	mh = mpg123_new( NULL, NULL );
 /*	mpg123_param( mh, MPG123_VERBOSE, 0, 0.0 ); */
 	mpg123_param( mh, MPG123_ADD_FLAGS, MPG123_QUIET, 0.0 );
-	fillInfo( mh, basedir, title );
+	fillInfo( mh, title );
 	mpg123_delete( mh );
 	mpg123_exit();
 	return 0;
 }
+

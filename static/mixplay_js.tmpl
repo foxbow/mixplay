@@ -336,6 +336,7 @@ function updateUI( ){
 
 					/* search results */
 					else if( data.type == 4 ) {
+						toggleResults(0);
 						e=document.getElementById('search0');
 						if( data.titles.length > 0 ) {
 							e.innerHTML="<a href='/cmd/010c?0'>Play all</a><br/>";
@@ -564,7 +565,7 @@ function remProf() {
  * download a title by key (0=current)
  */
 function download(key=0) {
-	if( confirm( "Download "+getElementById('title').innerHTML+" ?" ) ) {
+	if( confirm( "Download "+document.getElementById('title').innerHTML+" ?" ) ) {
 		window.location="/title/"+key;
 	}
 }

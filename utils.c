@@ -14,7 +14,7 @@
 #ifndef strlcpy
 size_t strlcpy( char *t,const  char *s, size_t l ) {
 	strncpy( t, s, l );
-	t[l]=0;
+	t[l-1]=0;
 	return strlen(t);
 }
 #endif
@@ -22,7 +22,7 @@ size_t strlcpy( char *t,const  char *s, size_t l ) {
 #ifndef strlcat
 size_t strlcat( char *t,const  char *s, size_t l ) {
 	strncat( t, s, l );
-	t[l]=0;
+	t[l-1]=0;
 	return strlen(t);
 }
 #endif
@@ -78,7 +78,8 @@ char *strip( char *buff, const char *text, const size_t maxlen ) {
 		tpos++;
 	}
 
-	len=MIN(strlen(text+tpos),maxlen);
+	len=MIN(strlen(text+tpos)+1,maxlen);
+	
 	strlcpy( buff, text+tpos, len );
 
 	/* Cut off trailing spaces and special chars */
