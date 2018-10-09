@@ -449,6 +449,8 @@ static void *clientHandler(void *args ) {
 					break;
 				case MPCOMM_RESULT:
 					config->found->send=0;
+					/* no break */
+				case MPCOMM_FULLSTAT:
 					fullstat=MPCOMM_STAT;
 					break;
 				}
