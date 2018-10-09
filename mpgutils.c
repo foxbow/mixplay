@@ -308,6 +308,7 @@ static void genPathName( mptitle *entry  ) {
 
 /**
  * read tag data from the file
+ * todo use the mpg123 provided text conversion functions
  */
 static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 	mpg123_id3v1 *v1;
@@ -315,6 +316,7 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 	int meta;
 	char path[MAXPATHLEN];
 	char *p;
+	int aisset=0;
 
 	/* Set some default values as tag info may be incomplete */
 	genPathName( title );
@@ -339,7 +341,9 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 		/* Prefer v2 tag data if available */
 		if( ( v2 != NULL ) && ( v2->title != NULL ) ){
 			tagCopy( title->title, v2->title );
-			tagCopy( title->artist, v2->artist );
+			if( tagCopy( title->artist, v2->artist ) ) {
+				aisset=-1;
+			}
 			tagCopy( title->album, v2->album );
 
 			if( v2->genre ) {
@@ -370,6 +374,7 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 
 			if( txtlen( v1->artist ) > 1 ) {
 				strip( title->artist, v1->artist, 32 );
+				aisset=-1;
 			}
 			if( txtlen( v1->album ) > 1 ) {
 				strip( title->album, v1->album, 32 );
@@ -384,24 +389,45 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 		addMessage( 0, "Tag parse error in %s", title->path );
 	}
 
-	/* todo: this can certainly be done more elegant. */	
-
-	/* check for titles named in the "artist - title" scheme */
+	/*
+	 * check for titles named in the "artist - title" scheme
+	 * do not change artist if it has been set by and MP3 tag
+	 * remove leading numbers
+	 */
 	p=strstr( title->title, " - " );
 	if( p != NULL ) {
-		strlcpy( title->artist, title->title, NAMELEN );
-		p=strstr( title->artist, " - " );
-		p[0]=0;
-		strlcpy( title->title, p+3, NAMELEN );
+		/* that's just the track number, remove that */
+		if( atoi( title->title ) != 0 ) {
+			addMessage( 2, "Turning '%s' into '%s'", title->title, p+3 );
+			memmove( p+3, p, strlen(p+3)+1 );
+		}
+		else if (!aisset) {
+			addMessage( 2, "Splitting %s", title->title );
+			strlcpy( title->artist, title->title, NAMELEN );
+			p=strstr( title->artist, " - " );
+			p[0]=0;
+			strlcpy( title->title, p+3, NAMELEN );
+		}
 	}
 
-	/* check for titles named in the "artist - title" scheme */
+	/*
+	 * check for titles named in the "artist / title" scheme
+	 * do not change artist if it has been set by and MP3 tag
+	 * remove leading numbers
+	 */
 	p=strstr( title->title, " / " );
 	if( p != NULL ) {
-		strlcpy( title->artist, title->title, NAMELEN );
-		p=strstr( title->artist, " / " );
-		p[0]=0;
-		strlcpy( title->title, p+3, NAMELEN );
+		if( atoi( title->title ) != 0 ) {
+			addMessage( 2, "Turning '%s' into '%s'", title->title, p+3 );
+			memmove( p+3, p, strlen(p+3)+1 );
+		}
+		else if (!aisset) {
+			addMessage( 2, "Splitting %s", title->title );
+			strlcpy( title->artist, title->title, NAMELEN );
+			p=strstr( title->artist, " / " );
+			p[0]=0;
+			strlcpy( title->title, p+3, NAMELEN );
+		}
 	}
 
 	snprintf( title->display, MAXPATHLEN, "%s - %s", title->artist, title->title );

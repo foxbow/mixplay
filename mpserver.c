@@ -208,10 +208,14 @@ static void *clientHandler(void *args ) {
 								addMessage( 1, "Decoded arg: %s", config->argument );
 							}
 
+							/*
+							 * send fullstat in the NEXT round to make sure the player has
+							 *
+							 */
 							if( ( MPC_CMD(cmd) == mpc_fav ) ||
 									( MPC_CMD(cmd) == mpc_insert ) ||
 									( MPC_CMD(cmd) == mpc_append ) ) {
-								fullstat=MPCOMM_FULLSTAT;
+								fullstat=MPCOMM_SKIP;
 							}
 
 							state=2;
@@ -326,13 +330,6 @@ static void *clientHandler(void *args ) {
 				}
 
 				jsonLine=serializeStatus( &clmsg, sock, fullstat );
-				if( fullstat == MPCOMM_FULLSTAT ) {
-					fullstat=MPCOMM_STAT;
-				}
-				/* Make sure that a new player gets a fullstat at startup */
-				if( fullstat == MPCOMM_CONFIG ) {
-					fullstat=MPCOMM_FULLSTAT;
-				}
 
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012", (int)strlen(jsonLine) );
 				while( ( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
@@ -445,9 +442,15 @@ static void *clientHandler(void *args ) {
 						addMessage( 1, "send failed" );
 					}
 				}
-				if( fullstat == MPCOMM_RESULT ) {
+				switch( fullstat ) {
+				case MPCOMM_SKIP:
+				case MPCOMM_CONFIG:
+					fullstat=MPCOMM_FULLSTAT;
+					break;
+				case MPCOMM_RESULT:
 					config->found->send=0;
 					fullstat=MPCOMM_STAT;
+					break;
 				}
 			}
 		} /* if running & !mpc_start */

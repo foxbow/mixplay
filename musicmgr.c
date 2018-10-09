@@ -22,6 +22,7 @@
 
 #include "database.h"
 
+static char *ARTIST_SAMPLER="Various";
 /*
  * checks if pat has a matching in text. If text is shorter than pat then
  * the test fails.
@@ -484,12 +485,10 @@ int search( const char *pat, const mpcmd range, const int global ) {
 				}
 
 				/*
-				 * two artists may have an album with the same name!
-				 * todo this is definitely problem in playResults()
-				 *  */
-				for( i=0; (i<res->lnum) &&
-				( strcmp( res->albums[i], runner->album ) &&
-						strcmp( res->albart[i], runner->artist ) ); i++ );
+				 * If an album has more than one artist it will be considered a sampler.
+				 * todo: two artists may have an album with the same name!
+				 */
+				for( i=0; (i<res->lnum) && strcmp( res->albums[i], runner->album ); i++ );
 
 				if( i == res->lnum ) {
 					res->lnum++;
@@ -497,6 +496,10 @@ int search( const char *pat, const mpcmd range, const int global ) {
 					res->albums[i]=runner->album;
 					res->albart=frealloc( res->albart, res->lnum*sizeof(char*) );
 					res->albart[i]=runner->artist;
+				}
+				else if( !strcmp( res->albart[i], ARTIST_SAMPLER ) && strcmp( res->albart[i], runner->artist ) ){
+					addMessage(1, "%s is considered a sampler (%s <> %s).", runner->album, runner->artist, res->albart[i] );
+					res->albart[i]=ARTIST_SAMPLER;
 				}
 			}
 

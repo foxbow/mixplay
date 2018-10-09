@@ -328,10 +328,6 @@ int getArgs( int argc, char ** argv ){
  * the control thread to communicate with the mpg123 processes
  * should be triggered after the app window is realized
  *
- * if dispatch is != 0, the profile will be set in a separate thread.
- * this is handy if the main thread is used to display messages e.g.:
- * gmixplay
- *
  * this will also start the communication thread is remote=2
  */
 int initAll( ) {
