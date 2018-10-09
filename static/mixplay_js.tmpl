@@ -41,9 +41,14 @@ function scrollToggle( ) {
 
 /*
  * enables scrolling on texts that are longer than the parent container 
- * and centers shorter texts 
+ * and centers shorter texts
  */
 function setScrolls( ) {
+	/* only do this if the main view is visible! */ 
+	if( document.getElementById( "extra5" ).style.display=='none' ) {
+		return;
+	}
+
 	for( var i=0; i < scrolls.length; i++ ) {
 		var scroll=scrolls[i];
 		var element=scroll.element;
@@ -120,14 +125,14 @@ var b;
 		e=document.getElementById( "extra"+i );
 		b=document.getElementById( "show"+i );
 		if( i == element ) {
+			b.style.backgroundColor='#ddd';
+			e.style.display='block';
 			if( i == '3' ) { 
 				b.value="\u2630 Messages"
 			}
 			if( i == '5' ) {
-				setTimeout( setScrolls(), 250 );
+				setScrolls(); 
 			}
-			b.style.backgroundColor='#ddd';
-			e.style.display='block';
 		}
 		else {
 			e.style.display='none';
