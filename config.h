@@ -114,8 +114,8 @@ struct _mpcontrol_t {
 	char *host;
 	int  port;
 	int remote;
-	int isDaemon;				/* 0 no daemon, -1 daemon running, 1 start daemon */
 	/* flags */
+	int isDaemon:1;
 	int inUI:1;					/* flag to show if the UI is active */
 	int changed:1;
 	int dbDirty:1;

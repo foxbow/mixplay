@@ -244,7 +244,7 @@ int getArgs( int argc, char ** argv ){
 
 	/* parse command line options */
 	/* using unsigned char c to work around getopt quirk on ARM */
-	while ( ( c = getopt( argc, argv, "vfldDFrh:p:sW" ) ) != 255 ) {
+	while ( ( c = getopt( argc, argv, "vfldFrh:p:sW" ) ) != 255 ) {
 		switch ( c ) {
 		case 'v': /* increase debug message level to display */
 			incVerbosity();
@@ -259,11 +259,6 @@ int getArgs( int argc, char ** argv ){
 			}
 			break;
 */
-		case 'D': /* force demonization even if debug level is set */
-			incDebug();
-			config->isDaemon=1;
-			break;
-
 		case 'd': /* increase debug message level to display on console */
 			incDebug();
 			break;
@@ -676,12 +671,7 @@ void addMessage( int v, char *msg, ... ) {
 			}
 		}
 		else if( v < getDebug() ) {
-			if( c_config->isDaemon == -1 ) {
-				syslog( LOG_NOTICE, "D%i %s\n", v, line );
-			}
-			else {
-				fprintf( stderr, "D%i %s\n", v, line );
-			}
+			fprintf( stderr, "D%i %s\n", v, line );
 		}
 	}
 
