@@ -54,7 +54,7 @@ void fail( const int error, const char* msg, ... ) {
 	va_list args;
 	va_start( args, msg );
 
-	if( getConfig()->isDaemon ) {
+	if( getConfig()->isDaemon == -1 ) {
 		vsyslog( LOG_ERR, msg, args );
 	}
 	fprintf( stdout, "\n" );
@@ -63,7 +63,7 @@ void fail( const int error, const char* msg, ... ) {
 	fprintf( stdout, "\n" );
 	if( error > 0 ) {
 		fprintf( stdout, "ERROR: %i - %s\n", abs( error ), strerror( abs( error ) ) );
-		if( getConfig()->isDaemon ) {
+		if( getConfig()->isDaemon == -1 ) {
 			syslog( LOG_ERR, "ERROR: %i - %s\n", abs( error ), strerror( abs( error ) ) );
 		}
 	}
@@ -78,7 +78,7 @@ void fail( const int error, const char* msg, ... ) {
 void s_updateHook( ) {
 	mpconfig *data=getConfig();
 	if( _curmsg < data->msg->count ) {
-		if( data->isDaemon ) {
+		if( data->isDaemon == -1 ) {
 			syslog( LOG_NOTICE, "%s", msgBuffPeek( data->msg, _curmsg ) );
 		}
 		_curmsg++;
@@ -128,7 +128,7 @@ int main( int argc, char **argv ) {
 	control->remote=2;
 
 	/* daemonization must happen before childs are created otherwise the pipes are cut */
-	if( getDebug() == 0 ) {
+	if( control->isDaemon || getDebug() == 0 ) {
 		daemon( 0, 1 );
 		openlog ("mixplayd", LOG_PID, LOG_DAEMON);
 		control->isDaemon=-1;
