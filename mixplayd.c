@@ -78,7 +78,7 @@ void fail( const int error, const char* msg, ... ) {
 void s_updateHook( ) {
 	mpconfig *data=getConfig();
 	if( _curmsg < data->msg->count ) {
-		if( getDebug() == 0 ) {
+		if( data->isDaemon ) {
 			syslog( LOG_NOTICE, "%s", msgBuffPeek( data->msg, _curmsg ) );
 		}
 		_curmsg++;

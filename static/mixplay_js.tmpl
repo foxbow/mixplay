@@ -372,6 +372,9 @@ function updateUI( ){
 						else {
 							e.innerHTML="<em>No albums found!</em>";
 						}
+						if( data.titles.lenght == 0 ) {
+							alert( "Search found "+data.artists.length+" artists and "+data.albums.length+" albums" );
+						}
 					}
 
 					/* standdard update */
