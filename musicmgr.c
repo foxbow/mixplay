@@ -1461,9 +1461,12 @@ int playResults( mpcmd range, const char *arg, const int insert ) {
 
 		/* play only one */
 		title=getTitleByIndex(key);
-		/* allow adding of already marked titles but mark them after adding! */
-		title->flags &= ~MP_MARK;
-		addToPL( title, pos, 1 );
+		/*
+		 * Do not touch marking, we searched the title so it's playing out of order.
+		 * It has been played before? Don't care, we want it now and it won't come back!
+		 * It's not been played before? Then play it now and whenever it's time comes.
+		 */
+		addToPL( title, pos, 0 );
 
 		return 1;
 	}

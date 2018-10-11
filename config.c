@@ -129,20 +129,20 @@ void setCommand( mpcmd cmd ) {
  * print out the default CLI help text
  */
 static void printUsage( char *name ) {
-	addMessage( 0, "USAGE: %s [args] [resource]", name );
-	addMessage( 0, " -v : increase debug message level to display in app" );
-/*	addMessage( 0, " -S : run in fullscreen mode (gmixplay)" );*/
-	addMessage( 0, " -d : increase debug message level to display on console" );
-	addMessage( 0, " -f : single channel - disable fading" );
-	addMessage( 0, " -F : enable fading");
-	addMessage( 0, " -r : control remote mixplayd (see -p and -h)" );
-	addMessage( 0, " -l : play local music" );
-	addMessage( 0, " -h <addr> : set remote host" );
-	addMessage( 0, " -p <port> : set communication port [2347]" );
-	addMessage( 0, " -s : start HTTP server" );
-	addMessage( 0, " -W': write changed config (used with -r,-l,-h,-p)" );
-	addMessage( 0, " resource: resource to play" );
-	addMessage( 0, "		   URL, path, mp3 file, playlist\n" );
+	printf( "USAGE: %s [args] [resource]", name );
+	printf( " -v : increase debug message level to display in app" );
+/*	printf( " -S : run in fullscreen mode (gmixplay)" );*/
+	printf( " -d : increase debug message level to display on console" );
+	printf( " -f : single channel - disable fading" );
+	printf( " -F : enable fading");
+	printf( " -r : control remote mixplayd (see -p and -h)" );
+	printf( " -l : play local music" );
+	printf( " -h <addr> : set remote host" );
+	printf( " -p <port> : set communication port [2347]" );
+	printf( " -s : start HTTP server" );
+	printf( " -W': write changed config (used with -r,-l,-h,-p)" );
+	printf( " resource: resource to play" );
+	printf( "		   URL, path, mp3 file, playlist\n" );
 }
 
 static mpplaylist *titleToPlaylist( mptitle *title, mpplaylist *pl ) {
@@ -240,11 +240,11 @@ int setArgument( const char *arg ) {
  */
 int getArgs( int argc, char ** argv ){
 	mpconfig *config=getConfig();
-	unsigned char c;
+	int c;
 
 	/* parse command line options */
 	/* using unsigned char c to work around getopt quirk on ARM */
-	while ( ( c = getopt( argc, argv, "vfldFrh:p:sW" ) ) != 255 ) {
+	while ( ( c = getopt( argc, argv, "vfldFrh:p:sW" ) ) != -1 ) {
 		switch ( c ) {
 		case 'v': /* increase debug message level to display */
 			incVerbosity();
@@ -295,7 +295,7 @@ int getArgs( int argc, char ** argv ){
 			break;
 
 		case 'W':
-			config->changed=-1;
+			config->changed=1;
 			break;
 
 		case '?':
@@ -305,7 +305,7 @@ int getArgs( int argc, char ** argv ){
 				fprintf (stderr, "Option -%c requires an argument!\n", optopt);
 				break;
 			default:
-				addMessage( 0, "Unknown option -%c\n", optopt );
+				printf( "Unknown option -%c\n", optopt );
 			}
 			/* no break */
 
@@ -319,7 +319,7 @@ int getArgs( int argc, char ** argv ){
 		return setArgument( argv[optind] );
 	}
 
-	if( config->changed == -1 ) {
+	if( config->changed ) {
 		writeConfig( NULL );
 	}
 	return 0;
@@ -654,6 +654,11 @@ void addMessage( int v, char *msg, ... ) {
 	va_start( args, msg );
 	vsnprintf( line, MP_MSGLEN, msg, args );
 	va_end( args );
+
+	/* cut off trailing linefeeds */
+	if( line[strlen(line)] == '\n' ) {
+		line[strlen(line)] = 0;
+	}
 
 	if( c_config == NULL ) {
 		fprintf( stderr, "* %s\n", line );

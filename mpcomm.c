@@ -66,8 +66,13 @@ void setSCommand( mpcmd cmd ) {
  * helperfunction to add a title to the given jsonOblect
  * if title is NULL an empty title will be created
  */
-static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mptitle *title ) {
+static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplaylist *pl ) {
 	jsonObject *val=NULL;
+	mptitle *title=NULL;
+
+	if( pl != NULL ) {
+		title=pl->title;
+	}
 
 	if( title != NULL ) {
 		val=jsonAddInt( NULL, "key", title->key );
@@ -119,7 +124,7 @@ static void jsonGetTitle( jsonObject *jo, const char *key, mptitle *title ) {
 /**
  * turns a playlist into a jsonObject.
  */
-static jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mpplaylist *pl ) {
+static jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mpplaylist *pl, int dir ) {
 	jsonObject *title=NULL;
 	jsonObject *ret=NULL;
 	char ikey[20];
@@ -127,11 +132,16 @@ static jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mpplaylist *p
 
 	while( pl != NULL ) {
 		sprintf( ikey, "%i", i );
-		title=jsonAddTitle( title, ikey, pl->title );
+		title=jsonAddTitle( title, ikey, pl );
 		if( i == 0 ) {
 			ret=title;
 		}
-		pl=pl->next;
+		if( dir < 0 ) {
+			pl=pl->prev;
+		}
+		else {
+			pl=pl->next;
+		}
 		i++;
 	}
 
@@ -198,23 +208,18 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 
 	if( type == MPCOMM_FULLSTAT ) {
 		if( current != NULL ) {
-			if( current->prev != NULL ) {
-				jsonAddTitle( jo, "prev", current->prev->title );
-			}
-			else {
-				jsonAddTitle( jo, "prev", NULL );
-			}
-			jsonAddTitle( jo, "current", data->current->title );
-			jsonAddTitles( jo, "next", current->next );
+			jsonAddTitles( jo, "prev", current->prev, -1 );
+			jsonAddTitle( jo, "current", current );
+			jsonAddTitles( jo, "next", current->next, 1 );
 		}
 		else {
-			jsonAddTitle( jo, "prev", NULL );
+			jsonAddTitles( jo, "prev", NULL, -1 );
 			jsonAddTitle( jo, "current", NULL );
-			jsonAddTitles( jo, "next", NULL );
+			jsonAddTitles( jo, "next", NULL, 1 );
 		}
 	}
 	else if ( type == MPCOMM_RESULT ) {
-		jsonAddTitles(jo, "titles", data->found->titles );
+		jsonAddTitles(jo, "titles", data->found->titles, 1 );
 		jsonAddStrs(jo, "artists", data->found->artists, data->found->anum);
 		jsonAddStrs(jo, "albums", data->found->albums, data->found->lnum);
 		jsonAddStrs(jo, "albart", data->found->albart, data->found->lnum);

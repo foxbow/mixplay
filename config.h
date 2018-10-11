@@ -115,10 +115,10 @@ struct _mpcontrol_t {
 	int  port;
 	int remote;
 	/* flags */
-	int isDaemon:1;
-	int inUI:1;					/* flag to show if the UI is active */
-	int changed:1;
-	int dbDirty:1;
+	unsigned isDaemon:1;
+	unsigned inUI:1;					/* flag to show if the UI is active */
+	unsigned changed:1;
+	unsigned dbDirty:1;
 };
 
 void writeConfig( const char *musicpath );

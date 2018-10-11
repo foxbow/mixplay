@@ -132,7 +132,7 @@ int main( int argc, char **argv ) {
 	cbreak();
 	keypad( stdscr, TRUE );
 	noecho();
-	config->inUI=-1;
+	config->inUI=1;
 	addUpdateHook( &nc_updateHook );
 	drawframe( NULL, "INIT", config->playstream );
 

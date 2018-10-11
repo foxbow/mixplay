@@ -283,7 +283,7 @@ void *setProfile( void *data ) {
 	}
 
 	if( ( control->active != cactive ) && !control->remote ) {
-		control->changed = -1;
+		control->changed = 1;
 	}
 	return NULL;
 }
@@ -822,6 +822,10 @@ void *reader( void *cont ) {
 		case mpc_prev:
 			if( asyncTest() ) {
 				order=-1;
+				if( control->argument != NULL ) {
+					order=-atoi(control->argument);
+					sfree(&(control->argument));
+				}
 				write( p_command[fdset][1], "STOP\n", 6 );
 			}
 			break;
@@ -1114,12 +1118,12 @@ void *reader( void *cont ) {
 		write( p_command[fdset][i], "QUIT\n", 6 );
 	}
 
-	if( control->dbDirty == -1 ) {
+	if( control->dbDirty ) {
 		addMessage( 0, "Updating Database" );
 		dbWrite(control->dbname, control->root );
 	}
 
-	addMessage( 1, "Reader stopped" );
+	addMessage( 0, "Player stopped" );
 
 	return NULL;
 }

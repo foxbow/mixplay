@@ -164,9 +164,8 @@ function toggleResults( element ) {
  */
 function killServer() {
 	if( confirm("Do you really want to stop the Server?") ) {
-		/* pull main to front */
+		toggleVisibility('3');
 		sendCMD(0x11);
-		doUpdate=0;
 	}
 }
 
@@ -312,17 +311,25 @@ function updateUI( ){
 					}
 					/* full update */
 					if( data.type == 3 ) {
+						e=document.getElementById('extra4');
+						e.innerHTML="";
 						document.title=data.current.artist+" - "+data.current.title;
+						if( data.prev.length > 0 ) {
+							setElement( 'prev', data.prev[0].artist+" - "+data.prev[0].title );
+							for( i = Math.min( 4, data.prev.length-1 ); i >= 0 ; i-- ) {
+								e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0002, "+(i+1)+")'>"+data.prev[i].artist+" - "+data.prev[i].title+"</p>";
+							}
+						}
+						else {
+							setElement( 'prev', "- - -" );
+						}
 						setElement( 'title', data.current.title );
-						setElement( 'prev', data.prev.artist+" - "+data.prev.title );
 						setElement( 'artist', data.current.artist );
 						setElement( 'album', data.current.album );
 						setElement( 'genre', data.current.genre );
+						e.innerHTML+="<p class='cmd' style='background-color: #ddd;' ><em>"+data.current.artist+" - "+data.current.title+"</em></p>";
 						if( data.next.length > 0 ) {
 							setElement( 'next', data.next[0].artist+" - "+data.next[0].title );
-							e=document.getElementById('extra4');
-							e.innerHTML="<p class='cmd' onclick='sendCMD( 0x0002 )'>"+data.prev.artist+" - "+data.prev.title+"</p>";							
-							e.innerHTML+="<p class='cmd' style='background-color: #ddd;' ><em>"+data.current.artist+" - "+data.current.title+"</em></p>";
 							for( i=0; i<data.next.length; i++ ) {
 								e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0003, "+(i+1)+")'>"+data.next[i].artist+" - "+data.next[i].title+"</p>";
 							}
@@ -419,7 +426,7 @@ function updateUI( ){
 			}
 
 			if( doUpdate != 0 ) {
-				setTimeout("updateUI()",333);
+				setTimeout("updateUI()",750);
 			}
 			else {
 				document.body.style.backgroundColor='#daa'

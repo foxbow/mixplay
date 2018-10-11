@@ -520,7 +520,7 @@ void *mpserver( void *data ) {
 	}
 
 	/* enable inUI even when not in daemon mode */
-	control->inUI=-1;
+	control->inUI=1;
 	alen = sizeof(struct sockaddr_in);
 	/* Start main loop */
 	while( control->status != mpc_quit ){
@@ -548,7 +548,7 @@ void *mpserver( void *data ) {
 			}
 		}
 	}
-	addMessage( 0, "Dropped out of the main loop" );
+	addMessage( 0, "Server stopped" );
 	/* todo this may return before the threads are done cleaning up.. */
 	sleep(1);
 	return NULL;

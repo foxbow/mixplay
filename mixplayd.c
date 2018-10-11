@@ -18,6 +18,8 @@
 
 static int _ftrpos=0;
 static unsigned long _curmsg=0;
+static int _actmsg=0;
+static char *_lastact=NULL;
 
 /**
  * show activity roller on console
@@ -29,17 +31,25 @@ void activity( const char *msg, ... ) {
 	int pos;
 	va_list args;
 
-	if( getDebug() && ( _ftrpos%( 100/getDebug() ) == 0 ) ) {
-		pos=( _ftrpos/( 100/getDebug() ) )%4;
-		va_start( args, msg );
-		vsprintf( text, msg, args );
-		printf( "%c %s                                  \r", roller[pos], text );
-		fflush( stdout );
-		va_end( args );
+	va_start( args, msg );
+	vsprintf( text, msg, args );
+	va_end( args );
+
+	if( ( _lastact == NULL) || ( strcmp( _lastact, msg ) ) ) {
+		_actmsg=0;
 	}
 
 	if( getDebug() ) {
 		_ftrpos=( _ftrpos+1 )%( 400/getDebug() );
+		if ( _ftrpos%( 100/getDebug() ) == 0 ) {
+			pos=( _ftrpos/( 100/getDebug() ) )%4;
+			printf( "%c %s                                  \r", roller[pos], text );
+			fflush( stdout );
+		}
+	}
+
+	if( ( ++_actmsg )%200 == 0 ) {
+		addMessage( 0, text );
 	}
 }
 
@@ -54,7 +64,7 @@ void fail( const int error, const char* msg, ... ) {
 	va_list args;
 	va_start( args, msg );
 
-	if( getConfig()->isDaemon == -1 ) {
+	if( getConfig()->isDaemon ) {
 		vsyslog( LOG_ERR, msg, args );
 	}
 	fprintf( stdout, "\n" );
@@ -63,7 +73,7 @@ void fail( const int error, const char* msg, ... ) {
 	fprintf( stdout, "\n" );
 	if( error > 0 ) {
 		fprintf( stdout, "ERROR: %i - %s\n", abs( error ), strerror( abs( error ) ) );
-		if( getConfig()->isDaemon == -1 ) {
+		if( getConfig()->isDaemon ) {
 			syslog( LOG_ERR, "ERROR: %i - %s\n", abs( error ), strerror( abs( error ) ) );
 		}
 	}
@@ -78,7 +88,7 @@ void fail( const int error, const char* msg, ... ) {
 void s_updateHook( ) {
 	mpconfig *data=getConfig();
 	if( _curmsg < data->msg->count ) {
-		if( data->isDaemon == -1 ) {
+		if( data->isDaemon ) {
 			syslog( LOG_NOTICE, "%s", msgBuffPeek( data->msg, _curmsg ) );
 		}
 		_curmsg++;
@@ -135,12 +145,12 @@ int main( int argc, char **argv ) {
 	}
 
 	addUpdateHook( &s_updateHook );
-	control->inUI=-1;
+	control->inUI=1;
 	initAll( );
 	pthread_join( control->stid, NULL );
 	pthread_join( control->rtid, NULL );
 	control->inUI=0;
-	addMessage( 0, "Server terminated" );
+	addMessage( 0, "Daemon terminated" );
 	freeConfig( );
 
 	return 0;

@@ -315,7 +315,7 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 	mpg123_id3v2 *v2;
 	int meta;
 	char path[MAXPATHLEN];
-	char *p;
+	char *p, *b;
 	int aisset=0;
 
 	/* Set some default values as tag info may be incomplete */
@@ -389,25 +389,25 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 		addMessage( 0, "Tag parse error in %s", title->path );
 	}
 
+	/* remove leading title title number first if any */
+	if( ( strtol( title->title, &b, 10 ) != 0 ) &&
+			( ( strstr( b, " - " ) == b ) || ( strstr( b, " / " ) == b ) ) ) {
+		addMessage( 2, "Turning '%s' into '%s'", title->title, b+3 );
+		memmove( title->title, b+3, strlen(b+3)+1 );
+	}
+
 	/*
 	 * check for titles named in the "artist - title" scheme
 	 * do not change artist if it has been set by and MP3 tag
 	 * remove leading numbers
 	 */
 	p=strstr( title->title, " - " );
-	if( p != NULL ) {
-		/* that's just the track number, remove that */
-		if( atoi( title->title ) != 0 ) {
-			addMessage( 2, "Turning '%s' into '%s'", title->title, p+3 );
-			memmove( p+3, p, strlen(p+3)+1 );
-		}
-		else if (!aisset) {
-			addMessage( 2, "Splitting %s", title->title );
-			strlcpy( title->artist, title->title, NAMELEN );
-			p=strstr( title->artist, " - " );
-			p[0]=0;
-			strlcpy( title->title, p+3, NAMELEN );
-		}
+	if( ( p != NULL ) && !aisset ) {
+		addMessage( 2, "Splitting %s", title->title );
+		strlcpy( title->artist, title->title, NAMELEN );
+		p=strstr( title->artist, " - " );
+		p[0]=0;
+		strlcpy( title->title, p+3, NAMELEN );
 	}
 
 	/*
@@ -415,19 +415,14 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 	 * do not change artist if it has been set by and MP3 tag
 	 * remove leading numbers
 	 */
+
 	p=strstr( title->title, " / " );
-	if( p != NULL ) {
-		if( atoi( title->title ) != 0 ) {
-			addMessage( 2, "Turning '%s' into '%s'", title->title, p+3 );
-			memmove( p+3, p, strlen(p+3)+1 );
-		}
-		else if (!aisset) {
-			addMessage( 2, "Splitting %s", title->title );
-			strlcpy( title->artist, title->title, NAMELEN );
-			p=strstr( title->artist, " / " );
-			p[0]=0;
-			strlcpy( title->title, p+3, NAMELEN );
-		}
+	if( ( p != NULL ) && !aisset ) {
+		addMessage( 2, "Splitting %s", title->title );
+		strlcpy( title->artist, title->title, NAMELEN );
+		p=strstr( title->artist, " / " );
+		p[0]=0;
+		strlcpy( title->title, p+3, NAMELEN );
 	}
 
 	snprintf( title->display, MAXPATHLEN, "%s - %s", title->artist, title->title );

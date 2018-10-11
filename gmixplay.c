@@ -93,7 +93,7 @@ int main( int argc, char **argv ) {
 	initAll( );
 
 	/* Start main loop */
-	control->inUI=-1;
+	control->inUI=1;
 	gtk_main();
 	control->inUI=0;
 	addMessage( 2, "Dropped out of the gtk_main loop" );

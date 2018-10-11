@@ -13,7 +13,7 @@
 #include <unistd.h>
 
 void dbMarkDirty( void ) {
-	getConfig()->dbDirty=-1;
+	getConfig()->dbDirty=1;
 }
 
 mptitle *getTitleByIndex( unsigned int index ) {

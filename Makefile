@@ -1,6 +1,6 @@
 CC=gcc
 VERSION=$(shell git describe --tags --abbrev=1 --dirty=-dev --always)
-MPCOMM_VER=14
+MPCOMM_VER=15
 CCFLAGS=-DMPCOMM_VER="${MPCOMM_VER}"
 CCFLAGS+=-DVERSION=\"${VERSION}\"
 CCFLAGS+=-Wall -pedantic -Werror -g
