@@ -294,7 +294,6 @@ void *setProfile( void *data ) {
  * back into the db.
  */
 static void playCount( mptitle *title ) {
-	// not in mix mode
 	if( getConfig()->playstream || ( title->key == 0 ) ) {
 		return;
 	}
