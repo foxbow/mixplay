@@ -34,15 +34,10 @@ typedef struct msgbuf_t msgbuf;
 #include "config.h"
 
 /*
- * for some reason Ubuntu does not know these?!
+ * string helper functions that avoid target buffer overflows
  */
-#ifndef strlcpy
-size_t strlcpy( char *t,const  char *s, size_t l );
-#endif
-
-#ifndef strlcat
-size_t strlcat( char *t,const  char *s, size_t l );
-#endif
+size_t strtcpy( char *t,const  char *s, size_t l );
+size_t strtcat( char *t,const  char *s, size_t l );
 
 /*
  * These functions need to be implemented in the UI
@@ -66,8 +61,8 @@ void msgBuffDiscard( struct msgbuf_t *msgbuf );
  * General utility functions
  */
 void setTitle( const char* title );
-int strlncpy( char *dest, const char *src, const size_t len );
-int strlncat( char *dest, const char *src, const size_t len );
+int strltcpy( char *dest, const char *src, const size_t len );
+int strltcat( char *dest, const char *src, const size_t len );
 char *strip( char *buff, const char *text, const size_t maxlen );
 int endsWith( const char *text, const char *suffix );
 int startsWith( const char *text, const char *prefix );

@@ -409,8 +409,8 @@ static void *clientHandler(void *args ) {
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: audio/mpeg;\015\012"
 						"Content-Disposition: attachment; filename=\"%s.mp3\"\015\012\015\012", title->display );
 				send(sock , commdata, strlen(commdata), 0);
-				strlcpy( line, config->musicdir, MAXPATHLEN );
-				strlcat( line, title->path, MAXPATHLEN );
+				strtcpy( line, config->musicdir, MAXPATHLEN );
+				strtcat( line, title->path, MAXPATHLEN );
 				filePost( sock, line );
 				title=NULL;
 				len=0;

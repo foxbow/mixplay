@@ -11,21 +11,25 @@
 #include <ncurses.h>
 #include <sys/stat.h>
 
-#ifndef strlcpy
-size_t strlcpy( char *t,const  char *s, size_t l ) {
+/*
+ * like strncpy but len is the max len of the target string, not the number of bytes to copy.
+ * Also the target string is always terminated with a 0 byte
+ */
+size_t strtcpy( char *t,const  char *s, size_t l ) {
 	strncpy( t, s, l );
 	t[l-1]=0;
 	return strlen(t);
 }
-#endif
 
-#ifndef strlcat
-size_t strlcat( char *t,const  char *s, size_t l ) {
+/*
+ * like strncat but len is the max len of the target string, not the number of bytes to copy.
+ */
+size_t strtcat( char *t, const char *s, size_t l ) {
+	l=l-strlen(t);
 	strncat( t, s, l );
 	t[l-1]=0;
 	return strlen(t);
 }
-#endif
 
 /**
  * turn a relative path into an absolute path
@@ -39,7 +43,7 @@ char *abspath( char *path, const char *basedir, int len ) {
 	if( path[0] != '/' ) {
 		buff=falloc( len, sizeof( char ) );
 		snprintf( buff, len, "%s/%s", basedir, path );
-		strlcpy( path, buff, len );
+		strtcpy( path, buff, len );
 		free( buff );
 	}
 
@@ -51,9 +55,9 @@ char *abspath( char *path, const char *basedir, int len ) {
  **/
 void setTitle( const char* title ) {
 	char buff[128];
-	strlcpy( buff, "\033]2;", 128 );
-	strlcat( buff, title, 128 );
-	strlcat( buff, "\007\000", 128 );
+	strtcpy( buff, "\033]2;", 128 );
+	strtcat( buff, title, 128 );
+	strtcat( buff, "\007\000", 128 );
 	fputs( buff, stdout );
 	fflush( stdout );
 }
@@ -80,7 +84,7 @@ char *strip( char *buff, const char *text, const size_t maxlen ) {
 
 	len=MIN(strlen(text+tpos)+1,maxlen);
 	
-	strlcpy( buff, text+tpos, len );
+	strtcpy( buff, text+tpos, len );
 
 	/* Cut off trailing spaces and special chars */
 	while( ( len > 0 ) && ( iscntrl( buff[len] ) || isspace( buff[len] ) ) ) {
@@ -209,10 +213,10 @@ char *toLower( char *text ) {
 }
 
 /**
- * works like strlcpy but turns every character to lowercase
+ * works like strtcpy but turns every character to lowercase
  */
-int strlncpy( char *dest, const char *src, const size_t len ) {
-	strlcpy( dest, src, len );
+int strltcpy( char *dest, const char *src, const size_t len ) {
+	strtcpy( dest, src, len );
 	dest=toLower( dest );
 	return strlen( dest );
 }
@@ -220,8 +224,8 @@ int strlncpy( char *dest, const char *src, const size_t len ) {
 /**
  * works like strncat but turns every character to lowercase
  */
-int strlncat( char *dest, const char *src, const size_t len ) {
-	strlcat( dest, src, len );
+int strltcat( char *dest, const char *src, const size_t len ) {
+	strtcat( dest, src, len );
 	dest=toLower( dest );
 	return strlen( dest );
 }

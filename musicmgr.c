@@ -44,13 +44,13 @@ static int patMatch( const char *text, const char *pat ) {
 
 	/* prepare the pattern */
 	lopat=falloc( strlen(pat)+3, 1 );
-	strlncpy( lopat+1, pat, plen+1 );
+	strltcpy( lopat+1, pat, plen+1 );
 	lopat[0]=-1;
 	lopat[plen+1]=-1;
 
 	/* prepare the text */
 	lotext=falloc( tlen+1, 1 );
-	strlncpy( lotext, text, tlen+1 );
+	strltcpy( lotext, text, tlen+1 );
 
 	/* check */
 	for( i=0; i<= ( tlen-plen ); i++ ) {
@@ -369,38 +369,38 @@ static int matchTitle( mptitle *title, const char* pat ) {
 
 		switch( pat[0] ) {
 		case 't':
-			strlncpy( loname, title->title, 1024 );
+			strltcpy( loname, title->title, 1024 );
 			break;
 
 		case 'a':
-			strlncpy( loname, title->artist, 1024 );
+			strltcpy( loname, title->artist, 1024 );
 			break;
 
 		case 'l':
-			strlncpy( loname, title->album, 1024 );
+			strltcpy( loname, title->album, 1024 );
 			break;
 
 		case 'g':
-			strlncpy( loname, title->genre, 1024 );
+			strltcpy( loname, title->genre, 1024 );
 			break;
 
 		case 'd':
-			strlncpy( loname, title->display, 1024 );
+			strltcpy( loname, title->display, 1024 );
 			break;
 
 		case 'p': /* @obsolete! */
-			strlncpy( loname, title->path, 1024 );
+			strltcpy( loname, title->path, 1024 );
 			break;
 
 		default:
 			addMessage( 0, "Unknown range %c in %s!", pat[0], pat );
 			addMessage( 0, "Using display instead" );
-			strlncpy( loname, title->display, 1024 );
+			strltcpy( loname, title->display, 1024 );
 			break;
 		}
 	}
 	else {
-		strlncpy( loname, title->display, 1024 );
+		strltcpy( loname, title->display, 1024 );
 	}
 
 	if( fuzzy ) {
@@ -408,7 +408,7 @@ static int matchTitle( mptitle *title, const char* pat ) {
 	}
 	else {
 		lopat=falloc( strlen( pat+1 ), 1 );
-		strlncpy( lopat, pat+2, strlen( pat+2 )+1 );
+		strltcpy( lopat, pat+2, strlen( pat+1 ) );
 		res=( strstr( loname, lopat ) != NULL );
 		free( lopat );
 	}
@@ -426,7 +426,7 @@ static int isMatch( const char *term, const char *pat, const int fuzzy ) {
 		return patMatch( term, pat);
 	}
 	else {
-		strlncpy( loterm, term, MAXPATHLEN );
+		strltcpy( loterm, term, MAXPATHLEN );
 		return ( strstr( loterm, pat ) != NULL );
 	}
 }
@@ -513,7 +513,7 @@ int search( const char *pat, const mpcmd range, const int global ) {
 
 	res->send=-1;
 
-	return cnt;
+	return (cnt>MAXSEARCH)?-1:cnt;
 }
 
 /**
@@ -642,7 +642,7 @@ struct marklist_t *loadList( const char *path ) {
 				goto cleanup;
 			}
 
-			strlncpy( ptr->dir, buff, MAXPATHLEN );
+			strltcpy( ptr->dir, buff, MAXPATHLEN );
 			ptr->dir[ strlen( buff )-1 ]=0;
 			ptr->next=NULL;
 			cnt++;
@@ -729,33 +729,33 @@ mpplaylist *removeByPattern( mpplaylist *plentry, const char *pat ) {
 	switch( pattern[0] ){
 
 	case 'l':
-		strlncpy( &pattern[2], entry->album, NAMELEN );
+		strltcpy( &pattern[2], entry->album, NAMELEN );
 		break;
 
 	case 'a':
-		strlncpy( &pattern[2], entry->artist, NAMELEN );
+		strltcpy( &pattern[2], entry->artist, NAMELEN );
 		break;
 
 	case 'g':
-		strlncpy( &pattern[2], entry->genre, NAMELEN );
+		strltcpy( &pattern[2], entry->genre, NAMELEN );
 		break;
 
 	case 't':
-		strlncpy( &pattern[2], entry->title, NAMELEN );
+		strltcpy( &pattern[2], entry->title, NAMELEN );
 		break;
 
 	case 'p':
-		strlncpy( &pattern[2], entry->path, NAMELEN );
+		strltcpy( &pattern[2], entry->path, NAMELEN );
 		break;
 
 	case 'd':
-		strlncpy( &pattern[2], entry->display, NAMELEN );
+		strltcpy( &pattern[2], entry->display, NAMELEN );
 		break;
 
 	default:
 		addMessage( 0, "Unknown pattern %s!", pat );
 		addMessage( 0, "Using display instead" );
-		strlncpy( &pattern[2], entry->display, NAMELEN );
+		strltcpy( &pattern[2], entry->display, NAMELEN );
 		break;
 	}
 
@@ -794,10 +794,10 @@ mptitle *insertTitle( mptitle *base, const char *path ) {
 	/* remove musicdir from path */
 	if( ( getConfig()->musicdir != NULL ) && 
 			( strstr( path, getConfig()->musicdir ) != path ) ) {
-		strlcpy( root->path, path, MAXPATHLEN );
+		strtcpy( root->path, path, MAXPATHLEN );
 	}
 	else {
-		strlcpy( root->path, path+strlen(getConfig()->musicdir), MAXPATHLEN );
+		strtcpy( root->path, path+strlen(getConfig()->musicdir), MAXPATHLEN );
 	}
 	fillTagInfo( root );
 
@@ -1445,10 +1445,14 @@ int playResults( mpcmd range, const char *arg, const int insert ) {
 				return 0;
 			}
 
+			/* find end of searchresults and mark titles as counted on the way */
+			end->title->flags|=MP_CNTD;
 			while( end->next != NULL ) {
 				end=end->next;
+				end->title->flags|=MP_CNTD;
 			}
 
+			/* make sure the next backlink is set correctly on insert */
 			if( pos->next != NULL ) {
 				pos->next->prev=end;
 			}
@@ -1461,6 +1465,11 @@ int playResults( mpcmd range, const char *arg, const int insert ) {
 
 		/* play only one */
 		title=getTitleByIndex(key);
+		/*
+		 * do not count this title as played and do not mark it skipped during this play
+		 * this will be reverted after play if needed.
+		 */
+		title->flags|=MP_CNTD;
 		/*
 		 * Do not touch marking, we searched the title so it's playing out of order.
 		 * It has been played before? Don't care, we want it now and it won't come back!

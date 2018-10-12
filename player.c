@@ -165,9 +165,9 @@ static void sendplay( int fdset, mpconfig *control ) {
 	char line[MAXPATHLEN+5]="load ";
 	assert( control->current != NULL );
 
-	strlcat( line, control->musicdir, MAXPATHLEN+5 );
-	strlcat( line, control->current->title->path, MAXPATHLEN+5 );
-	strlcat( line, "\n", MAXPATHLEN+5 );
+	strtcat( line, control->musicdir, MAXPATHLEN+5 );
+	strtcat( line, control->current->title->path, MAXPATHLEN+5 );
+	strtcat( line, "\n", MAXPATHLEN+5 );
 
 	if ( write( fdset, line, MAXPATHLEN+5 ) < strlen( line ) ) {
 		fail( F_FAIL, "Could not write\n%s", line );
@@ -293,19 +293,26 @@ void *setProfile( void *data ) {
  * needs to be decreased. In both cases the updated information is written
  * back into the db.
  */
-static void playCount( mpconfig *control ) {
-	if( control->playstream ) {
+static void playCount( mptitle *title ) {
+	// not in mix mode
+	if( getConfig()->playstream || ( title->key == 0 ) ) {
 		return;
 	}
 
-	if( ( control->current->title->key != 0 ) && !( control->current->title->flags & MP_CNTD ) ) {
-		control->current->title->flags |= MP_CNTD; /* make sure a title is only counted once per session */
-		control->current->title->playcount++;
+	/* marked but not counted - default */
+	if( (title->flags&MP_MARK) && !(title->flags&MP_CNTD) ) {
+		title->flags |= MP_CNTD; /* make sure a title is only counted once per session */
+		title->playcount++;
+		dbMarkDirty();
+	}
+	/* not marked but counted - this was a searchplay! */
+	else if( !(title->flags&MP_MARK) && (title->flags&MP_CNTD) ) {
+		title->flags &= ~MP_CNTD;
+	}
 
-		if( !( control->current->title->flags & MP_SKPD ) && ( control->current->title->skipcount > 0 ) ) {
-			control->current->title->skipcount--;
-		}
-
+	/* check skipcount */
+	if( !( title->flags & MP_SKPD ) && ( title->skipcount > 0 ) ) {
+		title->skipcount--;
 		dbMarkDirty();
 	}
 }
@@ -651,7 +658,7 @@ void *reader( void *cont ) {
 
 						if( ( control->fade ) && ( rem <= fade ) ){
 							/* should the playcount be increased? */
-							playCount( control );
+							playCount( control->current->title );
 
 							if( control->current->next == control->current ) {
 								control->status=mpc_idle; /* Single song: STOP */
@@ -693,13 +700,15 @@ void *reader( void *cont ) {
 							addMessage(2,"Title change on player %i", fdset );
 							/* should the playcount be increased? */
 							if( control->fade == 0 ) {
-								playCount( control );
+								playCount( control->current->title );
 							}
 
 							if( order < 0 ) {
-								if( control->current->prev != NULL ) {
+								while( ( control->current->prev != NULL ) && order < 0 ) {
 									control->current=control->current->prev;
+									order++;
 								}
+								/* ignore skip before first title in playlist */
 							}
 
 							if( order > 0 ) {
@@ -708,6 +717,7 @@ void *reader( void *cont ) {
 									plCheck(0);
 									order--;
 								}
+								/* stop on end of playlist */
 								if( control->current->next == NULL ) {
 									control->status=mpc_idle; /* stop */
 								}
@@ -1055,7 +1065,9 @@ void *reader( void *cont ) {
 					progressEnd();
 				}
 				else {
-					i=search( control->argument, MPC_RANGE(control->command), 0 );
+					if ( search( control->argument, MPC_RANGE(control->command), 0 ) == -1 ) {
+						addMessage( 0, "Too many titles found!" );
+					}
 					while( control->found->send == -1 ) {
 						nanosleep( &ts, NULL );
 					}

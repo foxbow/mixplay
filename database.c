@@ -363,7 +363,7 @@ static int checkPath( mptitle *entry, int range ) {
 	char	check[NAMELEN];
 	char *pos;
 
-	strlncpy( path, entry->path, MAXPATHLEN );
+	strltcpy( path, entry->path, MAXPATHLEN );
 	pos=strrchr( path, '/' );
 	if( NULL != pos ) {
 		*pos=0;
@@ -371,10 +371,10 @@ static int checkPath( mptitle *entry, int range ) {
 
 	switch( range ) {
 	case mpc_artist:
-		strlncpy( check,  entry->artist, NAMELEN );
+		strltcpy( check,  entry->artist, NAMELEN );
 		break;
 	case mpc_album:
-		strlncpy( check,  entry->artist, NAMELEN );
+		strltcpy( check,  entry->artist, NAMELEN );
 		break;
 	default:
 		fail( F_FAIL, "checkPath() range %i not implemented!\n", range );
