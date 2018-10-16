@@ -444,7 +444,6 @@ void *reader( void *cont ) {
 	int		insert=0;
 
 	control=( mpconfig * )cont;
-	assert( control->fade < 2 );
 
 	addMessage( 1, "Reader starting" );
 
@@ -491,7 +490,7 @@ void *reader( void *cont ) {
 			close( p_status[i][0] );
 			close( p_status[i][1] );
 			/* Start mpg123 in Remote mode */
-			execlp( "mpg123", "mpg123", "-R", "--rva-radio", "2> &1", NULL );
+			execlp( "mpg123", "mpg123", "-R", "--rva-mix", "--skip-id3v2", "2> &1", NULL );
 			fail( errno, "Could not exec mpg123" );
 		}
 

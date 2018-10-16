@@ -7,6 +7,9 @@
  *	  Author: bweber
  */
 #include "mpgutils.h"
+
+#include <assert.h>
+
 #include "utils.h"
 #include <stdlib.h>
 #include <mpg123.h>
@@ -272,7 +275,7 @@ static void genPathName( mptitle *entry  ) {
 		curdir[strlen( curdir ) - 4]=0;
 	}
 
-	strcpy( entry->artist, "Sampler" );
+	strcpy( entry->artist, "Unknown" );
 	strcpy( entry->album, "None" );
 
 	p=strrchr( curdir, '/' );
@@ -294,10 +297,7 @@ static void genPathName( mptitle *entry  ) {
 				p[0]=0;
 				strtcpy( entry->album, p+1, NAMELEN );
 				p=strrchr( curdir, '/' );
-				if( NULL == p ) {
-					strtcpy( entry->artist, curdir, NAMELEN );
-				}
-				else {
+				if( NULL != p ) {
 					strtcpy( entry->artist, p+1, NAMELEN );
 				}
 			}
@@ -424,6 +424,8 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 		p[0]=0;
 		strtcpy( title->title, p+3, NAMELEN );
 	}
+
+	assert( title->artist != NULL );
 
 	snprintf( title->display, MAXPATHLEN, "%s - %s", title->artist, title->title );
 	mpg123_close( mh );

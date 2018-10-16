@@ -104,7 +104,6 @@ struct _mpcontrol_t {
 	pthread_t rtid;				/* thread ID of the reader */
 	pthread_t stid;				/* thread ID of the server */
 	int skipdnp;				/* how many skips mean dnp? */
-	int fade;					/* controls fading between titles */
 	int volume;					/* current volume [0..100] */
 	char *channel;				/* the name of the ALSA master channel */
 	int verbosity;
@@ -115,6 +114,7 @@ struct _mpcontrol_t {
 	int  port;
 	int remote;
 	/* flags */
+	unsigned fade:1;					/* controls fading between titles */
 	unsigned isDaemon:1;
 	unsigned inUI:1;					/* flag to show if the UI is active */
 	unsigned changed:1;

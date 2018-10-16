@@ -260,10 +260,6 @@ int dbCheckExist( const char *dbname ) {
 
 	if( num > 0 ) {
 		dbMarkDirty();
-		addMessage( 1, "Removed %i titles", num );
-	}
-	else {
-		addMessage( 1, "No titles to remove" );
 	}
 
 	cleanTitles( root );
@@ -476,8 +472,6 @@ int dbNameCheck( const char *dbname ) {
 	fprintf( fp, "\necho Remember to clean the database!\n\n" );
 
 	fclose( fp );
-
-	addMessage(1, "Removed %i titles", count );
 
 	return count;
 }
