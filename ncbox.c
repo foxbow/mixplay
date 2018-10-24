@@ -56,7 +56,7 @@ void popUp( int time, const char *text, ... ) {
 		buff[ strlen( buff ) ]=0;
 	}
 
-	while( NULL != strchr( p,'\n' ) ) {
+	while( ( p != NULL ) && ( NULL != strchr( p,'\n' ) ) ) {
 		numlines++;
 		p=strchr( p,'\n' )+1;
 	}
@@ -67,8 +67,10 @@ void popUp( int time, const char *text, ... ) {
 
 	for( line=1; line < numlines; line++ ) {
 		p=strchr( lines[line-1], '\n' );
-		lines[line]=p+1;
-		*p=0;
+		if( p != NULL ) {
+			lines[line]=p+1;
+			*p=0;
+		}
 	}
 
 	refresh();

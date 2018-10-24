@@ -46,6 +46,9 @@ void activity( const char *msg, ... ) {
 		if( getConfig()->inUI ) {
 			gdk_threads_add_idle( g_activity, line );
 		}
+		else {
+			free( line );
+		}
 	}
 
 	_ftrpos=( _ftrpos+1 )%400;
@@ -84,11 +87,8 @@ void fail( const int error, const char* msg, ... ) {
 		gtk_dialog_run ( GTK_DIALOG ( dialog ) );
 		gtk_main_quit();
 	}
-	else {
-		exit( EXIT_FAILURE );
-	}
 
-	return;
+	exit( EXIT_FAILURE );
 }
 
 /**

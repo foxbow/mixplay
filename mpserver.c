@@ -98,8 +98,9 @@ static char *strdec( char *target, const char *src ) {
  * This will handle connection for each client
  */
 static void *clientHandler(void *args ) {
-	int sock=*(int*)args;
-	size_t len, sent, msglen;
+	int sock;
+	size_t len=0;
+	size_t sent, msglen;
 	struct timeval to;
 	int running=-1;
 	char *commdata=NULL;
@@ -126,6 +127,8 @@ static void *clientHandler(void *args ) {
 	mptitle *title=NULL;
 
 	commdata=falloc( commsize, sizeof( char ) );
+	sock=*(int*)args;
+	free( args );
 
 	config = getConfig();
 	clmsg = config->msg->count;
@@ -267,7 +270,7 @@ static void *clientHandler(void *args ) {
 							addMessage( 1, "received: %s", pos );
 							pos+=7;
 							index=atoi(pos);
-							if( index == 0 ) {
+							if( ( config->current != NULL ) && ( index == 0 ) ) {
 								title=config->current->title;
 							}
 							else {
@@ -330,15 +333,21 @@ static void *clientHandler(void *args ) {
 				}
 
 				jsonLine=serializeStatus( &clmsg, sock, fullstat );
-
-				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012", (int)strlen(jsonLine) );
-				while( ( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
-					commsize+=MP_BLKSIZE;
-					commdata=frealloc( commdata, commsize );
+				if( jsonLine != NULL ) {
+					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012", (int)strlen(jsonLine) );
+					while( ( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
+						commsize+=MP_BLKSIZE;
+						commdata=frealloc( commdata, commsize );
+					}
+					strcat( commdata, jsonLine );
+					len=strlen(commdata);
+					sfree( &jsonLine );
 				}
-				strcat( commdata, jsonLine );
-				len=strlen(commdata);
-				sfree( &jsonLine );
+				else {
+					addMessage( 0, "Could not turn status into JSON" );
+					sprintf( commdata, "HTTP/1.1 503 Service Unavailable\015\012Content-Length: 0\015\012\015\012" );
+					len=strlen(commdata);
+				}
 				break;
 			case 2: /* set command */
 				if( cmd != mpc_idle ) {
@@ -388,15 +397,22 @@ static void *clientHandler(void *args ) {
 				break;
 			case 6: /* get config */
 				jsonLine=serializeConfig( );
-				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012", (int)strlen(jsonLine) );
-				while( ( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
-					commsize+=MP_BLKSIZE;
-					commdata=frealloc( commdata, commsize );
+				if( jsonLine != NULL ) {
+					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012", (int)strlen(jsonLine) );
+					while( ( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
+						commsize+=MP_BLKSIZE;
+						commdata=frealloc( commdata, commsize );
+					}
+					strcat( commdata, jsonLine );
+					len=strlen(commdata);
+					sfree( &jsonLine );
+					fullstat=MPCOMM_CONFIG;
 				}
-				strcat( commdata, jsonLine );
-				len=strlen(commdata);
-				sfree( &jsonLine );
-				fullstat=MPCOMM_CONFIG;
+				else {
+					addMessage( 0, "Could not turn config into JSON" );
+					sprintf( commdata, "HTTP/1.1 503 Service Unavailable\015\012Content-Length: 0\015\012\015\012" );
+					len=strlen(commdata);
+				}
 				break;
 			case 7: /* get current build version */
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
@@ -461,7 +477,6 @@ static void *clientHandler(void *args ) {
 	addMessage( 2, "Client handler exited" );
 	unlockClient( sock );
 	close(sock);
-	free( args );
 	sfree( &commdata );
 	sfree( &jsonLine );
 
@@ -514,9 +529,7 @@ void *mpserver( void *data ) {
 				dup2( devnull, STDERR_FILENO) == -1 ) {
 			fail( errno, "Could not redirect std channels!" );
 		}
-		if ( devnull > 2) {
-			close( devnull );
-		}
+		close( devnull );
 	}
 
 	/* enable inUI even when not in daemon mode */
@@ -537,6 +550,7 @@ void *mpserver( void *data ) {
 			}
 			addMessage( 2, "Connection accepted" );
 
+			/* free()'d in clientHandler() */
 			new_sock = falloc( 1, sizeof(int) );
 			*new_sock = client_sock;
 
@@ -550,6 +564,8 @@ void *mpserver( void *data ) {
 	}
 	addMessage( 0, "Server stopped" );
 	/* todo this may return before the threads are done cleaning up.. */
+	close( mainsocket );
+
 	sleep(1);
 	return NULL;
 }

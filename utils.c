@@ -38,11 +38,11 @@ size_t strtcat( char *t, const char *s, size_t l ) {
  * be the real current directory and may be used to maintain config and data
  * directory structures
  */
-char *abspath( char *path, const char *basedir, int len ) {
+char *abspath( char *path, const char *basedir, const size_t len ) {
 	char *buff;
 
 	if( path[0] != '/' ) {
-		buff=falloc( len, sizeof( char ) );
+		buff=falloc( len+2, 1 );
 		snprintf( buff, len, "%s/%s", basedir, path );
 		strtcpy( path, buff, len );
 		free( buff );

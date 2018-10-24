@@ -615,14 +615,13 @@ struct marklist_t *loadList( const char *path ) {
 	char *buff;
 	int cnt=0;
 
-	buff=falloc( MAXPATHLEN, sizeof( char ) );
-
 	file=fopen( path, "r" );
-
 	if( !file ) {
 		addMessage( 0, "Could not open %s", path );
 		return NULL;
 	}
+
+	buff=falloc( MAXPATHLEN, sizeof( char ) );
 
 	while( !feof( file ) ) {
 		fgets( buff, MAXPATHLEN, file );
@@ -684,31 +683,29 @@ mptitle *loadPlaylist( const char *path ) {
 	char *buff;
 	char titlePath[MAXPATHLEN];
 
-	buff=falloc( MAXPATHLEN, sizeof( char ) );
-
 	fp=fopen( path, "r" );
-
 	if( !fp ) {
 		addMessage( 0, "Could not open playlist %s", path );
 		return NULL;
 	}
 
+	buff=falloc( MAXPATHLEN, 1 );
 	while( !feof( fp ) ) {
 		activity( "Loading" );
-		buff=fgets( buff, MAXPATHLEN, fp );
-
-		if( buff && ( strlen( buff ) > 1 ) && ( buff[0] != '#' ) ) {
+		if( ( fgets( buff, MAXPATHLEN, fp ) != NULL ) &&
+				( strlen( buff ) > 1 ) && ( buff[0] != '#' ) ) {
 			strip( titlePath, buff, MAXPATHLEN ); /* remove control chars like CR/LF */
 			current=insertTitle( current, titlePath );
 			/* turn list into playlist too */
 		}
 	}
+	free( buff );
 
 	fclose( fp );
 
 	addMessage( 2, "Loaded %s with %i entries.", path, cnt );
 
-	return current->next;
+	return ( current == NULL )?NULL:current->next;
 }
 
 /**
@@ -922,10 +919,18 @@ static mptitle *skipTitles( mptitle *current, long num ) {
 
 	for( ; num > 0; num-- ) {
 		current=skipOver(current->next,1);
+		if( current == NULL ) {
+			addMessage( 0, "Database title ring broken!" );
+			return NULL;
+		}
 	}
 
 	for( ; num < 0; num++ ) {
 		current=skipOver(current->next,-1);
+		if( current == NULL ) {
+			addMessage( 0, "Database title ring broken!" );
+			return NULL;
+		}
 	}
 
 	return current;
@@ -979,6 +984,10 @@ restart:
 	runner=skipTitles( runner, RANDOM( num ) );
 
 	if( runner==NULL ) {
+		if( pl == NULL ) {
+			addMessage( 0, "No titles in database and no playlist to add them to.." );
+			return NULL;
+		}
 		runner=pl->title;
 		addMessage( 0, "Next round!" );
 		newCount( );
@@ -1036,6 +1045,7 @@ restart:
 				if( (runner == NULL ) || ( guard == runner ) ) {
 					pcount++;	/* allow more replays */
 					addMessage( 2, "Increasing maxplaycount to %li", pcount );
+					runner=guard;
 				}
 			}
 		}
@@ -1104,9 +1114,11 @@ void plCheck( int del ) {
 	}
 
 	while( cnt < 10 ) {
-		pl=addNewTitle( getConfig()->current );
 		if( getConfig()->current == NULL ) {
-			getConfig()->current=pl;
+			getConfig()->current=addNewTitle( NULL );
+		}
+		else {
+			addNewTitle( getConfig()->current );
 		}
 		cnt++;
 	}
@@ -1380,19 +1392,19 @@ int handleRangeCmd( mptitle *title, mpcmd cmd ) {
 	if( addRangePrefix(line, cmd) == 0 ) {
 		switch( MPC_RANGE(cmd) ) {
 		case mpc_title:
-			strcat( line, title->title );
+			strtcat( line, title->title, NAMELEN );
 			break;
 		case mpc_artist:
-			strcat( line, title->artist );
+			strtcat( line, title->artist, NAMELEN );
 			break;
 		case mpc_album:
-			strcat( line, title->album );
+			strtcat( line, title->album, NAMELEN );
 			break;
 		case mpc_genre:
-			strcat( line, title->genre );
+			strtcat( line, title->genre, NAMELEN );
 			break;
 		case mpc_display:
-			strcat( line, title->display );
+			strtcat( line, title->display, MAXPATHLEN );
 			break;
 		}
 		if( strlen( line ) < 5 ) {
@@ -1465,6 +1477,10 @@ int playResults( mpcmd range, const char *arg, const int insert ) {
 
 		/* play only one */
 		title=getTitleByIndex(key);
+		if( title == NULL ) {
+			addMessage( 0, "No title with key %i!", key );
+			return 0;
+		}
 		/*
 		 * do not count this title as played and do not mark it skipped during this play
 		 * this will be reverted after play if needed.

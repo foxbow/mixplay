@@ -193,8 +193,8 @@ static void dbBackup( const char *dbname ) {
 	char backupname[MAXPATHLEN]="";
 	addMessage( 1, "Backing up database" );
 
-	strncpy( backupname, dbname, MAXPATHLEN );
-	strncat( backupname, ".bak", MAXPATHLEN );
+	strtcpy( backupname, dbname, MAXPATHLEN );
+	strtcat( backupname, ".bak", MAXPATHLEN );
 
 	if( rename( dbname, backupname ) ) {
 		fail( errno, "Could not rename %s", dbname );
@@ -238,6 +238,10 @@ int dbCheckExist( const char *dbname ) {
 	int num=0;
 
 	root=dbGetMusic( dbname );
+	if( root == NULL ) {
+		addMessage( 0, "No music in database!" );
+		return -1;
+	}
 	runner=root;
 	addMessage( 1, "Cleaning database..." );
 
@@ -356,7 +360,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 
 static int checkPath( mptitle *entry, int range ) {
 	char	path[MAXPATHLEN];
-	char	check[NAMELEN];
+	char	check[NAMELEN]="";
 	char *pos;
 
 	strltcpy( path, entry->path, MAXPATHLEN );
@@ -388,14 +392,18 @@ int dbNameCheck( const char *dbname ) {
 	FILE 			*fp;
 	int				match;
 
-	fp=fopen( "rmlist.sh", "w" );
-	fprintf( fp, "#!/bin/bash\n" );
+	root=dbGetMusic( dbname );
+	if( root == NULL ) {
+		addMessage( 0, "No music in database!");
+		return -1;
+	}
 
+	fp=fopen( "rmlist.sh", "w" );
 	if( NULL == fp ) {
 		fail( errno, "Could not open rmlist.sh for writing " );
 	}
 
-	root=dbGetMusic( dbname );
+	fprintf( fp, "#!/bin/bash\n" );
 
 	currentEntry=root;
 	while( currentEntry->next != root ) {
@@ -509,4 +517,5 @@ void dbWrite( const char *dbname, mptitle *root ) {
 	while( runner != root );
 
 	dbClose( db );
+	getConfig()->dbDirty=0;
 }

@@ -406,8 +406,13 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 		addMessage( 2, "Splitting %s", title->title );
 		strtcpy( title->artist, title->title, NAMELEN );
 		p=strstr( title->artist, " - " );
-		p[0]=0;
-		strtcpy( title->title, p+3, NAMELEN );
+		if( p != NULL ) {
+			p[0]=0;
+			strtcpy( title->title, p+3, NAMELEN );
+		}
+		else {
+			addMessage( 0, "String changed during strtcpy( %s, %s )!", title->artist, title->title );
+		}
 	}
 
 	/*
@@ -421,8 +426,13 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 		addMessage( 2, "Splitting %s", title->title );
 		strtcpy( title->artist, title->title, NAMELEN );
 		p=strstr( title->artist, " / " );
-		p[0]=0;
-		strtcpy( title->title, p+3, NAMELEN );
+		if( p != NULL ) {
+			p[0]=0;
+			strtcpy( title->title, p+3, NAMELEN );
+		}
+		else {
+			addMessage( 0, "String changed during strtcpy( %s, %s )!", title->artist, title->title );
+		}
 	}
 
 	assert( title->artist != NULL );

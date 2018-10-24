@@ -43,7 +43,7 @@ size_t strtcat( char *t,const  char *s, size_t l );
  * These functions need to be implemented in the UI
  * See: ncbox.c, gladeutils.c
  */
-void fail( const int error, const char* msg, ... );
+void fail( const int error, const char* msg, ... ) __attribute__ ((noreturn));
 void activity( const char *msg, ... );
 
 /**
@@ -69,7 +69,7 @@ int startsWith( const char *text, const char *prefix );
 int isURL( const char *uri );
 int isDir( const char *path );
 int readline( char *line, size_t len, int fd );
-char *abspath( char *path, const char *basedir, int len );
+char *abspath( char *path, const char *basedir, const size_t len );
 void *falloc( size_t num, size_t size );
 void *frealloc( void *old, size_t size );
 void sfree( char **ptr );

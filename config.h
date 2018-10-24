@@ -94,8 +94,8 @@ struct _mpcontrol_t {
 	char *dbname;				/* path to the database */
 	char *favname;				/* path to the favourites */
 	char *dnpname;				/* path to the DNPlist */
-	char playtime[10];			/* string containing time into song 00:00 */
-	char remtime[10];			/* string containing remaining playtime 00:00 */
+	char playtime[20];			/* string containing time into song 00:00 */
+	char remtime[20];			/* string containing remaining playtime 00:00 */
 	int percent;				/* how many percent of the song have been played */
 	int playstream;				/* profile or stream */
 	mpcmd command;				/* command to the player */

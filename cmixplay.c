@@ -57,7 +57,7 @@ void fail( const int error, const char* msg, ... ) {
 
 	if( error == 0 ) {
 		addMessage( 0, "OBSOLETE: %s", line );
-		return;
+		exit(-1);
 	}
 
 	getConfig()->status=mpc_quit;
@@ -77,8 +77,6 @@ void fail( const int error, const char* msg, ... ) {
 	while( getc( stdin )!=10 );
 
 	exit( error );
-
-	return;
 }
 
 int main( int argc, char **argv ) {
@@ -183,18 +181,22 @@ int main( int argc, char **argv ) {
 						break;
 
 					case 'i':
-						if( 0 != config->current->title->key ) {
-							popUp( 0, "%s\nGenre: %s\nKey: %04i\nplaycount: %i\nskipcount: %i\nCount: %s - Skip: %s",
-								   config->current->title->path, config->current->title->genre,
-								   config->current->title->key, config->current->title->playcount,
-								   config->current->title->skipcount,
-								   ONOFF( ~( config->current->title->flags )&MP_CNTD ),
-								   ONOFF( ~( config->current->title->flags )&MP_SKPD ) );
+						if( config->current != NULL ) {
+							if( 0 != config->current->title->key ) {
+								popUp( 0, "%s\nGenre: %s\nKey: %04i\nplaycount: %i\nskipcount: %i\nCount: %s - Skip: %s",
+									   config->current->title->path, config->current->title->genre,
+									   config->current->title->key, config->current->title->playcount,
+									   config->current->title->skipcount,
+									   ONOFF( ~( config->current->title->flags )&MP_CNTD ),
+									   ONOFF( ~( config->current->title->flags )&MP_SKPD ) );
+							}
+							else {
+								popUp( 2, config->current->title->path );
+							}
 						}
 						else {
-							popUp( 2, config->current->title->path );
+							popUp( 2, "No title available!" );
 						}
-
 						break;
 #if 0 /* todo: implement search properly */
 					case 'S':
@@ -230,12 +232,17 @@ int main( int argc, char **argv ) {
 #endif
 
 					case 'I':
-						popUp( 0,
-							   "profile: %s\n"
-							   "   fade: %s\n"
-							   "dnplist: %s\n"
-							   "favlist: %s",
-							   config->profile[config->active-1], ONOFF( config->fade ), config->dnpname, config->favname );
+						if( ( config->active > 0 ) && ( config->active < config->profiles ) ) {
+							popUp( 0,
+								   "profile: %s\n"
+								   "   fade: %s\n"
+								   "dnplist: %s\n"
+								   "favlist: %s",
+								   config->profile[config->active-1], ONOFF( config->fade ), config->dnpname, config->favname );
+						}
+						else {
+							popUp( 2, "No active profile!" );
+						}
 						break;
 
 					case KEY_DOWN:
@@ -266,8 +273,13 @@ int main( int argc, char **argv ) {
 							addMessage( 0, "Can't mark as DNP, argument is already set! [%s]", config->argument );
 						}
 						else {
-							config->argument=calloc( sizeof(char), 10);
-							snprintf( config->argument, 9, "%i", config->current->title->key );
+							if( config->current != NULL ) {
+								config->argument=falloc( 10, 1 );
+								snprintf( config->argument, 9, "%i", config->current->title->key );
+							}
+							else {
+								addMessage( 0, "Wow! The current title disappeared while being played!" );
+							}
 							setCommand( mpc_dnp|mpc_title );
 						}
 						break;
@@ -278,8 +290,13 @@ int main( int argc, char **argv ) {
 							addMessage( 0, "Can't mark as DNP, argument is already set! [%s]", config->argument );
 						}
 						else {
-							config->argument=calloc( sizeof(char), 10);
-							snprintf( config->argument, 9, "%i", config->current->title->key );
+							if( config->current != NULL ) {
+								config->argument=falloc( 10, 1 );
+								snprintf( config->argument, 9, "%i", config->current->title->key );
+							}
+							else {
+								addMessage( 0, "Wow! The current title disappeared while being played!" );
+							}
 							setCommand( mpc_dnp|mpc_album );
 						}
 						break;
@@ -289,8 +306,13 @@ int main( int argc, char **argv ) {
 							addMessage( 0, "Can't mark as DNP, argument is already set! [%s]", config->argument );
 						}
 						else {
-							config->argument=calloc( sizeof(char), 10);
-							snprintf( config->argument, 9, "%i", config->current->title->key );
+							if( config->current != NULL ) {
+								config->argument=falloc( 10, 1 );
+								snprintf( config->argument, 9, "%i", config->current->title->key );
+							}
+							else {
+								addMessage( 0, "Wow! The current title disappeared while being played!" );
+							}
 							setCommand( mpc_fav|mpc_title );
 						}
 						break;

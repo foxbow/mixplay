@@ -184,7 +184,7 @@ int setArgument( const char *arg ) {
 			strcpy( line, "@" );
 		}
 
-		strncat( line, arg, MAXPATHLEN );
+		strtcat( line, arg, MAXPATHLEN );
 		setStream( line, "Waiting for stream info..." );
 		return 1;
 	}
@@ -401,10 +401,15 @@ static int scanparts( char *line, char ***target ) {
 		*target=falloc( num, sizeof( char * ) );
 		for( i=0; i<num; i++ ) {
 			pos=strchr( line, ';' );
-			*pos=0;
-			(*target)[i]=falloc( strlen(line)+1, sizeof( char ) );
-			strip( (*target)[i], line, strlen(line)+1 );
-			line=pos+1;
+			if( pos != NULL ) {
+				*pos=0;
+				(*target)[i]=falloc( strlen(line)+1, sizeof( char ) );
+				strip( (*target)[i], line, strlen(line)+1 );
+				line=pos+1;
+			}
+			else {
+				fail( -1, "Config file Format error in %s!", line );
+			}
 		}
 	}
 
@@ -419,10 +424,16 @@ static int scanparts( char *line, char ***target ) {
  * This function should be called more or less first thing in the application
  */
 mpconfig *readConfig( ) {
-	char	conffile[MAXPATHLEN]; /*  = "mixplay.conf"; */
-	char	line[MAXPATHLEN];
+	char	conffile[MAXPATHLEN+1]; /*  = "mixplay.conf"; */
+	char	line[MAXPATHLEN+1];
 	char	*pos;
+	char *home=NULL;
 	FILE	*fp;
+
+	home=getenv("HOME");
+	if( home == NULL ) {
+		fail( F_FAIL, "Cannot get HOME!" );
+	}
 
 	if( c_config == NULL ) {
 		c_config=falloc( 1, sizeof( mpconfig ) );
@@ -440,7 +451,7 @@ mpconfig *readConfig( ) {
 	c_config->percent=0;
 	c_config->status=mpc_idle;
 	c_config->command=mpc_idle;
-	c_config->dbname=falloc( MAXPATHLEN, sizeof( char ) );
+	c_config->dbname=falloc( MAXPATHLEN+1, 1 );
 	c_config->verbosity=0;
 	c_config->debug=0;
 	c_config->fade=1;
@@ -452,9 +463,9 @@ mpconfig *readConfig( ) {
 	c_config->changed=0;
 	c_config->isDaemon=0;
 
-	snprintf( c_config->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", getenv("HOME") );
+	snprintf( c_config->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", home );
 
-	snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", getenv( "HOME" ) );
+	snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", home );
 	fp=fopen( conffile, "r" );
 
 	if( NULL != fp ) {
@@ -479,6 +490,7 @@ mpconfig *readConfig( ) {
 			}
 			if( strstr( line, "snames=" ) == line ) {
 				if( scanparts( pos, &c_config->sname ) != c_config->streams ) {
+					fclose(fp);
 					fail( F_FAIL, "Number of streams and stream names does not match!");
 				}
 			}
@@ -516,26 +528,32 @@ mpconfig *readConfig( ) {
  * $HOME/.mixplay/mixplay.conf
  */
 void writeConfig( const char *musicpath ) {
-	char	conffile[MAXPATHLEN]; /*  = "mixplay.conf"; */
+	char	conffile[MAXPATHLEN+1]; /*  = "mixplay.conf"; */
 	int		i;
 	FILE	*fp;
+	char *home=NULL;
 
 	addMessage( 0, "Saving config" );
 	assert( c_config != NULL );
+
+	home=getenv("HOME");
+	if( home == NULL ) {
+		fail( F_FAIL, "Cannot get HOME!" );
+	}
 
 	if( musicpath != NULL ) {
 		c_config->musicdir=falloc( strlen(musicpath)+1, sizeof( char ) );
 		strip( c_config->musicdir, musicpath, strlen(musicpath)+1 );
 	}
 
-	snprintf( conffile, MAXPATHLEN, "%s/.mixplay", getenv("HOME") );
+	snprintf( conffile, MAXPATHLEN, "%s/.mixplay", home );
 	if( mkdir( conffile, 0700 ) == -1 ) {
 		if( errno != EEXIST ) {
 			fail( errno, "Could not create config dir %s", conffile );
 		}
 	}
 
-	snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", getenv( "HOME" ) );
+	snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", home );
 
 	fp=fopen( conffile, "w" );
 

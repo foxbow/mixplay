@@ -85,7 +85,7 @@ void markfav( GtkButton *button, gpointer data ) {
 			addMessage( 0, "Can't mark as DNP, argument is already set! [%s]", mpcontrol->argument );
 		}
 		else {
-			mpcontrol->argument=calloc( sizeof(char), 10);
+			mpcontrol->argument=falloc( 10, 1 );
 			snprintf( mpcontrol->argument, 9, "%i", title->key );
 			setCommand( reply );
 		}
@@ -125,7 +125,7 @@ void dnpStart( GtkButton *button, gpointer data ) {
 			addMessage( 0, "Can't mark as DNP, argument is already set! [%s]", mpcontrol->argument );
 		}
 		else {
-			mpcontrol->argument=calloc( sizeof(char), 10);
+			mpcontrol->argument=falloc( 10, 1 );
 			snprintf( mpcontrol->argument, 9, "%i", current->key );
 			setCommand( reply );
 		}
@@ -423,10 +423,10 @@ void profileStart( GtkButton *button, gpointer data ) {
 		selected=gtk_dialog_run( GTK_DIALOG ( dialog ) );
 		if ( ( selected == GTK_RESPONSE_ACCEPT ) || ( selected == 1 ) ){
 			path=falloc( MAXPATHLEN, sizeof( char ) );
-			strncpy( path, gtk_file_chooser_get_filename( GTK_FILE_CHOOSER( dialog ) ), MAXPATHLEN );
+			strtcpy( path, gtk_file_chooser_get_filename( GTK_FILE_CHOOSER( dialog ) ), MAXPATHLEN );
 		}
 		gtk_widget_destroy ( dialog );
-		if( mpcontrol->root->key == 0 ) {
+		if( ( path != NULL ) && ( mpcontrol->root->key == 0 ) ) {
 			mpcontrol->root=recurse( path, mpcontrol->root );
 			sfree( &path );
 		}
@@ -452,7 +452,7 @@ void profileStart( GtkButton *button, gpointer data ) {
 		selected=gtk_dialog_run( GTK_DIALOG( dialog ) );
 		if( selected == GTK_RESPONSE_OK ) {
 			path=falloc( MAXPATHLEN, sizeof( char ) );
-			strncpy( path, gtk_entry_get_text( GTK_ENTRY( urlLine ) ), MAXPATHLEN );
+			strtcpy( path, gtk_entry_get_text( GTK_ENTRY( urlLine ) ), MAXPATHLEN );
 		}
 		gtk_widget_destroy( dialog );
 
@@ -539,8 +539,8 @@ void profileStart( GtkButton *button, gpointer data ) {
 			addMessage( 0, "Can't set path, argument is already set! [%s]", mpcontrol->argument );
 		}
 		else {
-			mpcontrol->argument=falloc( strlen( path )+1, sizeof(char) );
-			strcpy( mpcontrol->argument, path );
+			mpcontrol->argument=falloc( strlen( path )+1, 1 );
+			strtcpy( mpcontrol->argument, path, strlen(path) );
 			setCommand( mpc_path );
 		}
 		free( path );

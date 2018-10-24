@@ -190,7 +190,11 @@ void *setProfile( void *data ) {
 	int64_t active;
 	int64_t cactive;
 	mpconfig *control=( mpconfig * )data ;
+	char *home=getenv("HOME");
 
+	if( home == NULL ) {
+		fail( -1, "Cannot get homedir!" );
+	}
 	cactive=control->active;
 
 	if( cactive < 0 ) {
@@ -215,7 +219,8 @@ void *setProfile( void *data ) {
 		}
 
 		profile=control->profile[active];
-		snprintf( confdir, MAXPATHLEN, "%s/.mixplay", getenv( "HOME" ) );
+
+		snprintf( confdir, MAXPATHLEN, "%s/.mixplay", home );
 
 		control->dnpname=falloc( MAXPATHLEN, sizeof( char ) );
 		snprintf( control->dnpname, MAXPATHLEN, "%s/%s.dnp", confdir, profile );
@@ -326,6 +331,10 @@ static void *plCheckDoublets( void *arg ) {
 
 	progressStart( "Filesystem Cleanup" );
 
+	/* update database with current playcount etc */
+	if( control->dbDirty ) {
+		dbWrite( control->dbname, control->root );
+	}
 	addMessage( 0, "Checking for doubles.." );
 	i=dbNameCheck( control->dbname );
 	if( i > 0 ) {
@@ -345,6 +354,10 @@ static void *plDbClean( void *arg ) {
 	int i;
 	progressStart( "Database Cleanup" );
 
+	/* update database with current playcount etc */
+	if( control->dbDirty ) {
+		dbWrite( control->dbname, control->root );
+	}
 	addMessage( 0, "Checking for deleted titles.." );
 	i=dbCheckExist( control->dbname );
 
@@ -386,6 +399,10 @@ static void *plSetProfile( void *arg ) {
 	control->status=mpc_start;
 	if( control->dbname[0] == 0 ) {
 		readConfig( );
+	}
+	/* update database with current playcount etc */
+	if( control->dbDirty ) {
+		dbWrite( control->dbname, control->root );
 	}
 	setProfile( control );
 	control->current->title = control->root;
@@ -521,7 +538,7 @@ void *reader( void *cont ) {
 
 		/* drain inactive player */
 		if( control->fade && FD_ISSET( p_status[fdset?0:1][0], &fds ) ) {
-			key=readline( line, 512, p_status[fdset?0:1][0] );
+			key=readline( line, MAXPATHLEN, p_status[fdset?0:1][0] );
 
 			if( key > 2 ) {
 				if( '@' == line[0] ) {
@@ -534,10 +551,15 @@ void *reader( void *cont ) {
 						addMessage(  1, "MPG123 background instance is up" );
 						break;
 					case 'E':
-						fail( F_FAIL, "ERROR: %s\nIndex: %i\nName: %s\nPath: %s", line,
-							control->current->title->key,
-							control->current->title->display,
-							control->current->title->path );
+						if( control->current == NULL ) {
+							fail( F_FAIL, "ERROR: %s", line );
+						}
+						else {
+							fail( F_FAIL, "ERROR: %s\nIndex: %i\nName: %s\nPath: %s", line,
+								control->current->title->key,
+								control->current->title->display,
+								control->current->title->path );
+						}
 						break;
 					case 'F':
 						if( outvol > 0 ) {
@@ -556,7 +578,7 @@ void *reader( void *cont ) {
 
 		/* Interpret mpg123 output and ignore invalid lines */
 		if( FD_ISSET( p_status[fdset][0], &fds ) &&
-				( 3 < readline( line, 512, p_status[fdset][0] ) ) ) {
+				( 3 < readline( line, MAXPATHLEN, p_status[fdset][0] ) ) ) {
 			if( '@' == line[0] ) {
 				/* Don't print volume, progress and MP3Tag messages */
 				if( ( 'F' != line[1] ) && ( 'V' != line[1] ) && ( 'I' != line[1] ) ) {
@@ -573,7 +595,7 @@ void *reader( void *cont ) {
 				case 'I': /* ID3 info */
 
 					/* ICY stream info */
-					if( NULL != strstr( line, "ICY-" ) ) {
+					if( ( control->current != NULL ) &&( NULL != strstr( line, "ICY-" ) ) ) {
 						if( NULL != strstr( line, "ICY-NAME: " ) ) {
 							strip( control->current->title->album, line+13, NAMELEN );
 							update=-1;
@@ -586,10 +608,15 @@ void *reader( void *cont ) {
 
 							addMessage( 3, "%s", a );
 							a = a + 13;
-							*strchr( a, '\'' ) = '\0';
-							strncpy( control->current->next->title->artist, control->current->title->artist, NAMELEN );
-							strncpy( control->current->next->title->title, control->current->title->title, NAMELEN );
-							strncpy( control->current->next->title->display, control->current->title->display, MAXPATHLEN );
+							t=strchr( a, '\'' );
+							if( t != NULL ) {
+								*t = 0;
+							}
+							if( control->current->next != NULL ) {
+								strncpy( control->current->next->title->artist, control->current->title->artist, NAMELEN );
+								strncpy( control->current->next->title->title, control->current->title->title, NAMELEN );
+								strncpy( control->current->next->title->display, control->current->title->display, MAXPATHLEN );
+							}
 							strip( control->current->title->display, a, MAXPATHLEN );
 
 							if( NULL != ( t = strstr( a, " - " ) ) ) {
@@ -624,9 +651,17 @@ void *reader( void *cont ) {
 					 * rem = seconds left (float)
 					 */
 					a=strrchr( line, ' ' );
+					if( a == NULL ) {
+						addMessage( 0, "Error in Frame info: %s", line );
+						break;
+					}
 					rem=strtof( a, NULL );
 					*a=0;
 					a=strrchr( line, ' ' );
+					if( a == NULL ) {
+						addMessage( 0, "Error in Frame info: %s", line );
+						break;
+					}
 					intime=atoi( a );
 
 					if( invol < 100 ) {
@@ -650,7 +685,7 @@ void *reader( void *cont ) {
 						sprintf( control->playtime, "%02i:%02i:%02i", intime/3600, ( intime%3600 )/60, intime%60 );
 					}
 					/* file play */
-					if( control->playstream == 0 ) {
+					if( (control->current != NULL ) && (control->playstream == 0 ) ) {
 						control->percent=( 100*intime )/( rem+intime );
 						sprintf( control->remtime, "%02i:%02i", (int)rem/60, (int)rem%60 );
 
@@ -694,7 +729,7 @@ void *reader( void *cont ) {
 							control->status=mpc_idle;
 						}
 						/* we're playing a playlist */
-						else {
+						else if( control->current != NULL ){
 							addMessage(2,"Title change on player %i", fdset );
 							/* should the playcount be increased? */
 							if( control->fade == 0 ) {
@@ -727,6 +762,9 @@ void *reader( void *cont ) {
 
 							order=1;
 						}
+						else {
+							addMessage( 0, "Player status without current title" );
+						}
 						break;
 
 					case 1: /* PAUSE */
@@ -753,10 +791,12 @@ void *reader( void *cont ) {
 
 				case 'E':
 					addMessage( 0, "Player %i: %s!", fdset, line );
-					addMessage( 1, "Index: %i\nName: %s\nPath: %s",
-							  control->current->title->key,
-							  control->current->title->display,
-							  control->current->title->path );
+					if( control->current != NULL ) {
+						addMessage( 1, "Index: %i\nName: %s\nPath: %s",
+								  control->current->title->key,
+								  control->current->title->display,
+								  control->current->title->path );
+					}
 					control->status=mpc_idle;
 					break;
 
@@ -839,7 +879,7 @@ void *reader( void *cont ) {
 			break;
 
 		case mpc_next:
-			if( asyncTest() ) {
+			if( ( control->current != NULL ) && asyncTest() ) {
 				order=1;
 				if( control->argument != NULL ) {
 					order=atoi(control->argument);
@@ -872,7 +912,7 @@ void *reader( void *cont ) {
 			break;
 
 		case mpc_dnp:
-			if( asyncTest() ) {
+			if( (title != NULL ) && asyncTest() ) {
 				handleRangeCmd( title, control->command );
 				plCheck( 0 );
 				order=0;
@@ -881,7 +921,7 @@ void *reader( void *cont ) {
 			break;
 
 		case mpc_fav:
-			if( asyncTest() ) {
+			if( (title != NULL ) && asyncTest() ) {
 				handleRangeCmd( title, control->command );
 			}
 			break;
@@ -915,7 +955,7 @@ void *reader( void *cont ) {
 			break;
 
 		case mpc_newprof:
-			if ( asyncTest() ) {
+			if ( ( control->current != NULL ) && asyncTest() ) {
 				if( control->argument == NULL ) {
 					progressMsg( "No profile given!" );
 				}
@@ -932,7 +972,7 @@ void *reader( void *cont ) {
 				}
 				else {
 					control->profiles++;
-					control->profile=realloc( control->profile, control->profiles*sizeof(char*) );
+					control->profile=frealloc( control->profile, control->profiles*sizeof(char*) );
 					control->profile[control->profiles-1]=control->argument;
 					control->active=control->profiles;
 					writeConfig( NULL );
@@ -1013,7 +1053,7 @@ void *reader( void *cont ) {
 			break;
 
 		case mpc_path:
-			if( asyncTest() ) {
+			if( ( control->current != NULL ) && asyncTest() ) {
 				if( control->argument == NULL ) {
 					progressMsg( "No path given!" );
 				}

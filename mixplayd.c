@@ -99,6 +99,10 @@ int main( int argc, char **argv ) {
 	mpconfig	*control;
 
 	control=readConfig( );
+	if( control == NULL ) {
+		addMessage( 0, "No config found!" );
+		return -1;
+	}
 	muteVerbosity();
 
 	switch( getArgs( argc, argv ) ) {

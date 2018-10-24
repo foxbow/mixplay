@@ -65,9 +65,8 @@ int main( int argc, char **argv ) {
 	/* read default configuration */
 	control=readConfig();
 	if( NULL == control ) {
-		/* todo: get default music dir! */
-		writeConfig( NULL );
-		control=readConfig();
+		addMessage( 0, "No configuration available!" );
+		return -1;
 	}
 
 	/* add special GTK data */

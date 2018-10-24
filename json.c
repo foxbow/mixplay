@@ -523,6 +523,9 @@ static int jsonParseArray( char *json, jsonObject **jo ) {
 			case '[':
 				jpos++;
 				*current=jsonInit(1);
+				if( *current==NULL ) {
+					return jsonParseFail( __func__, json, jpos, state );
+				}
 				index=setIndex( *current, index );
 				jpos+=jsonParseValue( json+jpos, *current );
 				state=1;
@@ -548,6 +551,9 @@ static int jsonParseArray( char *json, jsonObject **jo ) {
 				json[jpos]=0;
 				jpos++;
 				(*current)->next=jsonInit(1);
+				if( (*current)->next == NULL ) {
+					return jsonParseFail( __func__, json, jpos, state );
+				}
 				current=&((*current)->next);
 				index=setIndex( *current, index );
 				jpos+=jsonParseValue( json+jpos, *current );
