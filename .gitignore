@@ -1,9 +1,10 @@
 # Generated headers and dependencies
 static/mixplay.js
-static/CURVER
-mprc_html.h
-gmixplay_*.h
-mixplayd_*.h
+build/CURVER
+src/mprc_html.h
+src/gmixplay_*.h
+src/mixplayd_*.h
+src/mpplayer_*.h
 *.d
 *.Td
 

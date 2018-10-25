@@ -4,12 +4,17 @@ MPCOMM_VER=15
 CCFLAGS=-DMPCOMM_VER="${MPCOMM_VER}"
 CCFLAGS+=-DVERSION=\"${VERSION}\"
 CCFLAGS+=-Wall -pedantic -Werror -g
+SRCDIR=src
+OBJDIR=build
 
-OBJS=mpserver.o utils.o musicmgr.o database.o mpgutils.o player.o config.o player.o mpcomm.o json.o
-NCOBJS=cmixplay.o ncbox.o
-GLOBJS=gladeutils.o gcallbacks.o gmixplay.o  
+OBJS=$(addprefix $(OBJDIR)/,mpserver.o utils.o musicmgr.o database.o \
+  mpgutils.o player.o config.o player.o mpcomm.o json.o )
+NCOBJS=$(addprefix $(OBJDIR)/,cmixplay.o ncbox.o )
+GLOBJS=$(addprefix $(OBJDIR)/,gladeutils.o gcallbacks.o gmixplay.o )
+
 LIBS=-lmpg123 -lpthread
 REFS=alsa
+
 # daemon is always being built 
 EXES=bin/mixplayd
 INST=install-mixplayd
@@ -42,47 +47,45 @@ else
 $(info ncurses is not installed, not building cmixplay )
 endif
 
-ifneq ("$(shell cat static/CURVER)","${MPCOMM_VER}")
-$(shell rm static/mixplay.js)
-$(shell echo ${MPCOMM_VER} > static/CURVER)
+ifneq ("$(shell cat $(OBJDIR)/CURVER)","${MPCOMM_VER}")
+$(shell rm -f static/mixplay.js)
+$(shell echo ${MPCOMM_VER} > $(OBJDIR)/CURVER)
 endif
 
 LIBS+=$(shell pkg-config --libs $(REFS))
 CCFLAGS+=$(shell pkg-config --cflags $(REFS))
 
-all: dep.d $(EXES)
+all: $(OBJDIR)/dep.d $(EXES)
 
 clean:
-	rm -f *.o
-	rm -f *.gch
 	rm -f bin/*
-	rm -f dep.d
+	rm -f $(OBJDIR)/*
 	touch bin/KEEPDIR
+	touch $(OBJDIR)/KEEPDIR
 
 distclean: clean
-	rm -f static/CURVER
 	rm -f static/mixplay.js
 	rm -f static/*~
-	rm -f gmixplay_app.h
-	rm -f mprc_html.h
-	rm -f mixplayd_*.h
-	rm -f mpplayer_*.h
-	rm -f *~
+	rm -f $(SRCDIR)/gmixplay_app.h
+	rm -f $(SRCDIR)/mprc_html.h
+	rm -f $(SRCDIR)/mixplayd_*.h
+	rm -f $(SRCDIR)/mpplayer_*.h
+	rm -f $(SRCDIR)/*~
 	rm -f core
 
 new: clean all
 
-bin/mixplayd: mixplayd.o $(OBJS) 
+bin/mixplayd: $(OBJDIR)/mixplayd.o $(OBJS) 
 	$(CC) $^ -o $@ $(LIBS)
 
-bin/cmixplay: cmixplay.o $(OBJS) $(NCOBJS) 
+bin/cmixplay: $(OBJDIR)/cmixplay.o $(OBJS) $(NCOBJS) 
 	$(CC) $^ -o $@ $(LIBS)
 
 bin/gmixplay: $(OBJS) $(GLOBJS)
 	$(CC) $^ -o $@ $(LIBS)
 
-%.o: %.c
-	$(CC) $(CCFLAGS) -c $<
+$(OBJDIR)/%.o: $(SRCDIR)/%.c
+	$(CC) $(CCFLAGS) -c -o $@ $<
 
 install-mixplayd: bin/mixplayd
 	install -d $(BINDIR)
@@ -96,9 +99,9 @@ install-gmixplay: bin/gmixplay
 	install -d $(BINDIR)
 	install -s -m 0755 bin/gmixplay $(BINDIR)
 	install -d ~/.local/share/icons/
-	install -m 0644 static/mixplay.svg $(SHAREDIR)/icons/
+	install -m 0644 glade/mixplay.svg $(SHAREDIR)/icons/
 	install -d $(SHAREDIR)/applications/
-	desktop-file-install --dir=$(SHAREDIR)/applications -m 0755 --set-icon=$(SHAREDIR)/icons/mixplay.svg --rebuild-mime-info-cache static/gmixplay.desktop
+	desktop-file-install --dir=$(SHAREDIR)/applications -m 0755 --set-icon=$(SHAREDIR)/icons/mixplay.svg --rebuild-mime-info-cache glade/gmixplay.desktop
 
 install-service: install-mixplayd
 	$(info No service support yet!)
@@ -106,35 +109,35 @@ install-service: install-mixplayd
 install: $(INST)
 
 mpplayer_html.h: static/mpplayer.html
-	xxd -i static/mpplayer.html > mpplayer_html.h
+	xxd -i static/mpplayer.html > src/mpplayer_html.h
 
 mpplayer_js.h: static/mpplayer.js
-	xxd -i static/mpplayer.js > mpplayer_js.h
+	xxd -i static/mpplayer.js > src/mpplayer_js.h
 
 mixplayd_html.h: static/mixplay.html
-	xxd -i static/mixplay.html > mixplayd_html.h
+	xxd -i static/mixplay.html > src/mixplayd_html.h
 
 mprc_html.h: static/mprc.html
-	xxd -i static/mprc.html > mprc_html.h
+	xxd -i static/mprc.html > src/mprc_html.h
 
 mixplayd_css.h: static/mixplay.css
-	xxd -i static/mixplay.css > mixplayd_css.h
+	xxd -i static/mixplay.css > src/mixplayd_css.h
+
+mixplayd_js.h: static/mixplay.js
+	xxd -i static/mixplay.js > src/mixplayd_js.h
+
+gmixplay_app.h: glade/gmixplay_app.glade
+	xxd -i glade/gmixplay_app.glade > src/gmixplay_app.h
 
 static/mixplay.js: static/mixplay_js.tmpl
 	sed -e 's/~~MPCOMM_VER~~/'${MPCOMM_VER}'/g' -e 's/~~MP_VERSION~~/'${VERSION}'/g' static/mixplay_js.tmpl > static/mixplay.js
 
-mixplayd_js.h: static/mixplay.js
-	xxd -i static/mixplay.js > mixplayd_js.h
-
-gmixplay_app.h: static/gmixplay_app.glade
-	xxd -i static/gmixplay_app.glade > gmixplay_app.h
-
 prepare:
 	apt-get install ncurses-dev mpg123 libmpg123-dev libgtk-3-dev libasound-dev
 
-dep.d: *.h
-	rm -f dep.d
-	$(CC) *.c -MM -MG >> dep.d
+$(OBJDIR)/dep.d: src/*.h
+	rm -f $(OBJDIR)/dep.d
+	$(CC) $(SRCDIR)/*.c -MM -MG | sed 's|[a-zA-Z0-9_-]*\.o|$(OBJDIR)/&|' >> $(OBJDIR)/dep.d
 
 # This will fail silently of first make run
--include dep.d
+-include $(OBJDIR)/dep.d
