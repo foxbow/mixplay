@@ -1,10 +1,6 @@
 # Generated headers and dependencies
 static/mixplay.js
-build/CURVER
-src/mprc_html.h
-src/gmixplay_*.h
-src/mixplayd_*.h
-src/mpplayer_*.h
+build/*
 *.d
 *.Td
 
@@ -18,11 +14,7 @@ org.eclipse*
 language.settings.xml
 
 # Binaries
-bin/mixplay
-bin/mixplayd
-bin/gmixplay
-bin/scanformusic
-bin/cmixplay
+bin/*
 core
 
 # Object files

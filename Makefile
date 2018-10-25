@@ -1,11 +1,12 @@
 CC=gcc
 VERSION=$(shell git describe --tags --abbrev=1 --dirty=-dev --always)
 MPCOMM_VER=15
-CCFLAGS=-DMPCOMM_VER="${MPCOMM_VER}"
-CCFLAGS+=-DVERSION=\"${VERSION}\"
-CCFLAGS+=-Wall -pedantic -Werror -g
 SRCDIR=src
 OBJDIR=build
+
+CCFLAGS=-DMPCOMM_VER="${MPCOMM_VER}"
+CCFLAGS+=-DVERSION=\"${VERSION}\"
+CCFLAGS+=-Wall -pedantic -Werror -I $(OBJDIR) -g 
 
 OBJS=$(addprefix $(OBJDIR)/,mpserver.o utils.o musicmgr.o database.o \
   mpgutils.o player.o config.o player.o mpcomm.o json.o )
@@ -109,25 +110,25 @@ install-service: install-mixplayd
 install: $(INST)
 
 mpplayer_html.h: static/mpplayer.html
-	xxd -i static/mpplayer.html > src/mpplayer_html.h
+	xxd -i static/mpplayer.html > $(OBJDIR)/mpplayer_html.h
 
 mpplayer_js.h: static/mpplayer.js
-	xxd -i static/mpplayer.js > src/mpplayer_js.h
+	xxd -i static/mpplayer.js > $(OBJDIR)/mpplayer_js.h
 
 mixplayd_html.h: static/mixplay.html
-	xxd -i static/mixplay.html > src/mixplayd_html.h
+	xxd -i static/mixplay.html > $(OBJDIR)/mixplayd_html.h
 
 mprc_html.h: static/mprc.html
-	xxd -i static/mprc.html > src/mprc_html.h
+	xxd -i static/mprc.html > $(OBJDIR)/mprc_html.h
 
 mixplayd_css.h: static/mixplay.css
-	xxd -i static/mixplay.css > src/mixplayd_css.h
+	xxd -i static/mixplay.css > $(OBJDIR)/mixplayd_css.h
 
 mixplayd_js.h: static/mixplay.js
-	xxd -i static/mixplay.js > src/mixplayd_js.h
+	xxd -i static/mixplay.js > $(OBJDIR)/mixplayd_js.h
 
 gmixplay_app.h: glade/gmixplay_app.glade
-	xxd -i glade/gmixplay_app.glade > src/gmixplay_app.h
+	xxd -i glade/gmixplay_app.glade > $(OBJDIR)/gmixplay_app.h
 
 static/mixplay.js: static/mixplay_js.tmpl
 	sed -e 's/~~MPCOMM_VER~~/'${MPCOMM_VER}'/g' -e 's/~~MP_VERSION~~/'${VERSION}'/g' static/mixplay_js.tmpl > static/mixplay.js
