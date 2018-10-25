@@ -10,8 +10,7 @@ build/*
 # Eclipse stuff
 .cproject
 .project
-org.eclipse*
-language.settings.xml
+.settings/*
 
 # Binaries
 bin/*

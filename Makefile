@@ -4,9 +4,9 @@ MPCOMM_VER=15
 SRCDIR=src
 OBJDIR=build
 
-CCFLAGS=-DMPCOMM_VER="${MPCOMM_VER}"
-CCFLAGS+=-DVERSION=\"${VERSION}\"
-CCFLAGS+=-Wall -pedantic -Werror -I $(OBJDIR) -g 
+CCFLAGS=-DMPCOMM_VER="$(MPCOMM_VER)"
+CCFLAGS+=-DVERSION=\"$(VERSION)\"
+CCFLAGS+=-Wall -pedantic -Werror -I $(OBJDIR) -g
 
 OBJS=$(addprefix $(OBJDIR)/,mpserver.o utils.o musicmgr.o database.o \
   mpgutils.o player.o config.o player.o mpcomm.o json.o )
@@ -16,7 +16,7 @@ GLOBJS=$(addprefix $(OBJDIR)/,gladeutils.o gcallbacks.o gmixplay.o )
 LIBS=-lmpg123 -lpthread
 REFS=alsa
 
-# daemon is always being built 
+# daemon is always being built
 EXES=bin/mixplayd
 INST=install-mixplayd
 
@@ -48,7 +48,7 @@ else
 $(info ncurses is not installed, not building cmixplay )
 endif
 
-ifneq ("$(shell cat $(OBJDIR)/CURVER)","${MPCOMM_VER}")
+ifneq ("$(shell cat $(OBJDIR)/CURVER)","$(MPCOMM_VER)")
 $(shell rm -f static/mixplay.js)
 $(shell echo ${MPCOMM_VER} > $(OBJDIR)/CURVER)
 endif
@@ -76,10 +76,10 @@ distclean: clean
 
 new: clean all
 
-bin/mixplayd: $(OBJDIR)/mixplayd.o $(OBJS) 
+bin/mixplayd: $(OBJDIR)/mixplayd.o $(OBJS)
 	$(CC) $^ -o $@ $(LIBS)
 
-bin/cmixplay: $(OBJDIR)/cmixplay.o $(OBJS) $(NCOBJS) 
+bin/cmixplay: $(OBJDIR)/cmixplay.o $(OBJS) $(NCOBJS)
 	$(CC) $^ -o $@ $(LIBS)
 
 bin/gmixplay: $(OBJS) $(GLOBJS)
