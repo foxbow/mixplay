@@ -6,7 +6,7 @@ OBJDIR=build
 
 CCFLAGS=-DMPCOMM_VER="$(MPCOMM_VER)"
 CCFLAGS+=-DVERSION=\"$(VERSION)\"
-CCFLAGS+=-Wall -pedantic -Werror -I $(OBJDIR) -g
+CCFLAGS+=-Wall -pedantic -Werror -I . -g
 
 OBJS=$(addprefix $(OBJDIR)/,mpserver.o utils.o musicmgr.o database.o \
   mpgutils.o player.o config.o player.o mpcomm.o json.o )
@@ -109,25 +109,25 @@ install-service: install-mixplayd
 
 install: $(INST)
 
-mpplayer_html.h: static/mpplayer.html
+$(OBJDIR)/mpplayer_html.h: static/mpplayer.html
 	xxd -i static/mpplayer.html > $(OBJDIR)/mpplayer_html.h
 
-mpplayer_js.h: static/mpplayer.js
+$(OBJDIR)/mpplayer_js.h: static/mpplayer.js
 	xxd -i static/mpplayer.js > $(OBJDIR)/mpplayer_js.h
 
-mixplayd_html.h: static/mixplay.html
+$(OBJDIR)/mixplayd_html.h: static/mixplay.html
 	xxd -i static/mixplay.html > $(OBJDIR)/mixplayd_html.h
 
-mprc_html.h: static/mprc.html
+$(OBJDIR)/mprc_html.h: static/mprc.html
 	xxd -i static/mprc.html > $(OBJDIR)/mprc_html.h
 
-mixplayd_css.h: static/mixplay.css
+$(OBJDIR)/mixplayd_css.h: static/mixplay.css
 	xxd -i static/mixplay.css > $(OBJDIR)/mixplayd_css.h
 
-mixplayd_js.h: static/mixplay.js
+$(OBJDIR)/mixplayd_js.h: static/mixplay.js
 	xxd -i static/mixplay.js > $(OBJDIR)/mixplayd_js.h
 
-gmixplay_app.h: glade/gmixplay_app.glade
+$(OBJDIR)/gmixplay_app.h: glade/gmixplay_app.glade
 	xxd -i glade/gmixplay_app.glade > $(OBJDIR)/gmixplay_app.h
 
 static/mixplay.js: static/mixplay_js.tmpl
@@ -136,9 +136,9 @@ static/mixplay.js: static/mixplay_js.tmpl
 prepare:
 	apt-get install ncurses-dev mpg123 libmpg123-dev libgtk-3-dev libasound-dev
 
-$(OBJDIR)/dep.d: src/*.h
+$(OBJDIR)/dep.d: src/*
 	rm -f $(OBJDIR)/dep.d
-	$(CC) $(SRCDIR)/*.c -MM -MG | sed 's|[a-zA-Z0-9_-]*\.o|$(OBJDIR)/&|' >> $(OBJDIR)/dep.d
+	$(CC) -I . $(SRCDIR)/*.c -MM -MG | sed 's|[a-zA-Z0-9_-]*\.o|$(OBJDIR)/&|' >> $(OBJDIR)/dep.d
 
 # This will fail silently of first make run
 -include $(OBJDIR)/dep.d

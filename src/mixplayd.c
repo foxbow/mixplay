@@ -97,11 +97,36 @@ void s_updateHook( ) {
 
 int main( int argc, char **argv ) {
 	mpconfig	*control;
+	char *path;
 
 	control=readConfig( );
 	if( control == NULL ) {
-		addMessage( 0, "No config found!" );
-		return -1;
+		printf( "music directory needs to be set.\n" );
+		printf( "It will be set up now\n" );
+		path=falloc( MAXPATHLEN+1, 1 );
+		while( 1 ) {
+			printf( "Default music directory:" );
+			fflush( stdout );
+			memset( path, 0, MAXPATHLEN );
+			fgets(path, MAXPATHLEN, stdin );
+			path[strlen( path )-1]=0; /* cut off CR */
+			abspath( path, getenv( "HOME" ), MAXPATHLEN );
+
+			if( isDir( path ) ) {
+				break;
+			}
+			else {
+				printf( "%s is not a directory!\n", path );
+			}
+		}
+
+		writeConfig( path );
+		free( path );
+		control=readConfig();
+		if( control == NULL ) {
+			printf( "Could not create config file!\n" );
+			return 1;
+		}
 	}
 	muteVerbosity();
 

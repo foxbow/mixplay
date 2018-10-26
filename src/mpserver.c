@@ -9,16 +9,17 @@
 
 #include "mpserver.h"
 #include "mpcomm.h"
-#include "mpplayer_html.h"
-#include "mpplayer_js.h"
-#include "mixplayd_html.h"
-#include "mprc_html.h"
-#include "mixplayd_js.h"
-#include "mixplayd_css.h"
 #include "player.h"
 #include "config.h"
 #include "utils.h"
 #include "database.h"
+
+#include "build/mpplayer_html.h"
+#include "build/mpplayer_js.h"
+#include "build/mixplayd_html.h"
+#include "build/mprc_html.h"
+#include "build/mixplayd_js.h"
+#include "build/mixplayd_css.h"
 
 #include <arpa/inet.h>
 #include <ctype.h>
@@ -349,6 +350,25 @@ static void *clientHandler(void *args ) {
 					len=strlen(commdata);
 				}
 				break;
+			case 6: /* get config */
+				jsonLine=serializeConfig( );
+				if( jsonLine != NULL ) {
+					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012", (int)strlen(jsonLine) );
+					while( ( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
+						commsize+=MP_BLKSIZE;
+						commdata=frealloc( commdata, commsize );
+					}
+					strcat( commdata, jsonLine );
+					len=strlen(commdata);
+					sfree( &jsonLine );
+					fullstat=MPCOMM_CONFIG;
+				}
+				else {
+					addMessage( 0, "Could not turn config into JSON" );
+					sprintf( commdata, "HTTP/1.1 503 Service Unavailable\015\012Content-Length: 0\015\012\015\012" );
+					len=strlen(commdata);
+				}
+				break;
 			case 2: /* set command */
 				if( cmd != mpc_idle ) {
 					/* check commands that lock the reply channel */
@@ -394,25 +414,6 @@ static void *clientHandler(void *args ) {
 				}
 				len=0;
 				running=0;
-				break;
-			case 6: /* get config */
-				jsonLine=serializeConfig( );
-				if( jsonLine != NULL ) {
-					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012", (int)strlen(jsonLine) );
-					while( ( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
-						commsize+=MP_BLKSIZE;
-						commdata=frealloc( commdata, commsize );
-					}
-					strcat( commdata, jsonLine );
-					len=strlen(commdata);
-					sfree( &jsonLine );
-					fullstat=MPCOMM_CONFIG;
-				}
-				else {
-					addMessage( 0, "Could not turn config into JSON" );
-					sprintf( commdata, "HTTP/1.1 503 Service Unavailable\015\012Content-Length: 0\015\012\015\012" );
-					len=strlen(commdata);
-				}
 				break;
 			case 7: /* get current build version */
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",

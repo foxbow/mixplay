@@ -8,11 +8,11 @@
 #include "musicmgr.h"
 #include "database.h"
 #include "gladeutils.h"
-#include "gmixplay_app.h"
 #include "player.h"
 #include "config.h"
 #include "mpcomm.h"
 
+#include "build/gmixplay_app.h"
 /**
  * sets up the UI by glade definitions
  */

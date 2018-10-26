@@ -560,9 +560,16 @@ void writeConfig( const char *musicpath ) {
 	if( NULL != fp ) {
 		fprintf( fp, "[mixplay]" );
 		fprintf( fp, "\nmusicdir=%s", c_config->musicdir );
-		fprintf( fp, "\nprofiles=" );
-		for( i=0; i< c_config->profiles; i++ ) {
-			fprintf( fp, "%s;", c_config->profile[i] );
+		if( c_config->profiles == 0 ) {
+		fprintf( fp, "\nactive=1" );
+			fprintf( fp, "\nprofiles=mixplay;" );
+		}
+		else {
+			fprintf( fp, "\nactive=%i", c_config->active );
+			fprintf( fp, "\nprofiles=" );
+			for( i=0; i< c_config->profiles; i++ ) {
+				fprintf( fp, "%s;", c_config->profile[i] );
+			}
 		}
 		fprintf( fp, "\nstreams=" );
 		for( i=0; i< c_config->streams; i++ ) {
@@ -572,14 +579,13 @@ void writeConfig( const char *musicpath ) {
 		for( i=0; i< c_config->streams; i++ ) {
 			fprintf( fp, "%s;", c_config->sname[i] );
 		}
-		fprintf( fp, "\nactive=%i", c_config->active );
 		fprintf( fp, "\nskipdnp=%i", c_config->skipdnp );
 		fprintf( fp, "\nfade=%i", c_config->fade );
 		if( c_config->channel != NULL ) {
 			fprintf( fp, "\nchannel=%s", c_config->channel );
 		}
 		else {
-			fprintf( fp, "channel=Master  for standard installations");
+			fprintf( fp, "\nchannel=Master");
 			fprintf( fp, "\n# channel=Digital for HifiBerry");
 			fprintf( fp, "\n# channel=Main");
 			fprintf( fp, "\n# channel=DAC");
