@@ -75,8 +75,8 @@ static const char *mpc_command[] = {
  * transform an mpcmd value into a string literal
  */
 const char *mpcString( mpcmd rawcmd ) {
-	mpcmd cmd=MPC_CMD(rawcmd);
-	if( cmd <= mpc_idle ) {
+	int cmd=(int)MPC_CMD(rawcmd);
+	if( cmd <= (int)mpc_idle ) {
 		return mpc_command[cmd];
 	}
 	else {
@@ -97,7 +97,7 @@ const mpcmd mpcCommand( const char *name ) {
 		addMessage( 1, "Unknown command %s!", name );
 		return mpc_idle;
 	}
-	return i;
+	return (mpcmd)i;
 }
 
 /*
@@ -281,7 +281,7 @@ int getArgs( int argc, char ** argv ){
 
 		case 'h':
 			sfree( &(config->host) );
-			config->host=falloc( strlen(optarg)+1, sizeof(char) );
+			config->host=(char*)falloc( strlen(optarg)+1, 1 );
 			strcpy( config->host, optarg );
 			config->remote=1;
 			break;
@@ -385,9 +385,9 @@ mpconfig *getConfig() {
  * returns the number of found values
  */
 static int scanparts( char *line, char ***target ) {
-	int i;
+	unsigned int i;
 	char *pos;
-	int num=0;
+	unsigned int num=0;
 
 	/* count number of entries */
 	for ( i=0; i<strlen(line); i++ ) {
@@ -398,12 +398,12 @@ static int scanparts( char *line, char ***target ) {
 
 	/* walk through the entries */
 	if( num > 0 ) {
-		*target=falloc( num, sizeof( char * ) );
+		*target=(char**)falloc( num, sizeof(char*) );
 		for( i=0; i<num; i++ ) {
 			pos=strchr( line, ';' );
 			if( pos != NULL ) {
 				*pos=0;
-				(*target)[i]=falloc( strlen(line)+1, sizeof( char ) );
+				(*target)[i]=(char*)falloc( strlen(line)+1, sizeof( char ) );
 				strip( (*target)[i], line, strlen(line)+1 );
 				line=pos+1;
 			}
@@ -436,9 +436,9 @@ mpconfig *readConfig( ) {
 	}
 
 	if( c_config == NULL ) {
-		c_config=falloc( 1, sizeof( mpconfig ) );
+		c_config=(mpconfig*)falloc( 1, sizeof( mpconfig ) );
 		c_config->msg=msgBuffInit();
-		c_config->found=falloc(1,sizeof(searchresults));
+		c_config->found=(searchresults*)falloc(1,sizeof(searchresults));
 	}
 
 	/* Set some default values */
@@ -451,14 +451,15 @@ mpconfig *readConfig( ) {
 	c_config->percent=0;
 	c_config->status=mpc_idle;
 	c_config->command=mpc_idle;
-	c_config->dbname=falloc( MAXPATHLEN+1, 1 );
+	c_config->dbname=(char*)falloc( MAXPATHLEN+1, 1 );
 	c_config->verbosity=0;
 	c_config->debug=0;
 	c_config->fade=1;
 	c_config->inUI=0;
 	c_config->msg->lines=0;
 	c_config->msg->current=0;
-	c_config->host="127.0.0.1";
+	c_config->host=(char*)falloc(16,1);
+	strtcpy( c_config->host, "127.0.0.1", 16 );
 	c_config->port=MP_PORT;
 	c_config->changed=0;
 	c_config->isDaemon=0;
@@ -475,11 +476,11 @@ mpconfig *readConfig( ) {
 			pos=strchr( line, '=' );
 			if( ( NULL == pos ) || ( strlen( ++pos ) == 0 ) ) continue;
 			if( strstr( line, "musicdir=" ) == line ) {
-				c_config->musicdir=falloc( strlen(pos)+1, sizeof( char ) );
+				c_config->musicdir=(char*)falloc( strlen(pos)+1, sizeof( char ) );
 				strip( c_config->musicdir, pos, strlen(pos)+1 );
 			}
 			if( strstr( line, "channel=" ) == line ) {
-				c_config->channel=falloc( strlen(pos)+1, sizeof( char ) );
+				c_config->channel=(char*)falloc( strlen(pos)+1, sizeof( char ) );
 				strip( c_config->channel, pos, strlen(pos)+1 );
 			}
 			if( strstr( line, "profiles=" ) == line ) {
@@ -504,7 +505,7 @@ mpconfig *readConfig( ) {
 				c_config->fade=atoi(pos);
 			}
 			if( strstr( line, "host=" ) == line ) {
-				c_config->host=falloc( strlen(pos)+1, sizeof( char ) );
+				c_config->host=(char*)frealloc( c_config->host, strlen(pos)+1 );
 				strip( c_config->host, pos, strlen(pos)+1 );
 			}
 			if( strstr( line, "port=" ) == line ) {
@@ -542,7 +543,7 @@ void writeConfig( const char *musicpath ) {
 	}
 
 	if( musicpath != NULL ) {
-		c_config->musicdir=falloc( strlen(musicpath)+1, sizeof( char ) );
+		c_config->musicdir=(char*)falloc( strlen(musicpath)+1, sizeof( char ) );
 		strip( c_config->musicdir, musicpath, strlen(musicpath)+1 );
 	}
 
@@ -669,12 +670,12 @@ void freeConfig( ) {
  * If debug > v the message is printed on the console (to avoid verbosity 0 messages to
  * always appear in the debug stream.
  */
-void addMessage( int v, char *msg, ... ) {
+void addMessage( int v, const char *msg, ... ) {
 	va_list args;
 	char *line;
 
 	pthread_mutex_lock( &msglock );
-	line = falloc( MP_MSGLEN, sizeof(char) );
+	line = (char*)falloc( MP_MSGLEN, 1 );
 	va_start( args, msg );
 	vsnprintf( line, MP_MSGLEN, msg, args );
 	va_end( args );
@@ -749,14 +750,14 @@ void muteVerbosity() {
 static void addHook( void (*func)( void* ), _mpFunc **list ) {
 	_mpFunc *pos=*list;
 	if( pos == NULL ) {
-		*list=falloc(1,  sizeof(_mpFunc) );
+		*list=(_mpFunc*)falloc(1,  sizeof(_mpFunc) );
 		pos=*list;
 	}
 	else {
 		while( pos->next != NULL ) {
 			pos=pos->next;
 		}
-		pos->next=falloc(1,  sizeof(_mpFunc) );
+		pos->next=(_mpFunc*)falloc(1,  sizeof(_mpFunc) );
 		pos=pos->next;
 	}
 	pos->func=func;
@@ -771,19 +772,19 @@ void addProgressHook( void (*func)( void * ) ){
 /*
  * stub implementations
  */
-void progressStart( char* msg, ... ) {
+void progressStart( const char* msg, ... ) {
 	va_list args;
 	char *line;
 	_mpFunc *pos=_pfunc;
 
-	line=falloc( 512, sizeof( char ) );
+	line=(char*)falloc( 512, 1 );
 
 	va_start( args, msg );
 	vsnprintf( line, 512, msg, args );
 	va_end( args );
 
 	while( pos != NULL ) {
-		pos->func( msg );
+		pos->func( line );
 		pos=pos->next;
 	}
 	addMessage( 0, line );
@@ -804,7 +805,7 @@ void progressEnd( void ) {
 	}
 }
 
-void progressMsg( char *msg ) {
+void progressMsg( const char *msg ) {
 	progressStart( "%s", msg );
 	progressEnd();
 }

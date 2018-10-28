@@ -134,14 +134,14 @@ int setVerbosity( int );
 int incVerbosity( void );
 void muteVerbosity( void );
 
-void addMessage( int v, char *msg, ... );
+void addMessage( int v, const char *msg, ... );
 char *getMessage( void );
 
-void progressStart( char *msg, ... );
+void progressStart( const char *msg, ... );
 void progressEnd( void );
-void progressMsg( char *msg );
-void addProgressHook( void (*func)( void *arg ) );
-void addUpdateHook( void (*func)( void *arg ) );
+void progressMsg( const char *msg );
+void addProgressHook( void (*)( void *arg ) );
+void addUpdateHook( void (*)( void *arg ) );
 void updateUI( void );
 
 const char *mpcString( mpcmd rawcmd );

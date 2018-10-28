@@ -35,7 +35,7 @@ void activity( const char *msg, ... ) {
 	vsprintf( text, msg, args );
 	va_end( args );
 
-	if( ( _lastact == NULL) || ( strcmp( _lastact, msg ) ) ) {
+	if( ( _lastact == NULL) || ( strcmp( _lastact, msg ) != 0 ) ) {
 		_actmsg=0;
 	}
 
@@ -48,7 +48,7 @@ void activity( const char *msg, ... ) {
 		}
 	}
 
-	if( ( ++_actmsg )%200 == 0 ) {
+	if( ( _actmsg++ )%200 == 0 ) {
 		addMessage( 0, text );
 	}
 }
@@ -85,7 +85,7 @@ void fail( const int error, const char* msg, ... ) {
 /**
  * special handling for the server during information updates
  */
-void s_updateHook( ) {
+void s_updateHook( void *ignore ) {
 	mpconfig *data=getConfig();
 	if( _curmsg < data->msg->count ) {
 		if( data->isDaemon ) {
@@ -103,7 +103,7 @@ int main( int argc, char **argv ) {
 	if( control == NULL ) {
 		printf( "music directory needs to be set.\n" );
 		printf( "It will be set up now\n" );
-		path=falloc( MAXPATHLEN+1, 1 );
+		path=(char *)falloc( MAXPATHLEN+1, 1 );
 		while( 1 ) {
 			printf( "Default music directory:" );
 			fflush( stdout );
@@ -170,7 +170,7 @@ int main( int argc, char **argv ) {
 	if( control->isDaemon || getDebug() == 0 ) {
 		daemon( 0, 1 );
 		openlog ("mixplayd", LOG_PID, LOG_DAEMON);
-		control->isDaemon=-1;
+		control->isDaemon=1;
 	}
 
 	addUpdateHook( &s_updateHook );
