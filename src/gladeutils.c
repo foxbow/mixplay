@@ -9,51 +9,6 @@
  */
 static pthread_mutex_t gmsglock=PTHREAD_MUTEX_INITIALIZER;
 
-static int g_activity( void *text ) {
-	if ( MP_GLDATA->widgets->mp_popup != NULL ) {
-		gtk_window_set_title( GTK_WINDOW( MP_GLDATA->widgets->mp_popup ), ( char * )text );
-		gtk_widget_queue_draw( MP_GLDATA->widgets->mp_popup );
-	}
-	else if( MP_GLDATA->widgets->album_current != NULL ) {
-		gtk_label_set_text( GTK_LABEL( MP_GLDATA->widgets->album_current ),
-							text );
-		gtk_widget_queue_draw( MP_GLDATA->widgets->mixplay_main );
-	}
-
-	free( text );
-	return 0;
-}
-
-/**
- * activity indication
- */
-static unsigned int _ftrpos=0;
-void activity( const char *msg, ... ) {
-	char roller[5]="|/-\\";
-	char text[256]="";
-	char *line;
-	int pos;
-
-	if( ( _ftrpos%100 ) == 0 ) {
-		line=falloc( NAMELEN, sizeof( char ) );
-		pos=( _ftrpos/100 )%4;
-
-		va_list args;
-		va_start( args, msg );
-		vsprintf( text, msg, args );
-		va_end( args );
-		snprintf( line, NAMELEN, "%s %c", text, roller[pos] );
-		if( getConfig()->inUI ) {
-			gdk_threads_add_idle( g_activity, line );
-		}
-		else {
-			free( line );
-		}
-	}
-
-	_ftrpos=( _ftrpos+1 )%400;
-}
-
 /*
  * Show errormessage quit
  * msg - Message to print

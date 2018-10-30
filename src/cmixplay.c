@@ -12,34 +12,6 @@
 #include "config.h"
 #include "mpcomm.h"
 
-static int _ftrpos=0;
-
-/**
- * show activity roller on console
- * this will only show when the global verbosity is larger than 0
- * spins faster with increased verbosity
- */
-void activity( const char *msg, ... ) {
-	char roller[5]="|/-\\";
-	char text[256]="";
-	int pos;
-	va_list args;
-
-	if( getVerbosity() && ( _ftrpos%( 100/getVerbosity() ) == 0 ) ) {
-		pos=( _ftrpos/( 100/getVerbosity() ) )%4;
-
-		va_start( args, msg );
-		vsprintf( text, msg, args );
-		printf( "%s %c		  \r", text, roller[pos] );
-		fflush( stdout );
-		va_end( args );
-	}
-
-	if( getVerbosity() > 0 ) {
-		_ftrpos=( _ftrpos+1 )%( 400/getVerbosity() );
-	}
-}
-
 /*
  * Print errormessage, errno and wait for [enter]
  * msg - Message to print
@@ -274,13 +246,13 @@ int main( int argc, char **argv ) {
 						}
 						else {
 							if( config->current != NULL ) {
-								config->argument=falloc( 10, 1 );
+								config->argument=(char*)falloc( 10, 1 );
 								snprintf( config->argument, 9, "%i", config->current->title->key );
 							}
 							else {
 								addMessage( 0, "Wow! The current title disappeared while being played!" );
 							}
-							setCommand( mpc_dnp|mpc_title );
+							setCommand( (mpcmd)(mpc_dnp|mpc_title) );
 						}
 						break;
 
@@ -291,13 +263,13 @@ int main( int argc, char **argv ) {
 						}
 						else {
 							if( config->current != NULL ) {
-								config->argument=falloc( 10, 1 );
+								config->argument=(char*)falloc( 10, 1 );
 								snprintf( config->argument, 9, "%i", config->current->title->key );
 							}
 							else {
 								addMessage( 0, "Wow! The current title disappeared while being played!" );
 							}
-							setCommand( mpc_dnp|mpc_album );
+							setCommand( (mpcmd)(mpc_dnp|mpc_album) );
 						}
 						break;
 
@@ -307,13 +279,13 @@ int main( int argc, char **argv ) {
 						}
 						else {
 							if( config->current != NULL ) {
-								config->argument=falloc( 10, 1 );
+								config->argument=(char*)falloc( 10, 1 );
 								snprintf( config->argument, 9, "%i", config->current->title->key );
 							}
 							else {
 								addMessage( 0, "Wow! The current title disappeared while being played!" );
 							}
-							setCommand( mpc_fav|mpc_title );
+							setCommand( (mpcmd)(mpc_fav|mpc_title) );
 						}
 						break;
 					}

@@ -16,42 +16,7 @@
 #include "utils.h"
 #include "player.h"
 
-static int _ftrpos=0;
 static unsigned long _curmsg=0;
-static int _actmsg=0;
-static char *_lastact=NULL;
-
-/**
- * show activity roller on console
- * this will only show if debug mode is enabled
- */
-void activity( const char *msg, ... ) {
-	char roller[5]="|/-\\";
-	char text[256]="";
-	int pos;
-	va_list args;
-
-	va_start( args, msg );
-	vsprintf( text, msg, args );
-	va_end( args );
-
-	if( ( _lastact == NULL) || ( strcmp( _lastact, msg ) != 0 ) ) {
-		_actmsg=0;
-	}
-
-	if( getDebug() ) {
-		_ftrpos=( _ftrpos+1 )%( 400/getDebug() );
-		if ( _ftrpos%( 100/getDebug() ) == 0 ) {
-			pos=( _ftrpos/( 100/getDebug() ) )%4;
-			printf( "%c %s                                  \r", roller[pos], text );
-			fflush( stdout );
-		}
-	}
-
-	if( ( _actmsg++ )%200 == 0 ) {
-		addMessage( 0, text );
-	}
-}
 
 /*
  * Print errormessage and exit

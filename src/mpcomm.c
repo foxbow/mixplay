@@ -16,6 +16,10 @@
 #include <errno.h>
 #include <unistd.h>
 
+#ifndef MPCOMM_VER
+#define MPCOMM_VER -1
+#endif
+
 static pthread_mutex_t _scmdlock=PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t _clientlock=PTHREAD_MUTEX_INITIALIZER;
 static int _curclient=-1;
@@ -88,7 +92,7 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplayli
 		val=jsonAddInt( NULL, "key", 0 );
 		jsonAddStr( val, "artist", "-" );
 		jsonAddStr( val, "album", "-" );
-		jsonAddStr( val, "title", "-" );
+		jsonAddStr( val, "title", getCurrentActivity() );
 		jsonAddInt( val, "flags", 0 );
 		jsonAddStr( val, "genre", "-" );
 		jsonAddInt( val, "playcount", 0 );
@@ -162,10 +166,10 @@ int jsonGetTitles( jsonObject *jo, const char *key, mpplaylist *pl ) {
 
 	while( jsonPeek( jo, ikey ) != json_null ) {
 		if( pl->next == NULL ) {
-			pl->next=falloc(1, sizeof(mpplaylist) );
+			pl->next=(mpplaylist*)falloc(1, sizeof(mpplaylist) );
 			pl->next->next=NULL;
 			pl->next->prev=pl;
-			pl->title=falloc(1,sizeof(mptitle) );
+			pl->title=(mptitle*)falloc(1,sizeof(mptitle) );
 		}
 		pl=pl->next;
 		jsonGetTitle( jo, ikey, pl->title );
@@ -421,14 +425,14 @@ void *netreader( void *control ) {
 	int sock, intr;
 	struct sockaddr_in server;
 	char *commdata;
-	size_t commsize=MP_BLKSIZE;
+	ssize_t commsize=MP_BLKSIZE;
 	mpconfig *config;
 	struct timeval to;
 	fd_set fds;
 	size_t len=0;
 	ssize_t recvd, retval;
 
-	commdata=falloc( commsize, sizeof( char ) );
+	commdata=(char*)falloc( commsize, sizeof( char ) );
 	config=(mpconfig*)control;
 
 	sock = socket(AF_INET , SOCK_STREAM , 0);
@@ -467,7 +471,7 @@ void *netreader( void *control ) {
 			while( ( retval=recv( sock, commdata+recvd, commsize-recvd, 0 ) ) == commsize-recvd ) {
 				recvd=commsize;
 				commsize+=MP_BLKSIZE;
-				commdata=frealloc( commdata, commsize );
+				commdata=(char*)frealloc( commdata, commsize );
 				memset( commdata+recvd, 0, MP_BLKSIZE );
 			}
 			switch( retval ) {

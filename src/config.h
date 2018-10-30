@@ -137,6 +137,9 @@ void muteVerbosity( void );
 void addMessage( int v, const char *msg, ... );
 char *getMessage( void );
 
+char *getCurrentActivity( void );
+void activity( const char *msg, ... );
+
 void progressStart( const char *msg, ... );
 void progressEnd( void );
 void progressMsg( const char *msg );
@@ -150,4 +153,5 @@ void setCommand( mpcmd rawcmd );
 int  setArgument( const char *arg );
 int getArgs( int argc, char ** argv );
 int initAll( void );
+
 #endif /* _CONFIG_H_ */

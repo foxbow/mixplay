@@ -1,7 +1,6 @@
 #ifndef __GLADEUTILS_H__
 #define __GLADEUTILS_H__
 
-#include <glib.h>
 #include <gtk/gtk.h>
 #include <pthread.h>
 

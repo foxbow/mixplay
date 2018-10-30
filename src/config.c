@@ -747,6 +747,36 @@ void muteVerbosity() {
 	setVerbosity(0);
 }
 
+static int _ftrpos=0;
+static char _curact[80]="";
+
+/**
+ * show activity roller on console
+ * this will only show if debug mode is enabled
+ */
+void activity( const char *msg, ... ) {
+	char roller[5]="|/-\\";
+	int pos;
+	va_list args;
+
+	va_start( args, msg );
+	vsnprintf( _curact, 80, msg, args );
+	va_end( args );
+
+	if( getDebug() ) {
+		_ftrpos=( _ftrpos+1 )%( 400/getDebug() );
+		if ( _ftrpos%( 100/getDebug() ) == 0 ) {
+			pos=( _ftrpos/( 100/getDebug() ) )%4;
+			printf( "%c %s                                  \r", roller[pos], _curact );
+			fflush( stdout );
+		}
+	}
+}
+
+char *getCurrentActivity( void ) {
+	return _curact;
+}
+
 static void addHook( void (*func)( void* ), _mpFunc **list ) {
 	_mpFunc *pos=*list;
 	if( pos == NULL ) {
