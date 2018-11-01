@@ -22,7 +22,7 @@
 
 #include "database.h"
 
-static char *ARTIST_SAMPLER="Various";
+static char ARTIST_SAMPLER[]="Various";
 /*
  * checks if pat has a matching in text. If text is shorter than pat then
  * the test fails.
@@ -43,13 +43,13 @@ static int patMatch( const char *text, const char *pat ) {
 	}
 
 	/* prepare the pattern */
-	lopat=falloc( strlen(pat)+3, 1 );
+	lopat=(char*)falloc( strlen(pat)+3, 1 );
 	strltcpy( lopat+1, pat, plen+1 );
 	lopat[0]=-1;
 	lopat[plen+1]=-1;
 
 	/* prepare the text */
-	lotext=falloc( tlen+1, 1 );
+	lotext=(char*)falloc( tlen+1, 1 );
 	strltcpy( lotext, text, tlen+1 );
 
 	/* check */
@@ -210,14 +210,14 @@ mpplaylist *cleanPlaylist( mpplaylist *pl ) {
 
 mpplaylist *addPLDummy( mpplaylist *pl, const char *name ){
 	mpplaylist *buf;
-	mptitle *title=falloc(1, sizeof(mptitle));
+	mptitle *title=(mptitle*)falloc(1, sizeof(mptitle));
 
 	if( pl == NULL ) {
-		pl=falloc(1, sizeof(mpplaylist));
+		pl=(mpplaylist*)falloc(1, sizeof(mpplaylist));
 	}
 	else {
 		buf=pl->prev;
-		pl->prev=falloc(1,sizeof(mpplaylist));
+		pl->prev=(mpplaylist*)falloc(1,sizeof(mpplaylist));
 		pl->prev->prev=buf;
 		pl->prev->next=pl;
 		if( buf != NULL ) {
@@ -253,37 +253,6 @@ mpplaylist *appendToPL( mptitle *title, mpplaylist *pl, const int mark ) {
 	return pl;
 }
 
-/**
- * inserts a title into the playlist chain. Creates a new playlist
- * if no target is set.
- * This function returns a valid target
- */
-mpplaylist *addToPL( mptitle *title, mpplaylist *target, const int mark ) {
-	mpplaylist *buf=NULL;
-
-	if( mark && ( title->flags & MP_MARK ) ) {
-		addMessage( 0, "Trying to add %s twice! (%i)", title->display, title->flags );
-	}
-
-	buf=falloc(1, sizeof( mpplaylist ) );
-	memset( buf, 0, sizeof( mpplaylist ) );
-	buf->title=title;
-
-	if( NULL == target ) {
-		target=buf;
-	}
-	else {
-		buf->next=target->next;
-		target->next=buf;
-		buf->prev=target;
-	}
-
-	if( mark ) {
-		title->flags |= MP_MARK;
-	}
-	return target;
-}
-
 /*
  * removes a title from the current playlist chain and returns the next title
  */
@@ -300,6 +269,89 @@ static mpplaylist *remFromPL( mpplaylist *pltitle ) {
 	pltitle->title->flags&=~MP_MARK;
 
 	return ret;
+}
+
+/*
+ * removes the title with the given key from the playlist
+ * this returns NULL or a valid playlist anchor in case the current title was
+ * removed
+ */
+mpplaylist *remFromPLByKey( mpplaylist *root, const unsigned key ) {
+	mpplaylist *pl=root;
+	if( pl == NULL ) {
+		addMessage( 0, "Cannot remove titles from an empty playlist" );
+		return NULL;
+	}
+
+	if( key == 0 ) {
+		return root;
+	}
+
+	while( pl->prev != NULL ) {
+		pl=pl->prev;
+	}
+
+	while( ( pl!=NULL ) && ( pl->title->key != key ) ) {
+		pl=pl->next;
+	}
+
+	if( pl != NULL ) {
+		if( pl->prev != NULL ) {
+			pl->prev->next=pl->next;
+		}
+		if( pl->next!=NULL ) {
+			pl->next->prev=pl->prev;
+		}
+		if( pl == root ) {
+			if( pl->next != NULL ) {
+				root=pl->next;
+			}
+			else if( pl->prev != NULL ) {
+				root=pl->prev;
+			}
+			else {
+				root=NULL;
+			}
+		}
+		free(pl);
+		pl=NULL;
+	}
+	else {
+		addMessage( 0, "No title with key %i in playlist!", key );
+	}
+
+	return root;
+}
+
+/**
+ * inserts a title into the playlist chain. Creates a new playlist
+ * if no target is set.
+ * This function returns a valid target
+ */
+mpplaylist *addToPL( mptitle *title, mpplaylist *target, const int mark ) {
+	mpplaylist *buf=NULL;
+
+	if( mark && ( title->flags & MP_MARK ) ) {
+		addMessage( 0, "Trying to add %s twice! (%i)", title->display, title->flags );
+	}
+
+	buf=(mpplaylist*)falloc(1, sizeof( mpplaylist ) );
+	memset( buf, 0, sizeof( mpplaylist ) );
+	buf->title=title;
+
+	if( NULL == target ) {
+		target=buf;
+	}
+	else {
+		buf->next=target->next;
+		target->next=buf;
+		buf->prev=target;
+	}
+
+	if( mark ) {
+		title->flags |= MP_MARK;
+	}
+	return target;
 }
 
 /**
@@ -320,6 +372,15 @@ static int msel( const struct dirent *entry ) {
 }
 
 /**
+ * helperfunction for scandir() - just return unhidden regular music files
+ */
+static int plsel( const struct dirent *entry ) {
+	return( ( entry->d_name[0] != '.' ) &&
+			( entry->d_type == DT_REG ) &&
+			endsWith( entry->d_name, ".m3u" ) );
+}
+
+/**
  * helperfunction for scandir() sorts entries numerically first then
  * alphabetical
  */
@@ -333,6 +394,13 @@ static int tsort( const struct dirent **d1, const struct dirent **d2 ) {
 	}
 
 	return strcasecmp( ( *d1 )->d_name, ( *d2 )->d_name );
+}
+
+/**
+ * loads all playlists in cd into pllist
+ */
+int getPlaylists( const char *cd, struct dirent ***pllist ) {
+	return scandir( cd, pllist, plsel, tsort );
 }
 
 /**
@@ -407,7 +475,7 @@ static int matchTitle( mptitle *title, const char* pat ) {
 		res=patMatch( loname, pat+2 );
 	}
 	else {
-		lopat=falloc( strlen( pat+1 ), 1 );
+		lopat=(char*)falloc( strlen( pat+1 ), 1 );
 		strltcpy( lopat, pat+2, strlen( pat+1 ) );
 		res=( strstr( loname, lopat ) != NULL );
 		free( lopat );
@@ -442,9 +510,9 @@ int search( const char *pat, const mpcmd range, const int global ) {
 	mptitle *root=getConfig()->root;
 	mptitle *runner=root;
 	searchresults *res=getConfig()->found;
-	int i=0;
+	unsigned int i=0;
 	int found=0;
-	int cnt=0;
+	unsigned int cnt=0;
 	/* free buffer playlist, the arrays will not get lost due to the realloc later */
 	res->titles=cleanPlaylist(res->titles);
 	res->tnum=0;
@@ -474,7 +542,7 @@ int search( const char *pat, const mpcmd range, const int global ) {
 
 				if( i == res->anum ) {
 					res->anum++;
-					res->artists=frealloc( res->artists, res->anum*sizeof(char*) );
+					res->artists=(char**)frealloc( res->artists, res->anum*sizeof(char*) );
 					res->artists[i]=runner->artist;
 				}
 			}
@@ -492,9 +560,9 @@ int search( const char *pat, const mpcmd range, const int global ) {
 
 				if( i == res->lnum ) {
 					res->lnum++;
-					res->albums=frealloc( res->albums, res->lnum*sizeof(char*) );
+					res->albums=(char**)frealloc( res->albums, res->lnum*sizeof(char*) );
 					res->albums[i]=runner->album;
-					res->albart=frealloc( res->albart, res->lnum*sizeof(char*) );
+					res->albart=(char**)frealloc( res->albart, res->lnum*sizeof(char*) );
 					res->albart[i]=runner->artist;
 				}
 				else if( !strcmp( res->albart[i], ARTIST_SAMPLER ) && strcmp( res->albart[i], runner->artist ) ){
@@ -518,7 +586,7 @@ int search( const char *pat, const mpcmd range, const int global ) {
 
 /**
  * applies the dnplist on a list of titles and marks matching titles
- * if th etitle is part of the playlist it will be removed from the playlist 
+ * if th etitle is part of the playlist it will be removed from the playlist
  * too. This may lead to double played artists though...
  */
 int applyDNPlist( mptitle *base, struct marklist_t *list ) {
@@ -621,18 +689,18 @@ struct marklist_t *loadList( const char *path ) {
 		return NULL;
 	}
 
-	buff=falloc( MAXPATHLEN, sizeof( char ) );
+	buff=(char*)falloc( MAXPATHLEN, 1 );
 
 	while( !feof( file ) ) {
 		fgets( buff, MAXPATHLEN, file );
 
 		if( buff && strlen( buff ) > 1 ) {
 			if( !bwlist ) {
-				bwlist=falloc( 1, sizeof( struct marklist_t ) );
+				bwlist=(struct marklist_t *)falloc( 1, sizeof( struct marklist_t ) );
 				ptr=bwlist;
 			}
 			else {
-				ptr->next=falloc( 1, sizeof( struct marklist_t ) );
+				ptr->next=(struct marklist_t *)falloc( 1, sizeof( struct marklist_t ) );
 				ptr=ptr->next;
 			}
 
@@ -689,7 +757,7 @@ mptitle *loadPlaylist( const char *path ) {
 		return NULL;
 	}
 
-	buff=falloc( MAXPATHLEN, 1 );
+	buff=(char*)falloc( MAXPATHLEN, 1 );
 	while( !feof( fp ) ) {
 		activity( "Loading" );
 		if( ( fgets( buff, MAXPATHLEN, fp ) != NULL ) &&
@@ -787,9 +855,9 @@ mptitle *insertTitle( mptitle *base, const char *path ) {
 		base->next=root;
 		root->next->prev=root;
 	}
-	
+
 	/* remove musicdir from path */
-	if( ( getConfig()->musicdir != NULL ) && 
+	if( ( getConfig()->musicdir != NULL ) &&
 			( strstr( path, getConfig()->musicdir ) != path ) ) {
 		strtcpy( root->path, path, MAXPATHLEN );
 	}
@@ -945,7 +1013,7 @@ static mptitle *skipTitles( mptitle *current, long num ) {
  *
  * returns the head of the (new/current) playlist
  */
-mpplaylist *addNewTitle( mpplaylist *pl ) {
+mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 	mptitle *runner=NULL;
 	mptitle *guard=NULL;
 	struct timeval tv;
@@ -969,7 +1037,7 @@ mpplaylist *addNewTitle( mpplaylist *pl ) {
 		lastpat=pl->title->artist ;
 	}
 	else {
-		runner=getConfig()->root;
+		runner=root;
 		valid=3;
 	}
 	/* improve 'randomization' */
@@ -1075,6 +1143,12 @@ void plCheck( int del ) {
 	mpplaylist *pl=getConfig()->current;
 	mpplaylist *buf=pl;
 
+
+	if( ( getConfig()->pledit==1 ) ||
+		( ( getConfig()->plplay==1 ) && ( getConfig()->plmix==0 ) ) ){
+		return;
+	}
+
 	if( pl != NULL ) {
 
 		while( ( pl->prev != NULL ) && ( cnt < 10 ) ) {
@@ -1115,10 +1189,10 @@ void plCheck( int del ) {
 
 	while( cnt < 10 ) {
 		if( getConfig()->current == NULL ) {
-			getConfig()->current=addNewTitle( NULL );
+			getConfig()->current=addNewTitle( NULL, getConfig()->root );
 		}
 		else {
-			addNewTitle( getConfig()->current );
+			addNewTitle( getConfig()->current, getConfig()->root );
 		}
 		cnt++;
 	}
@@ -1181,7 +1255,7 @@ mptitle *recurse( char *curdir, mptitle *files ) {
  * does a database scan and dumps information about playrate
  * favourites and DNPs
  */
-void dumpInfo( mptitle *root, int skip ) {
+void dumpInfo( mptitle *root, unsigned int skip ) {
 	mptitle *current=root;
 	unsigned int maxplayed=0;
 	unsigned int minplayed=-1; /* UINT_MAX; */
@@ -1406,6 +1480,9 @@ int handleRangeCmd( mptitle *title, mpcmd cmd ) {
 		case mpc_display:
 			strtcat( line, title->display, MAXPATHLEN );
 			break;
+		default:
+			addMessage( 0, "Illegal range 0x%04x", MPC_RANGE(cmd) );
+			break;
 		}
 		if( strlen( line ) < 5 ) {
 			addMessage( 0, "Not enough info in %s!", line );
@@ -1498,4 +1575,49 @@ int playResults( mpcmd range, const char *arg, const int insert ) {
 
 	addMessage( 0, "Range not supported!" );
 	return 0;
+}
+
+/*
+ * saves the current playlist as m3u
+ */
+int writePlaylist( mpplaylist *pl, const char *name ) {
+	mpconfig *config=getConfig();
+	char path[MAXPATHLEN+1];
+	char *home=NULL;
+	int cnt=0;
+	FILE	*fp;
+
+	if( pl == NULL ) {
+		addMessage( 0, "Will not write empty playlist!" );
+		return -1;
+	}
+
+	while( pl->prev != NULL ) {
+		pl=pl->prev;
+	}
+
+	home=getenv("HOME");
+	if( home == NULL ) {
+		fail( F_FAIL, "Cannot get HOME!" );
+	}
+
+	snprintf( path, MAXPATHLEN, "%s/.mixplay/playlists/%s.m3u", home, name );
+
+	fp=fopen( path, "w" );
+	if( fp == NULL ) {
+		addMessage( 0, "Could not open playlist file %s", path );
+		return -1;
+	}
+
+	fprintf( fp, "#EXTM3U\n" );
+	while( pl != NULL ) {
+		fprintf( fp, "%s/%s\n", config->musicdir, pl->title->path );
+		pl=pl->next;
+		cnt++;
+	}
+
+	fclose(fp);
+
+	addMessage( 0, "Added %i titles to %s", cnt, name );
+	return cnt;
 }

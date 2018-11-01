@@ -68,6 +68,10 @@ static const char *mpc_command[] = {
 		"mpc_newprof",
 		"mpc_path",
 		"mpc_remprof",
+		"mpc_edit",
+		"mpc_wipe",
+		"mpc_save",
+		"mpc_remove",
 		"mpc_idle"
 };
 
@@ -140,6 +144,7 @@ static void printUsage( char *name ) {
 	printf( " -h <addr> : set remote host" );
 	printf( " -p <port> : set communication port [2347]" );
 	printf( " -s : start HTTP server" );
+	printf( " -m : force mix on playlist" );
 	printf( " -W': write changed config (used with -r,-l,-h,-p)" );
 	printf( " resource: resource to play" );
 	printf( "		   URL, path, mp3 file, playlist\n" );
@@ -173,6 +178,7 @@ int setArgument( const char *arg ) {
 	mpconfig *control=getConfig();
 
 	control->active=0;
+	control->plplay=0;
 	if( isURL( arg ) ) {
 		addMessage( 1, "URL: %s", arg );
 		control->playstream=1;
@@ -204,7 +210,13 @@ int setArgument( const char *arg ) {
 		title=recurse( line, NULL );
 		if( title != NULL ) {
 			cleanTitles( control->root );
-			control->current=titleToPlaylist( title, control->current );
+			if( control->plmix==1 ) {
+				control->root=title;
+				plCheck(0);
+			}
+			else {
+				control->current=titleToPlaylist( title, control->current );
+			}
 		}
 		return 3;
 	}
@@ -224,9 +236,16 @@ int setArgument( const char *arg ) {
 
 		addMessage( 1, "Playlist: %s", arg );
 		title=loadPlaylist( arg );
+		control->plplay=1;
 		if( title != NULL ) {
 			cleanTitles( control->root );
-			control->current=titleToPlaylist( title, control->current );
+			if( control->plmix==1 ) {
+				control->root=title;
+				plCheck(0);
+			}
+			else {
+				control->current=titleToPlaylist( title, control->current );
+			}
 		}
 		return 4;
 	}
@@ -244,7 +263,7 @@ int getArgs( int argc, char ** argv ){
 
 	/* parse command line options */
 	/* using unsigned char c to work around getopt quirk on ARM */
-	while ( ( c = getopt( argc, argv, "vfldFrh:p:sW" ) ) != -1 ) {
+	while ( ( c = getopt( argc, argv, "vfldFrh:p:sWm" ) ) != -1 ) {
 		switch ( c ) {
 		case 'v': /* increase debug message level to display */
 			incVerbosity();
@@ -296,6 +315,10 @@ int getArgs( int argc, char ** argv ){
 
 		case 'W':
 			config->changed=1;
+			break;
+
+		case 'm':
+			config->plmix=1;
 			break;
 
 		case '?':
@@ -428,7 +451,9 @@ mpconfig *readConfig( ) {
 	char	line[MAXPATHLEN+1];
 	char	*pos;
 	char *home=NULL;
+	struct dirent **pls=NULL;
 	FILE	*fp;
+	int i;
 
 	home=getenv("HOME");
 	if( home == NULL ) {
@@ -465,6 +490,21 @@ mpconfig *readConfig( ) {
 	c_config->isDaemon=0;
 
 	snprintf( c_config->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", home );
+
+	snprintf( conffile, MAXPATHLEN, "%s/.mixplay/playlists", home );
+	c_config->playlists=getPlaylists( conffile, &pls );
+	if( c_config->playlists < 1 ) {
+		c_config->playlists = 0;
+	}
+	else {
+		c_config->playlist=(char**)falloc( c_config->playlists, sizeof(char**) );
+		for( i=0; i<c_config->playlists; i++ ) {
+			c_config->playlist[i]=(char*)falloc( strlen(pls[i]->d_name)+1, 1 );
+			strtcpy( c_config->playlist[i], pls[i]->d_name, strlen(pls[i]->d_name) );
+			free( pls[i] );
+		}
+		free( pls );
+	}
 
 	snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", home );
 	fp=fopen( conffile, "r" );
@@ -554,6 +594,13 @@ void writeConfig( const char *musicpath ) {
 		}
 	}
 
+	snprintf( conffile, MAXPATHLEN, "%s/.mixplay/playlists", home );
+	if( mkdir( conffile, 0700 ) == -1 ) {
+		if( errno != EEXIST ) {
+			fail( errno, "Could not create playlist dir %s", conffile );
+		}
+	}
+
 	snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", home );
 
 	fp=fopen( conffile, "w" );
@@ -616,6 +663,13 @@ void freeConfigContents() {
 	sfree( &(c_config->dnpname) );
 	sfree( &(c_config->favname) );
 	sfree( &(c_config->musicdir) );
+
+	for( i=0; i<c_config->playlists; i++ ) {
+		sfree( &(c_config->playlist[i]) );
+	}
+	c_config->playlists=0;
+	sfree( (char **)&(c_config->playlist) );
+
 	for( i=0; i<c_config->profiles; i++ ) {
 		sfree( &(c_config->profile[i]) );
 	}
@@ -627,11 +681,10 @@ void freeConfigContents() {
 		sfree( &(c_config->sname[i]) );
 	}
 	c_config->streams=0;
-	sfree( (char **)&(c_config->channel) );
-
 	sfree( (char **)&(c_config->stream) );
 	sfree( (char **)&(c_config->sname) );
 
+	sfree( (char **)&(c_config->channel) );
 	sfree( (char **)&(c_config->host) );
 
 	msgBuffDiscard( c_config->msg );

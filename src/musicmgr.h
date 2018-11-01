@@ -70,10 +70,12 @@ void addToFile( const char *path, const char *line );
  */
 mpplaylist *appendToPL( mptitle *title, mpplaylist *pl, const int mark );
 mpplaylist *addToPL( mptitle *title, mpplaylist *target, const int mark );
+mpplaylist *remFromPLByKey( mpplaylist *root, const unsigned key );
 void moveEntry( mpplaylist *entry, mpplaylist *pos );
 mpplaylist *cleanPlaylist( mpplaylist *pl );
 mpplaylist *addPLDummy( mpplaylist *pl, const char *name );
 void plCheck( int del );
+int writePlaylist( mpplaylist *pl, const char *name );
 
 mptitle *recurse( char *curdir, mptitle *files );
 mptitle *rewindTitles( mptitle *base );
@@ -98,7 +100,8 @@ void newCount( void );
 unsigned int getLowestPlaycount( );
 int isMusic( const char *name );
 void dumpTitles( mptitle *root, const int pl );
-void dumpInfo( mptitle *root, int skip );
+void dumpInfo( mptitle *root, unsigned int skip );
 int fillstick( mptitle *root, const char *target );
+int getPlaylists( const char *cd, struct dirent ***pllist );
 
 #endif /* _MUSICMGR_H_ */

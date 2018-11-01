@@ -43,13 +43,18 @@ enum _mpcmd_t {
 	mpc_newprof,
 	mpc_path,
 	mpc_remprof,
+	mpc_edit,
+	mpc_wipe,
+	mpc_save,
+	mpc_remove,
 	mpc_idle,
 	mpc_title=1<<8,
 	mpc_artist=1<<9,
 	mpc_album=1<<10,
 	mpc_display=1<<11,
 	mpc_genre=1<<12,
-	mpc_fuzzy=1<<13
+	mpc_fuzzy=1<<13,
+	mpc_mix=1<<13
 };
 typedef enum _mpcmd_t mpcmd;
 
@@ -60,9 +65,9 @@ typedef enum _mpcmd_t mpcmd;
  * 000F RRRR CCCC CCCC
  */
 /* extract raw command */
-#define MPC_CMD(x)   (x&0x00ff)
+#define MPC_CMD(x)   (mpcmd)((int)x&0x00ff)
 /* determine range */
-#define MPC_RANGE(x) (x&0xff00)
+#define MPC_RANGE(x) (mpcmd)((int)x&0xff00)
 #define MPC_ISTITLE(x) (x & mpc_title)
 #define MPC_ISARTIST(x) (x & mpc_artist)
 #define MPC_ISALBUM(x) ( x & mpc_album)
@@ -73,6 +78,7 @@ typedef enum _mpcmd_t mpcmd;
 #define MPC_EQALBUM(x) (MPC_RANGE(x)==mpc_album)
 #define MPC_EQGENRE(x) (MPC_RANGE(x)==mpc_genre)
 #define MPC_EQDISPLAY(x) (MPC_RANGE(x)==mpc_display)
+#define MPC_ISSHUFFLE(x) ( x & mpc_mix )
 /* shall it be fuzzy */
 #define MPC_ISFUZZY(x) (x & mpc_fuzzy )
 
@@ -88,6 +94,8 @@ struct _mpcontrol_t {
 	int streams;				/* number of streams */
 	char **stream;				/* stream URLs */
 	char **sname;				/* stream names */
+	int playlists;
+	char **playlist;
 	mptitle *root;				/* the root title */
 	searchresults *found;		/* buffer list to contain searchresults etc */
 	mpplaylist *current;		/* the current title */
@@ -114,6 +122,9 @@ struct _mpcontrol_t {
 	int  port;
 	int remote;
 	/* flags */
+	unsigned pledit:1;
+	unsigned plplay:1;
+	unsigned plmix:1;
 	unsigned fade:1;					/* controls fading between titles */
 	unsigned isDaemon:1;
 	unsigned inUI:1;					/* flag to show if the UI is active */

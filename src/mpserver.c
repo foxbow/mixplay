@@ -218,7 +218,9 @@ static void *clientHandler(void *args ) {
 							 */
 							if( ( MPC_CMD(cmd) == mpc_fav ) ||
 									( MPC_CMD(cmd) == mpc_insert ) ||
-									( MPC_CMD(cmd) == mpc_append ) ) {
+									( MPC_CMD(cmd) == mpc_append ) ||
+									( MPC_CMD(cmd) == mpc_remove ) ||
+									( MPC_CMD(cmd) == mpc_wipe ) ) {
 								fullstat=MPCOMM_SKIP;
 							}
 

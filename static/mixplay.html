@@ -44,12 +44,11 @@
        <input id='fav' type='button' onclick='sendRange(0x09)' value='FAV' >
        <br>
       </div>
-      <br>
       <div id='volpack'>
         &#x1F50A; <input id='vol' type='range' min='0' max='100' step='1' value='0' oninput='setVolume( this.value )' onwheel='return false'>
       </div>
     </div> <!-- main -->
-    <!-- search -->
+    <!-- Search view -->
     <div id='extra0' style='display: none; width:100%;' >
       <em>Search:</em><br/>
       <select label='Range' id='srange'>
@@ -67,15 +66,24 @@
       <div id='search1' style='display: none; width:100%;'><em>No artists found!</em></div>
       <div id='search2' style='display: none; width:100%;'><em>No albums found!</em></div>
     </div>
+    <!-- Profiles view -->
     <div id='extra1' style='display: none; width:100%;' >
-      <em>Profiles:</em><br>
+      <p><em>Profiles:</em><br>
       <select label='Profile' id='profiles'>
       </select>
       <input id='setprof' type='button' onclick='setProf()' value='Set Profile' >
       <input id='remprof' type='button' onclick='remProf()' value='Remove Profile' ><br>
       <input id='ptext' type='text'>
       <input id='newprof' type='button' onclick='createLoad()' value='New/Load' >
+      </p>
+      <p><em>Playlists:</em><br>
+      <select label='Playlist' id='playlists'>
+      </select>
+      <input id='plmix' type='checkbox'> mixplay
+      <input id='newprof' type='button' onclick='loadPlaylist()' value='Play' >
+      </p>
     </div>
+    <!-- Tools view -->
     <div id='extra2' style='display: none; width:100%;' >
       <em>Tools:</em><br>
       <input id='rescan' type='button' onclick='sendCMD(0x08)' value='ReScan' >
@@ -84,11 +92,20 @@
       <input id='stop' type='button' onclick='killServer()' value='STOP' >
       <input id='download' type='button' onclick='download(0)' value='Download' >
     </div>
+    <!-- Message view -->
     <div id='extra3' style='display: none;' width='100%'>
       <em>No messages.</em><br>
     </div>
+    <!-- Playlist view -->
     <div id='extra4' style='display: none;' width='100%'>
-      <em>No Playlist.</em><br>
+      <input id='pledmode' type='button' onclick='toggleEdit()' value='Edit' >
+      <div id='pledit' style='display: none;' width='100%' >
+        <input id='plclean' type='button' onclick='sendCMD(0x1a)' value='clean' >
+        <input id='plsave' type='button' onclick='savePL()' value='save' >
+      </div>
+      <div id='plist'>
+        <em>No Playlist.</em><br>
+      </div>
     </div>
   </body>
 </html>

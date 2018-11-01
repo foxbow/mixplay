@@ -162,6 +162,7 @@ void setPCommand(  mpcmd cmd ) {
  * make mpeg123 play the given title
  */
 static void sendplay( int fdset, mpconfig *control ) {
+	int res=0;
 	char line[MAXPATHLEN+5]="load ";
 	assert( control->current != NULL );
 
@@ -169,8 +170,9 @@ static void sendplay( int fdset, mpconfig *control ) {
 	strtcat( line, control->current->title->path, MAXPATHLEN+5 );
 	strtcat( line, "\n", MAXPATHLEN+5 );
 
-	if ( write( fdset, line, MAXPATHLEN+5 ) < strlen( line ) ) {
-		fail( F_FAIL, "Could not write\n%s", line );
+	res=write( fdset, line, MAXPATHLEN+5 );
+	if ( (res == -1 ) || ( (unsigned)res < strlen( line ) ) ) {
+		fail( errno, "Could not write\n%s", line );
 	}
 
 	addMessage( 2, "CMD: %s", line );
@@ -222,10 +224,10 @@ void *setProfile( void *data ) {
 
 		snprintf( confdir, MAXPATHLEN, "%s/.mixplay", home );
 
-		control->dnpname=falloc( MAXPATHLEN, sizeof( char ) );
+		control->dnpname=(char*)falloc( MAXPATHLEN, 1 );
 		snprintf( control->dnpname, MAXPATHLEN, "%s/%s.dnp", confdir, profile );
 
-		control->favname=falloc( MAXPATHLEN, sizeof( char ) );
+		control->favname=(char*)falloc( MAXPATHLEN, 1 );
 		snprintf( control->favname, MAXPATHLEN, "%s/%s.fav", confdir, profile );
 		dnplist=loadList( control->dnpname );
 		favourites=loadList( control->favname );
@@ -961,10 +963,10 @@ void *reader( void *cont ) {
 				}
 				else if(control->playstream){
 					control->streams++;
-					control->stream=frealloc(control->stream, control->streams*sizeof( char * ) );
-					control->stream[control->streams-1]=falloc( strlen(control->current->title->path)+1, sizeof( char ) );
+					control->stream=(char**)frealloc(control->stream, control->streams*sizeof( char * ) );
+					control->stream[control->streams-1]=(char*)falloc( strlen(control->current->title->path)+1, sizeof( char ) );
 					strcpy( control->stream[control->streams-1], control->current->title->path );
-					control->sname=frealloc(control->sname, control->streams*sizeof( char * ) );
+					control->sname=(char**)frealloc(control->sname, control->streams*sizeof( char * ) );
 					control->sname[control->streams-1]=control->argument;
 					control->active=-(control->streams);
 					writeConfig( NULL );
@@ -972,7 +974,7 @@ void *reader( void *cont ) {
 				}
 				else {
 					control->profiles++;
-					control->profile=frealloc( control->profile, control->profiles*sizeof(char*) );
+					control->profile=(char**)frealloc( control->profile, control->profiles*sizeof(char*) );
 					control->profile[control->profiles-1]=control->argument;
 					control->active=control->profiles;
 					writeConfig( NULL );
@@ -1058,9 +1060,14 @@ void *reader( void *cont ) {
 					progressMsg( "No path given!" );
 				}
 				else {
+					if( MPC_ISSHUFFLE(control->command) ) {
+						control->plmix=1;
+					}
+					else {
+						control->plmix=0;
+					}
 					if( setArgument( control->argument ) ){
 						control->active = 0;
-						control->current->title = control->root;
 						if( control->status == mpc_start ) {
 							write( p_command[fdset][1], "STOP\n", 6 );
 						}
@@ -1138,6 +1145,46 @@ void *reader( void *cont ) {
 			update=-1;
 			break;
 
+		case mpc_edit:
+			if( control->argument != NULL ) {
+				control->pledit=1;
+				sfree( &(control->argument) );
+			}
+			else {
+				control->pledit=0;
+			}
+			break;
+
+		case mpc_wipe:
+			if( control->pledit==1 ) {
+				control->current=cleanPlaylist(control->current);
+			}
+			else {
+				addMessage( 0, "Got wipe without active edit!" );
+			}
+			break;
+
+		case mpc_save:
+			if( ( control->pledit==1 ) && ( control->argument != NULL ) ) {
+				writePlaylist( control->current, control->argument );
+				sfree( &(control->argument) );
+			}
+			else {
+				addMessage( 0, "Got save without active edit!" );
+			}
+			break;
+
+		case mpc_remove:
+			if( ( control->pledit==1 ) && ( control->argument != NULL ) ) {
+				control->current=remFromPLByKey( control->current, atoi( control->argument ) );
+				sfree( &(control->argument) );
+			}
+			else {
+				addMessage( 0, "Got remove without active edit!" );
+			}
+
+			break;
+
 		case mpc_idle:
 			/* read current Hardware volume in case it changed externally
 			 * don't read before control->argument is NULL as someone may be
@@ -1148,6 +1195,7 @@ void *reader( void *cont ) {
 			break;
 
 		default:
+			addMessage( 0, "Received illegal command %i", cmd );
 			/* modifiers are ignored */
 			break;
 		}

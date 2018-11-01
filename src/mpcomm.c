@@ -287,6 +287,7 @@ char *serializeConfig( void ) {
 	jsonAddStrs( jo, "profile", config->profile, config->profiles );
 	jsonAddInt( jo, "skipdnp", config->skipdnp );
 	jsonAddInt( jo, "streams", config->streams );
+	jsonAddStrs( jo, "playlist", config->playlist, config->playlists );
 	jsonAddStrs( jo, "stream", config->stream, config->streams );
 	jsonAddStrs( jo, "sname", config->sname, config->streams );
 
@@ -506,6 +507,9 @@ void *netreader( void *control ) {
 		case mpc_setvol:
 		case mpc_fav:
 		case mpc_dnp:
+		case mpc_edit:
+		case mpc_remove:
+		case mpc_save:
 			if( config->argument != NULL ) {
 				sprintf( commdata, "get /cmd/%04x?%s HTTP/1.1\015\012xmixplay: 1\015\012\015\012",
 						config->command, config->argument );
