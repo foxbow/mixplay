@@ -134,6 +134,7 @@ struct _mpcontrol_t {
 
 void writeConfig( const char *musicpath );
 mpconfig *readConfig( void );
+void updatePlaylists( void );
 mpconfig *getConfig( void );
 void freeConfig( void );
 void freeConfigContents( void );

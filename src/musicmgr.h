@@ -72,7 +72,7 @@ mpplaylist *appendToPL( mptitle *title, mpplaylist *pl, const int mark );
 mpplaylist *addToPL( mptitle *title, mpplaylist *target, const int mark );
 mpplaylist *remFromPLByKey( mpplaylist *root, const unsigned key );
 void moveEntry( mpplaylist *entry, mpplaylist *pos );
-mpplaylist *cleanPlaylist( mpplaylist *pl );
+mpplaylist *wipePlaylist( mpplaylist *pl );
 mpplaylist *addPLDummy( mpplaylist *pl, const char *name );
 void plCheck( int del );
 int writePlaylist( mpplaylist *pl, const char *name );
@@ -81,7 +81,7 @@ mptitle *recurse( char *curdir, mptitle *files );
 mptitle *rewindTitles( mptitle *base );
 mptitle *loadPlaylist( const char *path );
 mptitle *insertTitle( mptitle *base, const char *path );
-mptitle *cleanTitles( mptitle *root );
+mptitle *wipeTitles( mptitle *root );
 int search( const char *pat, const mpcmd range, const int global );
 int playResults( mpcmd range, const char *arg, const int insert );
 

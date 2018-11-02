@@ -153,7 +153,7 @@ static void printUsage( char *name ) {
 static mpplaylist *titleToPlaylist( mptitle *title, mpplaylist *pl ) {
 	mptitle *guard=title;
 
-	pl=cleanPlaylist(pl);
+	pl=wipePlaylist(pl);
 
 	do {
 		pl=appendToPL( title, pl, -1 );
@@ -199,7 +199,7 @@ int setArgument( const char *arg ) {
 		/* play single song... */
 		title=insertTitle( NULL, arg );
 		if( title != NULL ) {
-			cleanTitles( control->root );
+			wipeTitles( control->root );
 			control->current=titleToPlaylist( title, control->current );
 		}
 		return 2;
@@ -209,7 +209,7 @@ int setArgument( const char *arg ) {
 		strncpy( line, arg, MAXPATHLEN );
 		title=recurse( line, NULL );
 		if( title != NULL ) {
-			cleanTitles( control->root );
+			wipeTitles( control->root );
 			if( control->plmix==1 ) {
 				control->root=title;
 				plCheck(0);
@@ -238,7 +238,7 @@ int setArgument( const char *arg ) {
 		title=loadPlaylist( arg );
 		control->plplay=1;
 		if( title != NULL ) {
-			cleanTitles( control->root );
+			wipeTitles( control->root );
 			if( control->plmix==1 ) {
 				control->root=title;
 				plCheck(0);
@@ -440,20 +440,61 @@ static int scanparts( char *line, char ***target ) {
 }
 
 /**
+ * checks the .mixplay/playlists directory and adds the found playlists
+ * to the configuration
+ */
+void updatePlaylists( void ) {
+	char path[MAXPATHLEN+1];
+	char *home=getenv("HOME");
+	struct dirent **pls=NULL;
+	int i;
+
+	if( home == NULL ) {
+		fail( F_FAIL, "Cannot get HOME!" );
+	}
+
+	/* free old entries, yes it would be better to do a 'real' update */
+	if( c_config->playlists > 0 ) {
+		for( i=0; i<c_config->playlists; i++ ) {
+			free(c_config->playlist[i]);
+		}
+	}
+
+	snprintf( path, MAXPATHLEN, "%s/.mixplay/playlists", home );
+	c_config->playlists=getPlaylists( path, &pls );
+	if( c_config->playlists < 1 ) {
+		c_config->playlists = 0;
+	}
+	else {
+		c_config->playlist=(char**)frealloc( c_config->playlist, c_config->playlists*sizeof(char**) );
+		for( i=0; i<c_config->playlists; i++ ) {
+			if( strlen( pls[i]->d_name ) > 4 ) {
+				c_config->playlist[i]=(char*)falloc( strlen(pls[i]->d_name)-3, 1 );
+				strtcpy( c_config->playlist[i], pls[i]->d_name, strlen(pls[i]->d_name)-4 );
+				free( pls[i] );
+			}
+			else {
+				addMessage( 0, "Illegal playlist %s", pls[i]->d_name );
+				c_config->playlists--;
+			}
+		}
+		free( pls );
+	}
+}
+
+/**
  * reads the configuration file at $HOME/.mixplay/mixplay.conf and stores the settings
  * in the given control structure.
  * returns NULL is no configuration file exists
  *
  * This function should be called more or less first thing in the application
  */
-mpconfig *readConfig( ) {
+mpconfig *readConfig( void ) {
 	char	conffile[MAXPATHLEN+1]; /*  = "mixplay.conf"; */
 	char	line[MAXPATHLEN+1];
 	char	*pos;
-	char *home=NULL;
-	struct dirent **pls=NULL;
+	char	*home=NULL;
 	FILE	*fp;
-	int i;
 
 	home=getenv("HOME");
 	if( home == NULL ) {
@@ -490,21 +531,6 @@ mpconfig *readConfig( ) {
 	c_config->isDaemon=0;
 
 	snprintf( c_config->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", home );
-
-	snprintf( conffile, MAXPATHLEN, "%s/.mixplay/playlists", home );
-	c_config->playlists=getPlaylists( conffile, &pls );
-	if( c_config->playlists < 1 ) {
-		c_config->playlists = 0;
-	}
-	else {
-		c_config->playlist=(char**)falloc( c_config->playlists, sizeof(char**) );
-		for( i=0; i<c_config->playlists; i++ ) {
-			c_config->playlist[i]=(char*)falloc( strlen(pls[i]->d_name)+1, 1 );
-			strtcpy( c_config->playlist[i], pls[i]->d_name, strlen(pls[i]->d_name) );
-			free( pls[i] );
-		}
-		free( pls );
-	}
 
 	snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", home );
 	fp=fopen( conffile, "r" );
@@ -696,8 +722,8 @@ void freeConfigContents() {
 void freeConfig( ) {
 	assert( c_config != NULL );
 	freeConfigContents( );
-	c_config->current=cleanPlaylist( c_config->current );
-	c_config->found->titles=cleanPlaylist( c_config->found->titles );
+	c_config->current=wipePlaylist( c_config->current );
+	c_config->found->titles=wipePlaylist( c_config->found->titles );
 	if( c_config->found->artists != NULL ) {
 		free( c_config->found->artists );
 	}
@@ -708,7 +734,7 @@ void freeConfig( ) {
 		free( c_config->found->albart );
 	}
 	/* free root last so playlist cleanup does not double free titles */
-	c_config->root=cleanTitles( c_config->root );
+	c_config->root=wipeTitles( c_config->root );
 	free( c_config->found );
 	free( c_config );
 	c_config=NULL;

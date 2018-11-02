@@ -126,7 +126,7 @@ void newCount( ) {
  * discards a list of titles and frees the memory
  * returns NULL for intuitive calling
  */
-mptitle *cleanTitles( mptitle *root ) {
+mptitle *wipeTitles( mptitle *root ) {
 	mptitle *runner=root;
 
 	if( NULL != root ) {
@@ -185,7 +185,7 @@ void addToFile( const char *path, const char *line ) {
 /**
  * deletes the current playlist
  */
-mpplaylist *cleanPlaylist( mpplaylist *pl ) {
+mpplaylist *wipePlaylist( mpplaylist *pl ) {
 	mpplaylist *next=NULL;
 
 	if( pl == NULL ) {
@@ -514,7 +514,7 @@ int search( const char *pat, const mpcmd range, const int global ) {
 	int found=0;
 	unsigned int cnt=0;
 	/* free buffer playlist, the arrays will not get lost due to the realloc later */
-	res->titles=cleanPlaylist(res->titles);
+	res->titles=wipePlaylist(res->titles);
 	res->tnum=0;
 	res->anum=0;
 	res->lnum=0;
@@ -1578,6 +1578,32 @@ int playResults( mpcmd range, const char *arg, const int insert ) {
 }
 
 /*
+ * removes duplicates in the playlist
+ */
+static int cleanPlaylist( mpplaylist *pl ) {
+	mpplaylist *head=pl;
+	mpplaylist *runner=NULL;
+	int cnt=0;
+
+	if( pl->prev != NULL ) {
+		addMessage( 0, "Only cleaning titles to be played!" );
+	}
+
+	while( head->next != NULL ) {
+		runner=head->next;
+		while( runner != NULL ) {
+			if( runner->title == head->title ) {
+				runner=runner->prev;
+				remFromPL( runner->next );
+				cnt++;
+			}
+			runner=runner->next;
+		}
+		head=head->next;
+	}
+	return cnt;
+}
+/*
  * saves the current playlist as m3u
  */
 int writePlaylist( mpplaylist *pl, const char *name ) {
@@ -1590,10 +1616,6 @@ int writePlaylist( mpplaylist *pl, const char *name ) {
 	if( pl == NULL ) {
 		addMessage( 0, "Will not write empty playlist!" );
 		return -1;
-	}
-
-	while( pl->prev != NULL ) {
-		pl=pl->prev;
 	}
 
 	home=getenv("HOME");
@@ -1609,6 +1631,16 @@ int writePlaylist( mpplaylist *pl, const char *name ) {
 		return -1;
 	}
 
+	while( pl->prev != NULL ) {
+		pl=pl->prev;
+	}
+
+	cnt=cleanPlaylist( pl );
+	if( cnt > 0 ) {
+		addMessage( 0, "Removed %i duplicate entries" );
+		cnt=0;
+	}
+
 	fprintf( fp, "#EXTM3U\n" );
 	while( pl != NULL ) {
 		fprintf( fp, "%s/%s\n", config->musicdir, pl->title->path );
@@ -1617,7 +1649,5 @@ int writePlaylist( mpplaylist *pl, const char *name ) {
 	}
 
 	fclose(fp);
-
-	addMessage( 0, "Added %i titles to %s", cnt, name );
 	return cnt;
 }

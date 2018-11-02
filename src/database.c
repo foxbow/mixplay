@@ -161,7 +161,7 @@ static int dbPutTitle( int db, mptitle *title ) {
  */
 static mptitle *addDBTitle( struct dbentry_t dbentry, mptitle *root, unsigned int index ) {
 	mptitle *entry;
-	entry=malloc( sizeof( mptitle ) );
+	entry=(mptitle*)malloc( sizeof( mptitle ) );
 
 	if( NULL == entry ) {
 		fail( errno, " %s - Could not create new entry", __func__ );
@@ -266,7 +266,7 @@ int dbCheckExist( const char *dbname ) {
 		dbMarkDirty();
 	}
 
-	cleanTitles( root );
+	wipeTitles( root );
 
 	return num;
 }

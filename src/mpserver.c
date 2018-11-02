@@ -214,7 +214,7 @@ static void *clientHandler(void *args ) {
 
 							/*
 							 * send fullstat in the NEXT round to make sure the player has
-							 *
+							 * updated the config in the meantime
 							 */
 							if( ( MPC_CMD(cmd) == mpc_fav ) ||
 									( MPC_CMD(cmd) == mpc_insert ) ||
@@ -323,18 +323,17 @@ static void *clientHandler(void *args ) {
 			memset( commdata, 0, commsize );
 			switch( state ) {
 			case 1: /* get update */
-				if( config->found->send == -1 ) {
-					fullstat=MPCOMM_RESULT;
+				/* normal update requested, is a special update needed? */
+				if( fullstat == MPCOMM_STAT ) {
+					/* do not miss a fullupdate, the searchresult can wait a moment */
+					if( (config->current != NULL ) && strcmp( config->current->title->display, playing ) ) {
+						strcpy( playing, config->current->title->display );
+						fullstat=MPCOMM_FULLSTAT;
+					}
+					else if( config->found->send == -1 ) {
+						fullstat=MPCOMM_RESULT;
+					}
 				}
-				/* do not miss a fullupdate, the searchresult can wait a moment */
-				if( config->current == NULL ) {
-					fullstat=MPCOMM_STAT;
-				}
-				else if( strcmp( config->current->title->display, playing ) ) {
-					strcpy( playing, config->current->title->display );
-					fullstat=MPCOMM_FULLSTAT;
-				}
-
 				jsonLine=serializeStatus( &clmsg, sock, fullstat );
 				if( jsonLine != NULL ) {
 					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012", (int)strlen(jsonLine) );

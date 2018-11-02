@@ -13,8 +13,8 @@ var scrolls=[];
  */
 function savePL() {
   var name=window.prompt('Save playlist as', 'party');
-  if( name != null && name != '' ) {
-    sendcmd( 0x1b, name );
+  if( name != null && name != '' && name != 'none' ) {
+    sendCMD( 0x1b, name );
     doUpdate=-1
   }
   else {

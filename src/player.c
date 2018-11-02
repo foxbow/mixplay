@@ -141,8 +141,8 @@ static long controlVolume( long volume, int absolute ) {
  */
 void setStream( const char* stream, const char *name ) {
 	mpconfig *control=getConfig();
-	control->root=cleanTitles(control->root);
-	control->current=cleanPlaylist( control->current );
+	control->root=wipeTitles(control->root);
+	control->current=wipePlaylist( control->current );
 	control->current=addPLDummy( control->current, stream );
 	control->current=addPLDummy( control->current, name );
 	addMessage( 1, "Play Stream %s (%s)", name, stream );
@@ -232,7 +232,7 @@ void *setProfile( void *data ) {
 		dnplist=loadList( control->dnpname );
 		favourites=loadList( control->favname );
 
-		control->root=cleanTitles( control->root );
+		control->root=wipeTitles( control->root );
 
 		control->root=dbGetMusic( control->dbname );
 
@@ -1157,7 +1157,9 @@ void *reader( void *cont ) {
 
 		case mpc_wipe:
 			if( control->pledit==1 ) {
-				control->current=cleanPlaylist(control->current);
+				control->current=wipePlaylist(control->current);
+				order=0;
+				write( p_command[fdset][1], "STOP\n", 6 );
 			}
 			else {
 				addMessage( 0, "Got wipe without active edit!" );
@@ -1168,6 +1170,7 @@ void *reader( void *cont ) {
 			if( ( control->pledit==1 ) && ( control->argument != NULL ) ) {
 				writePlaylist( control->current, control->argument );
 				sfree( &(control->argument) );
+				updatePlaylists();
 			}
 			else {
 				addMessage( 0, "Got save without active edit!" );
