@@ -339,14 +339,15 @@ mpplaylist *addToPL( mptitle *title, mpplaylist *target, const int mark ) {
 	memset( buf, 0, sizeof( mpplaylist ) );
 	buf->title=title;
 
-	if( NULL == target ) {
-		target=buf;
-	}
-	else {
+	if( target != NULL ) {
+		if( target->next != NULL ) {
+			target->next->prev=buf;
+		}
 		buf->next=target->next;
 		target->next=buf;
 		buf->prev=target;
 	}
+	target=buf;
 
 	if( mark ) {
 		title->flags |= MP_MARK;
@@ -1515,11 +1516,12 @@ int playResults( mpcmd range, const char *arg, const int insert ) {
 	mpconfig   *config=getConfig();
 	mpplaylist *pos=config->current;
 	mpplaylist *end=config->found->titles;
+	mpplaylist *res=NULL;
 	mptitle *title=NULL;
 	int key=atoi(arg);
 
 	/* insert results at current pos or at the end? */
-	if( insert == 0 ) {
+	if( (pos != NULL ) && ( insert == 0 ) ) {
 		while( pos->next != NULL ) {
 			pos=pos->next;
 		}
@@ -1541,14 +1543,16 @@ int playResults( mpcmd range, const char *arg, const int insert ) {
 				end->title->flags|=MP_CNTD;
 			}
 
-			/* make sure the next backlink is set correctly on insert */
-			if( pos->next != NULL ) {
-				pos->next->prev=end;
+			res=config->found->titles;
+			while( res!=NULL ) {
+				res->title->flags|=MP_CNTD;
+				pos=addToPL( res->title, pos, 0 );
+				res=res->next;
 			}
-
-			end->next=pos->next;
-			pos->next=config->found->titles;
-			pos->next->prev=pos;
+			if( config->current == NULL ) {
+				config->current=pos;
+			}
+			config->found->titles=wipePlaylist( config->found->titles );
 			return config->found->tnum;
 		}
 
@@ -1568,8 +1572,10 @@ int playResults( mpcmd range, const char *arg, const int insert ) {
 		 * It has been played before? Don't care, we want it now and it won't come back!
 		 * It's not been played before? Then play it now and whenever it's time comes.
 		 */
-		addToPL( title, pos, 0 );
-
+		pos=addToPL( title, pos, 0 );
+		if( config->current == NULL ) {
+			config->current=pos;
+		}
 		return 1;
 	}
 
