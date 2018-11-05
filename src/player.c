@@ -141,10 +141,10 @@ static long controlVolume( long volume, int absolute ) {
  */
 void setStream( const char* stream, const char *name ) {
 	mpconfig *control=getConfig();
-	control->root=wipeTitles(control->root);
 	control->current=wipePlaylist( control->current );
-	control->current=addPLDummy( control->current, stream );
+	control->root=wipeTitles(control->root);
 	control->current=addPLDummy( control->current, name );
+	strtcpy( control->current->title->path, stream, MAXPATHLEN );
 	addMessage( 1, "Play Stream %s (%s)", name, stream );
 }
 
@@ -166,7 +166,9 @@ static void sendplay( int fdset, mpconfig *control ) {
 	char line[MAXPATHLEN+5]="load ";
 	assert( control->current != NULL );
 
-	strtcat( line, control->musicdir, MAXPATHLEN+5 );
+	if( !control->playstream ) {
+		strtcat( line, control->musicdir, MAXPATHLEN+5 );
+	}
 	strtcat( line, control->current->title->path, MAXPATHLEN+5 );
 	strtcat( line, "\n", MAXPATHLEN+5 );
 
@@ -604,32 +606,23 @@ void *reader( void *cont ) {
 						}
 
 						if( NULL != ( a = strstr( line, "StreamTitle" ) ) ) {
-							if( control->current->next == control->current ) {
-								fail( F_FAIL, "Messed up playlist!" );
-							}
-
 							addMessage( 3, "%s", a );
 							a = a + 13;
 							t=strchr( a, '\'' );
 							if( t != NULL ) {
 								*t = 0;
 							}
-							if( control->current->next != NULL ) {
-								strncpy( control->current->next->title->artist, control->current->title->artist, NAMELEN );
-								strncpy( control->current->next->title->title, control->current->title->title, NAMELEN );
-								strncpy( control->current->next->title->display, control->current->title->display, MAXPATHLEN );
-							}
-							strip( control->current->title->display, a, MAXPATHLEN );
-
+							control->current=addPLDummy( control->current, a );
+							/* carry over stream title as album entry */
+							strtcpy( control->current->title->album, control->current->next->title->album, NAMELEN );
+							/* if possible cut up title and artist */
 							if( NULL != ( t = strstr( a, " - " ) ) ) {
 								*t=0;
 								t=t+3;
 								strip( control->current->title->artist, a, NAMELEN );
 								strip( control->current->title->title, t, NAMELEN );
 							}
-							else {
-								strip( control->current->title->title, a, NAMELEN );
-							}
+							plCheck(0);
 							update=-1;
 						}
 					}
@@ -1146,13 +1139,7 @@ void *reader( void *cont ) {
 			break;
 
 		case mpc_edit:
-			if( control->argument != NULL ) {
-				control->pledit=1;
-				sfree( &(control->argument) );
-			}
-			else {
-				control->pledit=0;
-			}
+			control->pledit=!control->pledit;
 			break;
 
 		case mpc_wipe:

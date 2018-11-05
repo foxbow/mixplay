@@ -1144,9 +1144,24 @@ void plCheck( int del ) {
 	mpplaylist *pl=getConfig()->current;
 	mpplaylist *buf=pl;
 
+	if( getConfig()->pledit ||
+		( getConfig()->plplay && !getConfig()->plmix ) ){
+		return;
+	}
 
-	if( ( getConfig()->pledit==1 ) ||
-		( ( getConfig()->plplay==1 ) && ( getConfig()->plmix==0 ) ) ){
+	/* truncate title history to 20 titles */
+	if( getConfig()->playstream ) {
+		while( ( pl->next != NULL ) && ( cnt < 20 ) ) {
+			pl=pl->next;
+			cnt++;
+		}
+		pl=pl->next;
+		while( pl != NULL ) {
+			buf=pl->next;
+			free( pl->title );
+			free( pl );
+			pl=buf;
+		}
 		return;
 	}
 

@@ -8,6 +8,8 @@
 #ifndef _JSON_H_
 #define _JSON_H_
 
+#include <stddef.h>
+
 /* if less than JSON_LOWATER bytes are unused in the string it will be
  * increased by JSON_INCBUFF bytes
  */
@@ -48,9 +50,10 @@ char *jsonGetError( void );
 
 jsonType jsonPeek( jsonObject *jo, char *key );
 int	jsonGetInt( jsonObject *jo, const char *key );
-int	jsonCopyStr( jsonObject *jo, const char *key, char *buf, int size );
+int	jsonCopyStr( jsonObject *jo, const char *key, char *buf, size_t len );
 char  *jsonGetStr( jsonObject *jo, const char *key );
 char **jsonGetStrs( jsonObject *jo, const char *key, const int num );
+unsigned jsonGetBool( jsonObject *jo, const char *key );
 jsonObject *jsonGetObj( jsonObject *jo, const char *key );
 
 jsonObject *jsonAddStr( jsonObject *jo, const char *key, const char *val );
@@ -58,7 +61,7 @@ jsonObject *jsonAddStrs( jsonObject *jo, const char *key, char **vals, const int
 jsonObject *jsonAddInt( jsonObject *jo, const char *key, const int val );
 jsonObject *jsonAddObj( jsonObject *jo, const char *key, jsonObject *val );
 jsonObject *jsonAddArr( jsonObject *jo, const char *key, jsonObject *val );
-jsonObject *jsonAddBool( jsonObject *jo, const char *key, long val );
+jsonObject *jsonAddBool( jsonObject *jo, const char *key, const unsigned val );
 
 jsonObject *jsonInitArr( jsonObject *jo, const char *key );
 jsonObject *jsonAddArrElement( jsonObject *jo, jsonType type, void *element );

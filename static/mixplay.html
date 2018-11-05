@@ -98,7 +98,7 @@
     </div>
     <!-- Playlist view -->
     <div id='extra4' style='display: none;' width='100%'>
-      <input id='pledmode' type='button' onclick='toggleEdit()' value='Edit' >
+      <input id='pledmode' type='button' onclick='sendCMD(0x19)' value='Edit' >
       <div id='pledit' style='display: none;' width='100%' >
         <input id='plclean' type='button' onclick='sendCMD(0x1a)' value='clean' >
         <input id='plsave' type='button' onclick='savePL()' value='save' >

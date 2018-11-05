@@ -235,6 +235,7 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 	jsonAddInt( jo, "percent", data->percent );
 	jsonAddInt( jo, "volume", data->volume );
 	jsonAddInt( jo, "status", data->status );
+	jsonAddBool( jo, "pledit", data->pledit );
 
 	/* broadcast */
 	if( _curclient == -1 ) {
@@ -350,6 +351,7 @@ static int deserializeStatus( jsonObject *jo ) {
 	data->percent=jsonGetInt( jo, "percent" );
 	data->volume=jsonGetInt( jo, "volume" );
 	data->status=jsonGetInt( jo, "status" );
+	data->pledit=jsonGetBool( jo, "pledit" );
 	jsonCopyStr( jo, "msg", msgline, 128 );
 	if( strlen( msgline ) > 0 ){
 		addMessage( 0, msgline );

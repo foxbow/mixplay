@@ -23,21 +23,6 @@ function savePL() {
 }
 
 /*
- * toggles playlist edit mode
- */
-function toggleEdit() {
-  var e=document.getElementById('pledit');
-  if( e.style.display == 'none' ) {
-    sendCMD( 0x19, 1 );
-    e.style.display = 'block'
-  }
-  else {
-    sendCMD( 0x19, 0 );
-    e.style.display = 'none'
-  }
-}
-
-/*
  * acts on clicking in the Playlist in play mode it jumps or pauses
  * in edit mode the title is removed from the playlist.
  */
@@ -461,6 +446,15 @@ function updateUI( ){
 					}
 
 					document.getElementById( 'vol' ).value=data.volume;
+          if( data.pledit == true ) {
+            document.getElementById('pledit').style.display='block'
+            document.body.style.backgroundColor='#ddf'
+          }
+          else {
+            document.getElementById('pledit').style.display='none'
+            document.body.style.backgroundColor='#fff'
+          }
+
 					if( ( data.msg != "" ) && ( data.msg != "Done." ) ) {
 						addText(data.msg);
 					}
