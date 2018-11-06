@@ -201,8 +201,15 @@ void *setProfile( void *data ) {
 	}
 	cactive=control->active;
 
+	if( cactive == 0 ) {
+		addMessage(0, "No profile/stream selected!" );
+		return NULL;
+	}
+
+	/* stream selected */
 	if( cactive < 0 ) {
 		active = -(cactive+1);
+		control->playstream=1;
 
 		if( active >= control->streams ) {
 			addMessage( 0, "Stream #%i does no exist!", active );
@@ -210,11 +217,13 @@ void *setProfile( void *data ) {
 			return setProfile(data);
 		}
 
-		control->playstream=1;
 		setStream( control->stream[active], control->sname[active] );
 	}
-	else if( cactive > 0 ){
+
+	/* profile selected */
+	else {
 		active=cactive-1;
+		control->playstream=0;
 
 		if( active > control->profiles ) {
 			addMessage ( 0, "Profile #%i does no exist!", active );
@@ -234,8 +243,8 @@ void *setProfile( void *data ) {
 		dnplist=loadList( control->dnpname );
 		favourites=loadList( control->favname );
 
+		control->current=wipePlaylist( control->current );
 		control->root=wipeTitles( control->root );
-
 		control->root=dbGetMusic( control->dbname );
 
 		if( NULL == control->root ) {
@@ -271,7 +280,6 @@ void *setProfile( void *data ) {
 		plCheck( 0 );
 		cleanList( dnplist );
 		cleanList( favourites );
-		control->playstream=0;
 
 		addMessage( 1, "Profile set to %s.", profile );
 		if( control->argument != NULL ) {
@@ -279,9 +287,6 @@ void *setProfile( void *data ) {
 			/* do not free, the string has become the new profile entry! */
 			control->argument=NULL;
 		}
-	}
-	else if( control->root == NULL ) {
-		fail( F_FAIL, "No music set!" );
 	}
 
 	/* if we're not in player context, start playing automatically */
@@ -409,9 +414,7 @@ static void *plSetProfile( void *arg ) {
 		dbWrite( control->dbname, control->root );
 	}
 	setProfile( control );
-	control->current->title = control->root;
 	sfree( &(control->argument) );
-	writeConfig(NULL);
 	pthread_mutex_unlock( &_asynclock );;
 	return NULL;
 }
@@ -719,7 +722,7 @@ void *reader( void *cont ) {
 							sendplay( p_command[fdset][1], control );
 						}
 						/* stream stopped playing? */
-						else if( control->playstream != 0 ) {
+						else if( control->playstream ) {
 							addMessage(2,"Stream stopped");
 							control->status=mpc_idle;
 						}
@@ -942,6 +945,7 @@ void *reader( void *cont ) {
 				else {
 					profile=atoi( control->argument );
 					if( ( profile != 0 ) && ( profile != control->active ) ) {
+						order=0; /* prevent title switch */
 						control->active=profile;
 						asyncRun( plSetProfile, control );
 					}

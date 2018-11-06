@@ -43,7 +43,7 @@ on playlists:
 glade/gtk version of the player
 
 ## mixplayd
-demon version of the player. Communicates via HTTP/GET and JSON replies with 
+demon version of the player. Communicates via HTTP/GET and JSON replies with
 clients. Also has a minimal web server to allow connection with a browser.
 
 ### Parameters
@@ -70,7 +70,7 @@ cmd = 000F RRRR CCCC CCCC
 * 0x3 - album
 * 0x4 - genre
 * 0x5 - display
-	
+
 ### C - the actual commands:
 * 0x00 - play/pause
 * 0x01 - stop
@@ -84,7 +84,7 @@ cmd = 000F RRRR CCCC CCCC
 * 0x09 - mark as favourite according to upper bytes
 * 0x0a - mark as do not play according to upper bytes
 * 0x0b - find double titles*
-* 0x0c - *unused*
+* 0x0c - insert title into playlist <key>
 * 0x0d - increase volume
 * 0x0e - decrease volume
 * 0x0f - fast forward
@@ -92,15 +92,18 @@ cmd = 000F RRRR CCCC CCCC
 * 0x11 - stop server*
 * 0x12 - send database information
 * 0x13 - search title +arg <string>
-* 0x14 - search titles +arg <string>*
+* 0x14 - append title to playlist <key>
 * 0x15 - set volume +arg <0..100>
 * 0x16 - create new profile +arg <string>
 * 0x17 - play path/url <string>
 * 0x18 - delete profile/channel <string>
-* 0x19 - idle / max command*
+* 0x19 - toggle edit mode
+* 0x1a - wipe playlist
+* 0x1b - save playlist <name>
+* 0x1c - remove title from playlist <key>
+* 0x1d - idle / max command*
 
-args are set with the '?' operator. 
-Examples: 
+args are set with the '?' operator.
+Examples:
 * set the volume to 50%: <server>:<port>/cmd/0015?50
 * search for a title named like 'lov hurs': <server>:<port>/cmd/1113?lov+hurs
-
