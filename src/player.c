@@ -312,20 +312,13 @@ static void playCount( mptitle *title ) {
 		return;
 	}
 
-	/* marked but not counted - default */
-	if( (title->flags&MP_MARK) && !(title->flags&MP_CNTD) ) {
+	/* marked - default play, not marked - searchplay */
+	if ( (title->flags&MP_MARK) && !(title->flags&MP_CNTD) ) {
 		title->flags |= MP_CNTD; /* make sure a title is only counted once per session */
 		title->playcount++;
-		dbMarkDirty();
-	}
-	/* not marked but counted - this was a searchplay! */
-	else if( !(title->flags&MP_MARK) && (title->flags&MP_CNTD) ) {
-		title->flags &= ~MP_CNTD;
-	}
-
-	/* check skipcount */
-	if( !( title->flags & MP_SKPD ) && ( title->skipcount > 0 ) ) {
-		title->skipcount--;
+		if( title->skipcount > 0 ) {
+			title->skipcount--;
+		}
 		dbMarkDirty();
 	}
 }
@@ -884,9 +877,10 @@ void *reader( void *cont ) {
 					sfree(&(control->argument));
 				}
 
-				if( ( control->current->title->key != 0 ) && !( control->current->title->flags & ( MP_SKPD|MP_CNTD ) ) ) {
+				if( ( control->current->title->key != 0 ) &&
+					!( control->current->title->flags & ( MP_CNTD ) ) && 
+					!( control->current->title->flags & ( MP_MARK ) ) ) {
 					control->current->title->skipcount++;
-					control->current->title->flags |= MP_SKPD;
 					/* updateCurrent( control ); - done in STOP handling */
 				}
 

@@ -155,12 +155,11 @@ int main( int argc, char **argv ) {
 					case 'i':
 						if( config->current != NULL ) {
 							if( 0 != config->current->title->key ) {
-								popUp( 0, "%s\nGenre: %s\nKey: %04i\nplaycount: %i\nskipcount: %i\nCount: %s - Skip: %s",
+								popUp( 0, "%s\nGenre: %s\nKey: %04i\nplaycount: %i\nskipcount: %i\nCount: %s",
 									   config->current->title->path, config->current->title->genre,
 									   config->current->title->key, config->current->title->playcount,
 									   config->current->title->skipcount,
-									   ONOFF( ~( config->current->title->flags )&MP_CNTD ),
-									   ONOFF( ~( config->current->title->flags )&MP_SKPD ) );
+									   ONOFF( ~( config->current->title->flags )&MP_CNTD ));
 							}
 							else {
 								popUp( 2, config->current->title->path );

@@ -172,23 +172,21 @@ static void setButtonLabel( GtkWidget *button, const char *text ) {
  */
 static int infoLine( char *line, const mptitle *title, const int len ) {
 	if( title->key != 0 ) {
-		return snprintf( line, len, "%s\nKey: %04i - Fav: %s\nplaycount: %i (%s)\nskipcount: %i (%s)",
+		return snprintf( line, len, "%s\nKey: %04i - Fav: %s\nplaycount: %i (%s)\nskipcount: %i",
 			  title->path,
 			  title->key,
 			  ONOFF( title->flags & MP_FAV ),
 			  title->playcount,
 			  ONOFF( ~( title->flags )&MP_CNTD ),
-			  title->skipcount,
-			  ONOFF( ~( title->flags )&MP_SKPD ) );
+			  title->skipcount );
 	}
 	else {
-		return snprintf( line, len, "%s\nFav: %s\nplaycount: %i (%s)\nskipcount: %i (%s)",
+		return snprintf( line, len, "%s\nFav: %s\nplaycount: %i (%s)\nskipcount: %i",
 			  title->path,
 			  ONOFF( title->flags & MP_FAV ),
 			  title->playcount,
 			  ONOFF( ~( title->flags )&MP_CNTD ),
-			  title->skipcount,
-			  ONOFF( ~( title->flags )&MP_SKPD ) );
+			  title->skipcount );
 	}
 }
 

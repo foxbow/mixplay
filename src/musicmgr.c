@@ -109,17 +109,9 @@ void newCount( ) {
 
 	do {
 		activity("Unmarking");
-		runner-> flags &= ~(MP_MARK|MP_CNTD|MP_SKPD);
+		runner-> flags &= ~(MP_CNTD);
 		runner=runner->next;
 	} while( runner != root );
-
-	/*
-	 * Mark the last titles to avoid quick repeats.
-	 */
-	do {
-		pl->title->flags |= MP_MARK;
-		pl=pl->prev;
-	} while ( pl != NULL );
 }
 
 /**
@@ -265,9 +257,12 @@ static mpplaylist *remFromPL( mpplaylist *pltitle ) {
 	if( pltitle->next != NULL ) {
 		pltitle->next->prev=pltitle->prev;
 	}
-	free(pltitle);
-	pltitle->title->flags&=~MP_MARK;
+	/* if the title has not been played yet, unmark it */
+	if( !(pltitle->title->flags & MP_CNTD) ) {
+		pltitle->title->flags&=~MP_MARK;
+	}
 
+	free(pltitle);
 	return ret;
 }
 
@@ -327,6 +322,9 @@ mpplaylist *remFromPLByKey( mpplaylist *root, const unsigned key ) {
  * inserts a title into the playlist chain. Creates a new playlist
  * if no target is set.
  * This function returns a valid target
+ * if mark is true, the title will be checked and marked for playing in
+ * default mixplay, otherwise it is a searched title and will be
+ * played out of order.
  */
 mpplaylist *addToPL( mptitle *title, mpplaylist *target, const int mark ) {
 	mpplaylist *buf=NULL;
@@ -929,13 +927,13 @@ unsigned int getLowestPlaycount( ) {
 }
 
 /**
- * skips the global list until a title is found that has not been marked
- * and is not marked as DNP
+ * skips the global list until a title is found that has not been played
+ * is not in the current playlist and is not marked as DNP
  */
 static mptitle *skipOver( mptitle *current, int dir ) {
 	mptitle *marker=current;
 
-	while( marker->flags & ( MP_DNP|MP_MARK ) ) {
+	while( marker->flags & ( MP_DNP|MP_MARK|MP_CNTD ) ) {
 		if( dir > 0 ) {
 			marker=marker->next;
 		}
@@ -1046,7 +1044,7 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 	srand( getpid()*tv.tv_sec );
 
 restart:
-	num = countTitles( MP_ALL, MP_DNP|MP_MARK );
+	num = countTitles( MP_ALL, MP_DNP|MP_MARK|MP_CNTD );
 
 	/* select a random title from the database */
 	/* skip forward until a title is found that is neither DNP nor MARK */
@@ -1129,6 +1127,10 @@ restart:
 
 	addMessage( 3, "[+] (%i/%li/%3s) %s", runner->playcount, pcount, ONOFF( runner->flags&MP_FAV ), runner->display );
 
+	/* count again in case this is a favourite */
+	if( runner->flags & MP_FAV ) {
+		runner->flags &= ~MP_CNTD;
+	}
 	return appendToPL( runner, pl, -1 );
 }
 
@@ -1177,6 +1179,8 @@ void plCheck( int del ) {
 
 		while( buf != NULL ) {
 			pl=buf->prev;
+			/* unmark title as it leaves the playlist */
+			buf->title->flags&=~MP_MARK;
 			free( buf );
 			buf=pl;
 		}

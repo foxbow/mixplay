@@ -12,10 +12,9 @@
 #define RANDOM(x) ((unsigned)rand()%(x))
 
 #define MP_FAV  1	/* Favourite */
-#define MP_DNP  2   /* do not play */
+#define MP_DNP  2	/* do not play */
 #define MP_CNTD 4	/* has been counted */
-#define MP_SKPD 8   /* has been skipped */
-#define MP_MARK 16	/* has been marked */
+#define MP_MARK 8	/* is currently in the playlist */
 #define MP_ALL  31
 
 typedef struct mptitle_t mptitle;
