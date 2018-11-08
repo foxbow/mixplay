@@ -427,11 +427,13 @@ function updateUI( ){
 					enableTab( 'show0', !isstream );
 					if( isstream ) {
 						setElement( 'splaytime', data.playtime );
+            document.getElementById( 'pledmode' ).style.display='none';
 					}
 					else {
 						setElement( 'playtime', data.playtime );
 						setElement( 'remtime', data.remtime );
 						document.getElementById( 'progress' ).value=data.percent;
+            document.getElementById( 'pledmode' ).style.display='inline';
 					}
 
 					if( active != data.active ) {
