@@ -1,5 +1,5 @@
 # mixplayd
-the new heartpiece of the mixplay family. This is the manager and player that can run headless and will just play the shuffled Music content. Different front-ends may connect to the mixplayd and control the actions.
+the new heartpiece of the mixplay family. This is the manager and player that can run headless and will just play the shuffled Music content.
 
 This is destined to run on a headless box and supply the stereo with a constant stream of music.
 
@@ -19,32 +19,8 @@ This is destined to run on a headless box and supply the stereo with a constant 
 * native MP3 streaming (depends on more recent libmp3/libout)
 * serve stream (unlikely but desireable)
 
-## cmixplay
-ncurses based based player
-
-### Control Keys
-* [SPACE] - toggle pause
-* s - stop playing
-* q - quit player
-
-on playlists:
-* i - show path information
-* n/[DOWN] - next title
-* p/[UP] - previous title
-* N - skip 5 titles forward
-* P - skip 5 titles backward
-* [LEFT] - rewind 64 frames
-* [RIGHT] - skip 64 frames
-* r - replay
-* b - add to do-not-play list
-* f - add to favoutites
-
-## gmixplay
-glade/gtk version of the player
-
 ## mixplayd
-demon version of the player. Communicates via HTTP/GET and JSON replies with
-clients. Also has a minimal web server to allow connection with a browser.
+demon version of the player. Communicates via HTTP/GET and JSON replies with clients. Also has a minimal web server to allow connection with a browser.
 
 ### Parameters
 * -d         : increase console verbosity. Not really useful for cmixplay as this breaks the ncurses UI! Tells mixplayd to not detach and run in debug mode (this reads web files from the filesystem and does not use the hard coded versions.)

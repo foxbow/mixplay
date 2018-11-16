@@ -83,7 +83,7 @@ static int patMatch( const char *text, const char *pat ) {
 
 /*
  * symmetric patMatch that checks if text is shorter than pattern
- * used for title checking in addNewTitle
+ * used for artist checking in addNewTitle
  */
 static int checkSim( const char *text, const char *pat ) {
 	if( strlen( text ) < strlen( pat ) ) {
