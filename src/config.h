@@ -129,7 +129,7 @@ struct _mpcontrol_t {
 	unsigned isDaemon:1;
 	unsigned inUI:1;					/* flag to show if the UI is active */
 	unsigned changed:1;
-	unsigned dbDirty:1;
+	unsigned dbDirty;
 };
 
 void writeConfig( const char *musicpath );

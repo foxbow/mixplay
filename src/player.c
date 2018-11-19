@@ -334,8 +334,8 @@ static void *plCheckDoublets( void *arg ) {
 	progressStart( "Filesystem Cleanup" );
 
 	/* update database with current playcount etc */
-	if( control->dbDirty ) {
-		dbWrite( control->dbname, control->root );
+	if( control->dbDirty > 0 ) {
+		dbWrite( );
 	}
 	addMessage( 0, "Checking for doubles.." );
 	i=dbNameCheck( control->dbname );
@@ -358,7 +358,7 @@ static void *plDbClean( void *arg ) {
 
 	/* update database with current playcount etc */
 	if( control->dbDirty ) {
-		dbWrite( control->dbname, control->root );
+		dbWrite( );
 	}
 	addMessage( 0, "Checking for deleted titles.." );
 	i=dbCheckExist( control->dbname );
@@ -404,7 +404,7 @@ static void *plSetProfile( void *arg ) {
 	}
 	/* update database with current playcount etc */
 	if( control->dbDirty ) {
-		dbWrite( control->dbname, control->root );
+		dbWrite( );
 	}
 	setProfile( control );
 	sfree( &(control->argument) );
@@ -878,7 +878,7 @@ void *reader( void *cont ) {
 				}
 
 				if( ( control->current->title->key != 0 ) &&
-					!( control->current->title->flags & ( MP_CNTD ) ) && 
+					!( control->current->title->flags & ( MP_CNTD ) ) &&
 					!( control->current->title->flags & ( MP_MARK ) ) ) {
 					control->current->title->skipcount++;
 					/* updateCurrent( control ); - done in STOP handling */
@@ -1204,9 +1204,9 @@ void *reader( void *cont ) {
 		write( p_command[fdset][i], "QUIT\n", 6 );
 	}
 
-	if( control->dbDirty ) {
+	if( control->dbDirty > 0 ) {
 		addMessage( 0, "Updating Database" );
-		dbWrite(control->dbname, control->root );
+		dbWrite( );
 	}
 
 	addMessage( 0, "Player stopped" );

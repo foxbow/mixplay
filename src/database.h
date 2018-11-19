@@ -28,7 +28,7 @@ int dbRemTitle( int db, mptitle *title );
 int dbCheckExist( const char *dbname );
 int dbAddTitles( const char *dbname, char *basedir );
 void dbClose( int db );
-void dbWrite( const char *dbname, mptitle *root );
+void dbWrite( void );
 int dbNameCheck( const char *dbname );
 mptitle *getTitleByIndex( unsigned int index );
 void dbMarkDirty( void );

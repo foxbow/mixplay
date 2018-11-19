@@ -14,10 +14,6 @@ OBJS=$(addprefix $(OBJDIR)/,mpserver.o utils.o musicmgr.o database.o \
 LIBS=-lmpg123 -lpthread
 REFS=alsa
 
-# daemon is always being built
-EXES=bin/mixplayd
-INST=install-mixplayd
-
 # Install globally when called as root
 ifeq ("$(shell id -un)","root")
 INST+=install-service
@@ -36,12 +32,10 @@ endif
 LIBS+=$(shell pkg-config --libs $(REFS))
 CCFLAGS+=$(shell pkg-config --cflags $(REFS))
 
-all: $(OBJDIR)/dep.d $(EXES)
+all: $(OBJDIR)/dep.d mixplayd
 
 clean:
-	rm -f bin/*
 	rm -f $(OBJDIR)/*
-	touch bin/KEEPDIR
 	touch $(OBJDIR)/KEEPDIR
 
 distclean: clean
@@ -56,20 +50,18 @@ distclean: clean
 
 new: clean all
 
-bin/mixplayd: $(OBJDIR)/mixplayd.o $(OBJS)
+mixplayd: $(OBJDIR)/mixplayd.o $(OBJS)
 	$(CC) $^ -o $@ $(LIBS)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CCFLAGS) -c -o $@ $<
 
-install-mixplayd: bin/mixplayd
+install: mixplayd
 	install -d $(BINDIR)
-	install -s -m 0755 bin/mixplayd $(BINDIR)
+	install -s -m 0755 mixplayd $(BINDIR)
 
 install-service: install-mixplayd
 	$(info No service support yet!)
-
-install: $(INST)
 
 $(OBJDIR)/mpplayer_html.h: static/mpplayer.html
 	xxd -i static/mpplayer.html > $(OBJDIR)/mpplayer_html.h

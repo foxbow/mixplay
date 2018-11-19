@@ -13,7 +13,9 @@
 #include <unistd.h>
 
 void dbMarkDirty( void ) {
-	getConfig()->dbDirty=1;
+	if( getConfig()->dbDirty++ > 25 ) {
+		dbWrite( );
+	}
 }
 
 mptitle *getTitleByIndex( unsigned int index ) {
@@ -496,10 +498,13 @@ void dbClose( int db ) {
  * Creates a backup of the current database file and dumps the
  * current reindexed database in a new file
  */
-void dbWrite( const char *dbname, mptitle *root ) {
+void dbWrite( void ) {
 	int db;
 	unsigned int index=1;
+	const char *dbname=getConfig()->dbname;
+	mptitle *root=getConfig()->root;
 	mptitle *runner=root;
+
 
 	if( NULL == root ) {
 		fail( F_FAIL, "Not dumping an empty database!" );
