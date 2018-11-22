@@ -499,8 +499,6 @@ void *mpserver( void *data ) {
 	int devnull=0;
 
 	control=getConfig( );
-	/* server can never be remote */
-	control->remote=2;
 
 	mainsocket = socket(AF_INET , SOCK_STREAM , 0);
 	if (mainsocket == -1) {

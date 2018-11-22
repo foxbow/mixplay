@@ -19,7 +19,6 @@
 #define MP_BLKSIZE 512
 #define MP_PORT 2347
 
-void *netreader( void *control );
 void setSCommand( mpcmd cmd );
 char *serializeStatus( unsigned long *count, int clientid, int fullstat );
 char *serializeConfig( void );

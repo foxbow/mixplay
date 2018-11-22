@@ -120,7 +120,6 @@ struct _mpcontrol_t {
 	void *data;					/* extended data for gmixplay */
 	char *host;
 	int  port;
-	int remote;
 	/* flags */
 	unsigned pledit:1;
 	unsigned plplay:1;
@@ -161,7 +160,6 @@ void updateUI( void );
 
 const char *mpcString( mpcmd rawcmd );
 const mpcmd mpcCommand( const char *val );
-void setCommand( mpcmd rawcmd );
 int  setArgument( const char *arg );
 int getArgs( int argc, char ** argv );
 int initAll( void );

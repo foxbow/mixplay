@@ -128,9 +128,6 @@ int main( int argc, char **argv ) {
 		return -1;
 	}
 
-	/* this will only run as server */
-	control->remote=2;
-
 	/* daemonization must happen before childs are created otherwise the pipes are cut */
 	if( control->isDaemon || getDebug() == 0 ) {
 		daemon( 0, 1 );

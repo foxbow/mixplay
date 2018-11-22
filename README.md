@@ -23,13 +23,11 @@ This is destined to run on a headless box and supply the stereo with a constant 
 demon version of the player. Communicates via HTTP/GET and JSON replies with clients. Also has a minimal web server to allow connection with a browser.
 
 ### Parameters
-* -d         : increase console verbosity. Not really useful for cmixplay as this breaks the ncurses UI! Tells mixplayd to not detach and run in debug mode (this reads web files from the filesystem and does not use the hard coded versions.)
+* -d         : increase console verbosity. Tells mixplayd to not detach and run in debug mode (this reads web files from the filesystem and does not use the hard coded versions.)
 * -f         : disable fading
 * -F         : enable fading
 * -h <host>  : set hostname for remote play [127.0.0.1]
-* -l         : run in local mode
 * -p <port>  : set port for remote play [2347]
-* -r         : act as client
 * -v         : increase application verbosity
 * [path|URL] : path to the music files [play from db]
 

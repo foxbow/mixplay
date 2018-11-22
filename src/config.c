@@ -105,31 +105,6 @@ const mpcmd mpcCommand( const char *name ) {
 }
 
 /*
- * sets the current command and decides if it needs to be sent to
- * a remote player or just be handled locally
- */
-void setCommand( mpcmd cmd ) {
-	mpconfig *config;
-	config=getConfig();
-
-	if( cmd == mpc_idle ) {
-		return;
-	}
-
-	if( config->remote==1 ) {
-		if( cmd == mpc_quit ) {
-			config->status = mpc_quit;
-		}
-		else {
-			setSCommand( cmd );
-		}
-	}
-	else {
-		setPCommand( cmd );
-	}
-}
-
-/*
  * print out the default CLI help text
  */
 static void printUsage( char *name ) {
@@ -263,21 +238,12 @@ int getArgs( int argc, char ** argv ){
 
 	/* parse command line options */
 	/* using unsigned char c to work around getopt quirk on ARM */
-	while ( ( c = getopt( argc, argv, "vfldFrh:p:sWm" ) ) != -1 ) {
+	while ( ( c = getopt( argc, argv, "vfdFh:p:Wm" ) ) != -1 ) {
 		switch ( c ) {
 		case 'v': /* increase debug message level to display */
 			incVerbosity();
 			break;
 
-/*		case 'S':
-			if( strcmp( argv[0], "gmixplay" ) == 0 ) {
-				glcontrol.fullscreen=1;
-			}
-			else {
-				addMessage( 0, "-S not supported for %s!", argv[0] );
-			}
-			break;
-*/
 		case 'd': /* increase debug message level to display on console */
 			incDebug();
 			break;
@@ -290,27 +256,14 @@ int getArgs( int argc, char ** argv ){
 			config->fade=1;
 			break;
 
-		case 'r':
-			config->remote=1;
-			break;
-
-		case 'l':
-			config->remote=0;
-			break;
-
 		case 'h':
 			sfree( &(config->host) );
 			config->host=(char*)falloc( strlen(optarg)+1, 1 );
 			strcpy( config->host, optarg );
-			config->remote=1;
 			break;
 
 		case 'p':
 			config->port=atoi(optarg);
-			break;
-
-		case 's':
-			config->remote=2;
 			break;
 
 		case 'W':
@@ -362,33 +315,25 @@ int initAll( ) {
 	ts.tv_sec=0;
 	ts.tv_nsec=250000;
 
-	if ( control->remote == 1 ) {
-		pthread_create( &control->rtid, NULL, netreader, (void *)control );
-		control->playstream=0;
+	/* start the actual player */
+	pthread_create( &control->rtid, NULL, reader, (void *)control );
+	/* make sure the mpg123 instances have a chance to start up */
+	nanosleep(&ts, NULL);
+	if( NULL == control->root ) {
+		/* Runs as thread to have updates in the UI */
+		pthread_create( &tid, NULL, setProfile, ( void * )control );
+		pthread_detach( tid );
 	}
 	else {
-		/* start the actual player */
-		pthread_create( &control->rtid, NULL, reader, (void *)control );
-		/* make sure the mpg123 instances have a chance to start up */
-		nanosleep(&ts, NULL);
-		if( NULL == control->root ) {
-			/* Runs as thread to have updates in the UI */
-			pthread_create( &tid, NULL, setProfile, ( void * )control );
-			pthread_detach( tid );
-		}
-		else {
-			control->active=0;
-			control->dbname[0]=0;
-			setCommand( mpc_play );
-		}
+		control->active=0;
+		control->dbname[0]=0;
+		setCommand( mpc_play );
 	}
 
 	/*
-	 * start the comm server if requested
+	 * start the comm server
 	 */
-	if ( control->remote == 2 ) {
-		pthread_create( &control->stid, NULL, mpserver, NULL );
-	}
+	pthread_create( &control->stid, NULL, mpserver, NULL );
 
 	return 0;
 }
@@ -577,9 +522,6 @@ mpconfig *readConfig( void ) {
 			if( strstr( line, "port=" ) == line ) {
 				c_config->port=atoi(pos);
 			}
-			if( strstr( line, "remote=" ) == line ) {
-				c_config->remote=atoi(pos);
-			}
 		}
 		while( !feof( fp ) );
 
@@ -668,7 +610,6 @@ void writeConfig( const char *musicpath ) {
 		if( c_config->port != MP_PORT ) {
 			fprintf( fp, "\nport=%i", c_config->port );
 		}
-		fprintf( fp, "\nremote=%i", c_config->remote );
 		fprintf( fp, "\n" );
 		fclose( fp );
 		c_config->changed=0;

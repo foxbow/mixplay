@@ -152,7 +152,11 @@ void setStream( const char* stream, const char *name ) {
  * sends a command to the player
  * also makes sure that commands are queued
  */
-void setPCommand(  mpcmd cmd ) {
+void setCommand( mpcmd cmd ) {
+	if( cmd == mpc_idle ) {
+		return;
+	}
+
 	pthread_mutex_lock( &_pcmdlock );
 	getConfig()->command=cmd;
 }
@@ -296,7 +300,7 @@ void *setProfile( void *data ) {
 		control->command=mpc_start;
 	}
 
-	if( ( control->active != cactive ) && !control->remote ) {
+	if( control->active != cactive ) {
 		control->changed = 1;
 	}
 	return NULL;
@@ -798,7 +802,8 @@ void *reader( void *cont ) {
 			} /* if line starts with '@' */
 			else {
 				/* verbosity 1 as sometimes tags appear here which confuses on level 0 */
-				addMessage( 1, "Player %i - MPG123: %s", fdset, line );
+				/* tag display should no longer happen with --skip-id3v2 */
+				addMessage( 0, "Player %i - MPG123: %s", fdset, line );
 			}
 		} /* fgets() > 0 */
 
