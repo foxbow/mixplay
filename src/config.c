@@ -110,7 +110,6 @@ const mpcmd mpcCommand( const char *name ) {
 static void printUsage( char *name ) {
 	printf( "USAGE: %s [args] [resource]", name );
 	printf( " -v : increase debug message level to display in app" );
-/*	printf( " -S : run in fullscreen mode (gmixplay)" );*/
 	printf( " -d : increase debug message level to display on console" );
 	printf( " -f : single channel - disable fading" );
 	printf( " -F : enable fading");
@@ -118,7 +117,6 @@ static void printUsage( char *name ) {
 	printf( " -l : play local music" );
 	printf( " -h <addr> : set remote host" );
 	printf( " -p <port> : set communication port [2347]" );
-	printf( " -s : start HTTP server" );
 	printf( " -m : force mix on playlist" );
 	printf( " -W': write changed config (used with -r,-l,-h,-p)" );
 	printf( " resource: resource to play" );
@@ -371,8 +369,8 @@ static int scanparts( char *line, char ***target ) {
 			pos=strchr( line, ';' );
 			if( pos != NULL ) {
 				*pos=0;
-				(*target)[i]=(char*)falloc( strlen(line)+1, sizeof( char ) );
-				strip( (*target)[i], line, strlen(line)+1 );
+				(*target)[i]=(char*)falloc( strlen(line)+1, 1 );
+				strip( (*target)[i], line, strlen(line) );
 				line=pos+1;
 			}
 			else {
@@ -487,12 +485,12 @@ mpconfig *readConfig( void ) {
 			pos=strchr( line, '=' );
 			if( ( NULL == pos ) || ( strlen( ++pos ) == 0 ) ) continue;
 			if( strstr( line, "musicdir=" ) == line ) {
-				c_config->musicdir=(char*)falloc( strlen(pos)+1, sizeof( char ) );
-				strip( c_config->musicdir, pos, strlen(pos)+1 );
+				c_config->musicdir=(char*)falloc( strlen(pos)+1, 1 );
+				strip( c_config->musicdir, pos, strlen(pos) );
 			}
 			if( strstr( line, "channel=" ) == line ) {
-				c_config->channel=(char*)falloc( strlen(pos)+1, sizeof( char ) );
-				strip( c_config->channel, pos, strlen(pos)+1 );
+				c_config->channel=(char*)falloc( strlen(pos)+1, 1 );
+				strip( c_config->channel, pos, strlen(pos) );
 			}
 			if( strstr( line, "profiles=" ) == line ) {
 				c_config->profiles=scanparts( pos, &c_config->profile );
@@ -517,7 +515,7 @@ mpconfig *readConfig( void ) {
 			}
 			if( strstr( line, "host=" ) == line ) {
 				c_config->host=(char*)frealloc( c_config->host, strlen(pos)+1 );
-				strip( c_config->host, pos, strlen(pos)+1 );
+				strip( c_config->host, pos, strlen(pos) );
 			}
 			if( strstr( line, "port=" ) == line ) {
 				c_config->port=atoi(pos);

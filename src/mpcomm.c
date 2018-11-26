@@ -98,6 +98,7 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplayli
 		jsonAddInt( val, "playcount", 0 );
 		jsonAddInt( val, "skipcount", 0 );
 	}
+
 	return jsonAddObj(jo, key, val);
 }
 
@@ -105,16 +106,16 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplayli
  * turns a playlist into a jsonObject.
  */
 static jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mpplaylist *pl, int dir ) {
-	jsonObject *title=NULL;
+	jsonObject *jsonTitle=NULL;
 	jsonObject *ret=NULL;
 	char ikey[20];
 	int i=0;
 
 	while( pl != NULL ) {
 		sprintf( ikey, "%i", i );
-		title=jsonAddTitle( title, ikey, pl );
+		jsonTitle=jsonAddTitle( jsonTitle, ikey, pl );
 		if( i == 0 ) {
-			ret=title;
+			ret=jsonTitle;
 		}
 		if( dir < 0 ) {
 			pl=pl->prev;

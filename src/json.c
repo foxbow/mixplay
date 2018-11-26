@@ -48,9 +48,7 @@ static int jsonFail( const char *msg, ... ) {
 	va_start( args, msg );
 	vsnprintf( _jsonError, 511, msg, args );
 	va_end( args );
-#ifdef DEBUG
 	fprintf( stderr, "JSON: %s\n", _jsonError );
-#endif
 	return -1;
 }
 
@@ -68,6 +66,10 @@ static char *jsonEncode( const char *val ) {
 	size_t len=0;
 	char *ret=NULL;
 	unsigned ip, op;
+
+	if( val == NULL ) {
+		return NULL;
+	}
 
 	/* guess length of target string */
 	for( ip=0; ip<strlen(val); ip++ ) {
@@ -833,6 +835,7 @@ jsonObject *jsonAddArr( jsonObject *jo, const char *key, jsonObject *val ) {
  */
 jsonObject *jsonAddStr( jsonObject *jo, const char *key, const char *val ) {
 	jo=jsonAppend( jo, key );
+	jo->type=json_string;
 	if( val == NULL ) {
 		jo->val=NULL;
 	}
@@ -842,7 +845,6 @@ jsonObject *jsonAddStr( jsonObject *jo, const char *key, const char *val ) {
 			jsonFail( "Out of memory!" );
 			return NULL;
 		}
-		jo->type=json_string;
 	}
 	return jo;
 }

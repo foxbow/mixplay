@@ -206,6 +206,8 @@ mpplaylist *addPLDummy( mpplaylist *pl, const char *name ){
 
 	if( pl == NULL ) {
 		pl=(mpplaylist*)falloc(1, sizeof(mpplaylist));
+		pl->prev=NULL;
+		pl->next=NULL;
 	}
 	else {
 		buf=pl->prev;
@@ -1151,24 +1153,26 @@ void plCheck( int del ) {
 		return;
 	}
 
-	/* truncate title history to 20 titles */
-	if( getConfig()->playstream ) {
-		while( ( pl->next != NULL ) && ( cnt < 20 ) ) {
-			pl=pl->next;
-			cnt++;
-		}
-		pl=pl->next;
-		while( pl != NULL ) {
-			buf=pl->next;
-			free( pl->title );
-			free( pl );
-			pl=buf;
-		}
-		return;
-	}
-
 	if( pl != NULL ) {
+		/* truncate stream title history to 20 titles */
+		if( getConfig()->playstream ) {
+			while( ( pl->next != NULL ) && ( cnt < 20 ) ) {
+				pl=pl->next;
+				cnt++;
+			}
 
+			buf=pl->next;
+			pl->next=NULL;
+			while( buf != NULL ) {
+				pl=buf->next;
+				free( buf->title );
+				free( buf );
+				buf=pl;
+			}
+			return;
+		}
+
+		/* truncate playlist title history to 10 titles */
 		while( ( pl->prev != NULL ) && ( cnt < 10 ) ) {
 			pl=pl->prev;
 			cnt++;
@@ -1189,7 +1193,7 @@ void plCheck( int del ) {
 		pl=getConfig()->current;
 		/* go to the end of the playlist */
 		while( pl->next != NULL ) {
-			/* clean up on the way? */
+			/* clean up on the way to remove DNP marked or deleted files? */
 			if( del != 0 ) {
 				if ( ( pl->title->flags | MP_DNP ) || ( access( pl->title->path, F_OK ) != 0 ) ) {
 					buf=pl->prev;
@@ -1207,6 +1211,7 @@ void plCheck( int del ) {
 		}
 	}
 
+	/* fill up the playlist with new titles */
 	while( cnt < 10 ) {
 		if( getConfig()->current == NULL ) {
 			getConfig()->current=addNewTitle( NULL, getConfig()->root );

@@ -42,7 +42,7 @@ char *abspath( char *path, const char *basedir, const size_t len ) {
 	char *buff;
 
 	if( path[0] != '/' ) {
-		buff=falloc( len+2, 1 );
+		buff=(char *)falloc( len+2, 1 );
 		snprintf( buff, len, "%s/%s", basedir, path );
 		strtcpy( path, buff, len );
 		free( buff );
@@ -65,27 +65,29 @@ void setTitle( const char* title ) {
 
 /**
  * Strip spaces and special chars from the beginning and the end
- * of 'text', truncate it to 'maxlen' and store the result in
- * 'buff'.
+ * of 'text', truncate it to 'maxlen' to keep space for the terminating null
+ * and store the result in 'buff'. buff MUST have a size of at least maxlen+1!
  *
- * @todo: take proper care of wide characters! Right now control (and
- *		extended) characters are simply filtered out. But different
- *		encodings WILL cause problems in any case.
+ * @todo: take proper care of wide characters!
 **/
 char *strip( char *buff, const char *text, const size_t maxlen ) {
 	int len=strlen( text );
 	int tpos=0;
+
 	/* clear target buffer */
-	memset( buff, 0, maxlen );
+	memset( buff, 0, maxlen+1 );
+
+	if( len == 0 ) {
+		return buff;
+	}
 
 	/* Cut off leading spaces and special chars */
 	while( ( tpos < len ) && ( isspace( text[tpos] ) ) ) {
 		tpos++;
 	}
 
-	len=MIN(strlen(text+tpos)+1,maxlen);
-	
-	strtcpy( buff, text+tpos, len );
+	len=MIN(strlen(text+tpos),maxlen);
+	strtcpy( buff, text+tpos, len+1 );
 
 	/* Cut off trailing spaces and special chars */
 	while( ( len > 0 ) && ( iscntrl( buff[len] ) || isspace( buff[len] ) ) ) {
@@ -102,7 +104,7 @@ char *strip( char *buff, const char *text, const size_t maxlen ) {
  * returns number of read bytes or -1 on overflow.
  */
 int readline( char *line, size_t len, int fd ) {
-	int cnt=0;
+	size_t cnt=0;
 	char c;
 
 	while ( 0 != read( fd, &c, 1 ) ) {
@@ -204,7 +206,7 @@ int isURL( const char *uri ) {
  * Inplace conversion of a string to lowercase
  */
 char *toLower( char *text ) {
-	int i;
+	size_t i;
 
 	for( i=0; i<strlen( text ); i++ ) {
 		text[i]=tolower( text[i] );
@@ -287,8 +289,8 @@ void sfree( char **ptr ) {
  * initialize a message ringbuffer
  */
 msgbuf *msgBuffInit() {
-	msgbuf *msgBuf=falloc( 1, sizeof( msgbuf ) );
-	msgBuf->msgLock=falloc( 1, sizeof( pthread_mutex_t ) );
+	msgbuf *msgBuf=(msgbuf *)falloc( 1, sizeof( msgbuf ) );
+	msgBuf->msgLock=(pthread_mutex_t *)falloc( 1, sizeof( pthread_mutex_t ) );
 	msgBuf->lines=0;
 	msgBuf->current=0;
 	msgBuf->count=0;
@@ -303,7 +305,7 @@ msgbuf *msgBuffInit() {
  */
 unsigned long msgBuffAdd( msgbuf *msgbuf, char *line ) {
 	char *myline;
-	myline=falloc( strlen(line)+1, sizeof( char ) );
+	myline=(char*)falloc( strlen(line)+1, 1 );
 	strcpy( myline, line );
 	pthread_mutex_lock( msgbuf->msgLock );
 	/* overflow? */
@@ -350,7 +352,7 @@ char *msgBuffGet( struct msgbuf_t *msgbuf ) {
  * Caveat: Returns "" if no messages are available
  */
 const char *msgBuffPeek( struct msgbuf_t *msgbuf, unsigned long msgno ) {
-	char *retval = "";
+	const char *retval = "";
 	int pos;
 
 	pthread_mutex_lock( msgbuf->msgLock );
@@ -378,7 +380,7 @@ char *msgBuffAll( struct msgbuf_t *msgbuf ) {
 	char *buff;
 	size_t len=256;
 
-	buff=falloc( len, sizeof( char ) );
+	buff=(char*)falloc( len, 1 );
 	buff[0]=0;
 
 	pthread_mutex_lock( msgbuf->msgLock );
@@ -386,7 +388,7 @@ char *msgBuffAll( struct msgbuf_t *msgbuf ) {
 		lineno=(i+msgbuf->current)%MSGNUM;
 		while( strlen(buff)+strlen(msgbuf->msg[lineno]) >= len ) {
 			len=len+256;
-			buff=frealloc( buff, len*sizeof( char ) );
+			buff=(char*)frealloc( buff, len );
 		}
 		strcat( buff, msgbuf->msg[lineno] );
 		strcat( buff, "\n" );
@@ -419,7 +421,7 @@ void msgBuffDiscard( struct msgbuf_t *msgbuf ) {
  * debug function to dump binary data on the screen
  */
 void dumpbin( const void *data, size_t len ) {
-	int i, j;
+	size_t i, j;
 	for( j=0; j<len/8; j++ ) {
 		for( i=0; i< 8; i++ ) {
 			if( i <= len ) {
