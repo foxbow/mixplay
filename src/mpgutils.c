@@ -233,7 +233,7 @@ static size_t txtlen( const char *line ) {
 	size_t len=strlen( line );
 	while( isspace( line[ret] ) ) ret++;
 	return( len-ret );
-}	
+}
 
 /**
  * helperfunction to copy V2 tag data
@@ -303,7 +303,6 @@ static void genPathName( mptitle *entry  ) {
 			}
 		}
 	}
-	
 }
 
 /**
@@ -320,10 +319,10 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 
 	/* Set some default values as tag info may be incomplete */
 	genPathName( title );
-	
+
 	strtcpy( path, getConfig()->musicdir, MAXPATHLEN );
 	strtcat( path, title->path, MAXPATHLEN );
-	
+
 	if( mpg123_open( mh, path ) != MPG123_OK ) {
 		addMessage( 1, "Could not open %s as MP3 file", path );
 		return;
@@ -359,11 +358,11 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 					}
 				}
 				else {
-					strtcpy( title->genre, "unset", 6 );
+					strcpy( title->genre, "unset" );
 				}
 			}
 			else {
-				strtcpy( title->genre, "unset", 6 );
+				strcpy( title->genre, "unset" );
 			}
 		}
 		/* otherwise try v1 data */
@@ -457,4 +456,3 @@ int fillTagInfo( mptitle *title ) {
 	mpg123_exit();
 	return 0;
 }
-

@@ -468,10 +468,11 @@ mpconfig *readConfig( void ) {
 	c_config->msg->lines=0;
 	c_config->msg->current=0;
 	c_config->host=(char*)falloc(16,1);
-	strtcpy( c_config->host, "127.0.0.1", 16 );
+	strcpy( c_config->host, "127.0.0.1" );
 	c_config->port=MP_PORT;
 	c_config->changed=0;
 	c_config->isDaemon=0;
+	c_config->streamURL=NULL;
 
 	snprintf( c_config->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", home );
 

@@ -116,6 +116,7 @@ struct _mpcontrol_t {
 	char *channel;				/* the name of the ALSA master channel */
 	int verbosity;
 	int debug;
+	char *streamURL;
 	struct msgbuf_t *msg;		/* generic message buffer */
 	void *data;					/* extended data for gmixplay */
 	char *host;

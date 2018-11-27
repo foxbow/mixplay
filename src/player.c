@@ -145,6 +145,8 @@ void setStream( const char* stream, const char *name ) {
 	control->root=wipeTitles(control->root);
 	control->current=addPLDummy( control->current, name );
 	strtcpy( control->current->title->path, stream, MAXPATHLEN );
+	control->streamURL=frealloc( control->streamURL, strlen(stream)+1 );
+	strcpy( control->streamURL, stream );
 	addMessage( 1, "Play Stream %s (%s)", name, stream );
 }
 
@@ -960,8 +962,8 @@ void *reader( void *cont ) {
 				else if(control->playstream){
 					control->streams++;
 					control->stream=(char**)frealloc(control->stream, control->streams*sizeof( char * ) );
-					control->stream[control->streams-1]=(char*)falloc( strlen(control->current->title->path)+1, sizeof( char ) );
-					strcpy( control->stream[control->streams-1], control->current->title->path );
+					control->stream[control->streams-1]=(char*)falloc( strlen(control->streamURL)+1, 1 );
+					strcpy( control->stream[control->streams-1], control->streamURL );
 					control->sname=(char**)frealloc(control->sname, control->streams*sizeof( char * ) );
 					control->sname[control->streams-1]=control->argument;
 					control->active=-(control->streams);
