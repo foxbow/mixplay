@@ -88,6 +88,7 @@ typedef enum _mpcmd_t mpcmd;
 typedef struct _mpcontrol_t mpconfig;
 struct _mpcontrol_t {
 	char *musicdir;				/* path to the music */
+	char pidpath[MAXPATHLEN];	/* path to the pidfile in demon mode */
 	int profiles;				/* number of profiles */
 	int active;					/* active >0 = profile / 0=none / <0 = stream */
 	char **profile;				/* profile names */

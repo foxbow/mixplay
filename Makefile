@@ -16,7 +16,6 @@ REFS=alsa
 
 # Install globally when called as root
 ifeq ("$(shell id -un)","root")
-INST+=install-service
 BINDIR=/usr/local/bin
 SHAREDIR=/usr/local/share
 else
@@ -59,9 +58,6 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.c
 install: mixplayd
 	install -d $(BINDIR)
 	install -s -m 0755 mixplayd $(BINDIR)
-
-install-service: install-mixplayd
-	$(info No service support yet!)
 
 $(OBJDIR)/mpplayer_html.h: static/mpplayer.html
 	xxd -i static/mpplayer.html > $(OBJDIR)/mpplayer_html.h

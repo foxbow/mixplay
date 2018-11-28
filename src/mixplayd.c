@@ -44,6 +44,7 @@ void fail( const int error, const char* msg, ... ) {
 	}
 	va_end( args );
 
+	unlink(getConfig()->pidpath);
 	exit( error );
 }
 
@@ -63,6 +64,7 @@ void s_updateHook( void *ignore ) {
 int main( int argc, char **argv ) {
 	mpconfig	*control;
 	char *path;
+	FILE *pidlog=NULL;
 
 	control=readConfig( );
 	if( control == NULL ) {
@@ -94,6 +96,21 @@ int main( int argc, char **argv ) {
 		}
 	}
 	muteVerbosity();
+
+	snprintf( control->pidpath, MAXPATHLEN, "%s/.mixplay/mixplayd.pid", getenv("HOME") );
+	if( access( control->pidpath, F_OK ) == 0 ) {
+		addMessage( 0, "Mixplayd is already running!" );
+		freeConfig();
+		return -1;
+	}
+
+	pidlog=fopen( control->pidpath, "w");
+	if( pidlog == NULL ) {
+		addMessage( 0, "Cannot open %s!", control->pidpath );
+		return -1;
+	}
+	fprintf( pidlog, "%li", pthread_self() );
+	fclose(pidlog);
 
 	switch( getArgs( argc, argv ) ) {
 	case 0: /* no arguments given */
@@ -129,7 +146,7 @@ int main( int argc, char **argv ) {
 	}
 
 	/* daemonization must happen before childs are created otherwise the pipes are cut */
-	if( control->isDaemon || getDebug() == 0 ) {
+	if( getDebug() == 0 ) {
 		daemon( 0, 1 );
 		openlog ("mixplayd", LOG_PID, LOG_DAEMON);
 		control->isDaemon=1;
@@ -142,6 +159,7 @@ int main( int argc, char **argv ) {
 	pthread_join( control->rtid, NULL );
 	control->inUI=0;
 	addMessage( 0, "Daemon terminated" );
+	unlink(control->pidpath);
 	freeConfig( );
 
 	return 0;
