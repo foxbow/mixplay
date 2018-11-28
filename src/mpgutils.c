@@ -18,7 +18,7 @@
 #include <ctype.h>
 
 /* default genres by number */
-char *genres[192] = {
+static const char* const genres[192] = {
 	"Blues"
 	,"Classic Rock"
 	,"Country"
@@ -217,7 +217,7 @@ char *genres[192] = {
  * either it's a number or a literal. If it's a number, the
  * predefined tag will be returned otherwise the literal text
  */
-static char *getGenre( unsigned char num ) {
+static const char *getGenre( const unsigned char num ) {
 	if( num > 191 ) {
 		return "invalid";
 	}

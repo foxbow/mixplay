@@ -145,7 +145,7 @@ void setStream( const char* stream, const char *name ) {
 	control->root=wipeTitles(control->root);
 	control->current=addPLDummy( control->current, name );
 	strtcpy( control->current->title->path, stream, MAXPATHLEN );
-	control->streamURL=frealloc( control->streamURL, strlen(stream)+1 );
+	control->streamURL=(char *)frealloc( control->streamURL, strlen(stream)+1 );
 	strcpy( control->streamURL, stream );
 	addMessage( 1, "Play Stream %s (%s)", name, stream );
 }
@@ -169,16 +169,20 @@ void setCommand( mpcmd cmd ) {
  */
 static void sendplay( int fdset, mpconfig *control ) {
 	int res=0;
-	char line[MAXPATHLEN+5]="load ";
+	char line[MAXPATHLEN+6]="load ";
 	assert( control->current != NULL );
 
 	if( !control->playstream ) {
-		strtcat( line, control->musicdir, MAXPATHLEN+5 );
+		strtcat( line, control->musicdir, MAXPATHLEN+6 );
+		strtcat( line, control->current->title->path, MAXPATHLEN+6 );
+		strtcat( line, "\n", MAXPATHLEN+6 );
 	}
-	strtcat( line, control->current->title->path, MAXPATHLEN+5 );
-	strtcat( line, "\n", MAXPATHLEN+5 );
+	else {
+		strtcat( line, control->streamURL, MAXPATHLEN+6 );
+		strtcat( line, "\n", MAXPATHLEN+6 );
+	}
 
-	res=write( fdset, line, MAXPATHLEN+5 );
+	res=write( fdset, line, MAXPATHLEN+6 );
 	if ( (res == -1 ) || ( (unsigned)res < strlen( line ) ) ) {
 		fail( errno, "Could not write\n%s", line );
 	}
@@ -628,7 +632,6 @@ void *reader( void *cont ) {
 							update=-1;
 						}
 					}
-
 					break;
 
 				case 'T': /* TAG reply */
@@ -720,7 +723,7 @@ void *reader( void *cont ) {
 							addMessage(2,"Restart player %i..", fdset );
 							sendplay( p_command[fdset][1], control );
 						}
-						/* stream stopped playing? */
+						/* stream stopped playing (PAUSE) */
 						else if( control->playstream ) {
 							addMessage(2,"Stream stopped");
 							control->status=mpc_idle;
@@ -790,9 +793,9 @@ void *reader( void *cont ) {
 					addMessage( 0, "Player %i: %s!", fdset, line );
 					if( control->current != NULL ) {
 						addMessage( 1, "Index: %i\nName: %s\nPath: %s",
-								  control->current->title->key,
-								  control->current->title->display,
-								  control->current->title->path );
+								control->current->title->key,
+								control->current->title->display,
+								control->current->title->path );
 					}
 					control->status=mpc_idle;
 					break;
@@ -852,10 +855,24 @@ void *reader( void *cont ) {
 			break;
 
 		case mpc_play:
+			/* has the player been properly initialized yet? */
 			if( control->status != mpc_start ) {
-				write( p_command[fdset][1], "PAUSE\n", 7 );
-				control->status=( mpc_play == control->status )?mpc_idle:mpc_play;
+				/* streamplay cannot be properly paused for longer */
+				if( control->playstream ) {
+					if( control->status == mpc_play ) {
+						write( p_command[fdset][1], "STOP\n", 6 );
+					}
+					else {
+						sendplay( p_command[fdset][1], control );
+					}
+				}
+				/* just toggle pause on normal play */
+				else {
+					write( p_command[fdset][1], "PAUSE\n", 7 );
+					control->status=( mpc_play == control->status )?mpc_idle:mpc_play;
+				}
 			}
+			/* initialize player after startup */
 			else {
 				plCheck( 0 );
 				if( control->current != NULL ) {
