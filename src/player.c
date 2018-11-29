@@ -790,7 +790,7 @@ void *reader( void *cont ) {
 					break;
 
 				case 'E':
-					addMessage( 0, "Player %i: %s!", fdset, line );
+					addMessage( 0, "Player %i: %s!", fdset, line+3 );
 					if( control->current != NULL ) {
 						addMessage( 1, "Index: %i\nName: %s\nPath: %s",
 								control->current->title->key,

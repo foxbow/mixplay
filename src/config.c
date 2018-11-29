@@ -146,7 +146,7 @@ static mpplaylist *titleToPlaylist( mptitle *title, mpplaylist *pl ) {
  */
 int setArgument( const char *arg ) {
 	mptitle *title=NULL;
-	char line [MAXPATHLEN];
+	char line [MAXPATHLEN+1];
 	int  i;
 	mpconfig *control=getConfig();
 
@@ -159,11 +159,18 @@ int setArgument( const char *arg ) {
 
 		if( endsWith( arg, ".m3u" ) ||
 				endsWith( arg, ".pls" ) ) {
-			fail( F_FAIL, "Only direct stream support" );
+			addMessage( 0, "Remote playlist will probably not work.." );
 			strcpy( line, "@" );
 		}
 
-		strtcat( line, arg, MAXPATHLEN );
+		if( strstr( arg, "https" ) == arg ) {
+			addMessage( 0, "No HTTPS support, trying plain HTTP." );
+			strtcat( line, "http", MAXPATHLEN );
+			strtcat( line, arg+5, MAXPATHLEN );
+		}
+		else {
+			strtcpy( line, arg, MAXPATHLEN );
+		}
 		setStream( line, "Waiting for stream info..." );
 		return 1;
 	}
