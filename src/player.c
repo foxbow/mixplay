@@ -858,10 +858,13 @@ void *reader( void *cont ) {
 			/* has the player been properly initialized yet? */
 			if( control->status != mpc_start ) {
 				/* streamplay cannot be properly paused for longer */
+				/* TODO: consider muting the stream instead */
 				if( control->playstream ) {
 					if( control->status == mpc_play ) {
-						write( p_command[fdset][1], "STOP\n", 6 );
+						setVolume( 0 );
+/*						write( p_command[fdset][1], "STOP\n", 6 ); */
 					}
+					/* restart the stream in case it broke */
 					else {
 						sendplay( p_command[fdset][1], control );
 					}
