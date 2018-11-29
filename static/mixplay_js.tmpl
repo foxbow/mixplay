@@ -348,7 +348,13 @@ function updateUI( ){
 						e.innerHTML="";
 						document.title=data.current.artist+" - "+data.current.title;
 						if( data.prev.length > 0 ) {
-							setElement( 'prev', data.prev[0].artist+" - "+data.prev[0].title );
+              if( data->prev[0].artist == "" ) {
+                /* only the stream title */
+                setElement( 'prev', data.prev[0].title );
+              }
+              else {
+						    setElement( 'prev', data.prev[0].artist+" - "+data.prev[0].title );
+              }
 							for( i = Math.min( 4, data.prev.length-1 ); i >= 0 ; i-- ) {
 								e.innerHTML+="<p class='cmd' onclick='plCMD( 0x0002, "+(i+1)+", "+data.prev[i].key+")'>"+data.prev[i].artist+" - "+data.prev[i].title+"</p>";
 							}

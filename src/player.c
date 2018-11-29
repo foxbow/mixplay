@@ -143,8 +143,9 @@ void setStream( const char* stream, const char *name ) {
 	mpconfig *control=getConfig();
 	control->current=wipePlaylist( control->current );
 	control->root=wipeTitles(control->root);
+	control->current=addPLDummy( control->current, "Playing stream" );
 	control->current=addPLDummy( control->current, name );
-	strtcpy( control->current->title->path, stream, MAXPATHLEN );
+	control->current=control->current->next;
 	control->streamURL=(char *)frealloc( control->streamURL, strlen(stream)+1 );
 	strcpy( control->streamURL, stream );
 	addMessage( 1, "Play Stream %s (%s)", name, stream );
