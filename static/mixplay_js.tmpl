@@ -348,7 +348,7 @@ function updateUI( ){
 						e.innerHTML="";
 						document.title=data.current.artist+" - "+data.current.title;
 						if( data.prev.length > 0 ) {
-              if( data->prev[0].artist == "" ) {
+              if( data.prev[0].artist == "" ) {
                 /* only the stream title */
                 setElement( 'prev', data.prev[0].title );
               }
