@@ -45,7 +45,7 @@
        <br>
       </div>
       <div id='volpack'>
-        &#x1F50A; <input id='vol' type='range' min='0' max='100' step='1' value='0' oninput='setVolume( this.value )' onwheel='return false'>
+        <div id='speaker' style='display: inline;' onclick='sendCMD(0x1d)'>&#x1F50A;</div> <input id='vol' type='range' min='0' max='100' step='1' value='0' oninput='setVolume( this.value )' onwheel='return false'>
       </div>
     </div> <!-- main -->
     <!-- Search view -->

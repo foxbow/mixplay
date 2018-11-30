@@ -10,7 +10,17 @@
 #include <unistd.h>
 #include <ncurses.h>
 #include <sys/stat.h>
+#include <signal.h>
+#include <pthread.h>
 
+void blockSigint() {
+	sigset_t set;
+	sigemptyset(&set);
+	sigaddset(&set, SIGINT);
+	if( pthread_sigmask(SIG_BLOCK, &set, NULL) != 0 ) {
+		addMessage( 0, "Could not block SIGINT!" );
+	}
+}
 /*
  * like strncpy but len is the max len of the target string, not the number of bytes to copy.
  * Also the target string is always terminated with a 0 byte

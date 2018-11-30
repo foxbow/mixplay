@@ -72,6 +72,7 @@ static const char *mpc_command[] = {
 		"mpc_wipe",
 		"mpc_save",
 		"mpc_remove",
+		"mpc_mute",
 		"mpc_idle"
 };
 

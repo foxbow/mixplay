@@ -452,7 +452,13 @@ function updateUI( ){
 						document.getElementById('current').style.backgroundColor="#daa";
 					}
 
-					document.getElementById( 'vol' ).value=data.volume;
+          if(data.volume==-2) {
+            document.getElementById('speaker').innerHTML='&#x1F507;';
+          }
+          else {
+            document.getElementById('speaker').innerHTML='&#x1F50A;';
+					  document.getElementById( 'vol' ).value=data.volume;
+          }
           if( data.pledit == true ) {
             document.getElementById('pledit').style.display='block'
             document.body.style.backgroundColor='#ddf'

@@ -1,6 +1,6 @@
 CC=gcc
 VERSION=$(shell git describe --tags --abbrev=1 --dirty=-dev --always)
-MPCOMM_VER=16
+MPCOMM_VER=17
 SRCDIR=src
 OBJDIR=build
 
@@ -24,7 +24,8 @@ SHAREDIR=$(HOME)/.local/share
 endif
 
 ifneq ("$(shell cat $(OBJDIR)/CURVER)","$(MPCOMM_VER)")
-$(shell rm -f static/mixplay.js)
+$(shell touch static/mixplay_js.tmpl)
+$(shell touch src/mpcomm.c)
 $(shell echo ${MPCOMM_VER} > $(OBJDIR)/CURVER)
 endif
 

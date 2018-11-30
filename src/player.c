@@ -36,18 +36,18 @@ static int asyncTest() {
 	return ret;
 }
 
-static snd_mixer_t *handle=NULL;
-static snd_mixer_elem_t *elem=NULL;
+static snd_mixer_t *_handle=NULL;
+static snd_mixer_elem_t *_elem=NULL;
 
 /**
  * disconnects from the mixer and frees all resources
  */
 static void closeAudio( ) {
-	if( handle != NULL ) {
-		snd_mixer_detach(handle, "default");
-		snd_mixer_close(handle);
+	if( _handle != NULL ) {
+		snd_mixer_detach(_handle, "default");
+		snd_mixer_close(_handle);
 		snd_config_update_free_global();
-		handle=NULL;
+		_handle=NULL;
 	}
 }
 
@@ -61,26 +61,26 @@ static long openAudio( const char *channel ) {
 		return -1;
 	}
 
-	snd_mixer_open(&handle, 0);
-	if( handle == NULL ) {
+	snd_mixer_open(&_handle, 0);
+	if( _handle == NULL ) {
 		addMessage( 1, "No ALSA support" );
 		return -1;
 	}
 
-	snd_mixer_attach(handle, "default");
-	snd_mixer_selem_register(handle, NULL, NULL);
-	snd_mixer_load(handle);
+	snd_mixer_attach(_handle, "default");
+	snd_mixer_selem_register(_handle, NULL, NULL);
+	snd_mixer_load(_handle);
 
 	snd_mixer_selem_id_alloca(&sid);
 	snd_mixer_selem_id_set_index(sid, 0);
-	snd_mixer_selem_id_set_name(sid, channel );
-	elem = snd_mixer_find_selem(handle, sid);
+	snd_mixer_selem_id_set_name(sid, channel);
+	_elem = snd_mixer_find_selem(_handle, sid);
 	/**
 	 * for some reason this can't be free'd explicitly.. ALSA is weird!
-	 * snd_mixer_selem_id_free(sid);
+	 * snd_mixer_selem_id_free(_sid);
 	 */
-	if( elem == NULL) {
-		addMessage( 0, "Can't find channel %s!", handle );
+	if( _elem == NULL) {
+		addMessage( 0, "Can't find channel %s!", channel );
 		closeAudio();
 		return -1;
 	}
@@ -97,35 +97,50 @@ static long openAudio( const char *channel ) {
  */
 static long controlVolume( long volume, int absolute ) {
 	long min, max;
+	int mswitch=0;
 	long retval = 0;
 	char *channel;
 	mpconfig *config;
 	config=getConfig();
 	channel=config->channel;
 
-	if( handle == NULL ) {
+	if( config->volume == -1 ) {
+		addMessage( 0, "Volume control is not supported!" );
+		return -1;
+	}
+
+	if( _handle == NULL ) {
 		if( openAudio( channel ) == -1 ) {
 			config->volume=-1;
 			return -1;
 		}
 	}
 
-	snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
+	/* if audio is muted, don't change a thing */
+	if (snd_mixer_selem_has_playback_switch(_elem)) {
+		snd_mixer_selem_get_playback_switch(_elem, SND_MIXER_SCHN_FRONT_LEFT, &mswitch);
+		if( mswitch == 0 ) {
+			config->volume=-2;
+			return -2;
+		}
+	}
+
+	snd_mixer_selem_get_playback_volume_range(_elem, &min, &max);
 	if( absolute != 0 ) {
 		retval=volume;
 	}
 	else {
-		snd_mixer_handle_events(handle);
-		snd_mixer_selem_get_playback_volume(elem, SND_MIXER_SCHN_FRONT_LEFT, &retval );
+		snd_mixer_handle_events(_handle);
+		snd_mixer_selem_get_playback_volume(_elem, SND_MIXER_SCHN_FRONT_LEFT, &retval );
 		retval=(( retval * 100 ) / max)+1;
 		retval+=volume;
 	}
 
 	if( retval < 0 ) retval=0;
 	if( retval > 100 ) retval=100;
-	snd_mixer_selem_set_playback_volume_all(elem, ( retval * max ) / 100);
-	config->volume=retval;
+	snd_mixer_selem_set_playback_volume_all(_elem, ( retval * max ) / 100);
 
+	config->volume=retval;
 	return retval;
 }
 
@@ -135,6 +150,43 @@ static long controlVolume( long volume, int absolute ) {
 #define setVolume(v)	controlVolume(v,1)
 #define getVolume()	 controlVolume(0,0)
 #define adjustVolume(d) controlVolume(d,0)
+
+/*
+ * toggles the mute states
+ * returns -1 if mute is not supported
+ *         -2 if mute was enabled
+ *         the current volume on unmute
+ */
+int toggleMute() {
+	mpconfig *config=getConfig();
+	int mswitch;
+
+	if( config->volume == -1 ) {
+		return -1;
+	}
+	if( _handle == NULL ) {
+		if( openAudio(config->channel ) == -1 ) {
+			config->volume=-1;
+			return -1;
+		}
+	}
+	if (snd_mixer_selem_has_playback_switch(_elem)) {
+		snd_mixer_selem_get_playback_switch(_elem, SND_MIXER_SCHN_FRONT_LEFT, &mswitch);
+		if( mswitch == 1 ) {
+			snd_mixer_selem_set_playback_switch_all(_elem, 0);
+			config->volume=-2;
+		}
+		else {
+			snd_mixer_selem_set_playback_switch_all(_elem, 1);
+			config->volume=getVolume();
+		}
+	}
+	else {
+		return -1;
+	}
+
+	return config->volume;
+}
 
 /**
  * sets the given stream
@@ -447,8 +499,8 @@ static void asyncRun( void *cmd(void *), mpconfig *control ) {
  * The original plan was to keep this UI independent so it could be used
  * in mixplay, gmixplay and probably other GUI variants (ie: web)
  */
-void *reader( void *cont ) {
-	mpconfig	*control;
+void *reader( void *data ) {
+	mpconfig	*control=getConfig();
 	mptitle		*title=NULL;
 	fd_set			fds;
 	struct timeval	to;
@@ -471,7 +523,7 @@ void *reader( void *cont ) {
 	int		update=0;
 	int		insert=0;
 
-	control=( mpconfig * )cont;
+	void blockSigint();
 
 	addMessage( 1, "Reader starting" );
 
@@ -859,11 +911,9 @@ void *reader( void *cont ) {
 			/* has the player been properly initialized yet? */
 			if( control->status != mpc_start ) {
 				/* streamplay cannot be properly paused for longer */
-				/* TODO: consider muting the stream instead */
 				if( control->playstream ) {
 					if( control->status == mpc_play ) {
-						setVolume( 0 );
-/*						write( p_command[fdset][1], "STOP\n", 6 ); */
+						write( p_command[fdset][1], "STOP\n", 6 );
 					}
 					/* restart the stream in case it broke */
 					else {
@@ -1201,10 +1251,14 @@ void *reader( void *cont ) {
 
 			break;
 
+		case mpc_mute:
+			toggleMute();
+			break;
+
 		case mpc_idle:
 			/* read current Hardware volume in case it changed externally
 			 * don't read before control->argument is NULL as someone may be
-			 * trying to set the volume right now  */
+			 * trying to set the volume right now */
 			if( (control->argument == NULL) && ( control->volume != -1 ) ) {
 				control->volume=getVolume( );
 			}
@@ -1228,16 +1282,17 @@ void *reader( void *cont ) {
 
 	closeAudio();
 	/* stop player(s) gracefully */
-	for( i=0; i<control->fade; i++) {
-		write( p_command[fdset][i], "QUIT\n", 6 );
-	}
-
 	if( control->dbDirty > 0 ) {
 		addMessage( 0, "Updating Database" );
 		dbWrite( );
 	}
 
+	sleep(1);
 	addMessage( 0, "Player stopped" );
+
+	for( i=0; i<control->fade; i++) {
+		write( p_command[fdset][i], "QUIT\n", 6 );
+	}
 
 	return NULL;
 }

@@ -134,6 +134,7 @@ static void *clientHandler(void *args ) {
 	config = getConfig();
 	clmsg = config->msg->count;
 
+	/* this one may terminate all willy nilly */
 	pthread_detach(pthread_self());
 
 	addMessage( 2, "Client handler started" );
@@ -476,7 +477,7 @@ static void *clientHandler(void *args ) {
 		} /* if running & !mpc_start */
 	}
 
-	addMessage( 2, "Client handler exited" );
+	addMessage( 1, "Client handler exited" );
 	unlockClient( sock );
 	close(sock);
 	sfree( &commdata );
@@ -497,6 +498,8 @@ void *mpserver( void *data ) {
 	struct sockaddr_in server , client;
 	mpconfig	*control;
 	int devnull=0;
+
+	blockSigint();
 
 	control=getConfig( );
 

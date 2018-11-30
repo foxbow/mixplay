@@ -12,11 +12,17 @@
 #include <stdarg.h>
 #include <syslog.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include "utils.h"
 #include "player.h"
 
 static unsigned long _curmsg=0;
+
+static void sigint(int signo){
+	addMessage(0, "External quit!", signo);
+	setCommand(mpc_quit);
+}
 
 /*
  * Print errormessage and exit
@@ -144,6 +150,8 @@ int main( int argc, char **argv ) {
 		addMessage( 0, "Unknown argument!\n", argv[optind] );
 		return -1;
 	}
+
+	signal(SIGINT, sigint );
 
 	/* daemonization must happen before childs are created otherwise the pipes are cut */
 	if( getDebug() == 0 ) {

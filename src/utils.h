@@ -78,4 +78,5 @@ char *toLower( char *text );
 int hexval( const char c );
 long readHex( char *txt, char **end );
 
+void blockSigint();
 #endif

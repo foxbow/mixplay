@@ -47,6 +47,7 @@ enum _mpcmd_t {
 	mpc_wipe,
 	mpc_save,
 	mpc_remove,
+	mpc_mute,
 	mpc_idle,
 	mpc_title=1<<8,
 	mpc_artist=1<<9,
