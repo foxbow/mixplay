@@ -110,8 +110,8 @@ function initScroll(index,id) {
 		var element=document.getElementById(id);
 		var scroll={"id":id,"element":element,"offset":"0px"};
 		scrolls[index]=scroll;
-    if( index > numscrolls ) {
-      numscrolls=index;
+    if( index+1 > numscrolls ) {
+      numscrolls=index+1;
     }
 	}
 }
