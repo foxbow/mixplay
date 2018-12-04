@@ -166,8 +166,11 @@ int main( int argc, char **argv ) {
 	pthread_join( control->stid, NULL );
 	pthread_join( control->rtid, NULL );
 	control->inUI=0;
-	addMessage( 0, "Daemon terminated" );
+	if( control->changed ) {
+		writeConfig( NULL );
+	}
 	unlink(control->pidpath);
+	addMessage( 0, "Daemon terminated" );
 	freeConfig( );
 
 	return 0;

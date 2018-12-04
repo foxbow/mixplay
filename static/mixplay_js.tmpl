@@ -7,6 +7,7 @@ var msglines=["","","","","","","","","","","","","","",""];
 var msgpos=0;
 var active=0;
 var scrolls=[];
+var numscrolls=0;
 
 /*
  * asks for a name and saves the current playlist
@@ -55,7 +56,7 @@ function showInfo() {
 function scrollToggle( ) {
 	var to=1000;
 	if (doUpdate == 0) return;
-	for (var i = 0; i < scrolls.length; i++) {
+	for (var i = 0; i < numscrolls; i++) {
 		var element=scrolls[i].element;
 		if( scrolls[i].offset.charAt(0) == '-' ) {
 			if( element.style.right == scrolls[i].offset ) {
@@ -82,7 +83,7 @@ function setScrolls( ) {
 		return;
 	}
 
-	for( var i=0; i < scrolls.length; i++ ) {
+	for( var i=0; i < numscrolls; i++ ) {
 		var scroll=scrolls[i];
 		var element=scroll.element;
 		element.style.left="auto";
@@ -109,6 +110,9 @@ function initScroll(index,id) {
 		var element=document.getElementById(id);
 		var scroll={"id":id,"element":element,"offset":"0px"};
 		scrolls[index]=scroll;
+    if( index > numscrolls ) {
+      numscrolls=index;
+    }
 	}
 }
 
@@ -118,7 +122,9 @@ function initScroll(index,id) {
 function initScrolls() {
 	initScroll(0, 'prev');
 	initScroll(1, 'title');
-	initScroll(2, 'next');
+  initScroll(2, 'next');
+  initScroll(3, 'artist');
+  initScroll(4, 'album');
 }
 
 /*
@@ -368,7 +374,13 @@ function updateUI( ){
 						setElement( 'genre', data.current.genre );
 						e.innerHTML+="<p class='cmd' onclick='plCMD( 0x0000, 0, "+data.current.key+")' style='background-color: #ddd;' ><em>"+data.current.artist+" - "+data.current.title+"</em></p>";
 						if( data.next.length > 0 ) {
-							setElement( 'next', data.next[0].artist+" - "+data.next[0].title );
+              if( data.next[0].artist == "" ) {
+                /* only the stream title */
+                setElement( 'next', data.next[0].title );
+              }
+              else {
+						    setElement( 'next', data.next[0].artist+" - "+data.next[0].title );
+              }
 							for( i=0; i<data.next.length; i++ ) {
 								e.innerHTML+="<p class='cmd' onclick='plCMD( 0x0003, "+(i+1)+", "+data.next[i].key+")'>"+data.next[i].artist+" - "+data.next[i].title+"</p>";
 							}
@@ -556,13 +568,6 @@ function getConfig() {
 
 	xmlhttp.open("GET", "/config", true);
 	xmlhttp.send();
-}
-
-/*
- * set volume to a fixed value
- */
-function setVolume( vol ) {
-	sendCMD( 0x15, vol );
 }
 
 /*

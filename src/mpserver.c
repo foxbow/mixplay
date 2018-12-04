@@ -30,6 +30,9 @@
 #include <sys/sendfile.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <pthread.h>
+
+static pthread_mutex_t _sendlock=PTHREAD_MUTEX_INITIALIZER;
 
 /**
  * send a static file
@@ -38,14 +41,18 @@ static int filePost( int sock, const char *fname ) {
 	int fd;
 	fd=open( fname, O_RDONLY );
 	if( fd != -1 ) {
+		errno=0;
 		while ( sendfile( sock, fd, 0, 4096 ) == 4096 );
+		if( errno != 0 ) {
+			addMessage(0, "Error %s sending %s!", strerror(errno), fname );
+		}
 		close(fd);
-		return 0;
 	}
 	else {
 		addMessage( 0, "%s not found!", fname );
 	}
-	return -1;
+	pthread_mutex_unlock(&_sendlock);
+	return 0;
 }
 
 /**
@@ -401,6 +408,7 @@ static void *clientHandler(void *args ) {
 				len=strlen( commdata );
 				break;
 			case 5: /* send file */
+				pthread_mutex_lock(&_sendlock);
 				if( getDebug() ) {
 					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012\015\012", mtype );
 					send(sock , commdata, strlen(commdata), 0);
@@ -413,6 +421,7 @@ static void *clientHandler(void *args ) {
 					while( len < flen ) {
 						len+=send( sock, &fdata[len], flen-len, 0 );
 					}
+					pthread_mutex_unlock(&_sendlock);
 				}
 				len=0;
 				running=0;
@@ -425,6 +434,7 @@ static void *clientHandler(void *args ) {
 				break;
 				/* todo: attachment or inline? */
 			case 8: /* send mp3 */
+				pthread_mutex_lock(&_sendlock);
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: audio/mpeg;\015\012"
 						"Content-Disposition: attachment; filename=\"%s.mp3\"\015\012\015\012", title->display );
 				send(sock , commdata, strlen(commdata), 0);
