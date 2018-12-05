@@ -359,9 +359,6 @@ void *setProfile( void *data ) {
 		control->command=mpc_start;
 	}
 
-	if( control->active != cactive ) {
-		control->changed = 1;
-	}
 	return NULL;
 }
 
@@ -1017,8 +1014,8 @@ void *reader( void *data ) {
 				else {
 					profile=atoi( control->argument );
 					if( ( profile != 0 ) && ( profile != control->active ) ) {
-						order=0; /* prevent title switch */
 						control->active=profile;
+						control->changed = 1;
 						asyncRun( plSetProfile, control );
 					}
 				}
@@ -1054,7 +1051,6 @@ void *reader( void *data ) {
 					if( control->dbname[0] == 0 ) {
 						readConfig( );
 					}
-					control->active=control->profiles+2;
 					setProfile( control );
 					control->current->title = control->root;
 					sendplay( p_command[fdset][1], control );
@@ -1108,13 +1104,12 @@ void *reader( void *data ) {
 							}
 							control->streams--;
 							control->profiles--;
-							if( profile == control->active ) {
-								control->active=0;
+							if( profile > control->active ) {
+								control->active=1;
 							}
 							else if( control->active < -profile ) {
-								control->active++;
+								control->active=1;
 							}
-
 							writeConfig(NULL);
 						}
 					}

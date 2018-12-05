@@ -11,7 +11,7 @@
 
 .scroll p {
 	position: absolute;
-	font-size: 150%;
+	font-size: 125%;
 	white-space: nowrap;
 	padding-top: 5px;
 	padding-bottom: 5px;
@@ -19,14 +19,18 @@
 	text-align: left;
 }
 
-#title, #prev, #next {
+#prev, #next {
 	font-size : 150%;
-	white-space: nowrap;
+}
+
+#title {
+	font-size : 150%;
+	font-weight: bold;
 }
 
 #current,#playpack {
 	background-color: #ddd;
-	padding-top: 5px;	
+	padding-top: 5px;
 	padding-bottom: 5px;
 	border:black;
 }
@@ -67,7 +71,6 @@ a.download {
 .cmd {
 	margin-top: 4px;
 	margin-bottom: 4px;
-	border: none; 
+	border: none;
 	background: none;
 }
-
