@@ -19,9 +19,9 @@
     <div id='extra5' onselectstart='return false' onwheel='volWheel(event)'>
       <div class='scroll' onclick='sendCMD(0x02)'><p id='prev'>prev</p></div>
       <div id='current' onclick='sendCMD(0x00)'>
-        <div class='scroll'><p id='artist'>artist</p></div>
-        <div class='scroll'><p id='title'>title</p></div>
-        <div class='scroll'><p id='album'>album</p></div>
+        <div class='scroll' style='height: 30px;' ><p id='artist'>artist</p></div>
+        <div class='scroll' style='height: 34px;'><p id='title'>title</p></div>
+        <div class='scroll' style='height: 30px;'><p id='album'>album</p></div>
         <div id='genre' >genre</div>
       </div>
       <div id='playpack' onclick='sendCMD(0x05)'>
@@ -93,11 +93,11 @@
       <input id='download' type='button' onclick='download(0)' value='Download' >
     </div>
     <!-- Message view -->
-    <div id='extra3' style='display: none;' width='100%'>
+    <div id='extra3' style='display: none; width: 100%;' >
       <em>No messages.</em><br>
     </div>
     <!-- Playlist view -->
-    <div id='extra4' style='display: none;' width='100%'>
+    <div id='extra4' style='display: none; width: 100%;' >
       <input id='pledmode' type='button' onclick='sendCMD(0x19)' value='Edit' >
       <div id='pledit' style='display: none;' width='100%' >
         <input id='plclean' type='button' onclick='sendCMD(0x1a)' value='clean' >

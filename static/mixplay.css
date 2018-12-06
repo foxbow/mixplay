@@ -1,17 +1,18 @@
 #body {
 	text-align: center;
+	font-size: 20px;
 }
 
 .scroll {
 	position: relative;
-	height: 40px;
+	height: 38px;
 	width: 100%;
 	overflow: hidden;
 }
 
 .scroll p {
 	position: absolute;
-	font-size: 125%;
+	font-size: 20px;
 	white-space: nowrap;
 	padding-top: 5px;
 	padding-bottom: 5px;
@@ -20,11 +21,15 @@
 }
 
 #prev, #next {
-	font-size : 150%;
+	font-size : 24px;
 }
 
 #title {
-	font-size : 150%;
+	font-size : 24px;
+	font-weight: bold;
+}
+
+#artist {
 	font-weight: bold;
 }
 
