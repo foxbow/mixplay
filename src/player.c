@@ -226,7 +226,9 @@ static void sendplay( int fdset, mpconfig *control ) {
 	assert( control->current != NULL );
 
 	if( !control->playstream ) {
-		strtcat( line, control->musicdir, MAXPATHLEN+6 );
+		if( control->active > 0 ) {
+			strtcat( line, control->musicdir, MAXPATHLEN+6 );
+		}
 		strtcat( line, control->current->title->path, MAXPATHLEN+6 );
 		strtcat( line, "\n", MAXPATHLEN+6 );
 	}

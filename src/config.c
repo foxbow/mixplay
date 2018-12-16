@@ -109,18 +109,16 @@ const mpcmd mpcCommand( const char *name ) {
  * print out the default CLI help text
  */
 static void printUsage( char *name ) {
-	printf( "USAGE: %s [args] [resource]", name );
-	printf( " -v : increase debug message level to display in app" );
-	printf( " -d : increase debug message level to display on console" );
-	printf( " -f : single channel - disable fading" );
-	printf( " -F : enable fading");
-	printf( " -r : control remote mixplayd (see -p and -h)" );
-	printf( " -l : play local music" );
-	printf( " -h <addr> : set remote host" );
-	printf( " -p <port> : set communication port [2347]" );
-	printf( " -m : force mix on playlist" );
-	printf( " -W': write changed config (used with -r,-l,-h,-p)" );
-	printf( " resource: resource to play" );
+	printf( "USAGE: %s [args] [resource]\n", name );
+	printf( " -v : increase debug message level to display in app\n" );
+	printf( " -d : increase debug message level to display on console\n" );
+	printf( " -f : single channel - disable fading\n" );
+	printf( " -F : enable fading\n");
+	printf( " -h <addr> : set host\n" );
+	printf( " -p <port> : set port [2347]\n" );
+	printf( " -m : force mix on playlist\n" );
+	printf( " -W': write changed config (used with -r,-l,-h,-p)\n" );
+	printf( " resource: resource to play\n" );
 	printf( "		   URL, path, mp3 file, playlist\n" );
 }
 
@@ -186,7 +184,12 @@ int setArgument( const char *arg ) {
 		return 2;
 	}
 	else if( isDir( arg ) ) {
-		addMessage( 1, "Directory: %s", arg );
+		if( arg[0] != '/' ) {
+			addMessage( 0, "%s is not an absolute path!", arg );
+		}
+		else {
+			addMessage( 1, "Directory: %s", arg );
+		}
 		strncpy( line, arg, MAXPATHLEN );
 		title=recurse( line, NULL );
 		if( title != NULL ) {
