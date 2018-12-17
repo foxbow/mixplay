@@ -158,6 +158,7 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 			jsonAddTitle( jo, "current", NULL );
 			jsonAddTitles( jo, "next", NULL, 1 );
 		}
+		jsonAddStrs( jo, "playlist", data->playlist, data->playlists );
 	}
 	else if ( type == MPCOMM_RESULT ) {
 		jsonAddTitles(jo, "titles", data->found->titles, 1 );
@@ -225,7 +226,6 @@ char *serializeConfig( void ) {
 	jsonAddStrs( jo, "profile", config->profile, config->profiles );
 	jsonAddInt( jo, "skipdnp", config->skipdnp );
 	jsonAddInt( jo, "streams", config->streams );
-	jsonAddStrs( jo, "playlist", config->playlist, config->playlists );
 	jsonAddStrs( jo, "stream", config->stream, config->streams );
 	jsonAddStrs( jo, "sname", config->sname, config->streams );
 

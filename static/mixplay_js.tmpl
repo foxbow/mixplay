@@ -548,7 +548,7 @@ function getConfig() {
             s=document.getElementById("playlists");
 						s.options.length=0;
             s.options[s.options.length] = new Option("None",0);
-						for(i=0; i<data.config.playlists; i++) {
+						for(i=0; i<data.config.playlist.length; i++) {
 							s.options[s.options.length] = new Option(data.config.playlist[i],i+1);
 						}
 					}

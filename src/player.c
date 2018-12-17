@@ -857,8 +857,7 @@ void *reader( void *data ) {
 			} /* if line starts with '@' */
 			else {
 				/* verbosity 1 as sometimes tags appear here which confuses on level 0 */
-				/* tag display should no longer happen with --skip-id3v2 */
-				addMessage( 0, "Player %i - MPG123: %s", fdset, line );
+				addMessage( 1, "Player %i - MPG123: %s", fdset, line );
 			}
 		} /* fgets() > 0 */
 

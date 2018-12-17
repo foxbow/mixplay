@@ -533,6 +533,9 @@ mpconfig *readConfig( void ) {
 		while( !feof( fp ) );
 
 		fclose(fp);
+
+		updatePlaylists();
+
 		return c_config;
 	}
 
