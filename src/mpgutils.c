@@ -231,7 +231,7 @@ static const char *getGenre( const unsigned char num ) {
 static size_t txtlen( const char *line ) {
 	size_t ret=0;
 	size_t len=strlen( line );
-	while( isspace( line[ret] ) ) ret++;
+	while( isspace( line[ret] ) && (ret<=len) ) ret++;
 	return( len-ret );
 }
 
@@ -240,13 +240,15 @@ static size_t txtlen( const char *line ) {
  */
 static int tagCopy( char *target, mpg123_string *tag ) {
 	if( NULL == tag ){
+		addMessage(1,"Empty Tag!");
 		return 0;
 	}
 	if ( txtlen( tag->p ) == 0 ) {
+		addMessage(1,">%s< is only spaces!", tag->p );
 		return 0;
 	}
 
-	strip( target, tag->p, NAMELEN );
+	strip( target, tag->p, NAMELEN-1 );
 	return strlen(target);
 }
 
@@ -268,7 +270,7 @@ static void genPathName( mptitle *entry  ) {
 		blen=blen-1;
 	}
 
-	strtcpy( curdir, entry->path, MIN( blen+1, MAXPATHLEN ) );
+	strtcpy( curdir, entry->path, MIN( blen+1, MAXPATHLEN-1 ) );
 
 	/* cut off .mp3 */
 	if( endsWith( curdir, ".mp3" ) ) {
@@ -282,23 +284,23 @@ static void genPathName( mptitle *entry  ) {
 
 	if( NULL == p ) {
 		addMessage( 1, "Only title for %s", curdir );
-		strtcpy( entry->title, curdir, NAMELEN );
+		strtcpy( entry->title, curdir, NAMELEN-1 );
 	}
 	else {
 		p[0]=0;
-		strtcpy( entry->title, p+1, NAMELEN );
+		strtcpy( entry->title, p+1, NAMELEN-1 );
 		if( strlen( curdir ) > 1 ) {
 			p=strrchr( curdir, '/' );
 
 			if( NULL == p ) {
-				strtcpy( entry->artist, curdir, NAMELEN );
+				strtcpy( entry->artist, curdir, NAMELEN-1 );
 			}
 			else {
 				p[0]=0;
-				strtcpy( entry->album, p+1, NAMELEN );
+				strtcpy( entry->album, p+1, NAMELEN-1 );
 				p=strrchr( curdir, '/' );
 				if( NULL != p ) {
-					strtcpy( entry->artist, p+1, NAMELEN );
+					strtcpy( entry->artist, p+1, NAMELEN-1 );
 				}
 			}
 		}
@@ -313,15 +315,20 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 	mpg123_id3v1 *v1;
 	mpg123_id3v2 *v2;
 	int meta;
-	char path[MAXPATHLEN];
+	char path[MAXPATHLEN]="";
 	char *p, *b;
 	int aisset=0;
 
 	/* Set some default values as tag info may be incomplete */
 	genPathName( title );
 
-	strtcpy( path, getConfig()->musicdir, MAXPATHLEN );
-	strtcat( path, title->path, MAXPATHLEN );
+	addMessage(2, "< %s:\n%s -%s\n%s", title->path, title->artist, title->title, title->album );
+
+	/*Only append musicdir on relative paths */
+	if( getConfig()->active > 0 ) {
+		strtcpy( path, getConfig()->musicdir, MAXPATHLEN-1 );
+	}
+	strtcat( path, title->path, MAXPATHLEN-1 );
 
 	if( mpg123_open( mh, path ) != MPG123_OK ) {
 		addMessage( 1, "Could not open %s as MP3 file", path );
@@ -347,10 +354,10 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 
 			if( v2->genre ) {
 				if( '(' == v2->genre->p[0] ) {
-					strtcpy( title->genre, getGenre( atoi( &v2->genre->p[1] ) ), NAMELEN );
+					strtcpy( title->genre, getGenre( atoi( &v2->genre->p[1] ) ), NAMELEN-1 );
 				}
 				else if( ( v2->genre->p[0] == '0' ) || atoi( v2->genre->p ) > 0 ) {
-					strtcpy( title->genre, getGenre( atoi( v2->genre->p ) ), NAMELEN );
+					strtcpy( title->genre, getGenre( atoi( v2->genre->p ) ), NAMELEN-1 );
 				}
 				else if( strlen( v2->genre->p ) > 0 ) {
 					if( tagCopy( title->genre, v2->genre ) == 1 ) {
@@ -364,6 +371,7 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 			else {
 				strcpy( title->genre, "unset" );
 			}
+			addMessage(2, "V2 %s/%s\n%s", title->artist, title->title, title->album );
 		}
 		/* otherwise try v1 data */
 		else if( v1 != NULL )  {
@@ -378,7 +386,8 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 			if( txtlen( v1->album ) > 1 ) {
 				strip( title->album, v1->album, 32 );
 			}
-			strtcpy( title->genre, getGenre( v1->genre ), NAMELEN );
+			strtcpy( title->genre, getGenre( v1->genre ), NAMELEN-1 );
+			addMessage(2, "V1 %s/%s\n%s", title->artist, title->title, title->album );
 		}
 		else {
 			addMessage( 2, "No MP3 tag info for %s", title->title );
@@ -403,11 +412,11 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 	p=strstr( title->title, " - " );
 	if( ( p != NULL ) && !aisset ) {
 		addMessage( 2, "Splitting %s", title->title );
-		strtcpy( title->artist, title->title, NAMELEN );
+		strtcpy( title->artist, title->title, NAMELEN-1 );
 		p=strstr( title->artist, " - " );
 		if( p != NULL ) {
 			p[0]=0;
-			strtcpy( title->title, p+3, NAMELEN );
+			strtcpy( title->title, p+3, NAMELEN-1 );
 		}
 		else {
 			addMessage( 0, "String changed during strtcpy( %s, %s )!", title->artist, title->title );
@@ -423,11 +432,11 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 	p=strstr( title->title, " / " );
 	if( ( p != NULL ) && !aisset ) {
 		addMessage( 2, "Splitting %s", title->title );
-		strtcpy( title->artist, title->title, NAMELEN );
+		strtcpy( title->artist, title->title, NAMELEN-1 );
 		p=strstr( title->artist, " / " );
 		if( p != NULL ) {
 			p[0]=0;
-			strtcpy( title->title, p+3, NAMELEN );
+			strtcpy( title->title, p+3, NAMELEN-1 );
 		}
 		else {
 			addMessage( 0, "String changed during strtcpy( %s, %s )!", title->artist, title->title );
@@ -438,6 +447,7 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 
 	snprintf( title->display, MAXPATHLEN, "%s - %s", title->artist, title->title );
 	mpg123_close( mh );
+	addMessage(1, "> %s/%s\n%s\n", title->artist, title->title, title->album );
 }
 
 /**
@@ -446,7 +456,10 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 int fillTagInfo( mptitle *title ) {
 	mpg123_handle* mh;
 	/* Do not try to scan non mp3 files */
-	if( !isMusic( title->path) ) return 0;
+	if( !isMusic( title->path) ) {
+		addMessage( 0, "%s is not an MP3 file!", title->path );
+		return 0;
+	}
 	mpg123_init();
 	mh = mpg123_new( NULL, NULL );
 /*	mpg123_param( mh, MPG123_VERBOSE, 0, 0.0 ); */

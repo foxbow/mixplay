@@ -110,14 +110,6 @@ int main( int argc, char **argv ) {
 		return -1;
 	}
 
-	pidlog=fopen( control->pidpath, "w");
-	if( pidlog == NULL ) {
-		addMessage( 0, "Cannot open %s!", control->pidpath );
-		return -1;
-	}
-	fprintf( pidlog, "%li", pthread_self() );
-	fclose(pidlog);
-
 	switch( getArgs( argc, argv ) ) {
 	case 0: /* no arguments given */
 		break;
@@ -158,6 +150,13 @@ int main( int argc, char **argv ) {
 		daemon( 0, 1 );
 		openlog ("mixplayd", LOG_PID, LOG_DAEMON);
 		control->isDaemon=1;
+		pidlog=fopen( control->pidpath, "w");
+		if( pidlog == NULL ) {
+			addMessage( 0, "Cannot open %s!", control->pidpath );
+			return -1;
+		}
+		fprintf( pidlog, "%li", pthread_self() );
+		fclose(pidlog);
 	}
 
 	addUpdateHook( &s_updateHook );
