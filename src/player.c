@@ -266,11 +266,6 @@ void *setProfile( void *data ) {
 	}
 	cactive=control->active;
 
-	if( cactive == 0 ) {
-		addMessage(0, "No profile/stream selected!" );
-		return NULL;
-	}
-
 	/* stream selected */
 	if( cactive < 0 ) {
 		active = -(cactive+1);
@@ -284,9 +279,8 @@ void *setProfile( void *data ) {
 
 		setStream( control->stream[active], control->sname[active] );
 	}
-
 	/* profile selected */
-	else {
+	else if( cactive > 0 ){
 		active=cactive-1;
 		control->playstream=0;
 

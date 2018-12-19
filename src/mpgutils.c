@@ -447,7 +447,7 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 
 	snprintf( title->display, MAXPATHLEN, "%s - %s", title->artist, title->title );
 	mpg123_close( mh );
-	addMessage(1, "> %s/%s\n%s\n", title->artist, title->title, title->album );
+	addMessage(2, "> %s/%s\n%s", title->artist, title->title, title->album );
 }
 
 /**

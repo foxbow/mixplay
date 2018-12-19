@@ -394,6 +394,12 @@ function updateUI( ){
 						else {
 							document.getElementById( 'fav' ).disabled=false;
 						}
+            e=document.getElementById("playlists");
+						e.options.length=0;
+            e.options[e.options.length] = new Option("None",0);
+            for(i=0; i<data.playlist.length; i++) {
+              e.options[e.options.length] = new Option(data.playlist[i],data.playlist[i]);
+            }
 						setScrolls();
 					}
 
@@ -545,12 +551,6 @@ function getConfig() {
 							s.options[s.options.length] = new Option(data.config.sname[i],-(i+1));
 						}
 						active=0;
-            s=document.getElementById("playlists");
-						s.options.length=0;
-            s.options[s.options.length] = new Option("None",0);
-						for(i=0; i<data.config.playlist.length; i++) {
-							s.options[s.options.length] = new Option(data.config.playlist[i],i+1);
-						}
 					}
 					else {
 						fail( "Received reply of type "+data.type+" for config!" );

@@ -424,7 +424,7 @@ void updatePlaylists( void ) {
 		for( i=0; i<c_config->playlists; i++ ) {
 			if( strlen( pls[i]->d_name ) > 4 ) {
 				c_config->playlist[i]=(char*)falloc( strlen(pls[i]->d_name)-3, 1 );
-				strtcpy( c_config->playlist[i], pls[i]->d_name, strlen(pls[i]->d_name)-4 );
+				strtcpy( c_config->playlist[i], pls[i]->d_name, strlen(pls[i]->d_name)-3 );
 				free( pls[i] );
 			}
 			else {
@@ -497,6 +497,9 @@ mpconfig *readConfig( void ) {
 			pos=strchr( line, '=' );
 			if( ( NULL == pos ) || ( strlen( ++pos ) == 0 ) ) continue;
 			if( strstr( line, "musicdir=" ) == line ) {
+				if( line[strlen(line)] != '/' ) {
+					strtcat( line, "/", MAXPATHLEN );
+				}
 				c_config->musicdir=(char*)falloc( strlen(pos)+1, 1 );
 				strip( c_config->musicdir, pos, strlen(pos) );
 			}
@@ -564,8 +567,11 @@ void writeConfig( const char *musicpath ) {
 	}
 
 	if( musicpath != NULL ) {
-		c_config->musicdir=(char*)falloc( strlen(musicpath)+1, sizeof( char ) );
+		c_config->musicdir=(char*)falloc( strlen(musicpath)+2, sizeof( char ) );
 		strip( c_config->musicdir, musicpath, strlen(musicpath)+1 );
+		if( c_config->musicdir[strlen(c_config->musicdir)] != '/' ) {
+			strtcat( c_config->musicdir, "/", strlen(musicpath)+2 );
+		}
 	}
 
 	snprintf( conffile, MAXPATHLEN, "%s/.mixplay", home );
