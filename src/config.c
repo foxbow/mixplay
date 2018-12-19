@@ -497,8 +497,8 @@ mpconfig *readConfig( void ) {
 			pos=strchr( line, '=' );
 			if( ( NULL == pos ) || ( strlen( ++pos ) == 0 ) ) continue;
 			if( strstr( line, "musicdir=" ) == line ) {
-				if( line[strlen(line)] != '/' ) {
-					strtcat( line, "/", MAXPATHLEN );
+				if( line[strlen(line)-1] != '/' ) {
+					line[strlen(line)-1] = '/';
 				}
 				c_config->musicdir=(char*)falloc( strlen(pos)+1, 1 );
 				strip( c_config->musicdir, pos, strlen(pos) );

@@ -144,6 +144,7 @@ int main( int argc, char **argv ) {
 	}
 
 	signal(SIGINT, sigint );
+	signal(SIGTERM, sigint );
 
 	/* daemonization must happen before childs are created otherwise the pipes are cut */
 	if( getDebug() == 0 ) {
@@ -155,7 +156,7 @@ int main( int argc, char **argv ) {
 			addMessage( 0, "Cannot open %s!", control->pidpath );
 			return -1;
 		}
-		fprintf( pidlog, "%li", pthread_self() );
+		fprintf( pidlog, "%i", getpid() );
 		fclose(pidlog);
 	}
 
