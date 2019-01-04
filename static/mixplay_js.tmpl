@@ -451,12 +451,14 @@ function updateUI( ){
 					if( isstream ) {
 						setElement( 'splaytime', data.playtime );
             document.getElementById( 'pledmode' ).style.display='none';
+            document.getElementById( 'lscroll' ).style.height='0px';
 					}
 					else {
 						setElement( 'playtime', data.playtime );
 						setElement( 'remtime', data.remtime );
 						document.getElementById( 'progress' ).value=data.percent;
             document.getElementById( 'pledmode' ).style.display='inline';
+            document.getElementById( 'lscroll' ).style.height='30px';
 					}
 
 					if( active != data.active ) {

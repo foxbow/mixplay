@@ -119,7 +119,7 @@ static void printUsage( char *name ) {
 	printf( " -m : force mix on playlist\n" );
 	printf( " -W': write changed config (used with -r,-l,-h,-p)\n" );
 	printf( " resource: resource to play\n" );
-	printf( "		   URL, path, mp3 file, playlist\n" );
+	printf( "		   URL, directory, mp3 file, playlist\n" );
 }
 
 static mpplaylist *titleToPlaylist( mptitle *title, mpplaylist *pl ) {
