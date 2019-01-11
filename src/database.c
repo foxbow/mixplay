@@ -320,25 +320,22 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 			/* find mean playcount */
 			if( !( dbrunner->flags & MP_DNP ) ) {
 				count++;
-				if( dbrunner->flags & MP_FAV ) {
-					mean+=dbrunner->playcount/2;
-				}
-				else {
-					mean+=dbrunner->playcount;
-				}
+				mean+=dbrunner->playcount;
 			}
 			dbrunner=dbrunner->next;
 		}
 		while( dbrunner != dbroot );
 
-		/* round down so new titles have a slightly better chance to be played */
+		/* round down so new titles have a slightly better chance to be played
+		   and to equalize favourites */
 		mean=(mean/count);
+
 	}
 
 	addMessage( 0, "Using mean playcount %d", mean );
 	addMessage( 0, "%d titles in current database", index );
 	index++;
-	
+
 	/* scan directory */
 	addMessage( 0, "Scanning..." );
 	fsroot=recurse( basedir, NULL );
