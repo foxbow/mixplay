@@ -324,6 +324,10 @@ int initAll( ) {
 	ts.tv_sec=0;
 	ts.tv_nsec=250000;
 
+	/* start the comm server */
+	pthread_create( &control->stid, NULL, mpserver, NULL );
+	nanosleep(&ts, NULL);
+
 	/* start the actual player */
 	pthread_create( &control->rtid, NULL, reader, (void *)control );
 	/* make sure the mpg123 instances have a chance to start up */
@@ -338,11 +342,6 @@ int initAll( ) {
 		control->dbname[0]=0;
 		setCommand( mpc_play );
 	}
-
-	/*
-	 * start the comm server
-	 */
-	pthread_create( &control->stid, NULL, mpserver, NULL );
 
 	return 0;
 }
@@ -497,8 +496,8 @@ mpconfig *readConfig( void ) {
 			pos=strchr( line, '=' );
 			if( ( NULL == pos ) || ( strlen( ++pos ) == 0 ) ) continue;
 			if( strstr( line, "musicdir=" ) == line ) {
-				if( line[strlen(line)-1] != '/' ) {
-					line[strlen(line)-1] = '/';
+				if( line[strlen(line)-2] != '/' ) {
+					line[strlen(line)-2] = '/';
 				}
 				c_config->musicdir=(char*)falloc( strlen(pos)+1, 1 );
 				strip( c_config->musicdir, pos, strlen(pos) );

@@ -905,7 +905,7 @@ static unsigned long countTitles( const unsigned int inc, const unsigned int exc
 /**
  * returns the lowest playcount of the current list
  */
-unsigned int getLowestPlaycount( ) {
+static unsigned int getLowestPlaycount( void ) {
 	mptitle *base=getConfig()->root;
 	mptitle *runner=base;
 	unsigned int min=-1;
@@ -1191,23 +1191,31 @@ void plCheck( int del ) {
 
 		cnt=0;
 		pl=getConfig()->current;
-		/* go to the end of the playlist */
-		while( pl->next != NULL ) {
-			/* clean up on the way to remove DNP marked or deleted files? */
-			if( del != 0 ) {
-				if ( ( pl->title->flags | MP_DNP ) || ( access( pl->title->path, F_OK ) != 0 ) ) {
-					buf=pl->prev;
-					pl->prev->next=pl->next;
-					if( pl->next != NULL ) {
+		/* this should always be != NULL */
+		if( pl == NULL ) {
+			addMessage( 0, "There should not be no playlist!" );
+		}
+		else {
+			/* go to the end of the playlist */
+			while( pl->next != NULL ) {
+				/* clean up on the way to remove DNP marked or deleted files? */
+				if( del != 0 ) {
+					if ( ( pl->title->flags | MP_DNP ) || ( !mp3Exists( pl->title ) ) ){
+						buf=pl->next;
+						if( pl->prev != NULL ) {
+							pl->prev->next=pl->next;
+						}
 						pl->next->prev=pl->prev;
+						free(pl);
+						pl=buf;
+						cnt--;
 					}
-					free(pl);
-					pl=buf;
-					cnt--;
 				}
+				else {
+					pl=pl->next;
+				}
+				cnt++;
 			}
-			pl=pl->next;
-			cnt++;
 		}
 	}
 

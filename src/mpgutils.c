@@ -240,11 +240,11 @@ static size_t txtlen( const char *line ) {
  */
 static int tagCopy( char *target, mpg123_string *tag ) {
 	if( NULL == tag ){
-		addMessage(1,"Empty Tag!");
+		addMessage(3,"Empty Tag!");
 		return 0;
 	}
 	if ( txtlen( tag->p ) == 0 ) {
-		addMessage(1,">%s< is only spaces!", tag->p );
+		addMessage(3,">%s< is only spaces!", tag->p );
 		return 0;
 	}
 
@@ -371,7 +371,7 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 			else {
 				strcpy( title->genre, "unset" );
 			}
-			addMessage(2, "V2 %s/%s\n%s", title->artist, title->title, title->album );
+			addMessage(3, "V2 %s/%s\n%s", title->artist, title->title, title->album );
 		}
 		/* otherwise try v1 data */
 		else if( v1 != NULL )  {
@@ -387,7 +387,7 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 				strip( title->album, v1->album, 32 );
 			}
 			strtcpy( title->genre, getGenre( v1->genre ), NAMELEN-1 );
-			addMessage(2, "V1 %s/%s\n%s", title->artist, title->title, title->album );
+			addMessage(3, "V1 %s/%s\n%s", title->artist, title->title, title->album );
 		}
 		else {
 			addMessage( 2, "No MP3 tag info for %s", title->title );
@@ -447,7 +447,7 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 
 	snprintf( title->display, MAXPATHLEN, "%s - %s", title->artist, title->title );
 	mpg123_close( mh );
-	addMessage(2, "> %s/%s\n%s", title->artist, title->title, title->album );
+	addMessage(3, "> %s/%s\n%s", title->artist, title->title, title->album );
 }
 
 /**

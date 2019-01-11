@@ -61,8 +61,10 @@ static mptitle *findTitle( mptitle *base, const char *path ) {
 /**
  * checks if a given title still exists on the filesystem
  */
-static int mp3Exists( const mptitle *title ) {
-	return( access( title->path, F_OK ) == 0 );
+int mp3Exists( const mptitle *title ) {
+	char path[MAXPATHLEN+1];
+	snprintf( path, MAXPATHLEN, "%s%s", getConfig()->musicdir, title->path );
+	return( access( path, F_OK ) == 0 );
 }
 
 /**
@@ -86,7 +88,7 @@ static mptitle *removeTitle( mptitle *entry ) {
 /**
  * turn a database entry into a mixplay structure
  */
-static int db2entry( struct dbentry_t *dbentry, mptitle *entry ) {
+static void db2entry( struct dbentry_t *dbentry, mptitle *entry ) {
 	memset( entry, 0, ESIZE );
 	strcpy( entry->path, dbentry->path );
 	strcpy( entry->artist, dbentry->artist );
@@ -96,13 +98,12 @@ static int db2entry( struct dbentry_t *dbentry, mptitle *entry ) {
 	snprintf( entry->display, MAXPATHLEN, "%s - %s", entry->artist, entry->title );
 	entry->playcount=dbentry->playcount;
 	entry->skipcount=dbentry->skipcount;
-	return 0;
 }
 
 /**
  * pack a mixplay entry into a database structure
  */
-static int entry2db( mptitle *entry, struct dbentry_t *dbentry ) {
+static void entry2db( mptitle *entry, struct dbentry_t *dbentry ) {
 	memset( dbentry, 0, DBESIZE );
 	strcpy( dbentry->path, entry->path );
 	strcpy( dbentry->artist, entry->artist );
@@ -111,7 +112,6 @@ static int entry2db( mptitle *entry, struct dbentry_t *dbentry ) {
 	strcpy( dbentry->genre, entry->genre );
 	dbentry->playcount=entry->playcount;
 	dbentry->skipcount=entry->skipcount;
-	return 0;
 }
 
 /**
@@ -298,20 +298,26 @@ static int dbAddTitle( int db, mptitle *title ) {
  */
 int dbAddTitles( const char *dbname, char *basedir ) {
 	mptitle *fsroot;
+	mptitle *fsnext;
 	mptitle *dbroot;
 	mptitle *dbrunner;
-	unsigned int count=0, mean=0;
-
+	unsigned count=0, mean=0;
+	unsigned index=0;
 	int num=0, db=0;
 
-	dbroot=dbGetMusic( dbname );
-
-	addMessage( 1, "Calculating proper playcount..." );
-
-	if( NULL != dbroot ) {
+	dbroot=getConfig()->root;
+	if( dbroot == NULL ) {
+		addMessage(0, "No database loaded!" );
+	}
+	else {
 		dbrunner=dbroot;
 
 		do {
+			/* find highest key */
+			if( index < dbrunner->key ) {
+				index=dbrunner->key;
+			}
+			/* find mean playcount */
 			if( !( dbrunner->flags & MP_DNP ) ) {
 				count++;
 				if( dbrunner->flags & MP_FAV ) {
@@ -329,8 +335,12 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 		mean=(mean/count);
 	}
 
+	addMessage( 0, "Using mean playcount %d", mean );
+	addMessage( 0, "%d titles in current database", index );
+	index++;
+	
 	/* scan directory */
-	addMessage( 1, "Scanning..." );
+	addMessage( 0, "Scanning..." );
 	fsroot=recurse( basedir, NULL );
 	if( fsroot == NULL ) {
 		addMessage( 0, "No music found in %s!", basedir );
@@ -339,7 +349,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 
 	fsroot=fsroot->next;
 
-	addMessage( 1, "Adding titles..." );
+	addMessage( 0, "Adding titles..." );
 
 	db=dbOpen( dbname );
 	while( NULL != fsroot ) {
@@ -347,16 +357,48 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 		dbrunner = findTitle( dbroot, fsroot->path );
 
 		if( NULL == dbrunner ) {
-			fsroot->playcount=mean;
-			dbAddTitle( db, fsroot );
-			num++;
-		}
+			fsnext=fsroot->next;
+			/* This was the last title in fsroot */
+			if( fsnext == fsroot ) {
+				fsnext=NULL;
+			}
 
-		fsroot=removeTitle( fsroot );
+			fsroot->playcount=mean;
+			fsroot->key=index++;
+			addMessage(1, "Adding %s", fsroot->display );
+			dbAddTitle( db, fsroot );
+
+			/* unlink title from fsroot */
+			fsroot->prev->next=fsroot->next;
+			fsroot->next->prev=fsroot->prev;
+
+			/* add title to dbroot */
+			if( dbroot == NULL ) {
+				dbroot=fsroot;
+				dbroot->prev=dbroot;
+				dbroot->next=dbroot;
+			}
+			else {
+				dbroot->prev->next=fsroot;
+				fsroot->prev=dbroot->prev;
+				fsroot->next=dbroot;
+				dbroot->prev=fsroot;
+			}
+			num++;
+
+			fsroot=fsnext;
+		}
+		else {
+			fsroot=removeTitle( fsroot );
+		}
 	}
 	dbClose( db );
 
-	addMessage( 1, "Added %i titles with playcount %i to %s", num, mean, dbname );
+	if( getConfig()->root == NULL ) {
+		addMessage(0, "Setting new active database" );
+		getConfig()->root=dbroot;
+	}
+
 	return num;
 }
 

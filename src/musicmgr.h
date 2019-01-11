@@ -96,7 +96,6 @@ struct marklist_t *loadList( const char *path );
 struct marklist_t *addToList( const char *line, struct marklist_t **list );
 
 void newCount( void );
-unsigned int getLowestPlaycount( );
 int isMusic( const char *name );
 void dumpTitles( mptitle *root, const int pl );
 void dumpInfo( mptitle *root, unsigned int skip );

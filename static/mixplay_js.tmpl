@@ -8,6 +8,7 @@ var msgpos=0;
 var active=0;
 var scrolls=[];
 var numscrolls=0;
+var wasstream=-1;
 
 /*
  * asks for a name and saves the current playlist
@@ -448,6 +449,8 @@ function updateUI( ){
 					setVisible( 'playstr', isstream );
 					setVisible( 'playpack', !isstream );
 					enableTab( 'show0', !isstream );
+
+          /* switching between stream and normal play */
 					if( isstream ) {
 						setElement( 'splaytime', data.playtime );
             document.getElementById( 'pledmode' ).style.display='none';
@@ -460,6 +463,17 @@ function updateUI( ){
             document.getElementById( 'pledmode' ).style.display='inline';
             document.getElementById( 'lscroll' ).style.height='30px';
 					}
+
+          if( ( isstream != wasstream ) &&
+              ( window.innerHeight != window.outerHeight ) ) {
+            if( isstream ) {
+              window.resizeTo( 300, 250 );
+            }
+            else {
+              window.resizeTo( 300, 380 );
+            }
+          }
+          wasstream=isstream;
 
 					if( active != data.active ) {
 						active=data.active;

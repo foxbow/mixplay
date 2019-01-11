@@ -32,6 +32,7 @@ void dbWrite( void );
 int dbNameCheck( const char *dbname );
 mptitle *getTitleByIndex( unsigned int index );
 void dbMarkDirty( void );
+int mp3Exists( const mptitle *title );
 
 /* void dbDump( const char *dbname, mptitle *root ); */
 
