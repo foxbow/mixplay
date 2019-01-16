@@ -103,13 +103,6 @@ int main( int argc, char **argv ) {
 	}
 	muteVerbosity();
 
-	snprintf( control->pidpath, MAXPATHLEN, "%s/.mixplay/mixplayd.pid", getenv("HOME") );
-	if( access( control->pidpath, F_OK ) == 0 ) {
-		addMessage( 0, "Mixplayd is already running!" );
-		freeConfig();
-		return -1;
-	}
-
 	switch( getArgs( argc, argv ) ) {
 	case 0: /* no arguments given */
 		break;
@@ -142,6 +135,14 @@ int main( int argc, char **argv ) {
 		addMessage( 0, "Unknown argument!\n", argv[optind] );
 		return -1;
 	}
+
+	snprintf( control->pidpath, MAXPATHLEN, "%s/.mixplay/mixplayd.pid", getenv("HOME") );
+	if( access( control->pidpath, F_OK ) == 0 ) {
+		addMessage( 0, "Mixplayd is already running!" );
+		freeConfig();
+		return -1;
+	}
+
 
 	signal(SIGINT, sigint );
 	signal(SIGTERM, sigint );

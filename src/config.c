@@ -111,6 +111,7 @@ const mpcmd mpcCommand( const char *name ) {
 static void printUsage( char *name ) {
 	printf( "USAGE: %s [args] [resource]\n", name );
 	printf( " -v : increase debug message level to display in app\n" );
+	printf( " -V : print curent build ID\n" );
 	printf( " -d : increase debug message level to display on console\n" );
 	printf( " -f : single channel - disable fading\n" );
 	printf( " -F : enable fading\n");
@@ -235,7 +236,7 @@ int setArgument( const char *arg ) {
 	}
 
 	fail( F_FAIL, "Illegal argument '%s'!", arg );
-	return -1;
+	return F_FAIL;
 }
 
 /*
@@ -247,11 +248,15 @@ int getArgs( int argc, char ** argv ){
 
 	/* parse command line options */
 	/* using unsigned char c to work around getopt quirk on ARM */
-	while ( ( c = getopt( argc, argv, "vfdFh:p:Wm" ) ) != -1 ) {
+	while ( ( c = getopt( argc, argv, "vVfdFh:p:Wm" ) ) != -1 ) {
 		switch ( c ) {
 		case 'v': /* increase debug message level to display */
 			incVerbosity();
 			break;
+
+		case 'V':
+			printf("%s version %s\n", argv[0], VERSION );
+			exit( EXIT_SUCCESS );
 
 		case 'd': /* increase debug message level to display on console */
 			incDebug();

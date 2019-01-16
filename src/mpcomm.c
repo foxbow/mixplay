@@ -37,7 +37,7 @@ int setCurClient( int client ) {
 		return -1;
 	}
 	_curclient=client;
-	return 0;
+	return client;
 }
 
 int isCurClient( int client ) {

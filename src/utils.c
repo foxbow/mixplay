@@ -163,7 +163,7 @@ int endsWith( const char *text, const char *suffix ) {
 		}
 	}
 
-	return -1;
+	return 1;
 }
 
 /**
@@ -185,7 +185,7 @@ int startsWith( const char *text, const char *prefix ) {
 		}
 	}
 
-	return -1;
+	return 1;
 }
 
 /**
@@ -194,7 +194,7 @@ int startsWith( const char *text, const char *prefix ) {
 int isMusic( const char *name ) {
 	return endsWith( name, ".mp3" );
 	/*
-	if( endsWith( name, ".mp3" ) || endsWith( name, ".ogg" ) ) return -1;
+	if( endsWith( name, ".mp3" ) || endsWith( name, ".ogg" ) ) return 1;
 	return 0;
 	*/
 }
@@ -206,7 +206,7 @@ int isMusic( const char *name ) {
  */
 int isURL( const char *uri ) {
 	if( startsWith( uri, "http://" ) || startsWith( uri, "https://" ) ) {
-		return -1;
+		return 1;
 	}
 
 	return 0;
@@ -250,7 +250,7 @@ int isDir( const char *path ) {
 	struct stat st;
 
 	if( !stat( path, &st ) && S_ISDIR( st.st_mode ) ) {
-		return -1;
+		return 1;
 	}
 
 	return 0;

@@ -526,16 +526,16 @@ int search( const char *pat, const mpcmd range, const int global ) {
 		if( global || !(runner->flags & MP_DNP) ) {
 			/* check for title/display */
 			if( MPC_ISTITLE(range) && isMatch( runner->title, pat, MPC_ISFUZZY(range)  )) {
-				found=-1;
+				found=1;
 			}
 			if( MPC_ISDISPLAY( range ) && isMatch( runner->display, pat, MPC_ISFUZZY(range) ) ) {
-				found=-1;
+				found=1;
 			}
 			/* check for artist, if title matched, also add artist */
 			if( ( found && MPC_EQTITLE( range ) ) || ( MPC_ISARTIST(range) && isMatch( runner->artist, pat, MPC_ISFUZZY(range) ) ) ) {
 				/* Only add title if search asks only for artist */
 				if( MPC_EQARTIST( range ) ) {
-					found=-1;
+					found=1;
 				}
 				/* check for new artist */
 
@@ -550,7 +550,7 @@ int search( const char *pat, const mpcmd range, const int global ) {
 			/* if title or artist matched, also add the album */
 			if( ( found && MPC_EQTITLE( range ) ) || ( MPC_ISALBUM(range) && isMatch( runner->album, pat, MPC_ISFUZZY(range) ) ) ) {
 				if( MPC_EQALBUM( range ) ) {
-					found=-1;
+					found=1;
 				}
 
 				/*
@@ -572,7 +572,7 @@ int search( const char *pat, const mpcmd range, const int global ) {
 				}
 			}
 
-			if( ( found == -1 ) && ( cnt++ < MAXSEARCH ) ) {
+			if( ( found != 0 ) && ( cnt++ < MAXSEARCH ) ) {
 				res->titles=appendToPL( runner, res->titles, 0 );
 				res->tnum++;
 			}

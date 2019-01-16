@@ -31,7 +31,7 @@ static int asyncTest() {
 	addMessage( 1, "Async test" );
 	if( pthread_mutex_trylock( &_asynclock ) != EBUSY ) {
 		pthread_mutex_unlock( &_asynclock );
-		ret=-1;
+		ret=1;
 	}
 	return ret;
 }
@@ -110,7 +110,7 @@ static long controlVolume( long volume, int absolute ) {
 	}
 
 	if( _handle == NULL ) {
-		if( openAudio( channel ) == -1 ) {
+		if( openAudio( channel ) != 0 ) {
 			config->volume=-1;
 			return -1;
 		}
@@ -165,7 +165,7 @@ int toggleMute() {
 		return -1;
 	}
 	if( _handle == NULL ) {
-		if( openAudio(config->channel ) == -1 ) {
+		if( openAudio(config->channel ) != 0 ) {
 			config->volume=-1;
 			return -1;
 		}
