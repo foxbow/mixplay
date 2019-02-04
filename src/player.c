@@ -557,7 +557,7 @@ void *reader( void *data ) {
 				fail( errno, "Could not dup stdout for player %i", i+1 );
 			}
 
-			/* this process needs no pipes */
+			/* this process needs no pipe handles */
 			close( p_command[i][0] );
 			close( p_command[i][1] );
 			close( p_status[i][0] );

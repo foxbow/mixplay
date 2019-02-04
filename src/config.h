@@ -110,7 +110,7 @@ struct _mpcontrol_t {
 	int playstream;				/* profile or stream */
 	mpcmd command;				/* command to the player */
 	char *argument;				/* arguments to command */
-	int status;					/* status of the player/system */
+	mpcmd status;					/* status of the player/system */
 	pthread_t rtid;				/* thread ID of the reader */
 	pthread_t stid;				/* thread ID of the server */
 	int skipdnp;				/* how many skips mean dnp? */

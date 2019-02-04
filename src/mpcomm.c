@@ -20,7 +20,6 @@
 #define MPCOMM_VER -1
 #endif
 
-static pthread_mutex_t _scmdlock=PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t _clientlock=PTHREAD_MUTEX_INITIALIZER;
 static int _curclient=-1;
 
@@ -56,14 +55,6 @@ void unlockClient( int client ) {
 		pthread_mutex_unlock( &_clientlock );
 		return;
 	}
-}
-
-/*
- * sets the command to be sent to mixplayd
- */
-void setSCommand( mpcmd cmd ) {
-	pthread_mutex_lock( &_scmdlock );
-	getConfig()->command=cmd;
 }
 
 /*

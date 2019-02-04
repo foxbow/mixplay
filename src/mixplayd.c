@@ -16,6 +16,9 @@
 
 #include "utils.h"
 #include "player.h"
+#ifdef EPAPER
+#include "mpepa.h"
+#endif
 
 static unsigned long _curmsg=0;
 
@@ -51,6 +54,9 @@ void fail( const int error, const char* msg, ... ) {
 	va_end( args );
 
 	unlink(getConfig()->pidpath);
+#ifdef EPAPER
+ 	epExit();
+#endif
 	exit( error );
 }
 
@@ -143,7 +149,6 @@ int main( int argc, char **argv ) {
 		return -1;
 	}
 
-
 	signal(SIGINT, sigint );
 	signal(SIGTERM, sigint );
 
@@ -162,11 +167,18 @@ int main( int argc, char **argv ) {
 	}
 
 	addUpdateHook( &s_updateHook );
+#ifdef EPAPER
+	epSetup();
+	addUpdateHook( &ep_updateHook );
+#endif
 	control->inUI=1;
 	initAll( );
 	pthread_join( control->stid, NULL );
 	pthread_join( control->rtid, NULL );
 	control->inUI=0;
+#ifdef EPAPER
+	epExit();
+#endif
 	if( control->changed ) {
 		writeConfig( NULL );
 	}

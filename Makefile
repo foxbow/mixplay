@@ -9,10 +9,19 @@ CCFLAGS+=-DVERSION=\"$(VERSION)\"
 CCFLAGS+=-Wall -pedantic -Werror -I . -g
 
 OBJS=$(addprefix $(OBJDIR)/,mpserver.o utils.o musicmgr.o database.o \
-  mpgutils.o player.o config.o player.o mpcomm.o json.o )
+  mpgutils.o player.o config.o mpcomm.o json.o )
 
 LIBS=-lmpg123 -lpthread
 REFS=alsa
+
+# build with 2.7" ePaper support ?
+ifeq ("$(shell dpkg -l wiringpi 2> /dev/null > /dev/null; echo $$?)","0")
+LIBS+=-lwiringPi
+OBJS+=$(OBJDIR)/mpepa.o $(OBJDIR)/epasupp.o
+CCFLAGS+=-DEPAPER
+else
+$(info WiringPi is not installed, disabling ePaper support )
+endif
 
 # Install globally when called as root
 ifeq ("$(shell id -un)","root")
@@ -33,6 +42,9 @@ LIBS+=$(shell pkg-config --libs $(REFS))
 CCFLAGS+=$(shell pkg-config --cflags $(REFS))
 
 all: $(OBJDIR)/dep.d mixplayd
+
+mptest: $(OBJDIR)/mptest.o $(OBJDIR)/epasupp.o $(OBJDIR)/utils.o
+	$(CC) $^ -o $@ $(LIBS)
 
 clean:
 	rm -f $(OBJDIR)/*
