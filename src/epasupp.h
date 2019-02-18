@@ -2,10 +2,17 @@
 #define _EPASUPP_H_ 1
 
 #include <wiringPi.h>
+#pragma GCC poison piThreadCreate
 
+/* Number of rows and columns */
 #define EPWIDTH  176
 #define EPHEIGHT 264
+/* size of the bitmap */
 #define EPDBYTES ((EPWIDTH/8)*EPHEIGHT)
+/* Actual coordinates */
+#define X_MAX (EPHEIGHT-1)
+#define Y_MAX (EPWIDTH-1)
+#define Y_BYTES (EPWIDTH/8)
 
 /* the used pins */
 #define RST_PIN 0
@@ -58,6 +65,14 @@
 #define READ_OTP_DATA                               0xA2
 #define POWER_OPT                                   0xF8
 
+enum epsmap_t {
+	epm_none,
+	epm_black,
+	epm_red,
+	epm_both
+};
+typedef enum epsmap_t epsmap;
+
 enum epsymbols_t {
 	ep_null=0,
 	ep_box,
@@ -73,15 +88,21 @@ enum epsymbols_t {
 };
 typedef enum epsymbols_t epsymbol;
 
-void epsDrawSymbol( unsigned char *map, unsigned x, unsigned y, epsymbol sym );
-void epsSetup();
-void epsIdle();
-void epsDisplay( unsigned char *black, unsigned char *red );
+void epsDrawString( epsmap map, unsigned posx, unsigned posy, char *txt, int mag );
+void epsDrawSymbol( epsmap map, unsigned x, unsigned y, epsymbol sym );
+int  epsDrawChar( epsmap map, unsigned x, unsigned y, unsigned char c, int mag );
+void epsSetup( void );
+void epsDisplay( void );
+void epsPartialDisplay( unsigned x, unsigned y, unsigned w, unsigned l );
 #define epsClear() epsDisplay( NULL, NULL );
 void epsPoweroff( void );
-void epsPoweron( void );
-void epsSetPixel( unsigned char *map, unsigned x, unsigned y );
-void epsLine( unsigned char* map, int x0, int y0, int x1, int y1 );
-void epsBox( unsigned char* map, unsigned x0, unsigned y0, unsigned x1, unsigned y1, int filled );
+int epsPoweron( void );
+void epsSetPixel( epsmap map, unsigned x, unsigned y );
+void epsWipe( epsmap map, unsigned x, unsigned y, unsigned w, unsigned l );
+void epsWipeFull( epsmap map );
+void epsLine( epsmap map, int x0, int y0, int x1, int y1 );
+void epsBox( epsmap map, unsigned x0, unsigned y0, unsigned x1, unsigned y1, int filled );
 void epsButton( unsigned key, void(*func)(void) );
+int epsGetState( void );
+
 #endif

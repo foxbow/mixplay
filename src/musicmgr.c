@@ -56,9 +56,9 @@ static int patMatch( const char *text, const char *pat ) {
 	for( i=0; i<= ( tlen-plen ); i++ ) {
 		res=0;
 		for ( j = i; j < plen+i; j++ ) {
-			if( ( lotext[j] == lopat[j-i-1] ) ||
-				( lotext[j] == lopat[j-i] ) ||
-				( lotext[j] == lopat[j-i+1] ) ) {
+			if( ( lotext[j] == lopat[j-i] ) ||
+				( lotext[j] == lopat[j-i+1] ) ||
+				( lotext[j] == lopat[j-i+2] ) ) {
 				res++;
 			}
 			if( res > best ) {

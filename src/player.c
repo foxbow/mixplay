@@ -211,6 +211,10 @@ void setCommand( mpcmd cmd ) {
 	if( cmd == mpc_idle ) {
 		return;
 	}
+	/* do not try to change quit! */
+	if( getConfig()->status == mpc_quit ) {
+		return;
+	}
 
 	pthread_mutex_lock( &_pcmdlock );
 	getConfig()->command=cmd;
@@ -260,6 +264,7 @@ void *setProfile( void *data ) {
 	int64_t cactive;
 	mpconfig *control=( mpconfig * )data ;
 	char *home=getenv("HOME");
+	addMessage( 2, "New Thread: setProfile()" );
 
 	if( home == NULL ) {
 		fail( -1, "Cannot get homedir!" );
@@ -354,7 +359,7 @@ void *setProfile( void *data ) {
 		addMessage( 1, "Start play" );
 		control->command=mpc_start;
 	}
-
+	addMessage( 2, "End Thread: setProfile()" );
 	return NULL;
 }
 
@@ -1277,12 +1282,11 @@ void *reader( void *data ) {
 		dbWrite( );
 	}
 
-	sleep(1);
-	addMessage( 0, "Player stopped" );
-
 	for( i=0; i<control->fade; i++) {
 		write( p_command[fdset][i], "QUIT\n", 6 );
 	}
+	addMessage( 0, "Players stopped" );
+	sleep(1);
 
 	return NULL;
 }

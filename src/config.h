@@ -149,6 +149,7 @@ int incVerbosity( void );
 void muteVerbosity( void );
 
 void addMessage( int v, const char *msg, ... );
+#define addError(x) addMessage( 0, "%i - %s", x, strerror(x) );
 char *getMessage( void );
 
 char *getCurrentActivity( void );

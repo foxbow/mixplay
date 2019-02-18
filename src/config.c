@@ -27,7 +27,7 @@
 #include "player.h"
 #include "mpserver.h"
 
-static pthread_mutex_t msglock=PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t _addmsglock=PTHREAD_MUTEX_INITIALIZER;
 static mpconfig *c_config=NULL;
 
 /**
@@ -717,7 +717,7 @@ void addMessage( int v, const char *msg, ... ) {
 	va_list args;
 	char *line;
 
-	pthread_mutex_lock( &msglock );
+	pthread_mutex_lock( &_addmsglock );
 	line = (char*)falloc( MP_MSGLEN, 1 );
 	va_start( args, msg );
 	vsnprintf( line, MP_MSGLEN, msg, args );
@@ -749,7 +749,7 @@ void addMessage( int v, const char *msg, ... ) {
 	}
 
 	free(line);
-	pthread_mutex_unlock( &msglock );
+	pthread_mutex_unlock( &_addmsglock );
 }
 
 /**

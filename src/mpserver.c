@@ -194,7 +194,7 @@ static void *clientHandler(void *args ) {
 							state=1;
 						}
 						else if( strstr( pos, "/cmd/" ) == pos ) {
-							addMessage( 1, "received: %s", pos );
+							addMessage( 2, "received cmd: %s", pos );
 							pos+=5;
 							rawcmd=readHex(pos,&pos);
 							if( rawcmd == -1 ) {
@@ -278,7 +278,7 @@ static void *clientHandler(void *args ) {
 							state=5;
 						}
 						else if( strstr( pos, "/title/" ) == pos ) {
-							addMessage( 1, "received: %s", pos );
+							addMessage( 2, "received: %s", pos );
 							pos+=7;
 							index=atoi(pos);
 							if( ( config->current != NULL ) && ( index == 0 ) ) {
@@ -490,7 +490,7 @@ static void *clientHandler(void *args ) {
 		} /* if running & !mpc_start */
 	}
 
-	addMessage( 1, "Client handler exited" );
+	addMessage( 2, "Client handler exited" );
 	unlockClient( sock );
 	close(sock);
 	sfree( &commdata );

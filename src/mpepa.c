@@ -2,49 +2,262 @@
  * ePaper integration.
  */
 #include <stdio.h>
-#include "epasupp.h"
+#include <sys/time.h>
+#include "mpepa.h"
 #include "config.h"
 #include "player.h"
 #include "utils.h"
+#define TOSLEEP 25
+
+#define EPS_PARTIAL 1
 
 /* the button modes
    button 1 cycles the modes for button 2 and 3
+   -1 - not initialized
     0 - default (pause/next)
     1 - volume  (up/down)
     2 - title   (DNP/FAV)
 */
-static int epmode=-1;
+static int _epmode=-1;
+/* update mode
+  -1 - full
+   0 - none
+   1 - play/pause
+   2 - buttons
+   4 - title
+*/
+static int _umode=-1;
+
 /*
  * the last known state. Used to avoid updating too much.
  * set to mpc_start to force update.
  */
 static mpcmd last=mpc_start;
 static int _updating=0;
+static struct timeval lastevent;
+static pthread_mutex_t _debouncelock=PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t _updatelock=PTHREAD_MUTEX_INITIALIZER;
+static unsigned ucount=0;
+static char lasttitle[MAXPATHLEN+1];
 
+/*
+ * update the display with the current title and buttons
+ * runs in it's own thread to not block updating
+ */
+static void *_update( void *ignored ) {
+  mpplaylist *current=NULL;
+
+  while( getConfig()->command != mpc_quit ) {
+    pthread_mutex_lock( &_updatelock );
+    current=getConfig()->current;
+    epsWipeFull( epm_both );
+
+    if( current != NULL ) {
+      if( current->prev != NULL ) {
+        epsDrawString( epm_red, 40, 159, current->prev->title->display, 0 );
+      }
+      else {
+        epsDrawString( epm_red, 40, 160, "---", 1 );
+      }
+      if( current->next != NULL ) {
+        epsDrawString( epm_red, 40, 1, current->next->title->display, 0 );
+      }
+      else {
+        epsDrawString( epm_red, 40, 0, "---", 0 );
+      }
+
+      if( last != mpc_idle ) {
+        if( current->title->flags & MP_FAV ) {
+          epsDrawSymbol( epm_red, 5, 151, ep_fav );
+        }
+        else {
+          epsDrawSymbol( epm_red, 5, 151, ep_play );
+        }
+        epsDrawString( epm_black, 40, 120, current->title->artist, 1 );
+        epsDrawString( epm_black, 40, 75,  current->title->title, 2 );
+        epsDrawString( epm_black, 40, 40,  current->title->album, 0 );
+      }
+      else {
+        epsDrawSymbol( epm_red, 5, 151, ep_pause );
+        epsDrawString( epm_red, 40, 120, current->title->artist, 1 );
+        epsDrawString( epm_red, 40, 75,  current->title->title, 2 );
+        epsDrawString( epm_red, 40, 40,  current->title->album, 0 );
+      }
+
+    }
+    else {
+      epsDrawString( epm_red, 40, 50, "Initializing", 1 );
+    }
+
+    epsLine( epm_black, 30, 0, 30, Y_MAX );
+    epsLine( epm_black, 0, 140, 30, 140 );
+    epsLine( epm_black, 30, 20, X_MAX, 20 );
+    epsLine( epm_black, 30, 150, X_MAX, 150 );
+
+    switch( _epmode ) {
+      case -1:
+      /* no break */
+      case 0: /* pause/next */
+      if( last != mpc_idle ) {
+        epsDrawSymbol( epm_black, 5, 90, ep_pause );
+      }
+      else {
+        epsDrawSymbol( epm_black, 5, 90, ep_play );
+      }
+      epsDrawSymbol( epm_black, 5, 30, ep_next );
+      break;
+      case 1: /* volume */
+      epsDrawSymbol( epm_black, 5, 90, ep_up );
+      epsDrawSymbol( epm_black, 5, 30, ep_down );
+      break;
+      case 2: /* dnp/fav */
+      epsDrawSymbol( epm_black, 5, 90, ep_dnp );
+      epsDrawSymbol( epm_black, 5, 30, ep_fav );
+      break;
+      default:
+      addMessage( 0, "EP: update illegal epmode %i", _epmode );
+    }
+
+    /* update full or partial depending on mode */
+    switch( _umode ) {
+      case 0:
+        /* no update.. */
+      break;
+      case 1: /* play/pause */
+        epsPartialDisplay( 5, 90, 16, 77 );
+      break;
+      case 2: /* buttons */
+        epsPartialDisplay( 5, 30, 16, 76 );
+      break;
+      default: /* full */
+        epsDisplay( );
+    }
+
+    _umode=0;
+    _updating=0;
+  }
+  return NULL;
+}
+
+/**
+ * special handling for the server during information updates
+ */
+void ep_updateHook( void *ignore ) {
+  char *title=NULL;
+  if( epsGetState() < 0 ) {
+    return;
+  }
+  /* no need to be really thread safe as only one thread can call this
+   * function and that has a frequency of ~1 call/s */
+  if( _updating != 0 ) {
+    return;
+  }
+  _updating=1;
+
+  if( ( getConfig()->current!=NULL ) &&
+  ( getConfig()->current->title != NULL ) ) {
+    title=getConfig()->current->title->display;
+  }
+
+  /* has the status changed? */
+  if( getConfig()->status != last ) {
+    last=getConfig()->status;
+    _umode|=1;
+  }
+
+  /* has the title changed? */
+  if ( ( title != NULL ) && ( strcmp( title, lasttitle ) != 0 ) ) {
+    strtcpy( lasttitle, title, MAXPATHLEN );
+    /* also get the status to avoid double draw on start */
+    last=getConfig()->status;
+    _umode|=4;
+  }
+
+  /* do we need an update? */
+  if( _umode != 0 ) {
+    if( ucount > TOSLEEP ) {
+      addMessage( 2, "EP: Display sleeps!" );
+      if( epsPoweron() ) {
+        _updating=0;
+        return;
+      }
+    }
+    ucount=0;
+    /* unlock update thread */
+    pthread_mutex_unlock(&_updatelock);
+  }
+  else {
+    _updating=0;
+  }
+
+  if( ucount == TOSLEEP ) {
+    addMessage( 2, "EP: Send Display to sleep.." );
+    epsPoweroff();
+    ucount++;
+  }
+  else if( ( epsGetState() >= 0 ) && ( ucount < TOSLEEP ) ) {
+    ucount++;
+  }
+}
+
+/*
+ * debounce the buttons
+ */
 static void debounceCmd( mpcmd cmd ) {
-  if( getConfig()->command == mpc_idle ) {
-    addMessage(1,"EP cmd %s", mpcString( cmd ) );
+  struct timeval now, diff;
+  if( pthread_mutex_trylock( &_debouncelock ) ) {
+    addMessage( 2,"EP: mutex debounce %s", mpcString( cmd ) );
+    return;
+  }
+  gettimeofday( &now, NULL );
+  timersub( &now, &lastevent, &diff );
+  lastevent.tv_sec=now.tv_sec;
+  lastevent.tv_usec=now.tv_usec;
+
+  if( ( diff.tv_sec > 0 ) || ( diff.tv_usec > 200000 ) ) {
+    addMessage( 2,"EP: cmd %s", mpcString( cmd ) );
     setCommand( cmd );
   }
   else {
-    addMessage(1,"EP debounce %s", mpcString( cmd ) );
+    addMessage( 2,"EP: debounce %s", mpcString( cmd ) );
+    addMessage( 1,"EP: tv %u - %u", diff.tv_sec, diff.tv_usec );
   }
+  pthread_mutex_unlock( &_debouncelock );
 }
 
-/* cycle through the modes */
+/*
+ * cycle through the key modes on Button 1
+ */
 static void key1_cb( void ) {
-  if( epmode == -1 ) {
-    addMessage(0, "Not yet.." );
+  struct timeval now, diff;
+  if( _epmode == -1 ) {
+    addMessage( 0, "EP: Key1, not yet.." );
     return;
   }
-  epmode=(epmode+1)%3;
-  last=mpc_start;
+  if( pthread_mutex_trylock( &_debouncelock ) ) {
+    addMessage( 2, "EP: mutex debounce cycle" );
+    return;
+  }
+  gettimeofday( &now, NULL );
+  timersub( &now, &lastevent, &diff );
+  lastevent.tv_sec=now.tv_sec;
+  lastevent.tv_usec=now.tv_usec;
+
+  if( ( diff.tv_sec > 0 ) || ( diff.tv_usec > 200000 ) ) {
+    _epmode=(_epmode+1)%3;
+    _umode=2;
+  }
+  pthread_mutex_unlock( &_debouncelock );
+  ep_updateHook( NULL );
 }
 
+/*
+ * Key2: play/pause, Vol+, DNP
+ */
 static void key2_cb( void ) {
-  switch( epmode ) {
+  switch( _epmode ) {
     case -1:
-      addMessage(0, "Not yet.." );
+      addMessage( 0, "EP: Key2, not yet.." );
     break;
     case 0:
       debounceCmd(mpc_play);
@@ -56,14 +269,17 @@ static void key2_cb( void ) {
       debounceCmd( mpc_dnp|mpc_display );
     break;
     default:
-      addMessage(0,"Unknown epMode %u for button2!",epmode);
+      addMessage( 0, "EP: Unknown epMode %i for button2!", _epmode );
   }
 }
 
+/*
+ * Key3: Skip, Vol-, FAV
+ */
 static void key3_cb( void ) {
-  switch( epmode ) {
+  switch( _epmode ) {
     case -1:
-      addMessage(0, "Not yet.." );
+      addMessage( 0, "EP: Key3, not yet.." );
     break;
     case 0:
       debounceCmd(mpc_next);
@@ -75,97 +291,73 @@ static void key3_cb( void ) {
       debounceCmd( mpc_fav|mpc_display );
     break;
     default:
-      addMessage(0,"Unknown epMode %u for button2!",epmode);
+      addMessage( 0, "EP: Unknown epMode %i for button3!", _epmode );
   }
 }
 
+/*
+ * Draw a little heart in the center of the display and switch it off
+ */
 void epExit( void ) {
-  unsigned char *black=falloc(EPDBYTES,1);
-  epsDrawSymbol( black, 124, 80, ep_fav );
-  epsDisplay( NULL, black );
-  free(black);
+  /* allow the update thread to terminate */
+  pthread_mutex_unlock(&_updatelock);
+
+  if( epsGetState() == -2 ) {
+    /* unitialized display, don't touch */
+    return;
+  }
+  if( epsGetState() == 0 ) {
+    if( epsPoweron() ){
+      /* unable to power on? Then just ignore and hope for the best.. */
+      return;
+    }
+  }
+  epsWipeFull( epm_both );
+  epsDrawSymbol( epm_red, 124, 80, ep_fav );
+  epsDisplay( );
   epsPoweroff();
 }
 
-PI_THREAD(_setButtons) {
-  epsIdle();
+/*
+ * helperfunction to set the buttons in an own thread
+ * this is an own thread to not block on initialization
+ * and PowerOn
+ */
+static void *_setButtons( void *ignored ) {
+  addMessage( 2, "New Thread: _setButtons()" );
+  /* init buttons */
   epsButton( KEY1, key1_cb );
   epsButton( KEY2, key2_cb );
   epsButton( KEY3, key3_cb );
   /* DO NOT USE BUTTON4, it will break the HiFiBerry function!
      However it will act like a MUTE button as is... */
-  epmode=0;
+  _epmode=0;
+  addMessage( 2, "End Thread: _setButtons()" );
   return NULL;
 }
 
+/*
+ * set up the display and initialize features
+ */
 void epSetup() {
+  pthread_t tid;
+  int error;
   epsSetup();
-  /* init buttons */
-  if( piThreadCreate(_setButtons) != 0 ) {
-    addMessage( 0, "EP: Could not start button init thread!" );
+
+  /* run this in an own thread to allow initialization of the player
+   * while the display is still busy waking up */
+  error=pthread_create( &tid, NULL, _setButtons, NULL );
+  if( error != 0 ) {
+    addMessage( 0, "EP: Could not start setup thread!" );
+    addError(error);
     return;
   }
-}
 
-PI_THREAD(_update) {
-  int i;
-  unsigned char *black=falloc(EPDBYTES,1);
-  addMessage(1,"EP update do");
-  last=getConfig()->status;
-  if( last == mpc_play ) {
-    for( i=0; i<40; i+=2 ) {
-  		epsLine( black, 108+i, 20, 183+i, 88 );
-  		epsLine( black, 183+i, 88, 108+i, 156 );
-  	}
-  	epsLine( black, 183, 88, 223, 88 );
-  }
-  else {
-    epsBox( black, 118, 20, 158, 156, 1 );
-    epsBox( black, 194, 20, 234, 156, 1 );
-  }
-
-  switch( epmode ) {
-    case 0: /* pause/next */
-    epsDrawSymbol( black, 5, 90, ep_play );
-    epsDrawSymbol( black, 5, 30, ep_next );
-    break;
-    case 1: /* volume */
-    epsDrawSymbol( black, 5, 90, ep_up );
-    epsDrawSymbol( black, 5, 30, ep_down );
-    break;
-    case 2: /* dnp/fav */
-    epsDrawSymbol( black, 5, 90, ep_dnp );
-    epsDrawSymbol( black, 5, 30, ep_fav );
-    break;
-    default:
-    addMessage( 0, "EP illegal mode %u", epmode );
-  }
-
-  epsDisplay( black, NULL );
-  free(black);
-  _updating=0;
-  return NULL;
-}
-
-static unsigned ucount=0;
-/**
- * special handling for the server during information updates
- */
-void ep_updateHook( void *ignore ) {
-  if( ( _updating == 0 ) && ( getConfig()->status != last ) ) {
-    if( ucount > 1000 ) {
-      addMessage( 0, "EP Display sleeps!" );
-      epsPoweron();
-    }
-    ucount=0;
-    _updating=1;
-    if( piThreadCreate(_update) != 0 ) {
-      addMessage( 0, "EP: Could not start update thread!" );
-      return;
-    }
-  }
-  if( ucount > 1000 ) {
-    addMessage( 1, "EP Send Display to sleep.." );
-    epsPoweroff();
+  /* start the background update thread failure to do this should be fatal! */
+  error=pthread_create( &tid, NULL, _update, NULL );
+  if( error != 0 ) {
+    addMessage( 0, "EP: Could not start update thread!" );
+    addError( error );
+    return;
   }
 }

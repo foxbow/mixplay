@@ -1,10 +1,35 @@
+/**
+ * support for a 2.7" ePaper display
+ *
+ * This uses a 'paper' format, so 0/0 is the lower left corner, not the upper
+ * left as usually in a display. This may change though...
+ */
+
 #include "utils.h"
 #include "epasupp.h"
+#include "bmfont.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <wiringPiSPI.h>
 #include <errno.h>
 
+static unsigned char _bm_red[EPDBYTES];
+static unsigned char _bm_black[EPDBYTES];
+static pthread_mutex_t _powerlock=PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t _idlelock=PTHREAD_MUTEX_INITIALIZER;
+
+/*
+  -2 - not initialized
+  -1 - initializing
+   0 - powered down
+   1 - powered up
+*/
+static volatile int  _state=-2;
+
+/**
+ * these are confusing as the current layout zeroes on the lower left corner
+ * not the upper left - see above
+ */
 static const unsigned char _epsymbols[ep_max][32]={
 	{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
 	{ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff },
@@ -18,16 +43,8 @@ static const unsigned char _epsymbols[ep_max][32]={
 	{ 0x00, 0x00, 0x1c, 0x38, 0x70, 0x0e, 0xc0, 0x03, 0x70, 0x0e, 0x1c, 0x38, 0xc0, 0x03, 0x60, 0x05, 0xe0, 0x07, 0x70, 0x0e, 0xf8, 0x1f, 0xb8, 0x1d, 0x98, 0x19, 0xf8, 0x1f, 0xe0, 0x07, 0x00, 0x00 }
 };
 
-/*
-  -2 - not initialized
-  -1 - initializing
-   0 - powered down
-   1 - powered up
-*/
-static int state=-2;
-
 /* Lookup tables */
-const unsigned char lut_vcom_dc[] = {
+static const unsigned char lut_vcom_dc[] = {
     0x00, 0x00,
     0x00, 0x1A, 0x1A, 0x00, 0x00, 0x01,
     0x00, 0x0A, 0x0A, 0x00, 0x00, 0x08,
@@ -38,8 +55,8 @@ const unsigned char lut_vcom_dc[] = {
     0x00, 0x23, 0x00, 0x00, 0x00, 0x01
 };
 
-/* R21H */
-const unsigned char lut_ww[] = {
+/* R21H  00 = - */
+static const unsigned char lut_ww[] = {
     0x90, 0x1A, 0x1A, 0x00, 0x00, 0x01,
     0x40, 0x0A, 0x0A, 0x00, 0x00, 0x08,
     0x84, 0x0E, 0x01, 0x0E, 0x01, 0x10,
@@ -49,8 +66,8 @@ const unsigned char lut_ww[] = {
     0x00, 0x23, 0x00, 0x00, 0x00, 0x01
 };
 
-/* R22H - red */
-const unsigned char lut_bw[] = {
+/* R22H  10 = red */
+static const unsigned char lut_bw[] = {
     0xA0, 0x1A, 0x1A, 0x00, 0x00, 0x01,
     0x00, 0x0A, 0x0A, 0x00, 0x00, 0x08,
     0x84, 0x0E, 0x01, 0x0E, 0x01, 0x10,
@@ -60,8 +77,8 @@ const unsigned char lut_bw[] = {
     0xC0, 0x23, 0x00, 0x00, 0x00, 0x01
 };
 
-/* R23H - white */
-const unsigned char lut_bb[] = {
+/* R23H 11 = white */
+static const unsigned char lut_bb[] = {
     0x90, 0x1A, 0x1A, 0x00, 0x00, 0x01,
     0x40, 0x0A, 0x0A, 0x00, 0x00, 0x08,
     0x84, 0x0E, 0x01, 0x0E, 0x01, 0x10,
@@ -71,8 +88,8 @@ const unsigned char lut_bb[] = {
     0x00, 0x23, 0x00, 0x00, 0x00, 0x01
 };
 
-/* R24H - black */
-const unsigned char lut_wb[] = {
+/* R24H 01 = black */
+static const unsigned char lut_wb[] = {
     0x90, 0x1A, 0x1A, 0x00, 0x00, 0x01,
     0x20, 0x0A, 0x0A, 0x00, 0x00, 0x08,
     0x84, 0x0E, 0x01, 0x0E, 0x01, 0x10,
@@ -91,38 +108,56 @@ static void epsSend( unsigned char cmd, int datamode ) {
   digitalWrite( DC_PIN, datamode );
   digitalWrite( CS_PIN, 0);
   if( wiringPiSPIDataRW( 0, &cmd, 1 ) < 0 ) {
+		/* is a command fails this is fail worthy.. */
     fail( errno, "wiringPiSPIDataRW(0,cmd,1) failed" );
   }
   digitalWrite( CS_PIN, 1);
 }
 
 /*
- * wait for ePaper
- * This is BAAAD!!!
+ * unlock the display functions
  */
-void epsIdle() {
-  if( state == -2 ) {
-    addMessage( 2, "EP Idling on unitialized Screen!" );
+static void epsUnidle(){
+	addMessage(2,"EPS: idle unlocked!");
+	pthread_mutex_unlock( &_idlelock );
+}
+
+/*
+ * wait for ePaper
+ * This should probably become epsLock()
+ */
+static void epsIdle(int unlock) {
+	addMessage(2,"EPS: idle locked!");
+	pthread_mutex_lock( &_idlelock );
+  if(  _state == -2 ) {
+    addMessage( 1, "EPS: Idling on unitialized Screen!" );
   }
-  if( state == 0 ) {
-    addMessage( 2, "EP Idling on powered off Screen!" );
+  if(  _state == 0 ) {
+    addMessage( 2, "EPS: Idling on powered off Screen!" );
   }
-	if( state <= 0 ) {
-		addMessage( 1, "EP initializing" );
-    while( state != 1 ) {
+	if(  _state <= 0 ) {
+		addMessage( 2, "EPS: Idling on initialization (%i)",  _state );
+    while(  _state != 1 ) {
       delay(100);
     }
-    addMessage( 1, "EP initialized" );
+    addMessage( 2, "EPS: initialized" );
 	}
   if( digitalRead( BSY_PIN ) == 0 ) {
-    addMessage( 1, "EP busy" );
+    addMessage( 2, "EPS: busy" );
     while( digitalRead( BSY_PIN ) == 0 ) {
       delay(100);
     }
-    addMessage( 1, "EP ready" );
+    addMessage( 2, "EPS: ready" );
   }
+	if( unlock != 0 ) {
+		epsUnidle();
+	}
+	addMessage(2,"EPS: exit idle..");
 }
 
+/*
+ * pushes the reset button on the display.
+ */
 static void epsReset( void ) {
   digitalWrite( RST_PIN, 1 );
   delay( 200 );
@@ -132,55 +167,280 @@ static void epsReset( void ) {
   delay( 200 );
 }
 
-void epsDisplay( unsigned char *black, unsigned char *red ) {
-  unsigned i;
-  epsIdle();
+/*
+ * sends the bitmaps to the display.
+ *
+ * These are interpreted as 0x and x0, so it is not, however 00 is set to 11
+ * so unset pixels (not red or black) are forced white and not unchanged..
+ * Not sure if it's due to the wrong command being send or due to the
+ * set up of the lookup tables.
+ */
+void epsDisplay( ) {
+	unsigned i;
+	if (  _state == -2 ) {
+		addMessage( 0, "EPS: Display is not initialized!");
+		return;
+	}
+	else if(  _state == -1 ) {
+		addMessage( 1, "EPS: Display is initializing.." );
+		return;
+	}
+	else if(  _state == 0 ) {
+		addMessage( 2, "EPS: Waking up display to draw" );
+		if( epsPoweron() ) {
+			return;
+		}
+	}
 
-  epsSend( DATA_START_TRANSMISSION_1, 0 );
-  for( i=0; i<EPDBYTES; i++ ) {
-    if( black == NULL ) {
-      epsSend(0,1);
-    }
-    else {
-      epsSend( black[i], 1 );
-    }
-  }
-  epsSend( DATA_STOP, 0 );
+	epsIdle(0);
 
-  epsSend( DATA_START_TRANSMISSION_2, 0 );
-  for( i=0; i<EPDBYTES; i++ ) {
-    if( red == NULL ) {
-      epsSend(0,1);
-    }
-    else {
-      epsSend( red[i], 1 );
-    }
-  }
-  epsSend( DATA_STOP, 0 );
+	epsSend( DATA_START_TRANSMISSION_1, 0 );
+	for( i=0; i<EPDBYTES; i++ ) {
+		epsSend( _bm_black[i], 1 );
+	}
+	epsSend( DATA_STOP, 0 );
 
-  epsSend( DISPLAY_REFRESH, 0 );
+	epsSend( DATA_START_TRANSMISSION_2, 0 );
+	for( i=0; i<EPDBYTES; i++ ) {
+		epsSend( _bm_red[i], 1 );
+	}
+	epsSend( DATA_STOP, 0 );
+
+	epsSend( DISPLAY_REFRESH, 0 );
+	epsUnidle();
 }
 
-void epsSetPixel( unsigned char *map, unsigned x, unsigned y ) {
+/* send coordinates in partial update format */
+static void epsSendCoords( unsigned x, unsigned y, unsigned w, unsigned h ) {
+	epsSend( x&0x0100 >> 8, 1 );
+	epsSend( x&0x00f8, 1 );
+	epsSend( y&0x0100 >> 8, 1 );
+	epsSend( y&0x00ff, 1 );
+	epsSend( w&0x0100 >> 8, 1 );
+	epsSend( w&0x00f8, 1 );
+	epsSend( h&0x0100 >> 8, 1 );
+	epsSend( h&0x00ff, 1 );
+}
+
+/* This is tricky as x and y are not what the display expects */
+void epsPartialDisplay( unsigned x, unsigned y, unsigned w, unsigned h ) {
+	unsigned bmx, bmy, bmw, bmh;
+	unsigned row, col;
+
+	/* w and l are width and height related, not coordinates! */
+	if( ( x+w > EPHEIGHT ) || ( y+h > EPWIDTH ) ) {
+			addMessage( 0, "EPS: Area (%u,%u,%u,%u) is out of area!", x, y, w, h );
+			return;
+	}
+
+	if(  _state < 0 ) {
+		addMessage( 0, "EPS: PartialDisplay is not initialized!" );
+		return;
+	}
+	else if(  _state == 0 ) {
+		addMessage( 2, "EPS: Waking up display to draw" );
+		if( epsPoweron() ) {
+			return;
+		}
+	}
+
+	addMessage( 2, "CO (%u,%u)/(%u/%u)", x, y, w, h );
+	/* transform coordinates from Display to bitmap */
+	bmx=EPWIDTH-(y+h);
+	bmw=h;
+	bmy=EPHEIGHT-(x+w);
+	bmh=w;
+
+	/* tweak bitmap offsets to fit definition */
+	if( bmx%8 != 0 ) {
+		bmw+=( bmx%8 );
+		bmx=bmx&0x01f8;
+	}
+	if( bmw%8 != 0 ) {
+		bmw=(bmw+8)&0x01f8;
+	}
+
+	if( bmy & 1 ) {
+		bmy--;
+		bmh++;
+	}
+	if( bmh & 1 ) {
+		bmh++;
+	}
+
+	addMessage( 2, "BM(%u,%u)/(%u/%u)", bmx, bmy, bmw, bmh );
+
+	epsIdle(0);
+
+	epsSend( PARTIAL_DATA_START_TRANSMISSION_1, 0 );
+	epsSendCoords( bmx, bmy, bmw, bmh );
+	for( row=bmy; row < bmy+bmh; row++ ) {
+		for( col=(bmx/8); col<(bmx+bmw)/8; col++ ) {
+			epsSend( _bm_black[(Y_BYTES)*row+col], 1 );
+		}
+	}
+	epsSend( DATA_STOP, 0 );
+
+	epsSend( PARTIAL_DATA_START_TRANSMISSION_2, 0 );
+	epsSendCoords( bmx, bmy, bmw, bmh );
+	for( row=bmy; row < bmy+bmh; row++ ) {
+		for( col=(bmx/8); col<(bmx+bmw)/8; col++ ) {
+			epsSend( _bm_red[(Y_BYTES)*row+col], 1 );
+		}
+	}
+	epsSend( DATA_STOP, 0 );
+
+	epsSend( PARTIAL_DISPLAY_REFRESH, 0 );
+	epsSendCoords( bmx, bmy, bmw, bmh );
+
+	epsUnidle();
+}
+
+void epsSetPixel( epsmap map, unsigned x, unsigned y ) {
   unsigned pos=0;
-	/* fix transformation off by one */
-	x++;
-	y++;
+
   /* clipping */
-  if( ( x > EPHEIGHT ) || ( y > EPWIDTH ) ) {
-    addMessage( 1, "EP pixel %u, %u is out or range!", x, y );
+  if( ( x > X_MAX ) || ( y > Y_MAX ) ) {
+    addMessage( 2, "EPS: setpixel %u, %u is out of range!", x, y );
     return;
   }
 	/* transform to actual layout.. */
-	y=EPWIDTH-y;
-	x=EPHEIGHT-x;
+	y=Y_MAX-y;
+	x=X_MAX-x;
 
   pos=(22*x)+(y/8);
-  map[pos]|=(128>>(y%8));
+	if( map & epm_black ) {
+  	_bm_black[pos]|=(128>>(y%8));
+	}
+	if( map & epm_red ) {
+  	_bm_red[pos]|=(128>>(y%8));
+	}
 }
 
-void epsDrawSymbol( unsigned char *map, unsigned posx, unsigned posy, epsymbol sym ) {
+static void epsUnsetPixel( epsmap map, unsigned x, unsigned y ) {
+  unsigned pos=0;
+
+  if( ( x > X_MAX ) || ( y > Y_MAX ) ) {
+    addMessage( 2, "EPS: unsetpixel %u, %u is out of range!", x, y );
+    return;
+  }
+	/* transform to actual layout.. */
+	y=Y_MAX-y;
+	x=X_MAX-x;
+
+  pos=(22*x)+(y/8);
+	if( map & epm_black ) {
+  	_bm_black[pos]&=~(128>>(y%8));
+	}
+	if( map & epm_red ) {
+  	_bm_red[pos]&=~(128>>(y%8));
+	}
+}
+
+void epsWipe( epsmap map, unsigned x, unsigned y, unsigned w, unsigned l ) {
+	int i, j;
+	for( i=x; i<x+l; i++ ) {
+		for( j=y; j<y+w; j++ ) {
+			epsUnsetPixel( map, i, j );
+		}
+	}
+}
+
+void epsWipeFull( epsmap map ) {
+	int i;
+	for( i=0; i<EPDBYTES; i++ ) {
+		if( map & epm_black ) {
+			_bm_black[i]=0;
+		}
+		if( map & epm_red ) {
+			_bm_red[i]=0;
+		}
+	}
+}
+
+static void epsPutByte( epsmap map, unsigned posx, unsigned posy, unsigned char b, int mag ) {
+	int i, j;
+	int m=(mag>0)?2:1;
+
+	if( ( posx > X_MAX ) || ( posy > Y_MAX ) ) {
+		return;
+	}
+
+	for( i=0; i<8; i++ ) {
+		if( b & ( 128 >> i ) ) {
+			for( j=0; j<m; j++ ) {
+				epsSetPixel( map, posx+(m*i)+j, posy );
+			}
+		}
+	}
+}
+
+int epsDrawChar( epsmap map, unsigned posx, unsigned posy, unsigned char c, int mag ) {
+	int i, m, ym=(mag==2)?2:1;
+
+	if( ( mag < 0 ) || ( mag > 2 ) ) {
+		addMessage( 0, "EPS: illegal magnification of %i ('%c')!", mag, c );
+		return 1;
+	}
+
+	c=c-' ';
+	if( ( c < 0 ) || ( c > 94 ) ) {
+		addMessage( 2 , "EPS: character %i is out of range!", c );
+		return 1;
+	}
+
+	if( ( posx > X_MAX ) || ( posy > Y_MAX ) ) {
+		return 1;
+	}
+
+	for( i=0; i<13; i++ ) {
+		for( m=0; m<ym; m++ ) {
+			epsPutByte( map, posx, posy+(i*ym)+m, _epfont[c][i], mag );
+		}
+	}
+
+	return 0;
+}
+
+void epsDrawString( epsmap map, unsigned posx, unsigned posy, char *txt, int mag ) {
+	unsigned end=0;
+	int i, ill=0;
+	int m=(mag>0)?2:1;
+
+	if( ( mag < 0 ) || ( mag > 2 ) ) {
+		addMessage( 0, "EPS: illegal magnification of %i (%s)!", mag, txt );
+		return;
+	}
+
+	if( ( posx > X_MAX ) || ( posy > Y_MAX ) ) {
+		return;
+	}
+
+	/* try to center short strings.. */
+	end=posx+(strlen(txt)*9*m);
+	if( end < X_MAX ) {
+		posx=posx+((X_MAX-end)/2);
+	}
+
+	for( i=0; i<strlen(txt); i++ ) {
+		ill+=epsDrawChar( map, posx+(9*(i-ill)*m), posy, txt[i], mag );
+	}
+}
+
+/*
+ * draw one of the predefined Symbols
+ */
+void epsDrawSymbol( epsmap map, unsigned posx, unsigned posy, epsymbol sym ) {
 	unsigned x, y;
+	if( sym >= ep_max ) {
+		addMessage( 0, "EPS: Illegal symbol #%i!", sym );
+		return;
+	}
+
+	if( ( posx > X_MAX ) || ( posy > Y_MAX ) ) {
+		return;
+	}
+
 	for( x=0; x<16; x++ ){
 		for( y=0; y<16; y++ ) {
 			if( _epsymbols[sym][(x/8)+(2*y)] & (1<<(x%8)) ) {
@@ -190,7 +450,10 @@ void epsDrawSymbol( unsigned char *map, unsigned posx, unsigned posy, epsymbol s
 	}
 }
 
-void epsLine( unsigned char* map, int x0, int y0, int x1, int y1 ) {
+/*
+ * draw a line in the given bitmap
+ */
+void epsLine( epsmap map, int x0, int y0, int x1, int y1 ) {
 	int xs, xe, ys, ye;
 	int x,y;
 	int step;
@@ -225,7 +488,7 @@ void epsLine( unsigned char* map, int x0, int y0, int x1, int y1 ) {
 	/* iterate over y */
 	else {
 		/* always draw from left to right */
-		if( x0<x1 ) {
+		if( y0<y1 ) {
 			xs=x0;
 			ys=y0;
 			xe=x1;
@@ -251,110 +514,10 @@ void epsLine( unsigned char* map, int x0, int y0, int x1, int y1 ) {
 	}
 }
 
-#if 0
-void epsLine( unsigned char* map, unsigned x0, unsigned y0, unsigned x1, unsigned y1 ) {
-  int dx=x1-x0;
-  int dy=y1-y0;
-  unsigned x, y;
-  int step;
-
-  /* straight horizontal line */
-  if( dx==0 ) {
-    if( y0<y1 ) {
-      for( y=y0; y<=y1; y++ ) {
-        epsSetPixel( map, x0, y );
-      }
-    }
-    else {
-      for( y=y1; y<=y0; y++ ) {
-        epsSetPixel( map, x0, y );
-      }  /* straight horizontal line */
-  if( dx==0 ) {
-    if( y0<y1 ) {
-      for( y=y0; y<=y1; y++ ) {
-        epsSetPixel( map, x0, y );
-      }
-    }
-    else {
-      for( y=y1; y<=y0; y++ ) {
-        epsSetPixel( map, x0, y );
-      }
-    }
-    return;
-  }
-
-  /* straight vertical line */
-  if( dy==0 ) {
-    if( x0<x1 ) {
-      for( x=x0; x<=x1; x++ ) {
-				epsSetPixel( map, x, y0 );
-      }
-    }
-    else {
-      for( x=x1; x<=x0; x++ ) {
-        epsSetPixel( map, x, y0 );
-      }
-    }
-    return;
-  }
-
-    }
-    return;
-  }
-
-  /* straight vertical line */
-  if( dy==0 ) {
-    if( x0<x1 ) {
-      for( x=x0; x<=x1; x++ ) {
-				epsSetPixel( map, x, y0 );
-      }
-    }
-    else {
-      for( x=x1; x<=x0; x++ ) {
-        epsSetPixel( map, x, y0 );
-      }
-    }
-    return;
-  }
-
-  if( abs(dx) < abs(dy) ) {
-    step=(100*dx)/dy;
-    if( y0 < y1 ) {
-      for( y=y0; y<=y1; y++ ) {
-        x=x0+(((y-y0)*step)/100);
-				epsSetPixel( map, x, y );
-				epsSetPixel( map, x+1, y );
-      }
-    }
-    else {
-      for( y=y1; y<=y0; y++ ) {
-        x=x1-(((y-y1)*step)/100);
-        epsSetPixel( map, x, y );
-				epsSetPixel( map, x+1, y );
-      }
-    }
-  }
-  else {
-    step=(100*dy)/dx;
-    if( x0 < x1 ) {
-      for( x=x0; x<=x1; x++ ) {
-        y=y0+(((x-x0)*step)/100);
-        epsSetPixel( map, x, y );
-				epsSetPixel( map, x, y+1 );
-      }
-    }
-    else {
-      for( x=x1; x<=x0; x++ ) {
-        y=y1-(((x-x1)*step)/100);
-				epsSetPixel( map, x, y );
-				epsSetPixel( map, x, y+1 );
-      }
-    }
-  }
-}
-#endif
-
-void epsBox( unsigned char* map, unsigned x0, unsigned y0, unsigned x1, unsigned y1, int filled ) {
+/*
+ * draw a box in the given bitmap
+ */
+void epsBox( epsmap map, unsigned x0, unsigned y0, unsigned x1, unsigned y1, int filled ) {
   unsigned x;
   if( filled ) {
     if( x0 < x1 ) {
@@ -376,157 +539,168 @@ void epsBox( unsigned char* map, unsigned x0, unsigned y0, unsigned x1, unsigned
   }
 }
 
-PI_THREAD(_epsSetup) {
-  unsigned count;
-  epsReset();
-
-  addMessage( 1, "EP power on" );
-  epsSend( POWER_ON, 0 );
-	while( digitalRead( BSY_PIN ) == 0 ) {
-		delay(100);
-	}
-
-  epsSend( PANEL_SETTING, 0 );
-  epsSend( 0xaf,1 );        /* KW-BF   KWR-AF    BWROTP 0f               */
-
-  epsSend( PLL_CONTROL, 0 );
-  epsSend( 0x3a, 1 );       /* 3A 100HZ   29 150Hz 39 200HZ    31 171HZ  */
-
-  epsSend( POWER_SETTING, 0 );
-  epsSend( 0x03, 1 );                  /* VDS_EN, VDG_EN                   */
-  epsSend( 0x00, 1 );                  /* VCOM_HV, VGHL_LV[1], VGHL_LV[0]  */
-  epsSend( 0x2b, 1 );                  /* VDH                              */
-  epsSend( 0x2b, 1 );                  /* VDL                              */
-  epsSend( 0x09, 1 );                  /* VDHR                             */
-
-  epsSend( BOOSTER_SOFT_START, 0 );
-  epsSend( 0x07, 1 );
-  epsSend( 0x07, 1 );
-  epsSend( 0x17, 1 );
-
-  /* Power optimization */
-  epsSend( POWER_OPT, 0 );
-  epsSend( 0x60, 1 );
-  epsSend( 0xA5, 1 );
-  epsSend( POWER_OPT, 0 );
-  epsSend( 0x89, 1 );
-  epsSend( 0xA5, 1 );
-  epsSend( POWER_OPT, 0 );
-  epsSend( 0x90, 1 );
-  epsSend( 0x00, 1 );
-  epsSend( POWER_OPT, 0 );
-  epsSend( 0x93, 1 );
-  epsSend( 0x2A, 1 );
-  epsSend( POWER_OPT, 0 );
-  epsSend( 0x73, 1 );
-  epsSend( 0x41, 1 );
-
-  epsSend( VCM_DC_SETTING_REGISTER, 0 );
-  epsSend( 0x12, 1 );
-  epsSend( VCOM_AND_DATA_INTERVAL_SETTING, 0 );
-  epsSend( 0x87, 1 );        /* define by OTP */
-
-  /* set lookup tabels */
-  addMessage(2, "EP setting lookup tables" );
-  epsSend( LUT_FOR_VCOM, 0 );                            /* vcom */
-  for(count = 0; count < 44; count++) {
-      epsSend(lut_vcom_dc[count],1);
-  }
-
-  epsSend( LUT_WHITE_TO_WHITE, 0 );                      /* ww -- */
-  for(count = 0; count < 42; count++) {
-      epsSend(lut_ww[count],1);
-  }
-
-  epsSend( LUT_BLACK_TO_WHITE, 0 );                      /* bw r  */
-  for(count = 0; count < 42; count++) {
-      epsSend(lut_bw[count],1);
-  }
-
-  epsSend( LUT_WHITE_TO_BLACK, 0 );                      /*wb w */
-  for(count = 0; count < 42; count++) {
-      epsSend(lut_bb[count],1);
-  }
-
-  epsSend( LUT_BLACK_TO_BLACK, 0 );                     /*bb b */
-  for(count = 0; count < 42; count++) {
-      epsSend(lut_wb[count],1);
-  }
-
-  epsSend(PARTIAL_DISPLAY_REFRESH,0);
-  epsSend(0x00,1);
-
-/* ShowMode() should be enough
-  addMessage( 2, "EP wipe all");
-  epClear();
-*/
-	state=1;
-  return NULL;
-}
-
-
+/*
+ * link one of the display buttons to a callback
+ */
 void epsButton( unsigned key, void(*func)(void) ){
-  if( state != 1 ) {
-    addMessage( 0, "Cannot set button - %i!", state );
-    return;
-  }
+	epsIdle(1);
 	pinMode( key, INPUT );
 	pullUpDnControl( key, PUD_UP ) ;
 	wiringPiISR ( key, INT_EDGE_FALLING, func );
+	epsUnidle();
 }
 
-void epsPoweron( void ) {
-  switch( state ){
+/*
+ * turn on the display. Use this after epsPoweroff() to turn the paper back on
+ * Do not use epsSetup() for this!
+ *
+ * This starts the actual power on sequence in an extra thread as it will
+ * take a couple of seconds which can be used better elsewhere. The rest of
+ * the ESP functions take care of the state.
+ */
+int epsPoweron( void ) {
+	int error=0;
+	unsigned count;
+
+	pthread_mutex_lock( &_powerlock );
+  switch( _state ){
     case 0:
-      if( piThreadCreate(_epsSetup) != 0 ) {
-        addMessage( 0, "Could not start EP init thread!" );
-        return;
-      }
+			epsReset();
+		  addMessage( 2, "EPS: powering on" );
+		  epsSend( POWER_ON, 0 );
+			while( digitalRead( BSY_PIN ) == 0 ) {
+				delay(100);
+			}
+
+			epsSend( PANEL_SETTING, 0 );
+			epsSend( 0xaf,1 );        /* KW-BF   KWR-AF    BWROTP 0f               */
+
+		  epsSend( PLL_CONTROL, 0 );
+		  epsSend( 0x3a, 1 );       /* 3A 100HZ   29 150Hz 39 200HZ    31 171HZ  */
+
+		  epsSend( POWER_SETTING, 0 );
+		  epsSend( 0x03, 1 );                  /* VDS_EN, VDG_EN                   */
+		  epsSend( 0x00, 1 );                  /* VCOM_HV, VGHL_LV[1], VGHL_LV[0]  */
+		  epsSend( 0x2b, 1 );                  /* VDH                              */
+		  epsSend( 0x2b, 1 );                  /* VDL                              */
+		  epsSend( 0x09, 1 );                  /* VDHR                             */
+
+		  epsSend( BOOSTER_SOFT_START, 0 );
+		  epsSend( 0x07, 1 );
+		  epsSend( 0x07, 1 );
+		  epsSend( 0x17, 1 );
+
+		  /* Power optimization */
+		  epsSend( POWER_OPT, 0 );
+		  epsSend( 0x60, 1 );
+		  epsSend( 0xA5, 1 );
+		  epsSend( POWER_OPT, 0 );
+		  epsSend( 0x89, 1 );
+		  epsSend( 0xA5, 1 );
+		  epsSend( POWER_OPT, 0 );
+		  epsSend( 0x90, 1 );
+		  epsSend( 0x00, 1 );
+		  epsSend( POWER_OPT, 0 );
+		  epsSend( 0x93, 1 );
+		  epsSend( 0x2A, 1 );
+		  epsSend( POWER_OPT, 0 );
+		  epsSend( 0x73, 1 );
+		  epsSend( 0x41, 1 );
+
+		  epsSend( VCM_DC_SETTING_REGISTER, 0 );
+		  epsSend( 0x12, 1 );
+		  epsSend( VCOM_AND_DATA_INTERVAL_SETTING, 0 );
+		  epsSend( 0x87, 1 );        /* define by OTP */
+
+		  /* set lookup tabels */
+		  addMessage(2, "EPS setting lookup tables" );
+		  epsSend( LUT_FOR_VCOM, 0 );                            /* vcom */
+		  for(count = 0; count < 44; count++) {
+		      epsSend(lut_vcom_dc[count],1);
+		  }
+
+		  epsSend( LUT_WHITE_TO_WHITE, 0 );                      /* ww -- */
+		  for(count = 0; count < 42; count++) {
+		      epsSend(lut_ww[count],1);
+		  }
+
+		  epsSend( LUT_BLACK_TO_WHITE, 0 );                      /* bw r  */
+		  for(count = 0; count < 42; count++) {
+		      epsSend(lut_bw[count],1);
+		  }
+
+		  epsSend( LUT_WHITE_TO_BLACK, 0 );                      /*wb w */
+		  for(count = 0; count < 42; count++) {
+		      epsSend(lut_bb[count],1);
+		  }
+
+		  epsSend( LUT_BLACK_TO_BLACK, 0 );                     /*bb b */
+		  for(count = 0; count < 42; count++) {
+		      epsSend(lut_wb[count],1);
+		  }
+
+			_state=1;
     break;
     case 1:
-      addMessage( 0, "EP display is already on!" );
+      /* cool, just go on */
     break;
     default:
-      addMessage( 0, "EP Display is not initialized!" );
+      addMessage( 0, "EPS: Display is not initialized!" );
+			error=-1;
   }
+	pthread_mutex_unlock( &_powerlock );
+	return error;
 }
 
+/*
+ * the basic set-up which initializes the Raspberry Pi and is independant
+ * of the state of the display
+ */
 void epsSetup( void ) {
-  addMessage(1, "Initializing ePaper");
-	if( state != -2 ) {
-		fail( F_FAIL, "Display is already set up!");
+  addMessage( 1, "EPS: Initializing ePaper");
+	if(  _state != -2 ) {
+		addMessage( 0, "EPS: Display is already set up!");
+		return;
 	}
-  state=-1;
+  _state=-1;
 
 	/* init wiringpi to use own pin layout */
 	wiringPiSetup();
 
-	/* init paper */
+	/* init GPIOs for paper */
   pinMode( RST_PIN, OUTPUT);
   pinMode(  DC_PIN, OUTPUT);
   pinMode(  CS_PIN, OUTPUT);
 	pinMode( BSY_PIN,  INPUT);
 
   if( wiringPiSPISetupMode(0, 32000000, 0) < 0 ) {
-    addMessage( 0, "Could not set SPI mode!" );
+    addMessage( 0, "EPS: Could not set SPI mode!" );
     return;
   }
-  state=0;
+   _state=0;
   epsPoweron();
 }
 
 /*
- * turn off the display in any case!
+ * returns the current state of the ePaper
+ */
+int epsGetState() {
+	return  _state;
+}
+
+/*
+ * turn off the display
  */
 void epsPoweroff(void) {
-  if( state == 1 ) {
-    addMessage(1, "Sending ePaper to sleep");
-    epsIdle(); /* this may be a bad idea tho.. */
-    epsSend( VCOM_AND_DATA_INTERVAL_SETTING, 0 );
-    epsSend( 0xf7, 1 );
-    epsSend( POWER_OFF, 0 );
-    epsSend( DEEP_SLEEP, 0 );
-    epsSend( 0xA5, 1 );
-    state=0;
+	if(  _state == 1 ) {
+		epsIdle(0); /* this may be a bad idea tho.. */
+		epsSend( VCOM_AND_DATA_INTERVAL_SETTING, 0 );
+		epsSend( 0xf7, 1 );
+		epsSend( POWER_OFF, 0 );
+		epsSend( DEEP_SLEEP, 0 );
+		epsSend( 0xA5, 1 );
+		epsUnidle();
+		addMessage( 2, "EPS: ePaper turned off");
+		_state=0;
   }
 }

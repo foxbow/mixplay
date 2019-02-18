@@ -23,7 +23,16 @@
 static unsigned long _curmsg=0;
 
 static void sigint(int signo){
-	addMessage(0, "External quit!", signo);
+	addMessage(0, "External quit!" );
+	if( getConfig()->command == mpc_quit ) {
+		addMessage( 0, "Forced exit!!" );
+		unlink(getConfig()->pidpath);
+		exit(1);
+	}
+	/* brute force */
+	getConfig()->command=mpc_quit;
+	getConfig()->status=mpc_quit;
+	/* try nicely too */
 	setCommand(mpc_quit);
 }
 
@@ -37,6 +46,8 @@ static void sigint(int signo){
 void fail( const int error, const char* msg, ... ) {
 	va_list args;
 	va_start( args, msg );
+	getConfig()->command=mpc_quit;
+	getConfig()->status=mpc_quit;
 
 	if( getConfig()->isDaemon ) {
 		vsyslog( LOG_ERR, msg, args );
@@ -55,7 +66,7 @@ void fail( const int error, const char* msg, ... ) {
 
 	unlink(getConfig()->pidpath);
 #ifdef EPAPER
- 	epExit();
+	epExit();
 #endif
 	exit( error );
 }
@@ -167,12 +178,15 @@ int main( int argc, char **argv ) {
 	}
 
 	addUpdateHook( &s_updateHook );
-#ifdef EPAPER
-	epSetup();
-	addUpdateHook( &ep_updateHook );
-#endif
 	control->inUI=1;
 	initAll( );
+	#ifdef EPAPER
+	sleep(1);
+	if( control->status != mpc_quit ) {
+		epSetup();
+		addUpdateHook( &ep_updateHook );
+	}
+	#endif
 	pthread_join( control->stid, NULL );
 	pthread_join( control->rtid, NULL );
 	control->inUI=0;
