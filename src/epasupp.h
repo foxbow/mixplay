@@ -2,7 +2,6 @@
 #define _EPASUPP_H_ 1
 
 #include <wiringPi.h>
-#pragma GCC poison piThreadCreate
 
 /* Number of rows and columns */
 #define EPWIDTH  176
