@@ -12,11 +12,11 @@
 #define EPS_PARTIAL 1
 
 /* the button modes
-	 button 1 cycles the modes for button 2 and 3
 	 -1 - not initialized
-		0 - default (pause/next)
-		1 - volume  (up/down)
-		2 - title   (DNP/FAV)
+		0 - default (cycle/pause/next)
+		1 - volume  (cycle/up/down)
+		2 - title   (cycle/DNP/FAV)
+		3 - stream	(pause/up/down)
 */
 static int _epmode=-1;
 /* update mode
@@ -90,7 +90,9 @@ static void *_update( void *ignored ) {
 		}
 
 		epsLine( epm_black, 30, 0, 30, Y_MAX );
-		epsLine( epm_black, 0, 140, 30, 140 );
+		if( _epmode != 3 ) {
+			epsLine( epm_black, 0, 140, 30, 140 );
+		}
 		epsLine( epm_black, 30, 20, X_MAX, 20 );
 		epsLine( epm_black, 30, 150, X_MAX, 150 );
 
@@ -107,6 +109,7 @@ static void *_update( void *ignored ) {
 			epsDrawSymbol( epm_black, 5, 30, ep_next );
 			break;
 			case 1: /* volume */
+			case 3:
 			epsDrawSymbol( epm_black, 5, 90, ep_up );
 			epsDrawSymbol( epm_black, 5, 30, ep_down );
 			break;
@@ -177,9 +180,9 @@ void ep_updateHook( void *ignore ) {
 	}
 
 	/* disable DNP/FAV on stream play */
-	if( getConfig()->playstream && ( _epmode == 2 ) ) {
-		_epmode=0;
-		_umode|=2;
+	if( getConfig()->playstream && ( _epmode != 3 ) ) {
+		_epmode=3;
+		_umode|=6;
 	}
 
 	/* do we need an update? */
@@ -244,26 +247,27 @@ static void key1_cb( void ) {
 		addMessage( 0, "EP: Key1, not yet.." );
 		return;
 	}
-	if( pthread_mutex_trylock( &_debouncelock ) ) {
-		addMessage( 2, "EP: mutex debounce cycle" );
-		return;
-	}
-	gettimeofday( &now, NULL );
-	timersub( &now, &lastevent, &diff );
-	lastevent.tv_sec=now.tv_sec;
-	lastevent.tv_usec=now.tv_usec;
 
-	if( ( diff.tv_sec > 0 ) || ( diff.tv_usec > 200000 ) ) {
-		if( getConfig()->playstream ) {
-			_epmode=(_epmode+1)%2;
-		}
-		else {
-			_epmode=(_epmode+1)%3;
-		}
-		_umode=2;
+	if( _epmode ==  3 ) {
+		debounceCmd( mpc_play );
 	}
-	pthread_mutex_unlock( &_debouncelock );
-	ep_updateHook( NULL );
+	else {
+		if( pthread_mutex_trylock( &_debouncelock ) ) {
+			addMessage( 2, "EP: mutex debounce cycle" );
+			return;
+		}
+		gettimeofday( &now, NULL );
+		timersub( &now, &lastevent, &diff );
+		lastevent.tv_sec=now.tv_sec;
+		lastevent.tv_usec=now.tv_usec;
+
+		if( ( diff.tv_sec > 0 ) || ( diff.tv_usec > 200000 ) ) {
+			_epmode=(_epmode+1)%3;
+			_umode=2;
+		}
+		pthread_mutex_unlock( &_debouncelock );
+		ep_updateHook( NULL );
+	}
 }
 
 /*
@@ -278,6 +282,7 @@ static void key2_cb( void ) {
 			debounceCmd(mpc_play);
 		break;
 		case 1:
+		case 3:
 			debounceCmd(mpc_ivol);
 		break;
 		case 2:
@@ -300,6 +305,7 @@ static void key3_cb( void ) {
 			debounceCmd(mpc_next);
 		break;
 		case 1:
+		case 3:
 			debounceCmd(mpc_dvol);
 		break;
 		case 2:

@@ -500,9 +500,10 @@ mpconfig *readConfig( void ) {
 			if( line[0]=='#' ) continue;
 			pos=strchr( line, '=' );
 			if( ( NULL == pos ) || ( strlen( ++pos ) == 0 ) ) continue;
+			line[strlen(line)-1]=0;
 			if( strstr( line, "musicdir=" ) == line ) {
-				if( line[strlen(line)-2] != '/' ) {
-					line[strlen(line)-2] = '/';
+				if( line[strlen(line)-1] != '/' ) {
+					line[strlen(line)] = '/';
 				}
 				c_config->musicdir=(char*)falloc( strlen(pos)+1, 1 );
 				strip( c_config->musicdir, pos, strlen(pos) );
