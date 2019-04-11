@@ -404,11 +404,11 @@ int epsDrawChar( epsmap map, unsigned posx, unsigned posy, unsigned char c, int 
 
 /* returns the length of the given string but only counts printable characters
    this may also come in handy if fonts with variable width were supported. */
-static int epsstrlen( static char *txt ) {
+static int epsstrlen( const char *txt ) {
 	int len=0;
 	int pos=0;
 	for( pos=0; pos <strlen(txt); pos++ ) {
-		if( ( txt[pos]-' ' < 0 ) || ( txt[pos]-' '  > 94 ) ) {
+		if( ( txt[pos]-' ' >= 0 ) && ( txt[pos]-' '  < 95 ) ) {
 			len++;
 		}
 	}
