@@ -402,6 +402,22 @@ int epsDrawChar( epsmap map, unsigned posx, unsigned posy, unsigned char c, int 
 	return 0;
 }
 
+/* returns the length of the given string but only counts printable characters
+   this may also come in handy if fonts with variable width were supported. */
+static int epsstrlen( static char *txt ) {
+	int len=0;
+	int pos=0;
+	for( pos=0; pos <strlen(txt); pos++ ) {
+		if( ( txt[pos]-' ' < 0 ) || ( txt[pos]-' '  > 94 ) ) {
+			len++;
+		}
+	}
+	return len;
+}
+
+/* draws a text string and tries to center it between posx and the right
+   edge of the display. This may not always be expected. Probably add a maxx
+	 parameter */
 void epsDrawString( epsmap map, unsigned posx, unsigned posy, char *txt, int mag ) {
 	unsigned end=0;
 	int i, ill=0;
@@ -417,7 +433,7 @@ void epsDrawString( epsmap map, unsigned posx, unsigned posy, char *txt, int mag
 	}
 
 	/* try to center short strings.. */
-	end=posx+(strlen(txt)*9*m);
+	end=posx+(epsstrlen(txt)*9*m);
 	if( end < X_MAX ) {
 		posx=posx+((X_MAX-end)/2);
 	}

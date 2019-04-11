@@ -1045,7 +1045,6 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 	gettimeofday( &tv,NULL );
 	srand( getpid()*tv.tv_sec );
 
-restart:
 	num = countTitles( MP_ALL, MP_DNP|MP_MARK|MP_CNTD );
 
 	/* select a random title from the database */
@@ -1060,7 +1059,13 @@ restart:
 		runner=pl->title;
 		addMessage( 0, "Next round!" );
 		newCount( );
-		goto restart;
+		/* Try again */
+		num = countTitles( MP_ALL, MP_DNP|MP_MARK|MP_CNTD );
+		runner=skipTitles( runner, RANDOM( num ) );
+		if( runner == NULL ) {
+			addMessage( 0, "No more titles in the database!?" );
+			return NULL;
+		}
 	}
 
 	cycles=0;
@@ -1075,11 +1080,11 @@ restart:
 				activity( "Nameskipping" );
 				runner=skipOver( runner->next, 1 );
 
+				/* hopefully this will not happen */
 				if( (runner == guard ) || ( runner == NULL ) ) {
 					addMessage( 0, "Only %s left..", lastpat );
 					newCount( );
-					goto restart;
-					break;
+					return(	addNewTitle( pl, root ) );
 				}
 			}
 			addMessage( 3, "%s != %s", runner->artist, lastpat );
