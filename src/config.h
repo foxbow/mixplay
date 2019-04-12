@@ -158,9 +158,15 @@ void activity( const char *msg, ... );
 void progressStart( const char *msg, ... );
 void progressEnd( void );
 void progressMsg( const char *msg );
-void addProgressHook( void (*)( void *arg ) );
-void addUpdateHook( void (*)( void *arg ) );
 void updateUI( void );
+
+void notifyChange();
+
+void addNotifyHook( void (*)( void *), void *arg );
+void addProgressHook( void (*)( void * ) );
+void addUpdateHook( void (*)( void * ) );
+
+void removeNotifyHook( void (*)( void *), void *arg );
 
 const char *mpcString( mpcmd rawcmd );
 const mpcmd mpcCommand( const char *val );

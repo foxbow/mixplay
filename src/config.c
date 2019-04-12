@@ -28,6 +28,7 @@
 #include "mpserver.h"
 
 static pthread_mutex_t _addmsglock=PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t _cblock=PTHREAD_MUTEX_INITIALIZER;
 static mpconfig *c_config=NULL;
 
 /**
@@ -36,11 +37,14 @@ static mpconfig *c_config=NULL;
 typedef struct _mpFunc_t _mpFunc;
 struct _mpFunc_t {
 	void (*func)( void * );
+	void *arg;
 	_mpFunc *next;
 };
 
+/* callback hooks */
 static _mpFunc *_pfunc=NULL;
 static _mpFunc *_ufunc=NULL;
+static _mpFunc *_nfunc=NULL;
 
 static const char *mpc_command[] = {
 		"mpc_play",
@@ -75,6 +79,16 @@ static const char *mpc_command[] = {
 		"mpc_mute",
 		"mpc_idle"
 };
+
+static void invokeHooks( _mpFunc *hooks ){
+	pthread_mutex_lock(&_cblock);
+	_mpFunc *pos=hooks;
+	while( pos != NULL ) {
+		pos->func(pos->arg);
+		pos=pos->next;
+	}
+	pthread_mutex_unlock(&_cblock);
+}
 
 /*
  * transform an mpcmd value into a string literal
@@ -821,8 +835,9 @@ char *getCurrentActivity( void ) {
 	return _curact;
 }
 
-static void addHook( void (*func)( void* ), _mpFunc **list ) {
+static void addHook( void (*func)( void* ), void *arg, _mpFunc **list ) {
 	_mpFunc *pos=*list;
+	pthread_mutex_lock(&_cblock);
 	if( pos == NULL ) {
 		*list=(_mpFunc*)falloc(1,  sizeof(_mpFunc) );
 		pos=*list;
@@ -835,12 +850,44 @@ static void addHook( void (*func)( void* ), _mpFunc **list ) {
 		pos=pos->next;
 	}
 	pos->func=func;
+	pos->arg=arg;
 	pos->next=NULL;
+	pthread_mutex_unlock(&_cblock);
 }
 
+static void removeHook( void (*func)( void* ), void *arg, _mpFunc **list ) {
+	_mpFunc *pos=*list;
+	_mpFunc *pre=NULL;
 
-void addProgressHook( void (*func)( void * ) ){
-	addHook( func, &_pfunc );
+	if( pos == NULL ) {
+		addMessage( 0 ,"Empty callback list!" );
+		return;
+	}
+
+	pthread_mutex_lock(&_cblock);
+
+	/* does the callback to be removed lead the list? */
+	if( ( pos->func == func ) && ( pos->arg == arg ) ){
+		*list=pos->next;
+		free( pos );
+	}
+	/* step through the rest of the list */
+	else {
+		while( pos->next != NULL ) {
+			pre=pos;
+			pos=pos->next;
+			if( ( pos->func == func ) && ( pos->arg == arg ) ){
+				pre->next=pos->next;
+				free( pos );
+				break;
+			}
+			else {
+				pos=pos->next;
+			}
+		}
+	}
+
+	pthread_mutex_unlock(&_cblock);
 }
 
 /*
@@ -849,7 +896,6 @@ void addProgressHook( void (*func)( void * ) ){
 void progressStart( const char* msg, ... ) {
 	va_list args;
 	char *line;
-	_mpFunc *pos=_pfunc;
 
 	line=(char*)falloc( 512, 1 );
 
@@ -857,11 +903,8 @@ void progressStart( const char* msg, ... ) {
 	vsnprintf( line, 512, msg, args );
 	va_end( args );
 
-	while( pos != NULL ) {
-		pos->func( line );
-		pos=pos->next;
-	}
 	addMessage( 0, line );
+	invokeHooks(_pfunc);
 
 	free( line );
 }
@@ -870,13 +913,8 @@ void progressStart( const char* msg, ... ) {
  * end a progress display
  */
 void progressEnd( void ) {
-	_mpFunc *pos=_pfunc;
-
 	addMessage( 0, "Done." );
-	while( pos != NULL ) {
-		pos->func( NULL );
-		pos=pos->next;
-	}
+	invokeHooks(_pfunc);
 }
 
 void progressMsg( const char *msg ) {
@@ -884,20 +922,38 @@ void progressMsg( const char *msg ) {
 	progressEnd();
 }
 
+void addProgressHook( void (*func)( void * ) ){
+	addHook( func, NULL, &_pfunc );
+}
+
 /**
  * register an update function
  */
-void addUpdateHook( void (*func)( void * ) ){
-	addHook( func, &_ufunc );
+ void addUpdateHook( void (*func)( void * ) ){
+ 	addHook( func, NULL, &_ufunc );
+ }
+
+/**
+ * register a notification function
+ */
+void addNotifyHook( void (*func)( void * ), void *arg ){
+	addHook( func, arg, &_nfunc );
+}
+
+void removeNotifyHook( void (*func)( void * ), void *arg ) {
+	removeHook( func, arg, &_nfunc );
+}
+
+/**
+ * notify all clients that the title info has unchanged
+ */
+void notifyChange() {
+	invokeHooks(_nfunc);
 }
 
 /**
  * run all registered update functions
  */
 void updateUI() {
-	_mpFunc *pos=_ufunc;
-	while( pos != NULL ) {
-		pos->func(NULL);
-		pos=pos->next;
-	}
+	invokeHooks(_ufunc);
 }

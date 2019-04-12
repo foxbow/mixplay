@@ -197,6 +197,7 @@ mpplaylist *wipePlaylist( mpplaylist *pl ) {
 		pl=next;
 	}
 
+	notifyChange();
 	return NULL;
 }
 
@@ -312,6 +313,8 @@ mpplaylist *remFromPLByKey( mpplaylist *root, const unsigned key ) {
 		}
 		free(pl);
 		pl=NULL;
+
+		notifyChange();
 	}
 	else {
 		addMessage( 0, "No title with key %i in playlist!", key );
@@ -352,6 +355,7 @@ mpplaylist *addToPL( mptitle *title, mpplaylist *target, const int mark ) {
 	if( mark ) {
 		title->flags |= MP_MARK;
 	}
+	/* do not notify here as the playlist may be a serach result! */
 	return target;
 }
 
@@ -1540,6 +1544,9 @@ int handleRangeCmd( mptitle *title, mpcmd cmd ) {
 		}
 	}
 
+	if( cnt > 0 ) {
+		notifyChange();
+	}
 	return cnt;
 }
 
@@ -1552,8 +1559,8 @@ int handleRangeCmd( mptitle *title, mpcmd cmd ) {
 int playResults( mpcmd range, const char *arg, const int insert ) {
 	mpconfig   *config=getConfig();
 	mpplaylist *pos=config->current;
-	mpplaylist *end=config->found->titles;
-	mpplaylist *res=NULL;
+	mpplaylist *end=NULL;
+	mpplaylist *res=config->found->titles;
 	mptitle *title=NULL;
 	int key=atoi(arg);
 
@@ -1572,7 +1579,12 @@ int playResults( mpcmd range, const char *arg, const int insert ) {
 				addMessage( 0, "No results to be added!" );
 				return 0;
 			}
+			if( config->found->titles == NULL ) {
+				addMessage( 0, "%i titles found but none in list!", config->found->tnum );
+				return 0;
+			}
 
+			end=res;
 			/* find end of searchresults and mark titles as counted on the way */
 			end->title->flags|=MP_CNTD;
 			while( end->next != NULL ) {
@@ -1580,16 +1592,16 @@ int playResults( mpcmd range, const char *arg, const int insert ) {
 				end->title->flags|=MP_CNTD;
 			}
 
-			res=config->found->titles;
 			while( res!=NULL ) {
 				res->title->flags|=MP_CNTD;
 				pos=addToPL( res->title, pos, 0 );
+				if( config->current == NULL ) {
+					config->current=pos;
+				}
 				res=res->next;
 			}
-			if( config->current == NULL ) {
-				config->current=pos;
-			}
-			config->found->titles=wipePlaylist( config->found->titles );
+
+			notifyChange();
 			return config->found->tnum;
 		}
 
@@ -1613,6 +1625,8 @@ int playResults( mpcmd range, const char *arg, const int insert ) {
 		if( config->current == NULL ) {
 			config->current=pos;
 		}
+
+		notifyChange();
 		return 1;
 	}
 

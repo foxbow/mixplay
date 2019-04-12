@@ -8,6 +8,9 @@
 #ifndef _MPSERVER_H_
 #define _MPSERVER_H_
 
+/* basic communication block size */
+#define MP_BLKSIZE 512
+
 void *mpserver( void *data );
 
 #endif /* _MPSERVER_H_ */

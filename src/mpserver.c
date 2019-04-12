@@ -102,6 +102,12 @@ static char *strdec( char *target, const char *src ) {
 	return target;
 }
 
+static void mps_notify( void *type ) {
+	addMessage( 1, "Playlist changed" );
+	*(int*)type=MPCOMM_FULLSTAT;
+}
+
+
 /**
  * This will handle connection for each client
  */
@@ -120,7 +126,6 @@ static void *clientHandler(void *args ) {
 	char *pos, *end, *arg;
 	mpcmd cmd=mpc_idle;
 	static const char *mtype;
-	char playing[MAXPATHLEN]="";
 	char line[MAXPATHLEN]="";
 	size_t commsize=MP_BLKSIZE;
 	ssize_t retval=0;
@@ -129,6 +134,7 @@ static void *clientHandler(void *args ) {
 	static const unsigned char *fdata;
 	unsigned int flen;
 	int fullstat=MPCOMM_STAT;
+	int nextstat=MPCOMM_STAT;
 	int okreply=-1;
 	int rawcmd;
 	int index=0;
@@ -143,7 +149,7 @@ static void *clientHandler(void *args ) {
 
 	/* this one may terminate all willy nilly */
 	pthread_detach(pthread_self());
-
+	addNotifyHook( &mps_notify, &nextstat );
 	addMessage( 2, "Client handler started" );
 	while( running && ( config->status!=mpc_quit ) ) {
 		FD_ZERO( &fds );
@@ -218,18 +224,6 @@ static void *clientHandler(void *args ) {
 								}
 								strdec( config->argument, pos );
 								addMessage( 1, "Decoded arg: %s", config->argument );
-							}
-
-							/*
-							 * send fullstat in the NEXT round to make sure the player has
-							 * updated the config in the meantime
-							 */
-							if( ( MPC_CMD(cmd) == mpc_fav ) ||
-									( MPC_CMD(cmd) == mpc_insert ) ||
-									( MPC_CMD(cmd) == mpc_append ) ||
-									( MPC_CMD(cmd) == mpc_remove ) ||
-									( MPC_CMD(cmd) == mpc_wipe ) ) {
-								fullstat=MPCOMM_SKIP;
 							}
 
 							state=2;
@@ -334,9 +328,9 @@ static void *clientHandler(void *args ) {
 				/* normal update requested, is a special update needed? */
 				if( fullstat == MPCOMM_STAT ) {
 					/* do not miss a fullupdate, the searchresult can wait a moment */
-					if( (config->current != NULL ) && strcmp( config->current->title->display, playing ) ) {
-						strcpy( playing, config->current->title->display );
+					if( nextstat == MPCOMM_FULLSTAT ) {
 						fullstat=MPCOMM_FULLSTAT;
+						nextstat=MPCOMM_STAT;
 					}
 					else if( config->found->send == -1 ) {
 						fullstat=MPCOMM_RESULT;
@@ -475,7 +469,6 @@ static void *clientHandler(void *args ) {
 					}
 				}
 				switch( fullstat ) {
-				case MPCOMM_SKIP:
 				case MPCOMM_CONFIG:
 					fullstat=MPCOMM_FULLSTAT;
 					break;
@@ -489,6 +482,7 @@ static void *clientHandler(void *args ) {
 			}
 		} /* if running & !mpc_start */
 	}
+	removeNotifyHook( &mps_notify, &nextstat );
 
 	addMessage( 2, "Client handler exited" );
 	unlockClient( sock );

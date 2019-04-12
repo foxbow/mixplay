@@ -246,6 +246,7 @@ static void sendplay( int fdset, mpconfig *control ) {
 		fail( errno, "Could not write\n%s", line );
 	}
 
+	notifyChange();
 	addMessage( 2, "CMD: %s", line );
 }
 
@@ -814,7 +815,7 @@ void *reader( void *data ) {
 							order=1;
 						}
 						else {
-							addMessage( 0, "Player status without current title" );
+							addMessage( 1, "Player status without current title" );
 						}
 						break;
 

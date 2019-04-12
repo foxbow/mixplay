@@ -131,10 +131,6 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 	jsonObject *jo=NULL;
 	mpplaylist *current=data->current;
 
-	if( type == MPCOMM_SKIP ) {
-		type=MPCOMM_STAT;
-	}
-
 	jo=jsonAddInt( jo, "version", MPCOMM_VER );
 	jsonAddInt( jo, "type", type );
 

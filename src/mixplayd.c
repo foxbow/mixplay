@@ -178,6 +178,7 @@ int main( int argc, char **argv ) {
 	}
 
 	addUpdateHook( &s_updateHook );
+
 	control->inUI=1;
 	initAll( );
 	#ifdef EPAPER
