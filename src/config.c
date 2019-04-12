@@ -81,8 +81,8 @@ static const char *mpc_command[] = {
 };
 
 static void invokeHooks( _mpFunc *hooks ){
-	pthread_mutex_lock(&_cblock);
 	_mpFunc *pos=hooks;
+	pthread_mutex_lock(&_cblock);
 	while( pos != NULL ) {
 		pos->func(pos->arg);
 		pos=pos->next;
