@@ -229,6 +229,7 @@ static void *clientHandler(void *args ) {
 							state=2;
 						}
 						else if( ( strstr( pos, "/ ") == pos ) || ( strstr( pos, "/index.html " ) == pos ) ) {
+							pthread_mutex_lock(&_sendlock);
 							fname="static/mixplay.html";
 							fdata=static_mixplay_html;
 							flen=static_mixplay_html_len;
@@ -236,6 +237,7 @@ static void *clientHandler(void *args ) {
 							state=5;
 						}
 						else if( ( strstr( pos, "/rc " ) == pos ) || ( strstr( pos, "/rc.html " ) == pos )  ) {
+							pthread_mutex_lock(&_sendlock);
 							fname="static/mprc.html";
 							fdata=static_mprc_html;
 							flen=static_mprc_html_len;
@@ -244,6 +246,7 @@ static void *clientHandler(void *args ) {
 
 						}
 						else if( strstr( pos, "/mixplay.css " ) == pos ) {
+							pthread_mutex_lock(&_sendlock);
 							fname="static/mixplay.css";
 							fdata=static_mixplay_css;
 							flen=static_mixplay_css_len;
@@ -251,6 +254,7 @@ static void *clientHandler(void *args ) {
 							state=5;
 						}
 						else if( strstr( pos, "/mixplay.js " ) == pos ) {
+							pthread_mutex_lock(&_sendlock);
 							fname="static/mixplay.js";
 							fdata=static_mixplay_js;
 							flen=static_mixplay_js_len;
@@ -258,6 +262,7 @@ static void *clientHandler(void *args ) {
 							state=5;
 						}
 						else if( strstr( pos, "/mpplayer.html " ) == pos ) {
+							pthread_mutex_lock(&_sendlock);
 							fname="static/mpplayer.html";
 							fdata=static_mpplayer_html;
 							flen=static_mpplayer_html_len;
@@ -265,6 +270,7 @@ static void *clientHandler(void *args ) {
 							state=5;
 						}
 						else if( strstr( pos, "/mpplayer.js " ) == pos ) {
+							pthread_mutex_lock(&_sendlock);
 							fname="static/mpplayer.js";
 							fdata=static_mpplayer_js;
 							flen=static_mpplayer_js_len;
@@ -286,6 +292,7 @@ static void *clientHandler(void *args ) {
 								state=9;
 							}
 							else if( title != NULL ) {
+								pthread_mutex_lock(&_sendlock);
 								fname=title->path;
 								state=8;
 							}
@@ -402,7 +409,6 @@ static void *clientHandler(void *args ) {
 				len=strlen( commdata );
 				break;
 			case 5: /* send file */
-				pthread_mutex_lock(&_sendlock);
 				if( getDebug() ) {
 					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012\015\012", mtype );
 					send(sock , commdata, strlen(commdata), 0);
