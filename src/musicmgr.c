@@ -909,7 +909,7 @@ static unsigned long countTitles( const unsigned int inc, const unsigned int exc
 /**
  * returns the lowest playcount of the current list
  */
-static unsigned int getLowestPlaycount( void ) {
+unsigned getLowestPlaycount( void ) {
 	mptitle *base=getConfig()->root;
 	mptitle *runner=base;
 	unsigned int min=-1;
@@ -1024,7 +1024,7 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 	struct timeval tv;
 	unsigned long num=0;
 	char *lastpat;
-	unsigned int pcount=getLowestPlaycount( );
+	unsigned int pcount=getConfig()->playcount;
 	unsigned int cycles=0;
 	int valid=0;
 	/* 0 - nothing checked
@@ -1122,17 +1122,19 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 
 				if( (runner == NULL ) || ( guard == runner ) ) {
 					pcount++;	/* allow more replays */
-					addMessage( 2, "Increasing maxplaycount to %li", pcount );
+					getConfig()->playcount=pcount;
+					addMessage( 1, "Increasing maxplaycount to %li", pcount );
 					runner=guard;
 				}
 			}
 		}
 
 		if( ++cycles > 10 ) {
-			addMessage( 2, "Looks like we ran into a loop" );
+			addMessage( 1, "Looks like we ran into a loop" );
 			cycles=0;
 			pcount++;	/* allow replays */
-			addMessage( 2, "Increasing maxplaycount to %li", pcount );
+			getConfig()->playcount=pcount;
+			addMessage( 1, "Increasing maxplaycount to %li", pcount );
 		}
 	} /* while( valid != 3 ) */
 

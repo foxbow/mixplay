@@ -123,6 +123,7 @@ struct _mpcontrol_t {
 	void *data;					/* extended data for gmixplay */
 	char *host;
 	int  port;
+	unsigned playcount;
 	/* flags */
 	unsigned pledit:1;
 	unsigned plplay:1;

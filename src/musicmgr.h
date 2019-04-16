@@ -102,4 +102,5 @@ void dumpInfo( mptitle *root, unsigned int skip );
 int fillstick( mptitle *root, const char *target );
 int getPlaylists( const char *cd, struct dirent ***pllist );
 
+unsigned getLowestPlaycount( void );
 #endif /* _MUSICMGR_H_ */

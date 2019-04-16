@@ -496,6 +496,7 @@ mpconfig *readConfig( void ) {
 	c_config->inUI=0;
 	c_config->msg->lines=0;
 	c_config->msg->current=0;
+	c_config->playcount=0;
 	c_config->host=(char*)falloc(16,1);
 	strcpy( c_config->host, "127.0.0.1" );
 	c_config->port=MP_PORT;

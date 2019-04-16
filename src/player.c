@@ -311,6 +311,7 @@ void *setProfile( void *data ) {
 		control->current=wipePlaylist( control->current );
 		control->root=wipeTitles( control->root );
 		control->root=dbGetMusic( control->dbname );
+		control->playcount=getLowestPlaycount();
 
 		if( NULL == control->root ) {
 			addMessage( 0, "Scanning musicdir" );
