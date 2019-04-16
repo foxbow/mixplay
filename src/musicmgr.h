@@ -9,8 +9,6 @@
 #define MAXPATHLEN 256
 #define MAXSEARCH 100
 
-#define RANDOM(x) ((unsigned)rand()%(x))
-
 #define MP_FAV  1	/* Favourite */
 #define MP_DNP  2	/* do not play */
 #define MP_CNTD 4	/* has been counted */

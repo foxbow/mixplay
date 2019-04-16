@@ -13,6 +13,7 @@
 #include <syslog.h>
 #include <unistd.h>
 #include <signal.h>
+#include <sys/time.h>
 
 #include "utils.h"
 #include "player.h"
@@ -88,6 +89,7 @@ int main( int argc, char **argv ) {
 	mpconfig	*control;
 	char *path;
 	FILE *pidlog=NULL;
+	struct timeval tv;
 
 	control=readConfig( );
 	if( control == NULL ) {
@@ -119,6 +121,10 @@ int main( int argc, char **argv ) {
 		}
 	}
 	muteVerbosity();
+
+	/* improve 'randomization' */
+	gettimeofday( &tv,NULL );
+	srand( (getpid()*tv.tv_usec)%RAND_MAX );
 
 	switch( getArgs( argc, argv ) ) {
 	case 0: /* no arguments given */

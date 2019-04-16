@@ -12,13 +12,13 @@
 #include <dirent.h>
 #include <strings.h>
 #include <sys/statvfs.h>
-#include <sys/time.h>
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
 #include <sys/stat.h>
 #include <sys/sendfile.h>
 #include <fcntl.h>
+#include <limits.h>
 
 #include "database.h"
 
@@ -377,7 +377,7 @@ static int msel( const struct dirent *entry ) {
 }
 
 /**
- * helperfunction for scandir() - just return unhidden regular music files
+ * helperfunction for scandir() - just return unhidden regular playlist files
  */
 static int plsel( const struct dirent *entry ) {
 	return( ( entry->d_name[0] != '.' ) &&
@@ -437,7 +437,7 @@ static int matchTitle( mptitle *title, const char* pat ) {
 
 	if( ( '=' == pat[1] ) || ( '*' == pat[1] ) ) {
 		if( '*' == pat[1] ) {
-			fuzzy=-1;
+			fuzzy=1;
 		}
 
 		switch( pat[0] ) {
@@ -591,8 +591,10 @@ int search( const char *pat, const mpcmd range, const int global ) {
 
 /**
  * applies the dnplist on a list of titles and marks matching titles
- * if th etitle is part of the playlist it will be removed from the playlist
+ * if the title is part of the playlist it will be removed from the playlist
  * too. This may lead to double played artists though...
+ *
+ * returns the number of marked titles or -1 on error
  */
 int applyDNPlist( mptitle *base, struct marklist_t *list ) {
 	mptitle  *pos = base;
@@ -912,7 +914,7 @@ static unsigned long countTitles( const unsigned int inc, const unsigned int exc
 unsigned getLowestPlaycount( void ) {
 	mptitle *base=getConfig()->root;
 	mptitle *runner=base;
-	unsigned int min=-1;
+	unsigned min=UINT_MAX;
 
 	if( base == NULL ) {
 		addMessage( 0, "Trying to get lowest playcount from empty database!" );
@@ -940,6 +942,7 @@ static mptitle *skipOver( mptitle *current, int dir ) {
 	mptitle *marker=current;
 
 	while( marker->flags & ( MP_DNP|MP_MARK|MP_CNTD ) ) {
+		activity("skipping");
 		if( dir > 0 ) {
 			marker=marker->next;
 		}
@@ -999,7 +1002,7 @@ static mptitle *skipTitles( mptitle *current, long num ) {
 	}
 
 	for( ; num < 0; num++ ) {
-		current=skipOver(current->next,-1);
+		current=skipOver(current->prev,-1);
 		if( current == NULL ) {
 			addMessage( 0, "Database title ring broken!" );
 			return NULL;
@@ -1021,7 +1024,6 @@ static mptitle *skipTitles( mptitle *current, long num ) {
 mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 	mptitle *runner=NULL;
 	mptitle *guard=NULL;
-	struct timeval tv;
 	unsigned long num=0;
 	char *lastpat;
 	unsigned int pcount=getConfig()->playcount;
@@ -1043,17 +1045,12 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 	}
 	else {
 		runner=root;
-		valid=3;
 	}
-	/* improve 'randomization' */
-	gettimeofday( &tv,NULL );
-	srand( getpid()*tv.tv_sec );
-
-	num = countTitles( MP_ALL, MP_DNP|MP_MARK|MP_CNTD );
 
 	/* select a random title from the database */
 	/* skip forward until a title is found that is neither DNP nor MARK */
-	runner=skipTitles( runner, RANDOM( num ) );
+	num = countTitles( MP_ALL, MP_DNP|MP_MARK|MP_CNTD );
+	runner=skipTitles( runner, rand()%num );
 
 	if( runner==NULL ) {
 		if( pl == NULL ) {
@@ -1065,7 +1062,7 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 		newCount( );
 		/* Try again */
 		num = countTitles( MP_ALL, MP_DNP|MP_MARK|MP_CNTD );
-		runner=skipTitles( runner, RANDOM( num ) );
+		runner=skipTitles( runner, rand()%num );
 		if( runner == NULL ) {
 			addMessage( 0, "No more titles in the database!?" );
 			return NULL;
@@ -1117,7 +1114,8 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 
 			if( ( valid & 2 ) != 2 ) {
 				activity( "Playcountskipping" );
-				runner=skipOver( runner->next, 1 );
+				/* simply pick a new title at random to avoid edge cases */
+				runner=skipTitles( runner, rand()%num );
 				valid=0;
 
 				if( (runner == NULL ) || ( guard == runner ) ) {
@@ -1144,6 +1142,7 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 	if( runner->flags & MP_FAV ) {
 		runner->flags &= ~MP_CNTD;
 	}
+	addMessage(1,"Added %2d %5d - %s", runner->playcount, runner->key, runner->display );
 	return appendToPL( runner, pl, -1 );
 }
 
