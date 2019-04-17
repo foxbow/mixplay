@@ -43,9 +43,6 @@ CCFLAGS+=$(shell pkg-config --cflags $(REFS))
 
 all: $(OBJDIR)/dep.d mixplayd
 
-mptest: $(OBJDIR)/mptest.o $(OBJDIR)/epasupp.o $(OBJDIR)/utils.o
-	$(CC) $^ -o $@ $(LIBS)
-
 clean:
 	rm -f $(OBJDIR)/*
 	touch $(OBJDIR)/KEEPDIR
