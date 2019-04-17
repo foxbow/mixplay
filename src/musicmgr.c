@@ -112,9 +112,6 @@ void newCount( ) {
 		runner-> flags &= ~(MP_CNTD);
 		runner=runner->next;
 	} while( runner != root );
-
-	/* start from the beginning so we catch remainders */
-	getConfig()->playcount=0;
 }
 
 /**

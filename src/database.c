@@ -562,4 +562,6 @@ void dbWrite( void ) {
 
 	dbClose( db );
 	getConfig()->dbDirty=0;
+	/* start from the beginning so we catch remainders */
+	getConfig()->playcount=0;
 }
