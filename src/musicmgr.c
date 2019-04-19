@@ -528,41 +528,34 @@ int search( const char *pat, const mpcmd range, const int global ) {
 		activity("searching");
 		found=0;
 		if( global || !(runner->flags & MP_DNP) ) {
-			/* check for title/display */
-			if( MPC_ISTITLE(range) && isMatch( runner->title, pat, MPC_ISFUZZY(range)  )) {
+			/* check for searchrange and pattern */
+			if( MPC_ISTITLE(range) &&
+					isMatch( runner->title, pat, MPC_ISFUZZY(range) ) ) {
 				found=1;
 			}
-			if( MPC_ISDISPLAY( range ) && isMatch( runner->display, pat, MPC_ISFUZZY(range) ) ) {
+			if( MPC_ISDISPLAY( range ) &&
+					isMatch( runner->display, pat, MPC_ISFUZZY(range) ) ) {
 				found=1;
 			}
-			/* check for artist, if title matched, also add artist */
-			if( ( found && MPC_EQTITLE( range ) ) || ( MPC_ISARTIST(range) && isMatch( runner->artist, pat, MPC_ISFUZZY(range) ) ) ) {
-				/* Only add title if search asks only for artist */
-				if( MPC_EQARTIST( range ) ) {
-					found=1;
-				}
+			if( MPC_ISARTIST(range) &&
+					isMatch( runner->artist, pat, MPC_ISFUZZY(range) ) ) {
+				found=1;
+			}
+			if( MPC_ISALBUM( range ) &&
+					isMatch( runner->album, pat, MPC_ISFUZZY(range) ) ) {
+				found=1;
+			}
+			/* todo: genre and path are missing here */
+			if( found ) {
 				/* check for new artist */
-
 				for( i=0; (i<res->anum) && strcmp( res->artists[i], runner->artist ); i++ );
-
 				if( i == res->anum ) {
 					res->anum++;
 					res->artists=(char**)frealloc( res->artists, res->anum*sizeof(char*) );
 					res->artists[i]=runner->artist;
 				}
-			}
-			/* if title or artist matched, also add the album */
-			if( ( found && MPC_EQTITLE( range ) ) || ( MPC_ISALBUM(range) && isMatch( runner->album, pat, MPC_ISFUZZY(range) ) ) ) {
-				if( MPC_EQALBUM( range ) ) {
-					found=1;
-				}
 
-				/*
-				 * If an album has more than one artist it will be considered a sampler.
-				 * todo: two artists may have an album with the same name!
-				 */
 				for( i=0; (i<res->lnum) && strcmp( res->albums[i], runner->album ); i++ );
-
 				if( i == res->lnum ) {
 					res->lnum++;
 					res->albums=(char**)frealloc( res->albums, res->lnum*sizeof(char*) );
@@ -570,12 +563,14 @@ int search( const char *pat, const mpcmd range, const int global ) {
 					res->albart=(char**)frealloc( res->albart, res->lnum*sizeof(char*) );
 					res->albart[i]=runner->artist;
 				}
-				else if( !strcmp( res->albart[i], ARTIST_SAMPLER ) && strcmp( res->albart[i], runner->artist ) ){
+				else if( !strcmp( res->albart[i], ARTIST_SAMPLER ) &&
+						strcmp( res->albart[i], runner->artist ) ){
 					addMessage(1, "%s is considered a sampler (%s <> %s).", runner->album, runner->artist, res->albart[i] );
 					res->albart[i]=ARTIST_SAMPLER;
 				}
 			}
 
+			/* add titles too */
 			if( ( found != 0 ) && ( cnt++ < MAXSEARCH ) ) {
 				res->titles=appendToPL( runner, res->titles, 0 );
 				res->tnum++;
@@ -1044,6 +1039,7 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 		lastpat=pl->title->artist ;
 	}
 	else {
+		valid=1;
 		runner=root;
 	}
 
@@ -1072,6 +1068,7 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 	cycles=0;
 
 	while( ( valid & 3 ) != 3 ) {
+		if( lastpat == NULL ) valid |=1;
 		/* title did not pass namecheck */
 		if( ( valid & 1 ) != 1 ) {
 			guard=runner;
@@ -1142,7 +1139,7 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 	if( runner->flags & MP_FAV ) {
 		runner->flags &= ~MP_CNTD;
 	}
-	addMessage(1,"Added %2d %5d - %s", runner->playcount, runner->key, runner->display );
+	addMessage(2,"Added %2d %5d - %s", runner->playcount, runner->key, runner->display );
 	return appendToPL( runner, pl, -1 );
 }
 
