@@ -166,6 +166,8 @@ int setArgument( const char *arg ) {
 
 	control->active=0;
 	control->plplay=0;
+	control->playstream=0;
+
 	if( isURL( arg ) ) {
 		addMessage( 1, "URL: %s", arg );
 		control->playstream=1;
@@ -193,7 +195,7 @@ int setArgument( const char *arg ) {
 		/* play single song... */
 		title=insertTitle( NULL, arg );
 		if( title != NULL ) {
-			wipeTitles( control->root );
+			control->root=wipeTitles( control->root );
 			control->current=titleToPlaylist( title, control->current );
 		}
 		return 2;
@@ -208,7 +210,7 @@ int setArgument( const char *arg ) {
 		strncpy( line, arg, MAXPATHLEN );
 		title=recurse( line, NULL );
 		if( title != NULL ) {
-			wipeTitles( control->root );
+			control->root=wipeTitles( control->root );
 			if( control->plmix==1 ) {
 				control->root=title;
 				plCheck(0);
@@ -235,15 +237,17 @@ int setArgument( const char *arg ) {
 
 		addMessage( 1, "Playlist: %s", arg );
 		title=loadPlaylist( arg );
-		control->plplay=1;
 		if( title != NULL ) {
-			wipeTitles( control->root );
+			control->plplay=1;
 			if( control->plmix==1 ) {
+				control->current=wipePlaylist( control->current );
+				control->root=wipeTitles( control->root );
 				control->root=title;
 				plCheck(0);
 			}
 			else {
 				control->current=titleToPlaylist( title, control->current );
+				control->root=wipeTitles( control->root );
 			}
 		}
 		return 4;
@@ -348,12 +352,12 @@ int initAll( ) {
 	nanosleep(&ts, NULL);
 
 	/* start the actual player */
-	pthread_create( &control->rtid, NULL, reader, (void *)control );
+	pthread_create( &control->rtid, NULL, reader, NULL );
 	/* make sure the mpg123 instances have a chance to start up */
 	nanosleep(&ts, NULL);
 	if( NULL == control->root ) {
 		/* Runs as thread to have updates in the UI */
-		pthread_create( &tid, NULL, setProfile, ( void * )control );
+		pthread_create( &tid, NULL, setProfile, NULL );
 		pthread_detach( tid );
 	}
 	else {
@@ -541,6 +545,10 @@ mpconfig *readConfig( void ) {
 			}
 			if( strstr( line, "active=" ) == line ) {
 				c_config->active=atoi(pos);
+				if( c_config->active == 0 ) {
+					addMessage(0,"Setting default profile!");
+					c_config->active=1;
+				}
 			}
 			if( strstr( line, "skipdnp=" ) == line ) {
 				c_config->skipdnp=atoi(pos);

@@ -224,9 +224,10 @@ void setCommand( mpcmd cmd ) {
 /**
  * make mpeg123 play the given title
  */
-static void sendplay( int fdset, mpconfig *control ) {
+static void sendplay( int fdset ) {
 	int res=0;
 	char line[MAXPATHLEN+6]="load ";
+	mpconfig *control=getConfig();
 	assert( control->current != NULL );
 
 	if( !control->playstream ) {
@@ -254,7 +255,7 @@ static void sendplay( int fdset, mpconfig *control ) {
  * sets the current profile
  * This is thread-able to have progress information on startup!
  */
-void *setProfile( void *data ) {
+void *setProfile( void *ignored ) {
 	char		confdir[MAXPATHLEN]; /* = "~/.mixplay"; */
 	char 		*profile;
 	struct marklist_t *dnplist=NULL;
@@ -263,14 +264,17 @@ void *setProfile( void *data ) {
 	int lastver;
 	int64_t active;
 	int64_t cactive;
-	mpconfig *control=( mpconfig * )data ;
+	mpconfig *control=getConfig();
 	char *home=getenv("HOME");
-	addMessage( 2, "New Thread: setProfile()" );
+	addMessage( 2, "New Thread: setProfile(%d)", control->active );
 
 	if( home == NULL ) {
 		fail( -1, "Cannot get homedir!" );
 	}
 	cactive=control->active;
+
+	control->plplay=0;
+	control->playstream=0;
 
 	/* stream selected */
 	if( cactive < 0 ) {
@@ -280,7 +284,7 @@ void *setProfile( void *data ) {
 		if( active >= control->streams ) {
 			addMessage( 0, "Stream #%i does no exist!", active );
 			control->active=1;
-			return setProfile(data);
+			return setProfile( NULL );
 		}
 
 		setStream( control->stream[active], control->sname[active] );
@@ -288,12 +292,11 @@ void *setProfile( void *data ) {
 	/* profile selected */
 	else if( cactive > 0 ){
 		active=cactive-1;
-		control->playstream=0;
 
 		if( active > control->profiles ) {
 			addMessage ( 0, "Profile #%i does no exist!", active );
 			control->active=1;
-			return setProfile(data);
+			return setProfile(NULL);
 		}
 
 		profile=control->profile[active];
@@ -390,8 +393,8 @@ static void playCount( mptitle *title ) {
  * asnchronous functions to run in the background and allow updates being sent to the
  * client
  */
-static void *plCheckDoublets( void *arg ) {
-	mpconfig *control=(mpconfig *)arg;
+static void *plCheckDoublets( void *ingnored ) {
+	mpconfig *control=getConfig();
 	int i;
 
 	progressStart( "Filesystem Cleanup" );
@@ -414,8 +417,8 @@ static void *plCheckDoublets( void *arg ) {
 	return NULL;
 }
 
-static void *plDbClean( void *arg ) {
-	mpconfig *control=(mpconfig *) arg;
+static void *plDbClean( void *ignored ) {
+	mpconfig *control=getConfig();
 	int i;
 	progressStart( "Database Cleanup" );
 
@@ -449,8 +452,8 @@ static void *plDbClean( void *arg ) {
 	return NULL;
 }
 
-static void *plDbInfo( void *arg ) {
-	mpconfig *control=(mpconfig *) arg;
+static void *plDbInfo( void *ignored ) {
+	mpconfig *control=getConfig();
 	progressStart( "Database Info" );
 	addMessage( 0, "Music dir: %s", control->musicdir );
 	dumpInfo( control->root, control->skipdnp );
@@ -459,9 +462,9 @@ static void *plDbInfo( void *arg ) {
 	return NULL;
 }
 
-static void *plSetProfile( void *arg ) {
-	mpconfig *control=(mpconfig *) arg;
-	control->status=mpc_start;
+static void *plSetProfile( void *ignored ) {
+	mpconfig *control=getConfig();
+	/* control->status=mpc_start; */
 	if( control->dbname[0] == 0 ) {
 		readConfig( );
 	}
@@ -469,7 +472,7 @@ static void *plSetProfile( void *arg ) {
 	if( control->dbDirty ) {
 		dbWrite( );
 	}
-	setProfile( control );
+	setProfile( NULL );
 	sfree( &(control->argument) );
 	pthread_mutex_unlock( &_asynclock );;
 	return NULL;
@@ -479,13 +482,13 @@ static void *plSetProfile( void *arg ) {
  * run the given command asynchronously to allow updates during execution
  * if channel is != -1 then playing the song will be paused during execution
  */
-static void asyncRun( void *cmd(void *), mpconfig *control ) {
+static void asyncRun( void *cmd(void *) ) {
 	pthread_t pid;
 	if( pthread_mutex_trylock( &_asynclock ) == EBUSY ) {
 		addMessage( 0, "Sorry, still blocked!" );
 	}
 	else {
-		if( pthread_create( &pid, NULL, cmd, (void*)control ) < 0) {
+		if( pthread_create( &pid, NULL, cmd, NULL ) < 0) {
 			addMessage( 0, "Could not create async thread!" );
 		}
 	}
@@ -759,7 +762,7 @@ void *reader( void *data ) {
 									outvol=100;
 									write( p_command[fdset][1], "volume 0\n", 9 );
 								}
-								sendplay( p_command[fdset][1], control );
+								sendplay( p_command[fdset][1] );
 							}
 						}
 					}
@@ -774,7 +777,7 @@ void *reader( void *data ) {
 						/* player was not yet fully initialized, start again */
 						if( control->status == mpc_start ) {
 							addMessage(2,"Restart player %i..", fdset );
-							sendplay( p_command[fdset][1], control );
+							sendplay( p_command[fdset][1] );
 						}
 						/* stream stopped playing (PAUSE) */
 						else if( control->playstream ) {
@@ -810,7 +813,7 @@ void *reader( void *data ) {
 							}
 
 							if( control->status != mpc_idle ) {
-								sendplay( p_command[fdset][1], control );
+								sendplay( p_command[fdset][1] );
 							}
 
 							order=1;
@@ -902,7 +905,7 @@ void *reader( void *data ) {
 			}
 			else {
 				control->status=mpc_start;
-				sendplay( p_command[fdset][1], control );
+				sendplay( p_command[fdset][1] );
 			}
 			break;
 
@@ -916,7 +919,7 @@ void *reader( void *data ) {
 					}
 					/* restart the stream in case it broke */
 					else {
-						sendplay( p_command[fdset][1], control );
+						sendplay( p_command[fdset][1] );
 					}
 				}
 				/* just toggle pause on normal play */
@@ -930,7 +933,7 @@ void *reader( void *data ) {
 				plCheck( 0 );
 				if( control->current != NULL ) {
 					addMessage( 1, "Autoplay.." );
-					sendplay( p_command[fdset][1], control );
+					sendplay( p_command[fdset][1] );
 				}
 			}
 			break;
@@ -966,11 +969,11 @@ void *reader( void *data ) {
 			break;
 
 		case mpc_doublets:
-			asyncRun( plCheckDoublets, control );
+			asyncRun( plCheckDoublets );
 			break;
 
 		case mpc_dbclean:
-			asyncRun( plDbClean, control );
+			asyncRun( plDbClean );
 			break;
 
 		case mpc_stop:
@@ -1016,9 +1019,16 @@ void *reader( void *data ) {
 				else {
 					profile=atoi( control->argument );
 					if( ( profile != 0 ) && ( profile != control->active ) ) {
+						/* todo: keep playing to the bitter end!
+						if( control->status == mpc_play ) {
+							order=0;
+							write( p_command[fdset][1], "STOP\n", 6 );
+						}
+						*/
+						order=0;
 						control->active=profile;
 						control->changed = 1;
-						asyncRun( plSetProfile, control );
+						asyncRun( plSetProfile );
 					}
 				}
 			}
@@ -1049,13 +1059,13 @@ void *reader( void *data ) {
 					control->argument=NULL;
 
 					write( p_command[fdset][1], "STOP\n", 6 );
-					control->status=mpc_start;
 					if( control->dbname[0] == 0 ) {
 						readConfig( );
 					}
 					setProfile( control );
 					control->current->title = control->root;
-					sendplay( p_command[fdset][1], control );
+					control->status=mpc_start;
+					sendplay( p_command[fdset][1] );
 				}
 			}
 			break;
@@ -1139,7 +1149,7 @@ void *reader( void *data ) {
 						}
 						else {
 							control->status=mpc_start;
-							sendplay( p_command[fdset][1], control );
+							sendplay( p_command[fdset][1] );
 						}
 					}
 					sfree( &(control->argument) );
@@ -1166,7 +1176,7 @@ void *reader( void *data ) {
 			break;
 
 		case mpc_dbinfo:
-			asyncRun( plDbInfo, control );
+			asyncRun( plDbInfo );
 			break;
 
 		case mpc_search:

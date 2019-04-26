@@ -718,7 +718,7 @@ struct marklist_t *loadList( const char *path ) {
 		}
 	}
 
-	addMessage( 2, "Loaded %s with %i entries.", path, cnt );
+	addMessage( 2, "Marklist %s with %i entries.", path, cnt );
 
 cleanup:
 	free( buff );
@@ -755,8 +755,17 @@ mptitle *loadPlaylist( const char *path ) {
 
 	fp=fopen( path, "r" );
 	if( !fp ) {
-		addMessage( 0, "Could not open playlist %s", path );
-		return NULL;
+		/* try standard playlist directory */
+		/* getenv("HOME") was valid before already.. */
+		snprintf( titlePath, MAXPATHLEN-1, "%s/.mixplay/playlists/%s", getenv("HOME"), path );
+		fp=fopen( titlePath, "r" );
+		if( !fp ) {
+			addMessage( 0, "Could not open playlist %s", path );
+			return NULL;
+		}
+		else {
+			addMessage(1,"Using %s",titlePath);
+		}
 	}
 
 	buff=(char*)falloc( MAXPATHLEN, 1 );
@@ -766,6 +775,7 @@ mptitle *loadPlaylist( const char *path ) {
 				( strlen( buff ) > 1 ) && ( buff[0] != '#' ) ) {
 			strip( titlePath, buff, MAXPATHLEN ); /* remove control chars like CR/LF */
 			current=insertTitle( current, titlePath );
+			cnt++;
 			/* turn list into playlist too */
 		}
 	}
@@ -773,7 +783,7 @@ mptitle *loadPlaylist( const char *path ) {
 
 	fclose( fp );
 
-	addMessage( 2, "Loaded %s with %i entries.", path, cnt );
+	addMessage( 2, "Playlist %s with %i entries.", path, cnt );
 
 	return ( current == NULL )?NULL:current->next;
 }
@@ -1155,8 +1165,16 @@ void plCheck( int del ) {
 	mpplaylist *pl=getConfig()->current;
 	mpplaylist *buf=pl;
 
-	if( getConfig()->pledit ||
-		( getConfig()->plplay && !getConfig()->plmix ) ){
+	if( getConfig()->pledit ) {
+		addMessage(2,"plCheck: Edit mode");
+		return;
+	}
+
+	if( getConfig()->plplay && !getConfig()->plmix ) {
+		addMessage(2,"plCheck: Sorted playlist");
+		if( getConfig()->current == NULL ) {
+			addMessage(0,"No playlist available!");
+		}
 		return;
 	}
 
@@ -1227,6 +1245,7 @@ void plCheck( int del ) {
 	}
 
 	/* fill up the playlist with new titles */
+
 	while( cnt < 10 ) {
 		if( getConfig()->current == NULL ) {
 			getConfig()->current=addNewTitle( NULL, getConfig()->root );
