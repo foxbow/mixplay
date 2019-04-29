@@ -47,7 +47,7 @@ function plCMD( cmd, count, key ) {
  * pops up the current build ID
  */
 function showInfo() {
-	alert( "Running mixplayd version ~~MP_VERSION~~" );
+	alert( "Running mixplayd version "+mpver );
 }
 
 /*
@@ -619,10 +619,17 @@ function sendArg( cmd ) {
  */
 function loadPlaylist() {
   var cmd=0x0017
+  var ple=document.getElementById('playlists');
+  var pl=ple.options[ple.selectedIndex].value;
   if( document.getElementById('plmix').checked ) {
     cmd=cmd|0x2000
   }
-  window.alert("Kommt noch!");
+  if( ple.selectedIndex == 0) {
+    alert("No playlist selected!");
+  }
+  else{
+    sendCMD( cmd, pl+".m3u" );
+  }
 }
 
 /*
