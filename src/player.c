@@ -220,7 +220,6 @@ void setCommand( mpcmd cmd ) {
 	getConfig()->command=cmd;
 }
 
-
 /**
  * make mpeg123 play the given title
  */

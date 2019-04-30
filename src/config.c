@@ -407,7 +407,7 @@ static int scanparts( char *line, char ***target ) {
 				line=pos+1;
 			}
 			else {
-				fail( -1, "Config file Format error in %s!", line );
+				fail( F_FAIL, "Config file Format error in %s!", line );
 			}
 		}
 	}
@@ -519,11 +519,15 @@ mpconfig *readConfig( void ) {
 			if( line[0]=='#' ) continue;
 			pos=strchr( line, '=' );
 			if( ( NULL == pos ) || ( strlen( ++pos ) == 0 ) ) continue;
+			/* cut off trailing \n */
 			line[strlen(line)-1]=0;
+
 			if( strstr( line, "musicdir=" ) == line ) {
+				/* make sure that musicdir ends with a '/' */
 				if( line[strlen(line)-1] != '/' ) {
 					line[strlen(line)] = '/';
 				}
+
 				c_config->musicdir=(char*)falloc( strlen(pos)+1, 1 );
 				strip( c_config->musicdir, pos, strlen(pos) );
 			}
