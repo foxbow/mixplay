@@ -20,6 +20,7 @@ void blockSigint() {
 	sigset_t set;
 	sigemptyset(&set);
 	sigaddset(&set, SIGINT);
+	sigaddset(&set, SIGTERM);
 	if( pthread_sigmask(SIG_BLOCK, &set, NULL) != 0 ) {
 		addMessage( 0, "Could not block SIGINT" );
 	}
