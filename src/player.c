@@ -266,6 +266,9 @@ void *setProfile( void *ignored ) {
 	int64_t cactive;
 	mpconfig *control=getConfig();
 	char *home=getenv("HOME");
+
+	blockSigint();
+
 	addMessage( 2, "New Thread: setProfile(%d)", control->active );
 
 	if( home == NULL ) {
@@ -526,7 +529,7 @@ void *reader( void *data ) {
 	int		update=0;
 	int		insert=0;
 
-	void blockSigint();
+	blockSigint();
 
 	addMessage( 1, "Reader starting" );
 

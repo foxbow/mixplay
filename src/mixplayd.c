@@ -23,6 +23,9 @@
 
 static unsigned long _curmsg=0;
 
+/**
+ * TODO: create a dedicated signal handler thread.
+ **/
 static void sigint(int signo){
 	addMessage(0, "External quit!" );
 	if( getConfig()->command == mpc_quit ) {
@@ -30,11 +33,9 @@ static void sigint(int signo){
 		unlink(getConfig()->pidpath);
 		exit(1);
 	}
-	/* brute force */
+	/* brute force to avoid lockups */
 	getConfig()->command=mpc_quit;
 	getConfig()->status=mpc_quit;
-	/* try nicely too */
-	setCommand(mpc_quit);
 }
 
 /*
@@ -166,6 +167,7 @@ int main( int argc, char **argv ) {
 		return -1;
 	}
 
+	/* TODO: this is a bad idea in a multithreaded environment! */
 	signal(SIGINT, sigint );
 	signal(SIGTERM, sigint );
 
@@ -204,7 +206,7 @@ int main( int argc, char **argv ) {
 		writeConfig( NULL );
 	}
 	unlink(control->pidpath);
-	addMessage( 0, "Daemon terminated" );
+	addMessage( 0, "Player terminated" );
 	freeConfig( );
 
 	return 0;

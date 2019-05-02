@@ -47,6 +47,8 @@ static char lasttitle[MAXPATHLEN+1];
 static void *_update( void *ignored ) {
 	mpplaylist *current=NULL;
 
+	blockSigint();
+	
 	while( getConfig()->command != mpc_quit ) {
 		pthread_mutex_lock( &_updatelock );
 		current=getConfig()->current;
