@@ -868,14 +868,7 @@ mptitle *insertTitle( mptitle *base, const char *path ) {
 		root->next->prev=root;
 	}
 
-	/* remove musicdir from path */
-	if( ( getConfig()->musicdir != NULL ) &&
-			( strstr( path, getConfig()->musicdir ) != path ) ) {
-		strtcpy( root->path, path, MAXPATHLEN );
-	}
-	else {
-		strtcpy( root->path, path+strlen(getConfig()->musicdir), MAXPATHLEN );
-	}
+	strtcpy( root->path, path, MAXPATHLEN );
 	fillTagInfo( root );
 
 	return root;
