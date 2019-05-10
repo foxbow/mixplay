@@ -13,12 +13,11 @@
 
 /* the button modes
 	 -1 - not initialized
-		0 - default (cycle/pause/next)
-		1 - volume  (cycle/up/down)
-		2 - title   (cycle/DNP/FAV)
-		3 - stream	(pause/up/down)
+		0 - default (pause/next/DNP)
+		1 - stream	(pause/up/down)
 */
 static int _epmode=-1;
+
 /* update mode
 	-1 - full
 	 0 - none
@@ -48,7 +47,7 @@ static void *_update( void *ignored ) {
 	mpplaylist *current=NULL;
 
 	blockSigint();
-	
+
 	while( getConfig()->command != mpc_quit ) {
 		pthread_mutex_lock( &_updatelock );
 		current=getConfig()->current;
@@ -70,17 +69,17 @@ static void *_update( void *ignored ) {
 
 			if( last != mpc_idle ) {
 				if( current->title->flags & MP_FAV ) {
-					epsDrawSymbol( epm_red, 5, 151, ep_fav );
+					epsDrawSymbol( epm_red, 5, 150, ep_fav );
 				}
 				else {
-					epsDrawSymbol( epm_red, 5, 151, ep_play );
+					epsDrawSymbol( epm_red, 5, 150, ep_play );
 				}
 				epsDrawString( epm_black, 40, 120, current->title->artist, 1 );
 				epsDrawString( epm_black, 40, 75,  current->title->title, 2 );
 				epsDrawString( epm_black, 40, 40,  current->title->album, 0 );
 			}
 			else {
-				epsDrawSymbol( epm_red, 5, 151, ep_pause );
+				epsDrawSymbol( epm_red, 5, 150, ep_pause );
 				epsDrawString( epm_red, 40, 120, current->title->artist, 1 );
 				epsDrawString( epm_red, 40, 75,  current->title->title, 2 );
 				epsDrawString( epm_red, 40, 40,  current->title->album, 0 );
@@ -91,33 +90,22 @@ static void *_update( void *ignored ) {
 			epsDrawString( epm_red, 40, 50, "Initializing", 1 );
 		}
 
+		epsLine( epm_black, 0, 128, 30, 128 );
+		epsLine( epm_black, 0, 66, 30, 66 );
 		epsLine( epm_black, 30, 0, 30, Y_MAX );
-		if( _epmode != 3 ) {
-			epsLine( epm_black, 0, 140, 30, 140 );
-		}
 		epsLine( epm_black, 30, 20, X_MAX, 20 );
 		epsLine( epm_black, 30, 150, X_MAX, 150 );
 
 		switch( _epmode ) {
 			case -1:
 			/* no break */
-			case 0: /* pause/next */
-			if( last != mpc_idle ) {
-				epsDrawSymbol( epm_black, 5, 90, ep_pause );
-			}
-			else {
-				epsDrawSymbol( epm_black, 5, 90, ep_play );
-			}
-			epsDrawSymbol( epm_black, 5, 30, ep_next );
+			case 0: /* -/next/dnp */
+			epsDrawSymbol( epm_black, 5, 90, ep_next );
+			epsDrawSymbol( epm_black, 5, 30, ep_dnp );
 			break;
-			case 1: /* volume */
-			case 3:
+			case 1: /* -/^/v */
 			epsDrawSymbol( epm_black, 5, 90, ep_up );
 			epsDrawSymbol( epm_black, 5, 30, ep_down );
-			break;
-			case 2: /* dnp/fav */
-			epsDrawSymbol( epm_black, 5, 90, ep_dnp );
-			epsDrawSymbol( epm_black, 5, 30, ep_fav );
 			break;
 			default:
 			addMessage( 0, "EP: update illegal epmode %i", _epmode );
@@ -129,7 +117,7 @@ static void *_update( void *ignored ) {
 				/* no update.. */
 			break;
 			case 1: /* play/pause */
-				epsPartialDisplay( 5, 90, 16, 77 );
+				epsPartialDisplay( 5, 150, 16, 16 );
 			break;
 			case 2: /* buttons */
 				epsPartialDisplay( 5, 30, 16, 76 );
@@ -244,36 +232,16 @@ static void debounceCmd( mpcmd cmd ) {
  * cycle through the key modes on Button 1
  */
 static void key1_cb( void ) {
-	struct timeval now, diff;
 	if( _epmode == -1 ) {
 		addMessage( 0, "EP: Key1, not yet.." );
 		return;
 	}
 
-	if( _epmode ==  3 ) {
-		debounceCmd( mpc_play );
-	}
-	else {
-		if( pthread_mutex_trylock( &_debouncelock ) ) {
-			addMessage( 2, "EP: mutex debounce cycle" );
-			return;
-		}
-		gettimeofday( &now, NULL );
-		timersub( &now, &lastevent, &diff );
-		lastevent.tv_sec=now.tv_sec;
-		lastevent.tv_usec=now.tv_usec;
-
-		if( ( diff.tv_sec > 0 ) || ( diff.tv_usec > 200000 ) ) {
-			_epmode=(_epmode+1)%3;
-			_umode=2;
-		}
-		pthread_mutex_unlock( &_debouncelock );
-		ep_updateHook( NULL );
-	}
+	debounceCmd( mpc_play );
 }
 
 /*
- * Key2: play/pause, Vol+, DNP
+ * Key2: next/vol+
  */
 static void key2_cb( void ) {
 	switch( _epmode ) {
@@ -281,14 +249,10 @@ static void key2_cb( void ) {
 			addMessage( 0, "EP: Key2, not yet.." );
 		break;
 		case 0:
-			debounceCmd(mpc_play);
+			debounceCmd(mpc_next);
 		break;
 		case 1:
-		case 3:
 			debounceCmd(mpc_ivol);
-		break;
-		case 2:
-			debounceCmd( mpc_dnp|mpc_display );
 		break;
 		default:
 			addMessage( 0, "EP: Unknown epMode %i for button2!", _epmode );
@@ -296,7 +260,7 @@ static void key2_cb( void ) {
 }
 
 /*
- * Key3: Skip, Vol-, FAV
+ * Key3: DNP, Vol-
  */
 static void key3_cb( void ) {
 	switch( _epmode ) {
@@ -304,14 +268,10 @@ static void key3_cb( void ) {
 			addMessage( 0, "EP: Key3, not yet.." );
 		break;
 		case 0:
-			debounceCmd(mpc_next);
+			debounceCmd( mpc_dnp|mpc_display );
 		break;
 		case 1:
-		case 3:
 			debounceCmd(mpc_dvol);
-		break;
-		case 2:
-			debounceCmd( mpc_fav|mpc_display );
 		break;
 		default:
 			addMessage( 0, "EP: Unknown epMode %i for button3!", _epmode );
