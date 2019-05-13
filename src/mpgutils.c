@@ -324,11 +324,7 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 
 	addMessage(2, "< %s:\n%s -%s\n%s", title->path, title->artist, title->title, title->album );
 
-	/*Only append musicdir on relative paths */
-	if( getConfig()->active > 0 ) {
-		strtcpy( path, getConfig()->musicdir, MAXPATHLEN-1 );
-	}
-	strtcat( path, title->path, MAXPATHLEN-1 );
+	strtcpy( path, fullpath(title->path), MAXPATHLEN-1 );
 
 	if( mpg123_open( mh, path ) != MPG123_OK ) {
 		addMessage( 1, "Could not open %s as MP3 file", path );

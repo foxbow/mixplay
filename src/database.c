@@ -62,9 +62,7 @@ static mptitle *findTitle( mptitle *base, const char *path ) {
  * checks if a given title still exists on the filesystem
  */
 int mp3Exists( const mptitle *title ) {
-	char path[MAXPATHLEN+1];
-	snprintf( path, MAXPATHLEN, "%s%s", getConfig()->musicdir, title->path );
-	return( access( path, F_OK ) == 0 );
+	return( access( fullpath(title->path), F_OK ) == 0 );
 }
 
 /**

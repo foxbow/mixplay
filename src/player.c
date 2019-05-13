@@ -229,10 +229,7 @@ static void sendplay( int fdset ) {
 	assert( control->current != NULL );
 
 	if( !control->playstream ) {
-		if( control->active > 0 ) {
-			strtcat( line, control->musicdir, MAXPATHLEN+6 );
-		}
-		strtcat( line, control->current->title->path, MAXPATHLEN+6 );
+		strtcat( line, fullpath(control->current->title->path), MAXPATHLEN+6 );
 		strtcat( line, "\n", MAXPATHLEN+6 );
 	}
 	else {
@@ -625,7 +622,7 @@ void *reader( void *data ) {
 							fail( F_FAIL, "ERROR: %s\nIndex: %i\nName: %s\nPath: %s", line,
 								control->current->title->key,
 								control->current->title->display,
-								control->current->title->path );
+								fullpath(control->current->title->path) );
 						}
 						break;
 					case 'F':
@@ -852,7 +849,7 @@ void *reader( void *data ) {
 						addMessage( 1, "Index: %i\nName: %s\nPath: %s",
 								control->current->title->key,
 								control->current->title->display,
-								control->current->title->path );
+								fullpath(control->current->title->path) );
 					}
 					control->status=mpc_idle;
 					break;

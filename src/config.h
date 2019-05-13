@@ -174,5 +174,6 @@ const mpcmd mpcCommand( const char *val );
 int  setArgument( const char *arg );
 int getArgs( int argc, char ** argv );
 int initAll( void );
+char *fullpath( const char *file );
 
 #endif /* _CONFIG_H_ */

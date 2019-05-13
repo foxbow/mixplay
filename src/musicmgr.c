@@ -1677,7 +1677,6 @@ static int cleanPlaylist( mpplaylist *pl ) {
  * saves the current playlist as m3u
  */
 int writePlaylist( mpplaylist *pl, const char *name ) {
-	mpconfig *config=getConfig();
 	char path[MAXPATHLEN+1];
 	char *home=NULL;
 	int cnt=0;
@@ -1713,12 +1712,7 @@ int writePlaylist( mpplaylist *pl, const char *name ) {
 
 	fprintf( fp, "#EXTM3U\n" );
 	while( pl != NULL ) {
-		if( config->active == 0 ) {
-			fprintf( fp, "%s\n", pl->title->path );
-		}
-		else {
-			fprintf( fp, "%s/%s\n", config->musicdir, pl->title->path );
-		}
+		fprintf( fp, "%s\n", fullpath(pl->title->path) );
 		pl=pl->next;
 		cnt++;
 	}

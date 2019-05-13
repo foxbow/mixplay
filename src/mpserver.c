@@ -439,11 +439,7 @@ static void *clientHandler(void *args ) {
 						"Content-Disposition: attachment; filename=\"%s.mp3\"\015\012\015\012", title->display );
 				send(sock , commdata, strlen(commdata), 0);
 				line[0]=0;
-				if( config->active > 0 ) {
-					strtcpy( line, config->musicdir, MAXPATHLEN );
-				}
-				strtcat( line, title->path, MAXPATHLEN );
-				filePost( sock, line );
+				filePost( sock, fullpath(title->path) );
 				title=NULL;
 				len=0;
 				running=0;

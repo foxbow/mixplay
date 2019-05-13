@@ -232,10 +232,8 @@ int setArgument( const char *arg ) {
 			}
 
 			line[i]=0;
-			/* todo: this should be the musicdir! */
-			if( chdir( line ) ){
-				fail(errno,"Could not cd to %s",line);
-			}
+
+			strtcpy( getConfig()->musicdir, line, MAXPATHLEN );
 		}
 
 		addMessage( 1, "Playlist: %s", arg );
@@ -974,4 +972,17 @@ void notifyChange() {
  */
 void updateUI() {
 	invokeHooks(_ufunc);
+}
+
+/*
+ * returns a pointer to a string containing a full absolute path to the file
+ */
+char *fullpath( const char *file ) {
+	static char pbuff[MAXPATHLEN+1]="";
+	if( file[0] != '/' ) {
+		strtcpy( pbuff, getConfig()->musicdir, MAXPATHLEN );
+	}
+
+	strtcat( pbuff, file, MAXPATHLEN );
+	return pbuff;
 }
