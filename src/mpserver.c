@@ -62,7 +62,7 @@ static int filePost( int sock, const char *fname ) {
  * also considers \n or \r to be line end characters
  */
 static char *strdec( char *target, const char *src ) {
-	int i,j;
+	unsigned int i,j;
 	char buf;
 	int state=0;
 
@@ -127,7 +127,7 @@ static void *clientHandler(void *args ) {
 	mpcmd cmd=mpc_idle;
 	static const char *mtype;
 	char line[MAXPATHLEN]="";
-	size_t commsize=MP_BLKSIZE;
+	ssize_t commsize=MP_BLKSIZE;
 	ssize_t retval=0;
 	ssize_t recvd=0;
 	static const char *fname;
@@ -140,7 +140,7 @@ static void *clientHandler(void *args ) {
 	int index=0;
 	mptitle *title=NULL;
 
-	commdata=falloc( commsize, sizeof( char ) );
+	commdata=(char*)falloc( commsize, sizeof( char ) );
 	sock=*(int*)args;
 	free( args );
 
@@ -164,7 +164,7 @@ static void *clientHandler(void *args ) {
 			while( ( retval=recv( sock, commdata+recvd, commsize-recvd, 0 ) ) == commsize-recvd ) {
 				recvd=commsize;
 				commsize+=MP_BLKSIZE;
-				commdata=frealloc( commdata, commsize );
+				commdata=(char*)frealloc( commdata, commsize );
 				memset( commdata+recvd, 0, MP_BLKSIZE );
 			}
 			switch( retval ) {
@@ -208,7 +208,7 @@ static void *clientHandler(void *args ) {
 								cmd=mpc_idle;
 							}
 							else {
-								cmd=rawcmd;
+								cmd=(mpcmd)rawcmd;
 								addMessage( 1, "Got command 0x%04x - %s", cmd, mpcString(cmd) );
 							}
 							if( arg != NULL ) {
@@ -216,11 +216,11 @@ static void *clientHandler(void *args ) {
 								if( config->argument != NULL ) {
 									addMessage( 1, "Argument %s becomes %s!", config->argument, pos );
 									if( strlen(config->argument) <= strlen(pos) ) {
-										config->argument=frealloc( config->argument, strlen(pos)+1 );
+										config->argument=(char*)frealloc( config->argument, strlen(pos)+1 );
 									}
 								}
 								else {
-									config->argument=falloc( strlen( pos )+2, sizeof( char ) );
+									config->argument=(char*)falloc( strlen( pos )+2, sizeof( char ) );
 								}
 								strdec( config->argument, pos );
 								addMessage( 1, "Decoded arg: %s", config->argument );
@@ -346,9 +346,9 @@ static void *clientHandler(void *args ) {
 				jsonLine=serializeStatus( &clmsg, sock, fullstat );
 				if( jsonLine != NULL ) {
 					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012", (int)strlen(jsonLine) );
-					while( ( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
+					while( (ssize_t)( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
 						commsize+=MP_BLKSIZE;
-						commdata=frealloc( commdata, commsize );
+						commdata=(char*)frealloc( commdata, commsize );
 					}
 					strcat( commdata, jsonLine );
 					len=strlen(commdata);
@@ -364,9 +364,9 @@ static void *clientHandler(void *args ) {
 				jsonLine=serializeConfig( );
 				if( jsonLine != NULL ) {
 					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012", (int)strlen(jsonLine) );
-					while( ( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
+					while( (ssize_t)( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
 						commsize+=MP_BLKSIZE;
-						commdata=frealloc( commdata, commsize );
+						commdata=(char*)frealloc( commdata, commsize );
 					}
 					strcat( commdata, jsonLine );
 					len=strlen(commdata);
@@ -567,7 +567,7 @@ void *mpserver( void *data ) {
 			addMessage( 2, "Connection accepted" );
 
 			/* free()'d in clientHandler() */
-			new_sock = falloc( 1, sizeof(int) );
+			new_sock = (int*)falloc( 1, sizeof(int) );
 			*new_sock = client_sock;
 
 			/* todo collect pids?

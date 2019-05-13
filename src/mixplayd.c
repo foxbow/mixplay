@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <sys/time.h>
+#include <errno.h>
 
 #include "utils.h"
 #include "player.h"
@@ -101,7 +102,9 @@ int main( int argc, char **argv ) {
 			printf( "Default music directory:" );
 			fflush( stdout );
 			memset( path, 0, MAXPATHLEN );
-			fgets(path, MAXPATHLEN, stdin );
+			if( fgets(path, MAXPATHLEN, stdin ) == NULL ) {
+				continue;
+			};
 			path[strlen( path )-1]=0; /* cut off CR */
 			abspath( path, getenv( "HOME" ), MAXPATHLEN );
 
@@ -173,7 +176,9 @@ int main( int argc, char **argv ) {
 
 	/* daemonization must happen before childs are created otherwise the pipes are cut */
 	if( getDebug() == 0 ) {
-		daemon( 0, 1 );
+		if( daemon( 0, 1 ) != 0 ) {
+			fail( errno, "Could not demonize!" );
+		}
 		openlog ("mixplayd", LOG_PID, LOG_DAEMON);
 		control->isDaemon=1;
 		pidlog=fopen( control->pidpath, "w");

@@ -224,7 +224,6 @@ void setCommand( mpcmd cmd ) {
  * make mpeg123 play the given title
  */
 static void sendplay( int fdset ) {
-	int res=0;
 	char line[MAXPATHLEN+6]="load ";
 	mpconfig *control=getConfig();
 	assert( control->current != NULL );
@@ -241,8 +240,7 @@ static void sendplay( int fdset ) {
 		strtcat( line, "\n", MAXPATHLEN+6 );
 	}
 
-	res=write( fdset, line, MAXPATHLEN+6 );
-	if ( (res == -1 ) || ( (unsigned)res < strlen( line ) ) ) {
+	if ( dowrite( fdset, line, MAXPATHLEN+6 ) == -1 ) {
 		fail( errno, "Could not write\n%s", line );
 	}
 
@@ -546,8 +544,9 @@ void *reader( void *data ) {
 	/* something needs to be played at all */
 	for( i=0; i <= control->fade; i++ ) {
 		/* create communication pipes */
-		pipe( p_status[i] );
-		pipe( p_command[i] );
+		if( ( pipe( p_status[i] ) != 0 ) || ( pipe( p_command[i] ) != 0 ) ) {
+			fail( errno, "Could not create pipes!" );
+		}
 		pid[i] = fork();
 		/* todo: consider spawn() instead
 		 * https://unix.stackexchange.com/questions/252901/get-output-of-posix-spawn
@@ -633,7 +632,7 @@ void *reader( void *data ) {
 						if( outvol > 0 ) {
 							outvol--;
 							snprintf( line, MAXPATHLEN, "volume %i\n", outvol );
-							write( p_command[fdset?0:1][1], line, strlen( line ) );
+							dowrite( p_command[fdset?0:1][1], line, strlen( line ) ) ;
 						}
 						break;
 					}
@@ -725,7 +724,7 @@ void *reader( void *data ) {
 					if( invol < 100 ) {
 						invol++;
 						snprintf( line, MAXPATHLEN, "volume %i\n", invol );
-						write( p_command[fdset][1], line, strlen( line ) );
+						dowrite( p_command[fdset][1], line, strlen( line ) );
 					}
 
 					if( intime != oldtime ) {
@@ -762,7 +761,7 @@ void *reader( void *data ) {
 									fdset=fdset?0:1;
 									invol=0;
 									outvol=100;
-									write( p_command[fdset][1], "volume 0\n", 9 );
+									dowrite( p_command[fdset][1], "volume 0\n", 9 );
 								}
 								sendplay( p_command[fdset][1] );
 							}
@@ -903,7 +902,7 @@ void *reader( void *data ) {
 		case mpc_start:
 			plCheck( 0 );
 			if( control->status == mpc_start ) {
-				write( p_command[fdset][1], "STOP\n", 6 );
+				dowrite( p_command[fdset][1], "STOP\n", 6 );
 			}
 			else {
 				control->status=mpc_start;
@@ -917,7 +916,7 @@ void *reader( void *data ) {
 				/* streamplay cannot be properly paused for longer */
 				if( control->playstream ) {
 					if( control->status == mpc_play ) {
-						write( p_command[fdset][1], "STOP\n", 6 );
+						dowrite( p_command[fdset][1], "STOP\n", 6 );
 					}
 					/* restart the stream in case it broke */
 					else {
@@ -926,7 +925,7 @@ void *reader( void *data ) {
 				}
 				/* just toggle pause on normal play */
 				else {
-					write( p_command[fdset][1], "PAUSE\n", 7 );
+					dowrite( p_command[fdset][1], "PAUSE\n", 7 );
 					control->status=( mpc_play == control->status )?mpc_idle:mpc_play;
 				}
 			}
@@ -947,7 +946,7 @@ void *reader( void *data ) {
 					order=-atoi(control->argument);
 					sfree(&(control->argument));
 				}
-				write( p_command[fdset][1], "STOP\n", 6 );
+				dowrite( p_command[fdset][1], "STOP\n", 6 );
 			}
 			break;
 
@@ -966,7 +965,7 @@ void *reader( void *data ) {
 					/* updateCurrent( control ); - done in STOP handling */
 				}
 
-				write( p_command[fdset][1], "STOP\n", 6 );
+				dowrite( p_command[fdset][1], "STOP\n", 6 );
 			}
 			break;
 
@@ -981,7 +980,7 @@ void *reader( void *data ) {
 		case mpc_stop:
 			if( asyncTest() ) {
 				order=0;
-				write( p_command[fdset][1], "STOP\n", 6 );
+				dowrite( p_command[fdset][1], "STOP\n", 6 );
 			}
 			break;
 
@@ -990,7 +989,7 @@ void *reader( void *data ) {
 				handleRangeCmd( title, control->command );
 				plCheck( 0 );
 				order=0;
-				write( p_command[fdset][1], "STOP\n", 6 );
+				dowrite( p_command[fdset][1], "STOP\n", 6 );
 			}
 			break;
 
@@ -1001,7 +1000,7 @@ void *reader( void *data ) {
 			break;
 
 		case mpc_repl:
-			write( p_command[fdset][1], "JUMP 0\n", 8 );
+			dowrite( p_command[fdset][1], "JUMP 0\n", 8 );
 			break;
 
 		case mpc_QUIT:
@@ -1024,7 +1023,7 @@ void *reader( void *data ) {
 						/* todo: keep playing to the bitter end!
 						if( control->status == mpc_play ) {
 							order=0;
-							write( p_command[fdset][1], "STOP\n", 6 );
+							dowrite( p_command[fdset][1], "STOP\n", 6 );
 						}
 						*/
 						order=0;
@@ -1060,7 +1059,7 @@ void *reader( void *data ) {
 					writeConfig( NULL );
 					control->argument=NULL;
 
-					write( p_command[fdset][1], "STOP\n", 6 );
+					dowrite( p_command[fdset][1], "STOP\n", 6 );
 					if( control->dbname[0] == 0 ) {
 						readConfig( );
 					}
@@ -1147,7 +1146,7 @@ void *reader( void *data ) {
 					if( setArgument( control->argument ) ){
 						control->active = 0;
 						if( control->status == mpc_start ) {
-							write( p_command[fdset][1], "STOP\n", 6 );
+							dowrite( p_command[fdset][1], "STOP\n", 6 );
 						}
 						else {
 							control->status=mpc_start;
@@ -1170,11 +1169,11 @@ void *reader( void *data ) {
 			break;
 
 		case mpc_bskip:
-			write( p_command[fdset][1], "JUMP -64\n", 10 );
+			dowrite( p_command[fdset][1], "JUMP -64\n", 10 );
 			break;
 
 		case mpc_fskip:
-			write( p_command[fdset][1], "JUMP +64\n", 10 );
+			dowrite( p_command[fdset][1], "JUMP +64\n", 10 );
 			break;
 
 		case mpc_dbinfo:
@@ -1231,7 +1230,7 @@ void *reader( void *data ) {
 			if( control->pledit==1 ) {
 				control->current=wipePlaylist(control->current);
 				order=0;
-				write( p_command[fdset][1], "STOP\n", 6 );
+				dowrite( p_command[fdset][1], "STOP\n", 6 );
 			}
 			else {
 				addMessage( 0, "Got wipe without active edit!" );
@@ -1297,7 +1296,7 @@ void *reader( void *data ) {
 	}
 
 	for( i=0; i<control->fade; i++) {
-		write( p_command[fdset][i], "QUIT\n", 6 );
+		dowrite( p_command[fdset][i], "QUIT\n", 6 );
 	}
 	addMessage( 0, "Players stopped" );
 	sleep(1);

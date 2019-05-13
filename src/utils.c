@@ -502,3 +502,23 @@ long readHex( char *txt, char **end ) {
 
 	return retval;
 }
+
+/**
+ * wrapper for the standard write() which handles partial writes and allows
+ * ignoring the return value
+ */
+int dowrite( const int fd, const char *buf, const size_t buflen ) {
+	const char *pos=buf;
+	size_t sent=0;
+	ssize_t ret=0;
+
+	while( sent < buflen ) {
+		ret=write( fd, pos+sent, buflen-sent );
+		if( ret == -1 ) {
+			addMessage( 0, "Write fail!\n" );
+			return -1;
+		}
+		sent=sent+ret;
+	}
+	return sent;
+}

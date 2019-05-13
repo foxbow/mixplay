@@ -694,7 +694,9 @@ struct marklist_t *loadList( const char *path ) {
 	buff=(char*)falloc( MAXPATHLEN, 1 );
 
 	while( !feof( file ) ) {
-		fgets( buff, MAXPATHLEN, file );
+		if( fgets( buff, MAXPATHLEN, file ) == NULL ) {
+			continue;
+		}
 
 		if( buff && strlen( buff ) > 1 ) {
 			if( !bwlist ) {
@@ -1023,7 +1025,7 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 	mptitle *runner=NULL;
 	mptitle *guard=NULL;
 	unsigned long num=0;
-	char *lastpat;
+	char *lastpat=NULL;
 	unsigned int pcount=getConfig()->playcount;
 	unsigned int cycles=0;
 	int valid=0;
@@ -1088,7 +1090,7 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 					return(	addNewTitle( pl, root ) );
 				}
 			}
-			addMessage( 3, "%s != %s", runner->artist, lastpat );
+			addMessage( 3, "%s != %s", runner->artist, lastpat==NULL?"---":lastpat );
 
 			if( guard != runner ) {
 				valid=1; /* we skipped and need to check playcount */
@@ -1421,7 +1423,7 @@ static int copyTitle( mptitle *title, const char* target, const unsigned int ind
 	}
 	len=st.st_size;
 
-	out=open( filename, O_CREAT|O_WRONLY|O_EXCL );
+	out=open( filename, O_CREAT|O_WRONLY|O_EXCL, 00544 );
 
 	if( -1 == out ) {
 		addMessage( 0, "Couldn't open %s for writing", filename );

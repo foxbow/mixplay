@@ -77,6 +77,7 @@ void dumpbin( const void *data, size_t len );
 char *toLower( char *text );
 int hexval( const char c );
 long readHex( char *txt, char **end );
+int dowrite( const int fd, const char *buf, const size_t buflen );
 
 void blockSigint();
 #endif

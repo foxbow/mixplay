@@ -232,7 +232,10 @@ int setArgument( const char *arg ) {
 			}
 
 			line[i]=0;
-			chdir( line );
+			/* todo: this should be the musicdir! */
+			if( chdir( line ) ){
+				fail(errno,"Could not cd to %s",line);
+			}
 		}
 
 		addMessage( 1, "Playlist: %s", arg );
@@ -515,7 +518,9 @@ mpconfig *readConfig( void ) {
 
 	if( NULL != fp ) {
 		do {
-			fgets( line, MAXPATHLEN, fp );
+			if( fgets( line, MAXPATHLEN, fp ) == NULL ) {
+				continue;
+			}
 			if( line[0]=='#' ) continue;
 			pos=strchr( line, '=' );
 			if( ( NULL == pos ) || ( strlen( ++pos ) == 0 ) ) continue;
