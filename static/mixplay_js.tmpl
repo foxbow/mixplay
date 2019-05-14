@@ -2,6 +2,7 @@
 var doUpdate=-1;
 var data=null;
 var mpver=~~MPCOMM_VER~~;
+var serverver="~~MIXPLAY_VER~~";
 var isstream=0;
 var msglines=["","","","","","","","","","","","","","",""];
 var msgpos=0;
@@ -47,7 +48,7 @@ function plCMD( cmd, count, key ) {
  * pops up the current build ID
  */
 function showInfo() {
-	alert( "Running mixplayd version "+mpver );
+	alert( "mixplayd "+serverver+" ("+mpver+")" );
 }
 
 /*
