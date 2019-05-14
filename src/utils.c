@@ -515,7 +515,7 @@ int dowrite( const int fd, const char *buf, const size_t buflen ) {
 	while( sent < buflen ) {
 		ret=write( fd, pos+sent, buflen-sent );
 		if( ret == -1 ) {
-			addMessage( 0, "Write fail!\n" );
+			addMessage( 0, "Unable to write %s %s!", buf, strerror(errno) );
 			return -1;
 		}
 		sent=sent+ret;

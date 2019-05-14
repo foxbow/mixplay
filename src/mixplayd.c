@@ -159,7 +159,7 @@ int main( int argc, char **argv ) {
 	case 4: /* playlist */
 		break;
 	default:
-		addMessage( 0, "Unknown argument!\n", argv[optind] );
+		addMessage( 0, "Unknown argument '%s'!", argv[optind] );
 		return -1;
 	}
 

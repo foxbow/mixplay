@@ -213,6 +213,12 @@ mptitle *dbGetMusic( const char *dbname ) {
 	db=dbOpen( dbname );
 
 	while( ( len = read( db, &dbentry, DBESIZE ) ) == DBESIZE ) {
+		/* support old database title path format */
+		if( ( dbentry.path[0] == '/' ) &&
+		    ( strstr( dbentry.path, getConfig()->musicdir ) != dbentry.path ) ) {
+			strcpy( dbentry.path, fullpath(&(dbentry.path[1])));
+			getConfig()->dbDirty=1;
+		}
 		dbroot = addDBTitle( dbentry, dbroot, index );
 		index++;
 	}
@@ -541,7 +547,6 @@ void dbWrite( void ) {
 	const char *dbname=getConfig()->dbname;
 	mptitle *root=getConfig()->root;
 	mptitle *runner=root;
-
 
 	if( NULL == root ) {
 		fail( F_FAIL, "Not dumping an empty database!" );

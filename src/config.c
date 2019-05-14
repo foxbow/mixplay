@@ -978,11 +978,14 @@ void updateUI() {
  * returns a pointer to a string containing a full absolute path to the file
  */
 char *fullpath( const char *file ) {
-	static char pbuff[MAXPATHLEN+1]="";
+	static char pbuff[MAXPATHLEN+1];
+	pbuff[0]=0;
 	if( file[0] != '/' ) {
 		strtcpy( pbuff, getConfig()->musicdir, MAXPATHLEN );
+		strtcat( pbuff, file, MAXPATHLEN );
 	}
-
-	strtcat( pbuff, file, MAXPATHLEN );
+	else {
+		strtcpy( pbuff, file, MAXPATHLEN );
+	}
 	return pbuff;
 }

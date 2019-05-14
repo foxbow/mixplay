@@ -581,12 +581,16 @@ void *reader( void *data ) {
 
 	/* check if we can control the system's volume */
 	control->volume=getVolume();
-	if( control->volume != -1  ) {
-		addMessage(  1, "Hardware volume level is %i%%", control->volume );
-	}
-	else {
-		addMessage( 0, "No hardware volume control!" );
-		control->channel=NULL;
+	switch( control->volume ) {
+		case -2:
+			addMessage( 1, "Hardware volume is muted" );
+			break;
+		case -1:
+			addMessage( 0, "Hardware volume control is diabled" );
+			control->channel=NULL;
+			break;
+		default:
+			addMessage( 1, "Hardware volume level is %i%%", control->volume );
 	}
 
 	/* main loop */
@@ -1293,7 +1297,7 @@ void *reader( void *data ) {
 	}
 
 	for( i=0; i<control->fade; i++) {
-		dowrite( p_command[fdset][i], "QUIT\n", 6 );
+		dowrite( p_command[i][1], "QUIT\n", 6 );
 	}
 	addMessage( 0, "Players stopped" );
 	sleep(1);
