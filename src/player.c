@@ -270,13 +270,12 @@ void *setProfile( void *ignored ) {
 	}
 	cactive=control->active;
 
-	control->plplay=0;
-	control->playstream=0;
+	PM_SETMODE(PM_NONE);
 
 	/* stream selected */
 	if( cactive < 0 ) {
 		active = -(cactive+1);
-		control->playstream=1;
+		control->mpmode=PM_STREAM;
 
 		if( active >= control->streams ) {
 			addMessage( 0, "Stream #%i does no exist!", active );
@@ -289,6 +288,7 @@ void *setProfile( void *ignored ) {
 	/* profile selected */
 	else if( cactive > 0 ){
 		active=cactive-1;
+		PM_SETMODE(PM_DATABASE);
 
 		if( active > control->profiles ) {
 			addMessage ( 0, "Profile #%i does no exist!", active );
@@ -341,8 +341,14 @@ void *setProfile( void *ignored ) {
 		if( control->skipdnp ) {
 			DNPSkip( control->root, control->skipdnp );
 		}
-		applyDNPlist( control->root, dnplist );
-		applyFAVlist( control->root, favourites );
+		if( PMQ_IS(PMQ_MIX) ) {
+			applyFAVlist( control->root, favourites, 1 );
+			applyDNPlist( control->root, dnplist );
+		}
+		else {
+			applyDNPlist( control->root, dnplist );
+			applyFAVlist( control->root, favourites, 0 );
+		}
 		plCheck( 0 );
 		cleanList( dnplist );
 		cleanList( favourites );
@@ -1064,7 +1070,7 @@ void *reader( void *data ) {
 					if( control->dbname[0] == 0 ) {
 						readConfig( );
 					}
-					setProfile( control );
+					setProfile( NULL );
 					control->current->title = control->root;
 					control->status=mpc_start;
 					sendplay( p_command[fdset][1] );
@@ -1139,10 +1145,10 @@ void *reader( void *data ) {
 				}
 				else {
 					if( MPC_ISSHUFFLE(control->command) ) {
-						control->plmix=1;
+						PMQ_SET(PMQ_MIX);
 					}
 					else {
-						control->plmix=0;
+						PMQ_CLEAR(PMQ_MIX);
 					}
 					if( setArgument( control->argument ) ){
 						control->active = 0;
@@ -1224,11 +1230,11 @@ void *reader( void *data ) {
 			break;
 
 		case mpc_edit:
-			control->pledit=!control->pledit;
+			PMQ_TOGGLE(PMQ_EDIT);
 			break;
 
 		case mpc_wipe:
-			if( control->pledit==1 ) {
+			if( PMQ_IS(PMQ_EDIT) ) {
 				control->current=wipePlaylist(control->current);
 				order=0;
 				dowrite( p_command[fdset][1], "STOP\n", 6 );
@@ -1239,7 +1245,7 @@ void *reader( void *data ) {
 			break;
 
 		case mpc_save:
-			if( ( control->pledit==1 ) && ( control->argument != NULL ) ) {
+			if( PMQ_IS(PMQ_EDIT) && ( control->argument != NULL ) ) {
 				writePlaylist( control->current, control->argument );
 				sfree( &(control->argument) );
 				updatePlaylists();
@@ -1250,7 +1256,7 @@ void *reader( void *data ) {
 			break;
 
 		case mpc_remove:
-			if( ( control->pledit==1 ) && ( control->argument != NULL ) ) {
+			if( PMQ_IS(PMQ_EDIT) && ( control->argument != NULL ) ) {
 				control->current=remFromPLByKey( control->current, atoi( control->argument ) );
 				sfree( &(control->argument) );
 			}

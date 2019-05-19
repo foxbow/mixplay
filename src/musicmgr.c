@@ -648,10 +648,17 @@ int applyDNPlist( mptitle *base, struct marklist_t *list ) {
 /**
  * This function sets the favourite bit on titles found in the given list
  */
-int applyFAVlist( mptitle *root, struct marklist_t *favourites ) {
+int applyFAVlist( mptitle *root, struct marklist_t *favourites, int excl ) {
 	struct marklist_t *ptr = NULL;
 	mptitle *runner=root;
 	int cnt=0;
+
+	if( excl ) {
+		do {
+			runner->flags |= MP_DNP;
+			runner=runner->next;
+		} while( runner != root );
+	}
 
 	do {
 		activity( "Favourites " );
@@ -661,7 +668,7 @@ int applyFAVlist( mptitle *root, struct marklist_t *favourites ) {
 			if( matchTitle( runner, ptr->dir ) ) {
 				addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
 				if( !( runner->flags & MP_FAV ) ) {
-					runner->flags|=MP_FAV;
+					runner->flags=MP_FAV;
 					cnt++;
 				}
 				ptr=NULL;
@@ -1184,12 +1191,12 @@ void plCheck( int del ) {
 	mpplaylist *pl=getConfig()->current;
 	mpplaylist *buf=pl;
 
-	if( getConfig()->pledit ) {
+	if( PMQ_IS(PMQ_EDIT) ) {
 		addMessage(2,"plCheck: Edit mode");
 		return;
 	}
 
-	if( getConfig()->plplay && !getConfig()->plmix ) {
+	if( ( PM_MODE == PM_PLAYLIST ) && !PMQ_IS(PMQ_MIX) ) {
 		addMessage(2,"plCheck: Sorted playlist");
 		if( getConfig()->current == NULL ) {
 			addMessage(0,"No playlist available!");
@@ -1572,7 +1579,7 @@ int handleRangeCmd( mptitle *title, mpcmd cmd ) {
 
 		if( MPC_CMD(cmd) == mpc_fav ) {
 			addToFile( config->favname, line );
-			cnt=applyFAVlist( title, &buff );
+			cnt=applyFAVlist( title, &buff, 0 );
 		}
 		else if( MPC_CMD(cmd) == mpc_dnp ) {
 			addToFile( config->dnpname, line );

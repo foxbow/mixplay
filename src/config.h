@@ -83,6 +83,24 @@ typedef enum _mpcmd_t mpcmd;
 /* shall it be fuzzy */
 #define MPC_ISFUZZY(x) (x & mpc_fuzzy )
 
+/* playmodes */
+#define PM_NONE     0x00
+#define PM_STREAM   0x01
+#define PM_PLAYLIST 0x02
+#define PM_DATABASE 0x03
+/* playmode qualifiers */
+#define PMQ_MIX     0x10
+#define PMQ_EDIT    0x20
+#define PMQ_FAVPLAY 0x40
+
+#define PM_MODE (getConfig()->mpmode & 0x0f)
+#define PMQ_MODE (getConfig()->mpmode & 0xf0)
+#define PM_SETMODE(x) (getConfig()->mpmode = PMQ_MODE | x)
+#define PMQ_IS(x) (getConfig()->mpmode & x)
+#define PMQ_TOGGLE(x) (getConfig()->mpmode ^= x)
+#define PMQ_SET(x) (getConfig()->mpmode |= x)
+#define PMQ_CLEAR(x) (getConfig()->mpmode &= ~x)
+
 /**
  * holds the widgets and pipes for communication
  */
@@ -124,10 +142,8 @@ struct _mpcontrol_t {
 	char *host;
 	int  port;
 	unsigned playcount;
+	int mpmode;
 	/* flags */
-	unsigned pledit:1;
-	unsigned plplay:1;
-	unsigned plmix:1;
 	unsigned fade:1;					/* controls fading between titles */
 	unsigned isDaemon:1;
 	unsigned inUI:1;					/* flag to show if the UI is active */

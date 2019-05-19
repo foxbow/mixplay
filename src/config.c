@@ -164,12 +164,11 @@ int setArgument( const char *arg ) {
 	mpconfig *control=getConfig();
 
 	control->active=0;
-	control->plplay=0;
-	control->playstream=0;
+	PM_SETMODE(PM_NONE);
 
 	if( isURL( arg ) ) {
 		addMessage( 1, "URL: %s", arg );
-		control->playstream=1;
+		PM_SETMODE(PM_STREAM);
 		line[0]=0;
 
 		if( endsWith( arg, ".m3u" ) ||
@@ -210,7 +209,7 @@ int setArgument( const char *arg ) {
 		title=recurse( line, NULL );
 		if( title != NULL ) {
 			control->root=wipeTitles( control->root );
-			if( control->plmix==1 ) {
+			if( PMQ_IS(PMQ_MIX) ) {
 				control->root=title;
 				plCheck(0);
 			}
@@ -226,8 +225,8 @@ int setArgument( const char *arg ) {
 		addMessage( 1, "Playlist: %s", arg );
 		title=loadPlaylist( arg );
 		if( title != NULL ) {
-			control->plplay=1;
-			if( control->plmix==1 ) {
+			PM_SETMODE(PM_PLAYLIST);
+			if( PMQ_IS(PMQ_MIX) ) {
 				control->current=wipePlaylist( control->current );
 				control->root=wipeTitles( control->root );
 				control->root=title;
@@ -291,7 +290,7 @@ int getArgs( int argc, char ** argv ){
 			break;
 
 		case 'm':
-			config->plmix=1;
+			PMQ_SET(PMQ_MIX);
 			break;
 
 		case '?':

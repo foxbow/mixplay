@@ -160,7 +160,7 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 	jsonAddInt( jo, "percent", data->percent );
 	jsonAddInt( jo, "volume", data->volume );
 	jsonAddInt( jo, "status", data->status );
-	jsonAddBool( jo, "pledit", data->pledit );
+	jsonAddInt( jo, "mpmode", data->mpmode );
 
 	/* broadcast */
 	if( _curclient == -1 ) {
