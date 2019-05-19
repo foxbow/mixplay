@@ -161,7 +161,6 @@ static mpplaylist *titleToPlaylist( mptitle *title, mpplaylist *pl ) {
 int setArgument( const char *arg ) {
 	mptitle *title=NULL;
 	char line [MAXPATHLEN+1];
-	int  i;
 	mpconfig *control=getConfig();
 
 	control->active=0;
@@ -223,18 +222,6 @@ int setArgument( const char *arg ) {
 	}
 	else if ( endsWith( arg, ".m3u" ) ||
 			  endsWith( arg, ".pls" ) ) {
-		if( NULL != strrchr( arg, '/' ) ) {
-			strcpy( line, arg );
-			i=strlen( line );
-
-			while( line[i] != '/' ) {
-				i--;
-			}
-
-			line[i]=0;
-
-			strtcpy( getConfig()->musicdir, line, MAXPATHLEN );
-		}
 
 		addMessage( 1, "Playlist: %s", arg );
 		title=loadPlaylist( arg );

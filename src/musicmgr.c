@@ -524,6 +524,11 @@ int search( const char *pat, const mpcmd range, const int global ) {
 	res->anum=0;
 	res->lnum=0;
 
+	if( root == NULL ) {
+		addMessage( 0, "No database loaded." );
+		return 0;
+	}
+
 	do {
 		activity("searching");
 		found=0;
@@ -754,6 +759,19 @@ mptitle *loadPlaylist( const char *path ) {
 	mptitle *current=NULL;
 	char *buff;
 	char titlePath[MAXPATHLEN];
+	char mdir[MAXPATHLEN+1]="";
+	int i=0;
+
+	/* get path to the playlist, if any */
+	if( NULL != strrchr( path, '/' ) ) {
+		i=MIN(strlen( path ),MAXPATHLEN);
+
+		while( path[i] != '/' ) {
+			i--;
+		}
+		strtcpy( mdir, path, i+1 );
+	}
+
 
 	fp=fopen( path, "r" );
 	if( !fp ) {
@@ -767,6 +785,7 @@ mptitle *loadPlaylist( const char *path ) {
 		}
 		else {
 			addMessage(1,"Using %s",titlePath);
+			strtcpy( mdir, getConfig()->musicdir, MAXPATHLEN );
 		}
 	}
 
@@ -775,6 +794,11 @@ mptitle *loadPlaylist( const char *path ) {
 		activity( "Loading" );
 		if( ( fgets( buff, MAXPATHLEN, fp ) != NULL ) &&
 				( strlen( buff ) > 1 ) && ( buff[0] != '#' ) ) {
+			/* turn relative paths into absolute ones */
+			if( buff[0] != '/' ) {
+				snprintf( titlePath, MAXPATHLEN, "%s%s", mdir, buff );
+				strtcpy( buff, titlePath, MAXPATHLEN );
+			}
 			strip( titlePath, buff, MAXPATHLEN ); /* remove control chars like CR/LF */
 			current=insertTitle( current, titlePath );
 			cnt++;
@@ -1278,7 +1302,7 @@ mptitle *recurse( char *curdir, mptitle *files ) {
 	}
 
 	for( i=0; i<num; i++ ) {
-		activity( "Scanning" );
+		activity( "Scanning %s", curdir );
 		sprintf( dirbuff, "%s/%s", curdir, entry[i]->d_name );
 		files=insertTitle( files, dirbuff );
 		free( entry[i] );
