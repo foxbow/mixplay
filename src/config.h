@@ -48,6 +48,7 @@ enum _mpcmd_t {
 	mpc_save,
 	mpc_remove,
 	mpc_mute,
+	mpc_favplay,
 	mpc_idle,
 	mpc_title=1<<8,
 	mpc_artist=1<<9,
@@ -88,18 +89,6 @@ typedef enum _mpcmd_t mpcmd;
 #define PM_STREAM   0x01
 #define PM_PLAYLIST 0x02
 #define PM_DATABASE 0x03
-/* playmode qualifiers */
-#define PMQ_MIX     0x10
-#define PMQ_EDIT    0x20
-#define PMQ_FAVPLAY 0x40
-
-#define PM_MODE (getConfig()->mpmode & 0x0f)
-#define PMQ_MODE (getConfig()->mpmode & 0xf0)
-#define PM_SETMODE(x) (getConfig()->mpmode = PMQ_MODE | x)
-#define PMQ_IS(x) (getConfig()->mpmode & x)
-#define PMQ_TOGGLE(x) (getConfig()->mpmode ^= x)
-#define PMQ_SET(x) (getConfig()->mpmode |= x)
-#define PMQ_CLEAR(x) (getConfig()->mpmode &= ~x)
 
 /**
  * holds the widgets and pipes for communication
@@ -125,7 +114,7 @@ struct _mpcontrol_t {
 	char playtime[20];			/* string containing time into song 00:00 */
 	char remtime[20];			/* string containing remaining playtime 00:00 */
 	int percent;				/* how many percent of the song have been played */
-	int playstream;				/* profile or stream */
+//	int playstream;				/* profile or stream */
 	mpcmd command;				/* command to the player */
 	char *argument;				/* arguments to command */
 	mpcmd status;					/* status of the player/system */
@@ -142,8 +131,12 @@ struct _mpcontrol_t {
 	char *host;
 	int  port;
 	unsigned playcount;
-	int mpmode;
-	/* flags */
+	int mpmode;						/* playmode, see PM_* */
+	/* flags for mpmode */
+	unsigned mpedit:1;
+	unsigned mpfavplay:1;
+	unsigned mpmix:1;
+	/* other flags */
 	unsigned fade:1;					/* controls fading between titles */
 	unsigned isDaemon:1;
 	unsigned inUI:1;					/* flag to show if the UI is active */

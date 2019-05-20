@@ -655,7 +655,7 @@ int applyFAVlist( mptitle *root, struct marklist_t *favourites, int excl ) {
 
 	if( excl ) {
 		do {
-			runner->flags |= MP_DNP;
+			runner->flags = MP_DNP;
 			runner=runner->next;
 		} while( runner != root );
 	}
@@ -668,7 +668,12 @@ int applyFAVlist( mptitle *root, struct marklist_t *favourites, int excl ) {
 			if( matchTitle( runner, ptr->dir ) ) {
 				addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
 				if( !( runner->flags & MP_FAV ) ) {
-					runner->flags=MP_FAV;
+					if( excl ) {
+						runner->flags=MP_FAV;
+					}
+					else {
+						runner->flags|=MP_FAV;
+					}
 					cnt++;
 				}
 				ptr=NULL;
@@ -915,20 +920,21 @@ mptitle *insertTitle( mptitle *base, const char *path ) {
  *
  * MP_DNP|MP_FAV will match any title where either flag is set
  */
-static unsigned long countTitles( const unsigned int inc, const unsigned int exc ) {
+unsigned long countTitles( const unsigned int inc, const unsigned int exc ) {
 	unsigned long cnt=0;
 	mptitle *base=getConfig()->root;
 	mptitle *runner=base;
 
 	if( NULL == base ) {
+		addMessage(1,"Counting without Database!");
 		return 0;
 	}
 
 	do {
 		activity( "Counting" );
 
-		if( ( ( ( inc == MP_ALL ) || ( runner->flags & inc ) ) &&
-				!( runner->flags & exc ) ) ) {
+		if( ( ( inc == MP_ALL ) || ( runner->flags & inc ) ) &&
+				!( runner->flags & exc ) ) {
 			cnt++;
 		}
 
@@ -1050,7 +1056,7 @@ static mptitle *skipTitles( mptitle *current, long num ) {
  * - does not play the same artist twice in a row
  * - prefers titles with lower playcount
  *
- * returns the head of the (new/current) playlist
+ * returns the head of the (new/current) playlist or NULL on error
  */
 mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 	mptitle *runner=NULL;
@@ -1082,6 +1088,10 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 	/* select a random title from the database */
 	/* skip forward until a title is found that is neither DNP nor MARK */
 	num = countTitles( MP_ALL, MP_DNP|MP_MARK|MP_CNTD );
+	if( num == 0 ) {
+		addMessage(0, "No titles to be played!" );
+		return NULL;
+	}
 	runner=skipTitles( runner, rand()%num );
 
 	if( runner==NULL ) {
@@ -1191,13 +1201,13 @@ void plCheck( int del ) {
 	mpplaylist *pl=getConfig()->current;
 	mpplaylist *buf=pl;
 
-	if( PMQ_IS(PMQ_EDIT) ) {
-		addMessage(2,"plCheck: Edit mode");
+	if( getConfig()->mpedit ) {
+		addMessage(1,"plCheck: Edit mode");
 		return;
 	}
 
-	if( ( PM_MODE == PM_PLAYLIST ) && !PMQ_IS(PMQ_MIX) ) {
-		addMessage(2,"plCheck: Sorted playlist");
+	if( ( getConfig()->mpmode == PM_PLAYLIST ) && !getConfig()->mpmix ) {
+		addMessage(1,"plCheck: Sorted playlist");
 		if( getConfig()->current == NULL ) {
 			addMessage(0,"No playlist available!");
 		}
@@ -1206,7 +1216,7 @@ void plCheck( int del ) {
 
 	if( pl != NULL ) {
 		/* truncate stream title history to 20 titles */
-		if( getConfig()->playstream ) {
+		if( getConfig()->mpmode == PM_STREAM ) {
 			while( ( pl->next != NULL ) && ( cnt < 20 ) ) {
 				pl=pl->next;
 				cnt++;

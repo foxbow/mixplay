@@ -78,7 +78,8 @@ cmd = 00MF RRRR CCCC CCCC
 * 0x1b - save playlist <name>
 * 0x1c - remove title from playlist <key>
 * 0x1d - toggle mute
-* 0x1e - idle / max command*
+* 0x1e - toggle favplay
+* 0x1f - idle / max command*
 
 args are set with the '?' operator.
 Examples:

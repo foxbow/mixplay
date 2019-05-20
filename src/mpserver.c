@@ -29,6 +29,7 @@
 #include <string.h>
 #include <sys/sendfile.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <pthread.h>
 
@@ -42,7 +43,7 @@ static int filePost( int sock, const char *fname ) {
 	fd=open( fname, O_RDONLY );
 	if( fd != -1 ) {
 		errno=0;
-		while ( sendfile( sock, fd, 0, 4096 ) == 4096 );
+		while( sendfile( sock, fd, NULL, 4096 ) == 4096 );
 		if( errno != 0 ) {
 			addMessage(0, "Error %s sending %s!", strerror(errno), fname );
 		}
@@ -139,6 +140,7 @@ static void *clientHandler(void *args ) {
 	int rawcmd;
 	int index=0;
 	mptitle *title=NULL;
+	struct stat sbuf;
 
 	commdata=(char*)falloc( commsize, sizeof( char ) );
 	sock=*(int*)args;
@@ -410,8 +412,13 @@ static void *clientHandler(void *args ) {
 				break;
 			case 5: /* send file */
 				if( getDebug() ) {
-					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012\015\012", mtype );
-					send(sock , commdata, strlen(commdata), 0);
+					if( stat(fname,&sbuf) == -1 ) {
+						fail( errno, "stat() failed on %s", fname );
+					}
+					flen=sbuf.st_size;
+
+					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012Content-Length: %i;\015\012\015\012", mtype, flen );
+					send(sock, commdata, strlen(commdata), 0);
 					filePost( sock, fname );
 				}
 				else {

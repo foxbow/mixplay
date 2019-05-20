@@ -228,14 +228,13 @@ static void sendplay( int fdset ) {
 	mpconfig *control=getConfig();
 	assert( control->current != NULL );
 
-	if( !control->playstream ) {
-		strtcat( line, fullpath(control->current->title->path), MAXPATHLEN+6 );
-		strtcat( line, "\n", MAXPATHLEN+6 );
+	if( getConfig()->mpmode == PM_STREAM ) {
+		strtcat( line, control->streamURL, MAXPATHLEN+6 );
 	}
 	else {
-		strtcat( line, control->streamURL, MAXPATHLEN+6 );
-		strtcat( line, "\n", MAXPATHLEN+6 );
+		strtcat( line, fullpath(control->current->title->path), MAXPATHLEN+6 );
 	}
+	strtcat( line, "\n", MAXPATHLEN+6 );
 
 	if ( dowrite( fdset, line, MAXPATHLEN+6 ) == -1 ) {
 		fail( errno, "Could not write\n%s", line );
@@ -270,7 +269,7 @@ void *setProfile( void *ignored ) {
 	}
 	cactive=control->active;
 
-	PM_SETMODE(PM_NONE);
+	control->mpedit=0;
 
 	/* stream selected */
 	if( cactive < 0 ) {
@@ -288,7 +287,6 @@ void *setProfile( void *ignored ) {
 	/* profile selected */
 	else if( cactive > 0 ){
 		active=cactive-1;
-		PM_SETMODE(PM_DATABASE);
 
 		if( active > control->profiles ) {
 			addMessage ( 0, "Profile #%i does no exist!", active );
@@ -309,8 +307,13 @@ void *setProfile( void *ignored ) {
 		favourites=loadList( control->favname );
 
 		control->current=wipePlaylist( control->current );
-		control->root=wipeTitles( control->root );
-		control->root=dbGetMusic( control->dbname );
+
+		/* only load database if it has not yet been used */
+		if( control->mpmode != PM_DATABASE ) {
+			control->root=wipeTitles( control->root );
+			control->root=dbGetMusic( control->dbname );
+			control->mpmode=PM_DATABASE;
+		}
 		control->playcount=getLowestPlaycount();
 
 		if( NULL == control->root ) {
@@ -341,7 +344,7 @@ void *setProfile( void *ignored ) {
 		if( control->skipdnp ) {
 			DNPSkip( control->root, control->skipdnp );
 		}
-		if( PMQ_IS(PMQ_MIX) ) {
+		if( control->mpfavplay ) {
 			applyFAVlist( control->root, favourites, 1 );
 			applyDNPlist( control->root, dnplist );
 		}
@@ -377,7 +380,8 @@ void *setProfile( void *ignored ) {
  * back into the db.
  */
 static void playCount( mptitle *title ) {
-	if( getConfig()->playstream || ( title->key == 0 ) ) {
+	/* playcount only makes sense with a database */
+	if( getConfig()->mpmode != PM_DATABASE ) {
 		return;
 	}
 
@@ -528,6 +532,8 @@ void *reader( void *data ) {
 	mpcmd	cmd=mpc_idle;
 	int		update=0;
 	int		insert=0;
+	struct marklist_t *dnplist=NULL;
+	struct marklist_t *favourites=NULL;
 
 	blockSigint();
 
@@ -749,7 +755,7 @@ void *reader( void *data ) {
 						sprintf( control->playtime, "%02i:%02i:%02i", intime/3600, ( intime%3600 )/60, intime%60 );
 					}
 					/* file play */
-					if( (control->current != NULL ) && (control->playstream == 0 ) ) {
+					if( control->mpmode == PM_PLAYLIST ) {
 						control->percent=( 100*intime )/( rem+intime );
 						sprintf( control->remtime, "%02i:%02i", (int)rem/60, (int)rem%60 );
 
@@ -788,7 +794,7 @@ void *reader( void *data ) {
 							sendplay( p_command[fdset][1] );
 						}
 						/* stream stopped playing (PAUSE) */
-						else if( control->playstream ) {
+						else if( control->mpmode == PM_STREAM ) {
 							addMessage(2,"Stream stopped");
 							control->status=mpc_idle;
 						}
@@ -921,7 +927,7 @@ void *reader( void *data ) {
 			/* has the player been properly initialized yet? */
 			if( control->status != mpc_start ) {
 				/* streamplay cannot be properly paused for longer */
-				if( control->playstream ) {
+				if( control->mpmode == PM_STREAM ) {
 					if( control->status == mpc_play ) {
 						dowrite( p_command[fdset][1], "STOP\n", 6 );
 					}
@@ -1047,7 +1053,7 @@ void *reader( void *data ) {
 				if( control->argument == NULL ) {
 					progressMsg( "No profile given!" );
 				}
-				else if(control->playstream){
+				else if(control->mpmode == PM_STREAM){
 					control->streams++;
 					control->stream=(char**)frealloc(control->stream, control->streams*sizeof( char * ) );
 					control->stream[control->streams-1]=(char*)falloc( strlen(control->streamURL)+1, 1 );
@@ -1144,12 +1150,8 @@ void *reader( void *data ) {
 					progressMsg( "No path given!" );
 				}
 				else {
-					if( MPC_ISSHUFFLE(control->command) ) {
-						PMQ_SET(PMQ_MIX);
-					}
-					else {
-						PMQ_CLEAR(PMQ_MIX);
-					}
+					control->mpmix=MPC_ISSHUFFLE(control->command);
+
 					if( setArgument( control->argument ) ){
 						control->active = 0;
 						if( control->status == mpc_start ) {
@@ -1230,11 +1232,11 @@ void *reader( void *data ) {
 			break;
 
 		case mpc_edit:
-			PMQ_TOGGLE(PMQ_EDIT);
+			control->mpedit=~(control->mpedit);
 			break;
 
 		case mpc_wipe:
-			if( PMQ_IS(PMQ_EDIT) ) {
+			if( control->mpedit ) {
 				control->current=wipePlaylist(control->current);
 				order=0;
 				dowrite( p_command[fdset][1], "STOP\n", 6 );
@@ -1245,7 +1247,7 @@ void *reader( void *data ) {
 			break;
 
 		case mpc_save:
-			if( PMQ_IS(PMQ_EDIT) && ( control->argument != NULL ) ) {
+			if( control->mpedit && ( control->argument != NULL ) ) {
 				writePlaylist( control->current, control->argument );
 				sfree( &(control->argument) );
 				updatePlaylists();
@@ -1256,7 +1258,7 @@ void *reader( void *data ) {
 			break;
 
 		case mpc_remove:
-			if( PMQ_IS(PMQ_EDIT) && ( control->argument != NULL ) ) {
+			if( control->mpedit && ( control->argument != NULL ) ) {
 				control->current=remFromPLByKey( control->current, atoi( control->argument ) );
 				sfree( &(control->argument) );
 			}
@@ -1269,6 +1271,44 @@ void *reader( void *data ) {
 		case mpc_mute:
 			toggleMute();
 			break;
+
+		case mpc_favplay:
+			if( asyncTest() ) {
+				if( control->mpmode == PM_DATABASE ) {
+					/* do not play next title automatically */
+					order=0;
+					/* toggle favplay */
+					control->mpfavplay=!control->mpfavplay;
+					addMessage(1,"%s Favplay",control->mpfavplay?"Enabling":"Disabling");
+
+					dnplist=loadList( control->dnpname );
+					favourites=loadList( control->favname );
+
+					if( control->mpfavplay ) {
+						addMessage(1,"%i playable titles", countTitles( MP_ALL, MP_DNP|MP_MARK|MP_CNTD ) );
+						applyFAVlist( control->root, favourites, 1 );
+						addMessage(1,"%i playable titles", countTitles( MP_ALL, MP_DNP|MP_MARK|MP_CNTD ) );
+						applyDNPlist( control->root, dnplist );
+						addMessage(1,"%i playable titles", countTitles( MP_ALL, MP_DNP|MP_MARK|MP_CNTD ) );
+					}
+					else {
+						applyDNPlist( control->root, dnplist );
+						applyFAVlist( control->root, favourites, 0 );
+						if( control->skipdnp ) {
+							DNPSkip( control->root, control->skipdnp );
+						}
+					}
+
+					cleanList( dnplist );
+					cleanList( favourites );
+
+					control->current=wipePlaylist( control->current );
+					plCheck( 0 );
+				}
+				else {
+					addMessage(0,"Favplay only works in database mode!");
+				}
+			}
 
 		case mpc_idle:
 			/* read current Hardware volume in case it changed externally

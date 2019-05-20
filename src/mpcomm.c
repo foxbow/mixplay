@@ -153,7 +153,6 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 		jsonAddStrs(jo, "albums", data->found->albums, data->found->lnum);
 		jsonAddStrs(jo, "albart", data->found->albart, data->found->lnum);
 	}
-	jsonAddInt( jo, "playstream", data->playstream );
 	jsonAddInt( jo, "active", data->active );
 	jsonAddStr( jo, "playtime", data->playtime );
 	jsonAddStr( jo, "remtime", data->remtime );
@@ -161,6 +160,8 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 	jsonAddInt( jo, "volume", data->volume );
 	jsonAddInt( jo, "status", data->status );
 	jsonAddInt( jo, "mpmode", data->mpmode );
+	jsonAddBool( jo, "mpfavplay", data->mpfavplay );
+	jsonAddBool( jo, "mpedit", data->mpedit );
 
 	/* broadcast */
 	if( _curclient == -1 ) {

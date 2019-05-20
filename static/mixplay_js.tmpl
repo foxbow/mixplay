@@ -10,6 +10,7 @@ var active=0;
 var scrolls=[];
 var numscrolls=0;
 var wasstream=-1;
+var favplay=0;
 
 /*
  * asks for a name and saves the current playlist
@@ -443,9 +444,17 @@ function updateUI( ){
 						}
 					}
 
-					/* standdard update */
-					isstream=data.playstream;
+					/* standard update */
+          favplay=data.mpfavplay;
+          if( favplay ) {
+            document.getElementById('setfavplay').value="Disable Favplay";
+          }
+          else {
+            document.getElementById('setfavplay').value="Enable Favplay";
+          }
+					isstream=( data.mpmode == 1 ); /* PM_STREAM */
 
+          setVisible( 'setfavplay', !isstream );
 					setVisible( 'ctrl', !isstream );
 					setVisible( 'playstr', isstream );
 					setVisible( 'playpack', !isstream );
@@ -494,7 +503,7 @@ function updateUI( ){
             document.getElementById('speaker').innerHTML='&#x1F50A;';
 					  document.getElementById( 'vol' ).value=data.volume;
           }
-          if( data.pledit == true ) {
+          if( data.mpedit == true ) {
             document.getElementById('pledit').style.display='block'
             document.body.style.backgroundColor='#ddf'
           }

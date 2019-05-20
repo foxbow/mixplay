@@ -77,6 +77,7 @@ static const char *mpc_command[] = {
 		"mpc_save",
 		"mpc_remove",
 		"mpc_mute",
+		"mpc_favplay",
 		"mpc_idle"
 };
 
@@ -164,11 +165,10 @@ int setArgument( const char *arg ) {
 	mpconfig *control=getConfig();
 
 	control->active=0;
-	PM_SETMODE(PM_NONE);
+	control->mpmode=PM_NONE;
 
 	if( isURL( arg ) ) {
 		addMessage( 1, "URL: %s", arg );
-		PM_SETMODE(PM_STREAM);
 		line[0]=0;
 
 		if( endsWith( arg, ".m3u" ) ||
@@ -185,12 +185,14 @@ int setArgument( const char *arg ) {
 		else {
 			strtcpy( line, arg, MAXPATHLEN );
 		}
+		control->mpmode=PM_STREAM;
 		setStream( line, "Waiting for stream info..." );
 		return 1;
 	}
 	else if( endsWith( arg, ".mp3" ) ) {
 		addMessage( 1, "Single file: %s", arg );
 		/* play single song... */
+		control->mpmode=PM_PLAYLIST;
 		title=insertTitle( NULL, arg );
 		if( title != NULL ) {
 			control->root=wipeTitles( control->root );
@@ -208,8 +210,9 @@ int setArgument( const char *arg ) {
 		strncpy( line, arg, MAXPATHLEN );
 		title=recurse( line, NULL );
 		if( title != NULL ) {
+			control->mpmode=PM_PLAYLIST;
 			control->root=wipeTitles( control->root );
-			if( PMQ_IS(PMQ_MIX) ) {
+			if( control->mpmix ) {
 				control->root=title;
 				plCheck(0);
 			}
@@ -219,14 +222,14 @@ int setArgument( const char *arg ) {
 		}
 		return 3;
 	}
+	/* todo: support database playlists */
 	else if ( endsWith( arg, ".m3u" ) ||
 			  endsWith( arg, ".pls" ) ) {
-
 		addMessage( 1, "Playlist: %s", arg );
+		control->mpmode=PM_PLAYLIST;
 		title=loadPlaylist( arg );
 		if( title != NULL ) {
-			PM_SETMODE(PM_PLAYLIST);
-			if( PMQ_IS(PMQ_MIX) ) {
+			if( control->mpmix ) {
 				control->current=wipePlaylist( control->current );
 				control->root=wipeTitles( control->root );
 				control->root=title;
@@ -290,7 +293,7 @@ int getArgs( int argc, char ** argv ){
 			break;
 
 		case 'm':
-			PMQ_SET(PMQ_MIX);
+			config->mpmix=1;
 			break;
 
 		case '?':
@@ -473,7 +476,6 @@ mpconfig *readConfig( void ) {
 	/* Set some default values */
 	c_config->root=NULL;
 	c_config->current=NULL;
-	c_config->playstream=0;
 	c_config->volume=80;
 	strcpy( c_config->playtime, "00:00" );
 	strcpy( c_config->remtime, "00:00" );
