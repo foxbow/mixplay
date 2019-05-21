@@ -1196,9 +1196,11 @@ void *reader( void *data ) {
 					progressEnd();
 				}
 				else {
-					if ( search( control->argument, MPC_RANGE(control->command), 0 ) == -1 ) {
+					if ( search( control->argument, MPC_RANGE(control->command),
+				 			control->mpedit ) == -1 ) {
 						addMessage( 0, "Too many titles found!" );
 					}
+					/* todo: a signal/unblock would be nicer here */
 					while( control->found->send == -1 ) {
 						nanosleep( &ts, NULL );
 					}
@@ -1275,6 +1277,10 @@ void *reader( void *data ) {
 		case mpc_favplay:
 			if( asyncTest() ) {
 				if( control->mpmode == PM_DATABASE ) {
+					if( countTitles( MP_FAV, 0 ) < 15 ) {
+						addMessage( 0, "Need at least 15 Favourites to enable Favplay." );
+						break;
+					}
 					/* do not play next title automatically */
 					order=0;
 					/* toggle favplay */
@@ -1285,11 +1291,8 @@ void *reader( void *data ) {
 					favourites=loadList( control->favname );
 
 					if( control->mpfavplay ) {
-						addMessage(1,"%i playable titles", countTitles( MP_ALL, MP_DNP|MP_MARK|MP_CNTD ) );
 						applyFAVlist( control->root, favourites, 1 );
-						addMessage(1,"%i playable titles", countTitles( MP_ALL, MP_DNP|MP_MARK|MP_CNTD ) );
 						applyDNPlist( control->root, dnplist );
-						addMessage(1,"%i playable titles", countTitles( MP_ALL, MP_DNP|MP_MARK|MP_CNTD ) );
 					}
 					else {
 						applyDNPlist( control->root, dnplist );
@@ -1309,6 +1312,7 @@ void *reader( void *data ) {
 					addMessage(0,"Favplay only works in database mode!");
 				}
 			}
+			break;
 
 		case mpc_idle:
 			/* read current Hardware volume in case it changed externally
@@ -1321,7 +1325,6 @@ void *reader( void *data ) {
 
 		default:
 			addMessage( 0, "Received illegal command %i", cmd );
-			/* modifiers are ignored */
 			break;
 		}
 
@@ -1335,17 +1338,19 @@ void *reader( void *data ) {
 	}
 	while ( control->status != mpc_quit );
 
-	closeAudio();
-	/* stop player(s) gracefully */
 	if( control->dbDirty > 0 ) {
 		addMessage( 0, "Updating Database" );
 		dbWrite( );
 	}
 
+	/* stop player(s) gracefully */
 	for( i=0; i<control->fade; i++) {
 		dowrite( p_command[i][1], "QUIT\n", 6 );
 	}
 	addMessage( 0, "Players stopped" );
+	closeAudio();
+
+	/* todo: should not be needed */
 	sleep(1);
 
 	return NULL;

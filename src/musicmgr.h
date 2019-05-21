@@ -92,6 +92,7 @@ int addRangePrefix( char *line, mpcmd cmd );
 struct marklist_t *cleanList( struct marklist_t *root );
 struct marklist_t *loadList( const char *path );
 struct marklist_t *addToList( const char *line, struct marklist_t **list );
+int saveList( const char *path, struct marklist_t *list );
 
 void newCount( void );
 int isMusic( const char *name );

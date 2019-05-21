@@ -508,10 +508,10 @@ static int isMatch( const char *term, const char *pat, const int fuzzy ) {
  * fills the global searchresult structure with the results of the given search.
  * Returns the number of found titles.
  * pat - pattern to search for
- * global - include DNP
- * fill - fill artist and album results
+ * range - search range
+ * dnp - search in DNP
  */
-int search( const char *pat, const mpcmd range, const int global ) {
+int search( const char *pat, const mpcmd range, const int dnp ) {
 	mptitle *root=getConfig()->root;
 	mptitle *runner=root;
 	searchresults *res=getConfig()->found;
@@ -532,7 +532,8 @@ int search( const char *pat, const mpcmd range, const int global ) {
 	do {
 		activity("searching");
 		found=0;
-		if( global || !(runner->flags & MP_DNP) ) {
+		/* dnp XNOR MP_DNP */
+		if( ( runner->flags & MP_DNP ) == ( dnp?MP_DNP:0 ) ) {
 			/* check for searchrange and pattern */
 			if( MPC_ISTITLE(range) &&
 					isMatch( runner->title, pat, MPC_ISFUZZY(range) ) ) {
@@ -744,6 +745,33 @@ cleanup:
 	fclose( file );
 
 	return bwlist;
+}
+
+int saveList( const char *path, struct marklist_t *list ) {
+	int cnt=0;
+	struct marklist_t *runner=list;
+	FILE *fp=NULL;
+
+  fileBackup(path);
+	fp=fopen( path, "a" );
+
+	if( NULL == fp ) {
+		addMessage( 0, "Could not open %s for writing ", path );
+		return -1;
+	}
+
+	while( runner != NULL ) {
+		if( fprintf( fp, "%s\n", runner->dir ) == -1 ) {
+			addMessage( 0, "Could write %s to %s!", runner->dir, path );
+			fclose(fp);
+			return -1;
+		};
+		runner=runner->next;
+		cnt++;
+	}
+	fclose( fp );
+
+	return cnt;
 }
 
 /**

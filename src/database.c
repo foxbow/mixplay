@@ -186,22 +186,6 @@ static mptitle *addDBTitle( struct dbentry_t dbentry, mptitle *root, unsigned in
 }
 
 /**
- * move the current database file into a backup
- * tries to delete the backup first
- */
-static void dbBackup( const char *dbname ) {
-	char backupname[MAXPATHLEN]="";
-	addMessage( 1, "Backing up database" );
-
-	strtcpy( backupname, dbname, MAXPATHLEN );
-	strtcat( backupname, ".bak", MAXPATHLEN );
-
-	if( rename( dbname, backupname ) ) {
-		fail( errno, "Could not rename %s", dbname );
-	}
-}
-
-/**
  * gets all titles from the database and returns them as a mixplay entry list
  */
 mptitle *dbGetMusic( const char *dbname ) {
@@ -552,7 +536,7 @@ void dbWrite( void ) {
 		fail( F_FAIL, "Not dumping an empty database!" );
 	}
 
-	dbBackup( dbname );
+	fileBackup( dbname );
 	db=dbOpen( dbname );
 
 	do {

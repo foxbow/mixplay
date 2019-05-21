@@ -522,3 +522,21 @@ int dowrite( const int fd, const char *buf, const size_t buflen ) {
 	}
 	return sent;
 }
+
+/**
+ * move the current file file into a backup
+ */
+int fileBackup( const char *name ) {
+	char backupname[MAXPATHLEN]="";
+	addMessage( 1, "Backing up %s", name );
+
+	strtcpy( backupname, name, MAXPATHLEN );
+	strtcat( backupname, ".bak", MAXPATHLEN );
+
+	if( rename( name, backupname ) ) {
+		addMessage(0, "Could not rename %s", name );
+		return errno;
+	}
+
+	return 0;
+}
