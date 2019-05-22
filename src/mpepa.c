@@ -13,8 +13,8 @@
 
 /* the button modes
 	 -1 - not initialized
-		0 - default (pause/next/DNP)
-		1 - stream	(pause/up/down)
+	  0 - default (pause/next/DNP)
+	  1 - stream  (pause/up/down)
 */
 static int _epmode=-1;
 
@@ -170,7 +170,7 @@ void ep_updateHook( void *ignore ) {
 	}
 
 	/* disable DNP/FAV on stream play */
-	if( getConfig()->playstream && ( _epmode != 3 ) ) {
+	if( ( getConfig()->mpmode == PM_STREAM ) && ( _epmode != 3 ) ) {
 		_epmode=3;
 		_umode|=6;
 	}
