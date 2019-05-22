@@ -511,13 +511,14 @@ static int isMatch( const char *term, const char *pat, const int fuzzy ) {
  * range - search range
  * dnp - search in DNP
  */
-int search( const char *pat, const mpcmd range, const int dnp ) {
+int search( const char *pat, const mpcmd range ) {
 	mptitle *root=getConfig()->root;
 	mptitle *runner=root;
 	searchresults *res=getConfig()->found;
 	unsigned int i=0;
 	int found=0;
 	unsigned int cnt=0;
+	int dnp=0;
 	/* free buffer playlist, the arrays will not get lost due to the realloc later */
 	res->titles=wipePlaylist(res->titles);
 	res->tnum=0;
@@ -529,11 +530,17 @@ int search( const char *pat, const mpcmd range, const int dnp ) {
 		return 0;
 	}
 
+	/* if player is in favplay mode and the search in in fav mode
+	   then search for DNP titles. */
+	if ( getConfig()->mpedit && getConfig()->mpfavplay ) {
+		dnp=mpc_dnp;
+	}
+
 	do {
 		activity("searching");
 		found=0;
 		/* dnp XNOR MP_DNP */
-		if( ( runner->flags & MP_DNP ) == ( dnp?MP_DNP:0 ) ) {
+		if( ( runner->flags & MP_DNP ) == dnp ) {
 			/* check for searchrange and pattern */
 			if( MPC_ISTITLE(range) &&
 					isMatch( runner->title, pat, MPC_ISFUZZY(range) ) ) {

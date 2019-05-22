@@ -79,7 +79,7 @@ mptitle *rewindTitles( mptitle *base );
 mptitle *loadPlaylist( const char *path );
 mptitle *insertTitle( mptitle *base, const char *path );
 mptitle *wipeTitles( mptitle *root );
-int search( const char *pat, const mpcmd range, const int global );
+int search( const char *pat, const mpcmd range );
 int playResults( mpcmd range, const char *arg, const int insert );
 
 int DNPSkip( mptitle *base, const unsigned int level );

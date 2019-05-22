@@ -1203,8 +1203,7 @@ void *reader( void *data ) {
 					progressEnd();
 				}
 				else {
-					if ( search( control->argument, MPC_RANGE(control->command),
-				 			control->mpedit ) == -1 ) {
+					if ( search( control->argument, MPC_RANGE(control->command) ) == -1 ) {
 						addMessage( 0, "Too many titles found!" );
 					}
 					/* todo: a signal/unblock would be nicer here */
