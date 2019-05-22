@@ -240,7 +240,6 @@ static void sendplay( int fdset ) {
 		fail( errno, "Could not write\n%s", line );
 	}
 
-	notifyChange();
 	addMessage( 2, "CMD: %s", line );
 }
 
@@ -903,7 +902,8 @@ void *reader( void *data ) {
 			title=control->current->title;
 			if( ( cmd == mpc_fav ) || ( cmd == mpc_dnp ) ) {
 				if( control->argument != NULL ) {
-					if( MPC_EQTITLE(control->command) ) {
+					/* todo: check if control->argument is a number */
+					if( MPC_EQDISPLAY(control->command) ) {
 						title=getTitleByIndex(atoi( control->argument ) );
 					}
 					else {
@@ -1007,7 +1007,6 @@ void *reader( void *data ) {
 		case mpc_dnp:
 			if( (title != NULL ) && asyncTest() ) {
 				handleRangeCmd( title, control->command );
-				plCheck( 0 );
 				order=0;
 				dowrite( p_command[fdset][1], "STOP\n", 6 );
 			}
@@ -1244,29 +1243,16 @@ void *reader( void *data ) {
 			break;
 
 		case mpc_wipe:
-			if( control->mpedit ) {
-				control->current=wipePlaylist(control->current);
-				order=0;
-				dowrite( p_command[fdset][1], "STOP\n", 6 );
-			}
-			else {
-				addMessage( 0, "Got wipe without active edit!" );
-			}
-			break;
-
 		case mpc_save:
 			addMessage( 0, "Removed!" );
 			break;
 
 		case mpc_remove:
-			if( control->mpedit && ( control->argument != NULL ) ) {
+			if( control->argument != NULL ) {
 				control->current=remFromPLByKey( control->current, atoi( control->argument ) );
+				plCheck(0);
 				sfree( &(control->argument) );
 			}
-			else {
-				addMessage( 0, "Got remove without active edit!" );
-			}
-
 			break;
 
 		case mpc_mute:

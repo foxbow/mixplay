@@ -58,11 +58,6 @@ struct marklist_t {
 #include "config.h"
 
 /**
- * Music helper functions
- */
-void addToFile( const char *path, const char *line );
-
-/**
  * playlist functions
  */
 mpplaylist *appendToPL( mptitle *title, mpplaylist *pl, const int mark );

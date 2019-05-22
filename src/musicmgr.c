@@ -156,22 +156,44 @@ struct marklist_t *cleanList( struct marklist_t *root ) {
 /**
  * add a line to a file
  */
-void addToFile( const char *path, const char *line ) {
+static int addToFile( const char *path, const char *line ) {
+	char *buff;
+	int cnt=0;
 	FILE *fp;
-	fp=fopen( path, "a" );
+	fp=fopen( path, "r" );
 
 	if( NULL == fp ) {
-		addMessage( 0, "Could not open %s for writing ", path );
-		return;
+		addMessage( 0, "Could not open %s", path );
+		return -1;
 	}
 
-	fputs( line, fp );
+	buff=(char*)falloc( MAXPATHLEN, 1 );
 
-	if( '\n' != line[strlen( line )] ) {
-		fputc( '\n', fp );
+	while( !feof( fp ) ) {
+		if( fgets( buff, MAXPATHLEN, fp ) == NULL ) {
+			continue;
+		}
+		buff[strlen(buff)-1]=0;
+		if( strcmp( line, buff ) == 0 ) {
+			addMessage(0,"%s is already noted",line,path);
+			cnt++;
+		}
 	}
 
 	fclose( fp );
+
+	if( cnt == 0 ) {
+		fp=fopen( path, "a" );
+		if( NULL == fp ) {
+			addMessage( 0, "Could not open %s", path );
+			return -1;
+		}
+		fputs(line,fp);
+		fputc('\n',fp);
+		fclose( fp );
+	}
+
+	return cnt;
 }
 
 /**
@@ -197,7 +219,6 @@ mpplaylist *wipePlaylist( mpplaylist *pl ) {
 		pl=next;
 	}
 
-	notifyChange();
 	return NULL;
 }
 
@@ -313,8 +334,6 @@ mpplaylist *remFromPLByKey( mpplaylist *root, const unsigned key ) {
 		}
 		free(pl);
 		pl=NULL;
-
-		notifyChange();
 	}
 	else {
 		addMessage( 0, "No title with key %i in playlist!", key );
@@ -757,6 +776,7 @@ cleanup:
 int saveList( const char *path, struct marklist_t *list ) {
 	int cnt=0;
 	struct marklist_t *runner=list;
+	struct marklist_t *checker, *buff;
 	FILE *fp=NULL;
 
   fileBackup(path);
@@ -773,6 +793,19 @@ int saveList( const char *path, struct marklist_t *list ) {
 			fclose(fp);
 			return -1;
 		};
+		checker=runner;
+		while( ( checker != NULL ) && ( checker->next != NULL ) ) {
+			/* filter out double entries */
+			if( strcmp( checker->next->dir, runner->dir ) == 0 ) {
+				buff=checker->next;
+				checker->next=buff->next;
+				addMessage(1,"%s == %s",runner->dir, buff->dir );
+				free(buff);
+			}
+			if( checker->next != NULL ) {
+				checker=checker->next;
+			}
+		}
 		runner=runner->next;
 		cnt++;
 	}
@@ -1228,18 +1261,11 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
  * checks the current playlist.
  * If there are more than 10 previous titles, those get pruned.
  * While there are less that 10 next titles, titles will be added.
- *
- * todo: make this also work on other playlists
  */
 void plCheck( int del ) {
 	int cnt=0;
 	mpplaylist *pl=getConfig()->current;
 	mpplaylist *buf=pl;
-
-	if( getConfig()->mpedit ) {
-		addMessage(1,"plCheck: Edit mode");
-		return;
-	}
 
 	if( ( getConfig()->mpmode == PM_PLAYLIST ) && !getConfig()->mpmix ) {
 		addMessage(1,"plCheck: Sorted playlist");
@@ -1265,6 +1291,7 @@ void plCheck( int del ) {
 				free( buf );
 				buf=pl;
 			}
+			notifyChange();
 			return;
 		}
 
@@ -1326,6 +1353,7 @@ void plCheck( int del ) {
 		}
 		cnt++;
 	}
+	notifyChange();
 }
 
 /*
@@ -1584,8 +1612,9 @@ int addRangePrefix( char *line, mpcmd cmd ) {
 }
 
 /**
- * wrapper to handle FAV and DNP. Uses the given title and the range definitions in cmd
- * to create the proper config line and immediately applies it to the current playlist
+ * wrapper to handle FAV and DNP. Uses the given title and the range
+ * definitions in cmd to create the proper config line and immediately
+ * applies it to the current database and playlist
  */
 int handleRangeCmd( mptitle *title, mpcmd cmd ) {
 	char line[MAXPATHLEN];
@@ -1623,18 +1652,20 @@ int handleRangeCmd( mptitle *title, mpcmd cmd ) {
 		strcpy( buff.dir, line );
 
 		if( MPC_CMD(cmd) == mpc_fav ) {
-			addToFile( config->favname, line );
-			cnt=applyFAVlist( title, &buff, 0 );
+			if( addToFile( config->favname, line ) == 0 ) {
+				cnt=applyFAVlist( title, &buff, 0 );
+			}
 		}
 		else if( MPC_CMD(cmd) == mpc_dnp ) {
-			addToFile( config->dnpname, line );
-			cnt=applyDNPlist( title, &buff );
+			if( addToFile( config->dnpname, line ) == 0 ) {
+				cnt=applyDNPlist( title, &buff );
+				if( cnt > 0 ) {
+					plCheck(1);
+				}
+			}
 		}
 	}
 
-	if( cnt > 0 ) {
-		notifyChange();
-	}
 	return cnt;
 }
 

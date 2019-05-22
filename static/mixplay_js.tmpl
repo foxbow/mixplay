@@ -13,25 +13,6 @@ var wasstream=-1;
 var favplay=0;
 
 /*
- * acts on clicking in the Playlist in play mode it jumps or pauses
- * in edit mode the title is removed from the playlist.
- */
-function plCMD( cmd, count, key ) {
-  var e=document.getElementById('searchmode');
-  if( e.value == 'Play' ) {
-    if( count != 0 ) {
-      sendCMD( cmd, count );
-    }
-    else {
-      sendCMD( cmd );
-    }
-  }
-  else {
-    sendCMD( 0x1c, key );
-  }
-}
-
-/*
  * TODO: update searchresults on the fly
  */
 function toggleSearch() {
@@ -167,9 +148,6 @@ var b;
 			}
 		}
 		else {
-      if( i == '4' ) {
-        b.style.display='none';
-      }
 			e.style.display='none';
 			b.style.backgroundColor='#fff';
 		}
@@ -354,7 +332,7 @@ function updateUI( ){
 						e.innerHTML="";
 						document.title=data.current.artist+" - "+data.current.title;
 						if( data.prev.length > 0 ) {
-              if( data.prev[0].artist == "" ) {
+              if( data.mpmode == 1 ) {
                 /* only the stream title */
                 setElement( 'prev', data.prev[0].title );
               }
@@ -362,7 +340,7 @@ function updateUI( ){
 						    setElement( 'prev', data.prev[0].artist+" - "+data.prev[0].title );
               }
 							for( i = Math.min( 4, data.prev.length-1 ); i >= 0 ; i-- ) {
-								e.innerHTML+="<p class='cmd' onclick='plCMD( 0x0002, "+(i+1)+", "+data.prev[i].key+")'>"+data.prev[i].artist+" - "+data.prev[i].title+"</p>";
+								e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0002, "+(i+1)+")'>"+data.prev[i].artist+" - "+data.prev[i].title+"</p>";
 							}
 						}
 						else {
@@ -372,7 +350,7 @@ function updateUI( ){
 						setElement( 'artist', data.current.artist );
 						setElement( 'album', data.current.album );
 						setElement( 'genre', data.current.genre );
-						e.innerHTML+="<p class='cmd' onclick='plCMD( 0x0000, 0, "+data.current.key+")' style='background-color: #ddd;' ><em>"+data.current.artist+" - "+data.current.title+"</em></p>";
+						e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0000 )' style='background-color: #ddd;' ><em>"+data.current.artist+" - "+data.current.title+"</em></p>";
 						if( data.next.length > 0 ) {
               if( data.next[0].artist == "" ) {
                 /* only the stream title */
@@ -382,7 +360,10 @@ function updateUI( ){
 						    setElement( 'next', data.next[0].artist+" - "+data.next[0].title );
               }
 							for( i=0; i<data.next.length; i++ ) {
-								e.innerHTML+="<p class='cmd' onclick='plCMD( 0x0003, "+(i+1)+", "+data.next[i].key+")'>"+data.next[i].artist+" - "+data.next[i].title+"</p>";
+                if( data.mpmode != 1 ) {
+                  e.innerHTML+="<input style='width:2em; border:none; background:none; float:left; color:red;' type='button' onclick='sendCMD( 0x1c, "+data.next[i].key+" )' value='X'>";
+                }
+								e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0003, "+(i+1)+")'>"+data.next[i].artist+" - "+data.next[i].title+"</p>";
 							}
 						}
 						else {
@@ -402,10 +383,15 @@ function updateUI( ){
 						toggleResults(0);
 						e=document.getElementById('search0');
 						if( data.titles.length > 0 ) {
-							e.innerHTML="<a href='/cmd/010c?0'>Play all</a><a href='/cmd/0114?0'>Fav all</a><br/>";
+              if( data.mpedit ) {
+                e.innerHTML="<a href='/cmd/0114?0'>Fav all</a><br/>";
+              }
+              else {
+                e.innerHTML="<a href='/cmd/010c?0'>Play all</a><br/>";
+              }
 							for( i=0; i<data.titles.length; i++ ) {
                 if( data.mpedit ) {
-                  e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0509, "+data.titles[i].key+")'>&hearts; "+data.titles[i].artist+" - "+data.titles[i].title+"</p>"
+                  e.innerHTML+="<p class='cmd' onclick='this.style.display=\"none\"; sendCMD( 0x0509, "+data.titles[i].key+")'>&hearts; "+data.titles[i].artist+" - "+data.titles[i].title+"</p>"
                 }
                 else {
                   e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x010c, "+data.titles[i].key+")'>&#x25B6; "+data.titles[i].artist+" - "+data.titles[i].title+"</p>"
@@ -420,7 +406,7 @@ function updateUI( ){
 							e.innerHTML="";
 							for( i=0; i<data.artists.length; i++ ) {
                 if( data.mpedit ) {
-                  e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0209, \""+data.artists[i]+"\")'>&hearts; "+data.artists[i]+"</p>\n"
+                  e.innerHTML+="<p class='cmd' onclick='this.style.display=\"none\"; sendCMD( 0x0209, \""+data.artists[i]+"\")'>&hearts; "+data.artists[i]+"</p>\n"
                 }
                 else {
                   e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0213, \""+data.artists[i]+"\")'>&#x1F50E; "+data.artists[i]+"</p>\n"
@@ -435,7 +421,7 @@ function updateUI( ){
 							e.innerHTML="";
 							for( i=0; i<data.albums.length; i++ ) {
                 if( data.mpedit ) {
-                  e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0409, \""+data.albums[i]+"\")'>&hearts; "+data.albart[i]+" - "+data.albums[i]+"</p>"
+                  e.innerHTML+="<p class='cmd' onclick='this.style.display=\"none\"; sendCMD( 0x0409, \""+data.albums[i]+"\")'>&hearts; "+data.albart[i]+" - "+data.albums[i]+"</p>"
                 }
                 else {
                   e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0413, \""+data.albums[i]+"\")'>&#x1F50E; "+data.albart[i]+" - "+data.albums[i]+"</p>"
