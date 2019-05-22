@@ -903,8 +903,15 @@ void *reader( void *data ) {
 			title=control->current->title;
 			if( ( cmd == mpc_fav ) || ( cmd == mpc_dnp ) ) {
 				if( control->argument != NULL ) {
-					if( ( title=getTitleByIndex(atoi( control->argument ) ) ) == NULL ) {
-						title=control->current->title;
+					if( MPC_EQTITLE(control->command) ) {
+						title=getTitleByIndex(atoi( control->argument ) );
+					}
+					else {
+						title=getTitleForRange( control->command, control->argument );
+					}
+					/* someone is testing parameters, mh? */
+					if( title == NULL ) {
+						addMessage(0,"Nothing matches %s!", control->argument );
 					}
 					sfree( &(control->argument) );
 				}
@@ -1249,14 +1256,7 @@ void *reader( void *data ) {
 			break;
 
 		case mpc_save:
-			if( control->mpedit && ( control->argument != NULL ) ) {
-				writePlaylist( control->current, control->argument );
-				sfree( &(control->argument) );
-				updatePlaylists();
-			}
-			else {
-				addMessage( 0, "Got save without active edit!" );
-			}
+			addMessage( 0, "Removed!" );
 			break;
 
 		case mpc_remove:

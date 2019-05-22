@@ -406,49 +406,6 @@ static int scanparts( char *line, char ***target ) {
 }
 
 /**
- * checks the .mixplay/playlists directory and adds the found playlists
- * to the configuration
- */
-void updatePlaylists( void ) {
-	char path[MAXPATHLEN+1];
-	char *home=getenv("HOME");
-	struct dirent **pls=NULL;
-	int i;
-
-	if( home == NULL ) {
-		fail( F_FAIL, "Cannot get HOME!" );
-	}
-
-	/* free old entries, yes it would be better to do a 'real' update */
-	if( c_config->playlists > 0 ) {
-		for( i=0; i<c_config->playlists; i++ ) {
-			free(c_config->playlist[i]);
-		}
-	}
-
-	snprintf( path, MAXPATHLEN, "%s/.mixplay/playlists", home );
-	c_config->playlists=getPlaylists( path, &pls );
-	if( c_config->playlists < 1 ) {
-		c_config->playlists = 0;
-	}
-	else {
-		c_config->playlist=(char**)frealloc( c_config->playlist, c_config->playlists*sizeof(char**) );
-		for( i=0; i<c_config->playlists; i++ ) {
-			if( strlen( pls[i]->d_name ) > 4 ) {
-				c_config->playlist[i]=(char*)falloc( strlen(pls[i]->d_name)-3, 1 );
-				strtcpy( c_config->playlist[i], pls[i]->d_name, strlen(pls[i]->d_name)-3 );
-				free( pls[i] );
-			}
-			else {
-				addMessage( 0, "Illegal playlist %s", pls[i]->d_name );
-				c_config->playlists--;
-			}
-		}
-		free( pls );
-	}
-}
-
-/**
  * reads the configuration file at $HOME/.mixplay/mixplay.conf and stores the settings
  * in the given control structure.
  * returns NULL is no configuration file exists
@@ -563,8 +520,6 @@ mpconfig *readConfig( void ) {
 
 		fclose(fp);
 
-		updatePlaylists();
-
 		return c_config;
 	}
 
@@ -672,12 +627,6 @@ void freeConfigContents() {
 	sfree( &(c_config->dnpname) );
 	sfree( &(c_config->favname) );
 	sfree( &(c_config->musicdir) );
-
-	for( i=0; i<c_config->playlists; i++ ) {
-		sfree( &(c_config->playlist[i]) );
-	}
-	c_config->playlists=0;
-	sfree( (char **)&(c_config->playlist) );
 
 	for( i=0; i<c_config->profiles; i++ ) {
 		sfree( &(c_config->profile[i]) );

@@ -34,6 +34,38 @@ mptitle *getTitleByIndex( unsigned int index ) {
 
 	return NULL;
 }
+
+/**
+ * searches for a title that fits the name in the range.
+ * This is kind of a hack to turn an artist name or an album name into
+ * a title that can be used for FAV/DNP marking.
+ */
+mptitle *getTitleForRange( const mpcmd range, const char *name ) {
+	mptitle *root=getConfig()->root;
+	mptitle *run=root;
+
+	if( root == NULL ) {
+		return NULL;
+	}
+
+	if( !MPC_EQALBUM(range) && !MPC_EQARTIST(range) ){
+		addMessage(0, "Can only search represantatives for Artists and Albums!");
+		return NULL;
+	}
+
+	do {
+		if( MPC_EQALBUM( range ) && !strcasecmp( run->album, name ) ) {
+			return run;
+		}
+		if( MPC_EQARTIST( range ) && !strcasecmp( run->artist, name ) ) {
+			return run;
+		}
+		run=run->next;
+	} while ( root != run );
+
+	return NULL;
+}
+
 /**
  * 	searches for a given path in the mixplay entry list
  */

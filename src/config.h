@@ -103,8 +103,6 @@ struct _mpcontrol_t {
 	int streams;				/* number of streams */
 	char **stream;				/* stream URLs */
 	char **sname;				/* stream names */
-	int playlists;
-	char **playlist;
 	mptitle *root;				/* the root title */
 	searchresults *found;		/* buffer list to contain searchresults etc */
 	mpplaylist *current;		/* the current title */
@@ -146,7 +144,6 @@ struct _mpcontrol_t {
 
 void writeConfig( const char *musicpath );
 mpconfig *readConfig( void );
-void updatePlaylists( void );
 mpconfig *getConfig( void );
 void freeConfig( void );
 void freeConfigContents( void );

@@ -50,7 +50,8 @@
     </div> <!-- main -->
     <!-- Search view -->
     <div id='extra0' style='display: none; width:100%;' >
-      <em>Search:</em><br/>
+      <em>Search Mode:</em>
+      <input id='searchmode' type='button' onclick='toggleSearch()' value='Play' ><br/>
       <select label='Range' id='srange'>
         <option value='0x0100' selected>Title</option>
         <option value='0x0200'>Artist</option>
@@ -73,26 +74,24 @@
       </select>
       <input id='setprof' type='button' onclick='setProf()' value='Set Profile' >
       <input id='remprof' type='button' onclick='remProf()' value='Remove Profile' ><br>
-      <input id='setfavplay' type='button' onclick='sendCMD(0x1e)' value='Enable Favplay'>
       <br>
       <input id='ptext' type='text'>
       <input id='newprof' type='button' onclick='createLoad()' value='New/Load' >
       </p>
-      <p><em>Playlists:</em><br>
-      <select label='Playlist' id='playlists'>
-      </select>
-      <input id='plmix' type='checkbox'> mixplay
-      <input id='newprof' type='button' onclick='loadPlaylist()' value='Play' >
-      </p>
     </div>
     <!-- Tools view -->
     <div id='extra2' style='display: none; width:100%;' >
-      <em>Tools:</em><br>
-      <input id='rescan' type='button' onclick='sendCMD(0x08)' value='ReScan' >
-      <input id='dbinfo' type='button' onclick='sendCMD(0x12)' value='DBInfo' >
-      <input id='version' type='button' onclick='showInfo()' value='Info' >
-      <input id='stop' type='button' onclick='killServer()' value='STOP' >
-      <input id='download' type='button' onclick='download(0)' value='Download' >
+      <em>Tools:</em>
+      <p>Player<br>
+        <input id='setfavplay' type='button' onclick='sendCMD(0x1e)' value='Enable Favplay'>
+        <input id='version' type='button' onclick='showInfo()' value='Player Info' >
+        <input id='stop' type='button' onclick='killServer()' value='STOP' >
+        <input id='download' type='button' onclick='download(0)' value='Download Title' >
+      </p>
+      <p>Database:<br>
+        <input id='rescan' type='button' onclick='sendCMD(0x08)' value='ReScan' >
+        <input id='dbinfo' type='button' onclick='sendCMD(0x12)' value='DBInfo' >
+      </p>
     </div>
     <!-- Message view -->
     <div id='extra3' style='display: none; width: 100%;' >
@@ -100,11 +99,6 @@
     </div>
     <!-- Playlist view -->
     <div id='extra4' style='display: none; width: 100%;' >
-      <input id='pledmode' type='button' onclick='sendCMD(0x19)' value='Edit' >
-      <div id='pledit' style='display: none;' width='100%' >
-        <input id='plclean' type='button' onclick='sendCMD(0x1a)' value='clean' >
-        <input id='plsave' type='button' onclick='savePL()' value='save' >
-      </div>
       <div id='plist'>
         <em>No Playlist.</em><br>
       </div>

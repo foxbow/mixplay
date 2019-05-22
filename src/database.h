@@ -31,6 +31,7 @@ void dbClose( int db );
 void dbWrite( void );
 int dbNameCheck( const char *dbname );
 mptitle *getTitleByIndex( unsigned int index );
+mptitle *getTitleForRange( const mpcmd range, const char *name );
 void dbMarkDirty( void );
 int mp3Exists( const mptitle *title );
 
