@@ -9,14 +9,13 @@
     <title>Mixplay</title>
   </head>
   <body onload='initScrolls()' onresize='setScrolls()'>
-    <input id='show5' style='background-color: #ddd;' class='cmd' type='button' onclick='toggleVisibility("5")' value='&#x25B6;' >
-    <input id='show0' class='cmd' type='button' onclick='toggleVisibility("0")' value='&#x1F50E;' >
-    <input id='show1' class='cmd' type='button' onclick='toggleVisibility("1")' value='&#x1F5C1;' >
+    <input id='show0' style='background-color: #ddd;' class='cmd' type='button' onclick='toggleVisibility("0")' value='&#x25B6;' >
+    <input id='show1' class='cmd' type='button' onclick='toggleVisibility("1")' value='&#x1F50E;' >
     <input id='show2' class='cmd' type='button' onclick='toggleVisibility("2")' value='&#x2692;' >
-    <input id='show4' class='cmd' type='button' onclick='toggleVisibility("4")' value='&#x2630;' >
-    <input id='show3' class='cmd' type='button' onclick='toggleVisibility("3")' value='&#x2713;' >
+    <input id='show3' class='cmd' type='button' onclick='toggleVisibility("3")' value='&#x2630;' >
+    <input id='show4' style='display:none;' class='cmd' type='button' onclick='toggleVisibility("4")' value='&#x26A0;' >
     <!-- main -->
-    <div id='extra5' onselectstart='return false' onwheel='volWheel(event)'>
+    <div id='extra0' onselectstart='return false' onwheel='volWheel(event)'>
       <div class='scroll' onclick='sendCMD(0x02)'><p id='prev'>prev</p></div>
       <div id='current' onclick='sendCMD(0x00)'>
         <div class='scroll' style='height: 30px;' ><p id='artist'>artist</p></div>
@@ -49,7 +48,7 @@
       </div>
     </div> <!-- main -->
     <!-- Search view -->
-    <div id='extra0' style='display: none; width:100%;' >
+    <div id='extra1' style='display: none; width:100%;' >
       <em>Search Mode:</em>
       <input id='searchmode' type='button' onclick='toggleSearch()' value='Play' ><br/>
       <select label='Range' id='srange'>
@@ -67,41 +66,37 @@
       <div id='search1' style='display: none; width:100%;'><em>No artists found!</em></div>
       <div id='search2' style='display: none; width:100%;'><em>No albums found!</em></div>
     </div>
-    <!-- Profiles view -->
-    <div id='extra1' style='display: none; width:100%;' >
-      <p><em>Profiles:</em><br>
-      <select label='Profile' id='profiles'>
-      </select>
-      <input id='setprof' type='button' onclick='setProf()' value='Set Profile' >
-      <input id='remprof' type='button' onclick='remProf()' value='Remove Profile' ><br>
-      <br>
-      <input id='ptext' type='text'>
-      <input id='newprof' type='button' onclick='createLoad()' value='New/Load' >
-      </p>
-    </div>
     <!-- Tools view -->
     <div id='extra2' style='display: none; width:100%;' >
-      <em>Tools:</em>
-      <p>Player<br>
+      <p><em>Player</em><br>
         <input id='setfavplay' type='button' onclick='sendCMD(0x1e)' value='Enable Favplay'>
         <input id='version' type='button' onclick='showInfo()' value='Player Info' >
         <input id='stop' type='button' onclick='killServer()' value='STOP' >
         <input id='download' type='button' onclick='download(0)' value='Download Title' >
       </p>
-      <p>Database:<br>
+      <p><em>Profiles</em><br>
+      <select label='Profile' id='profiles'>
+      </select>
+      <input id='setprof' type='button' onclick='setProf()' value='Set Profile' >
+      <input id='remprof' type='button' onclick='remProf()' value='Remove Profile' >
+      <br>
+      <input id='ptext' type='text'>
+      <input id='newprof' type='button' onclick='createLoad()' value='New/Load' >
+      </p>
+      <p><em>Database</em><br>
         <input id='rescan' type='button' onclick='sendCMD(0x08)' value='ReScan' >
         <input id='dbinfo' type='button' onclick='sendCMD(0x12)' value='DBInfo' >
       </p>
     </div>
-    <!-- Message view -->
-    <div id='extra3' style='display: none; width: 100%;' >
-      <em>No messages.</em><br>
-    </div>
     <!-- Playlist view -->
-    <div id='extra4' style='display: none; width: 100%;' >
+    <div id='extra3' style='display: none; width: 100%;' >
       <div id='plist'>
         <em>No Playlist.</em><br>
       </div>
+    </div>
+    <!-- Message view -->
+    <div id='extra4' style='display: none; width: 100%;' >
+      <em>No messages.</em><br>
     </div>
   </body>
 </html>

@@ -68,7 +68,7 @@ function scrollToggle( ) {
  */
 function setScrolls( ) {
 	/* only do this if the main view is visible! */
-	if( document.getElementById( "extra5" ).style.display=='none' ) {
+	if( document.getElementById( "extra0" ).style.display=='none' ) {
 		return;
 	}
 
@@ -135,7 +135,7 @@ function setProf() {
 	var id=e.value;
 	if( id != 0 ) {
 		/* pull main to front */
-		toggleVisibility('5');
+		toggleVisibility('0');
 		sendCMD( 0x06,id );
 	}
 	else {
@@ -149,20 +149,20 @@ function setProf() {
 function toggleVisibility( element ) {
 var e;
 var b;
-	for( i=0; i<6; i++ ) {
+	for( i=0; i<5; i++ ) {
 		e=document.getElementById( "extra"+i );
 		b=document.getElementById( "show"+i );
 		if( i == element ) {
 			b.style.backgroundColor='#ddd';
 			e.style.display='block';
-			if( i == '3' ) {
-				b.value="\u2713"
-			}
-			if( i == '5' ) {
+			if( i == '0' ) {
 				setScrolls();
 			}
 		}
 		else {
+      if( i == '4' ) {
+        b.style.display='none';
+      }
 			e.style.display='none';
 			b.style.backgroundColor='#fff';
 		}
@@ -192,7 +192,7 @@ function toggleResults( element ) {
  */
 function killServer() {
 	if( confirm("Do you really want to stop the Server?") ) {
-		toggleVisibility('3');
+		toggleVisibility('4');
 		sendCMD(0x11);
 	}
 }
@@ -203,7 +203,8 @@ function killServer() {
 function addText(text) {
 	var line="";
 	var numlines=15;
-	e=document.getElementById('extra3');
+	e=document.getElementById('extra4');
+  document.getElementById('show4').style.display='inline';
 
 	if( msgpos < numlines ) {
 		msglines[msgpos]=text;
@@ -220,11 +221,6 @@ function addText(text) {
 		line+=msglines[i]+"<br>\n";
 	}
 	e.innerHTML=line;
-
-	f=document.getElementById('show3');
-	if( e.style.display=='none') {
-		f.value="\u26A0"
-	}
 }
 
 /*
@@ -246,11 +242,11 @@ function sendCMD( cmd, arg="" ) {
 		( code == '0010' ) ) ) return;
 
 	/* these commands should pull main to front */
-	if( code == '010c' ) toggleVisibility('5');
+	if( code == '010c' ) toggleVisibility('0');
 
 	/* These command should pull the messages to front */
 	if( ( code == '0008' ) ||
-	    ( code == '0012' ) ) toggleVisibility('3');
+	    ( code == '0012' ) ) toggleVisibility('4');
 
 	xmlhttp.onreadystatechange=function() {
 		if ( xmlhttp.readyState==4  ) {
@@ -321,7 +317,7 @@ function enableTab( e, i ) {
 	}
 }
 
-function toggleSearch() {
+function show() {
   for( i=0; i<3; i++ ) {
     e=document.getElementById('search'+i);
     e.innerHTML="<em>Mode change, repeat seach!</em>";
@@ -467,11 +463,10 @@ function updateUI( ){
 					setVisible( 'ctrl', !isstream );
 					setVisible( 'playstr', isstream );
 					setVisible( 'playpack', !isstream );
-					enableTab( 'show0', !isstream );
+					enableTab( 'show1', !isstream );
 
           /* switching between stream and normal play */
 					if( isstream ) {
-            /* todo: hide search tab too! */
 						setElement( 'splaytime', data.playtime );
             document.getElementById( 'lscroll' ).style.height='0px';
 					}
@@ -656,7 +651,7 @@ function createLoad() {
 			}
 		}
 		/* pull main to front */
-		toggleVisibility('5');
+		toggleVisibility('0');
 	}
 }
 
