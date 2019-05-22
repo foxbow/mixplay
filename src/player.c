@@ -755,7 +755,7 @@ void *reader( void *data ) {
 						sprintf( control->playtime, "%02i:%02i:%02i", intime/3600, ( intime%3600 )/60, intime%60 );
 					}
 					/* file play */
-					if( control->mpmode == PM_PLAYLIST ) {
+					if( control->mpmode != PM_STREAM ) {
 						control->percent=( 100*intime )/( rem+intime );
 						sprintf( control->remtime, "%02i:%02i", (int)rem/60, (int)rem%60 );
 
