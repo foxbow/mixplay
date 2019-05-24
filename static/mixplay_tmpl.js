@@ -133,12 +133,14 @@ function setProf() {
 
 /**
  * toggle search result tabs
+ * todo: consider using 'this' as a parameter and
+ * pull info from this.id
  */
 function toggleTab( element, num ) {
 	var i=0;
 	var b;
 	var e=document.getElementById( element+i );
-	
+
 	while( e!=null ) {
 		b=document.getElementById( "c"+element+i );
 		if( i == num ) {
@@ -161,7 +163,7 @@ function toggleTab( element, num ) {
  * toggle main UI tabs
  */
 function toggleVisibility( element ) {
-	toggleTab( "extra", element );	
+	toggleTab( "extra", element );
 	if( element == '0' ) {
 		setScrolls();
 	}
@@ -219,10 +221,11 @@ function sendCMD( cmd, arg="" ) {
 		( code == '0003' ) ||
 		( code == '0005' ) ||
 		( code == '000f' ) ||
-		( code == '0010' ) ) ) return;
+		( code == '0010' ) ||
+    ( code == '001e' ) ) ) return;
 
 	/* these commands should pull main to front */
-	if( code == '010c' ) toggleVisibility('0');
+	if( ( code == '001e' ) ) toggleVisibility('0');
 
 	/* These command should pull the messages to front */
 	if( ( code == '0008' ) ||
@@ -297,18 +300,10 @@ function enableTab( e, i ) {
 	}
 }
 
-function show() {
-  for( i=0; i<3; i++ ) {
-    e=document.getElementById('search'+i);
-    e.innerHTML="<em>Mode change, repeat seach!</em>";
-  }
-  sendCMD(0x19);
-}
-
 function getPattern( line, cmd ) {
 	var encline=line;
 	var reply="<p class='cmd' onclick='this.style.display=\"none\"; sendCMD( "+cmd+", \""+encodeURI(encline)+"\")'>";
-	
+
 	switch( line.charAt(0) ) {
 		case 't':
 		case 'd':
@@ -427,10 +422,10 @@ function updateUI( ){
               }
 							for( i=0; i<data.titles.length; i++ ) {
                 if( data.mpedit ) {
-                  e.innerHTML+="<p class='cmd' onclick='this.style.display=\"none\"; sendCMD( 0x0509, "+data.titles[i].key+")'>&hearts; "+data.titles[i].artist+" - "+data.titles[i].title+"</p>"
+                  e.innerHTML+="<p class='cmd' onclick='this.style.display=\"none\"; sendCMD( 0x0809, "+data.titles[i].key+")'>&hearts; "+data.titles[i].artist+" - "+data.titles[i].title+"</p>"
                 }
                 else {
-                  e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x010c, "+data.titles[i].key+")'>&#x25B6; "+data.titles[i].artist+" - "+data.titles[i].title+"</p>"
+                  e.innerHTML+="<p class='cmd' onclick='this.style.display=\"none\"; sendCMD( 0x080c, "+data.titles[i].key+")'>&#x25B6; "+data.titles[i].artist+" - "+data.titles[i].title+"</p>"
                 }
 							}
 						}
@@ -445,7 +440,7 @@ function updateUI( ){
                   e.innerHTML+="<p class='cmd' onclick='this.style.display=\"none\"; sendCMD( 0x0209, \""+data.artists[i]+"\")'>&hearts; "+data.artists[i]+"</p>\n"
                 }
                 else {
-                  e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0213, \""+data.artists[i]+"\")'>&#x1F50E; "+data.artists[i]+"</p>\n"
+                  e.innerHTML+="<p class='cmd' onclick='this.style.display=\"none\"; sendCMD( 0x0213, \""+data.artists[i]+"\")'>&#x1F50E; "+data.artists[i]+"</p>\n"
                 }
 							}
 						}
@@ -460,7 +455,7 @@ function updateUI( ){
                   e.innerHTML+="<p class='cmd' onclick='this.style.display=\"none\"; sendCMD( 0x0409, \""+data.albums[i]+"\")'>&hearts; "+data.albart[i]+" - "+data.albums[i]+"</p>"
                 }
                 else {
-                  e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0413, \""+data.albums[i]+"\")'>&#x1F50E; "+data.albart[i]+" - "+data.albums[i]+"</p>"
+                  e.innerHTML+="<p class='cmd' onclick='this.style.display=\"none\"; sendCMD( 0x0413, \""+data.albums[i]+"\")'>&#x1F50E; "+data.albart[i]+" - "+data.albums[i]+"</p>"
                 }
 							}
 						}
@@ -474,20 +469,20 @@ function updateUI( ){
 
 					/* dnp/fav lists */
 					if( data.type & 4 ) {
-						e=document.getElementById("list0");
+						e=document.getElementById("search3");
 						if( data.dnplist.length == 0 ) {
 							e.innerHTML="<em>No DNPs yet</em>";
-						} 
+						}
 						else {
 							e.innerHTML="";
 							for( i=0; i<data.dnplist.length; i++) {
 								e.innerHTML+=getPattern(data.dnplist[i],"0x001a");
 							}
 						}
-						e=document.getElementById("list1");
+						e=document.getElementById("search4");
 						if( data.favlist.length == 0 ) {
 							e.innerHTML="<em>No Favourites yet</em>";
-						} 
+						}
 						else {
 							e.innerHTML="";
 							for( i=0; i<data.favlist.length; i++) {
@@ -495,7 +490,7 @@ function updateUI( ){
 							}
 						}
 					}
-					
+
 					/* standard update */
           if( data.mpedit ) {
             document.getElementById('searchmode').value="Fav";

@@ -28,7 +28,7 @@ static pthread_mutex_t _asynclock=PTHREAD_MUTEX_INITIALIZER;
  */
 static int asyncTest() {
 	int ret=0;
-	
+
 	addMessage( 1, "Async test" );
 	if( pthread_mutex_trylock( &_asynclock ) != EBUSY ) {
 		pthread_mutex_unlock( &_asynclock );
@@ -248,7 +248,7 @@ static void sendplay( int fdset ) {
  * sets the current profile
  * This is thread-able to have progress information on startup!
  */
-void *setProfile( void *ignored ) {
+void *setProfile( ) {
 	char		confdir[MAXPATHLEN]; /* = "~/.mixplay"; */
 	char 		*profile;
 	int num;
@@ -350,6 +350,7 @@ void *setProfile( void *ignored ) {
 
 		plCheck( 0 );
 
+
 		addMessage( 1, "Profile set to %s.", profile );
 		if( control->argument != NULL ) {
 			progressEnd();
@@ -394,7 +395,7 @@ static void playCount( mptitle *title ) {
  * asnchronous functions to run in the background and allow updates being sent to the
  * client
  */
-static void *plCheckDoublets( void *ingnored ) {
+static void *plCheckDoublets( ) {
 	mpconfig *control=getConfig();
 	int i;
 
@@ -418,7 +419,7 @@ static void *plCheckDoublets( void *ingnored ) {
 	return NULL;
 }
 
-static void *plDbClean( void *ignored ) {
+static void *plDbClean( ) {
 	mpconfig *control=getConfig();
 	int i;
 	progressStart( "Database Cleanup" );
@@ -453,7 +454,7 @@ static void *plDbClean( void *ignored ) {
 	return NULL;
 }
 
-static void *plDbInfo( void *ignored ) {
+static void *plDbInfo( ) {
 	mpconfig *control=getConfig();
 	progressStart( "Database Info" );
 	addMessage( 0, "Music dir: %s", control->musicdir );
@@ -463,7 +464,7 @@ static void *plDbInfo( void *ignored ) {
 	return NULL;
 }
 
-static void *plSetProfile( void *ignored ) {
+static void *plSetProfile( ) {
 	mpconfig *control=getConfig();
 	/* control->status=mpc_start; */
 	if( control->dbname[0] == 0 ) {
@@ -503,7 +504,7 @@ static void asyncRun( void *cmd(void *) ) {
  * The original plan was to keep this UI independent so it could be used
  * in mixplay, gmixplay and probably other GUI variants (ie: web)
  */
-void *reader( void *data ) {
+void *reader( ) {
 	mpconfig	*control=getConfig();
 	mptitle		*title=NULL;
 	fd_set			fds;
@@ -524,8 +525,8 @@ void *reader( void *data ) {
 	int 	p_command[2][2];		/* command pipes to mpg123 */
 	pid_t	pid[2];
 	mpcmd	cmd=mpc_idle;
-	int		update=0;
-	int		insert=0;
+	unsigned	update=0;
+	unsigned	insert=0;
 
 	blockSigint();
 
@@ -670,7 +671,7 @@ void *reader( void *data ) {
 					if( ( control->current != NULL ) &&( NULL != strstr( line, "ICY-" ) ) ) {
 						if( NULL != strstr( line, "ICY-NAME: " ) ) {
 							strip( control->current->title->album, line+13, NAMELEN );
-							update=-1;
+							update=1;
 						}
 
 						if( NULL != ( a = strstr( line, "StreamTitle" ) ) ) {
@@ -691,7 +692,7 @@ void *reader( void *data ) {
 								strip( control->current->title->title, t, NAMELEN );
 							}
 							plCheck(0);
-							update=-1;
+							update=1;
 						}
 					}
 					break;
@@ -734,7 +735,7 @@ void *reader( void *data ) {
 
 					if( intime != oldtime ) {
 						oldtime=intime;
-						update=-1;
+						update=1;
 					}
 					else {
 						break;
@@ -845,7 +846,7 @@ void *reader( void *data ) {
 						break;
 					}
 
-					update=-1;
+					update=1;
 					break;
 
 				case 'V': /* volume reply */
@@ -1168,12 +1169,12 @@ void *reader( void *data ) {
 
 		case mpc_ivol:
 			adjustVolume( +VOLSTEP );
-			update=-1;
+			update=1;
 			break;
 
 		case mpc_dvol:
 			adjustVolume( -VOLSTEP );
-			update=-1;
+			update=1;
 			break;
 
 		case mpc_bskip:
@@ -1199,7 +1200,7 @@ void *reader( void *data ) {
 						addMessage( 0, "Too many titles found!" );
 					}
 					/* todo: a signal/unblock would be nicer here */
-					while( control->found->send == -1 ) {
+					while( control->found->send == 1 ) {
 						nanosleep( &ts, NULL );
 					}
 					progressEnd();
@@ -1209,8 +1210,8 @@ void *reader( void *data ) {
 			break;
 
 		case mpc_insert:
-			insert=-1;
-			/* no break */
+			insert=1;
+			/* fallthrough */
 
 		case mpc_append:
 			if( control->argument == NULL ) {
@@ -1228,7 +1229,7 @@ void *reader( void *data ) {
 				setVolume( atoi(control->argument) );
 				sfree( &(control->argument) );
 			}
-			update=-1;
+			update=1;
 			break;
 
 		case mpc_edit:
@@ -1262,8 +1263,10 @@ void *reader( void *data ) {
 						addMessage( 0, "Need at least 15 Favourites to enable Favplay." );
 						break;
 					}
-					/* do not play next title automatically */
-					order=0;
+					if( control->status == mpc_play ) {
+						order=0;
+						dowrite( p_command[fdset][1], "STOP\n", 6 );
+					}
 					/* toggle favplay */
 					control->mpfavplay=!control->mpfavplay;
 					addMessage(1,"%s Favplay",control->mpfavplay?"Enabling":"Disabling");
@@ -1282,6 +1285,7 @@ void *reader( void *data ) {
 
 					control->current=wipePlaylist( control->current );
 					plCheck( 0 );
+					sendplay( p_command[fdset][1] );
 				}
 				else {
 					addMessage(0,"Favplay only works in database mode!");

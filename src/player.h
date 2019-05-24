@@ -12,8 +12,8 @@
 #define VOLSTEP 2
 
 void setCommand( mpcmd cmd );
-void *reader( void *control );
-void *setProfile( void *control );
+void *reader( );
+void *setProfile( );
 void setStream( const char* stream, const char *name );
 
 #endif /* __PLAYER_H__ */

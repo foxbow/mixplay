@@ -28,7 +28,7 @@ static unsigned long _curmsg=0;
  * TODO: create a dedicated signal handler thread.
  **/
 static void sigint(int signo){
-	addMessage(0, "External quit!" );
+	addMessage(0, "External quit on signal %i!", signo );
 	if( getConfig()->command == mpc_quit ) {
 		addMessage( 0, "Forced exit!!" );
 		unlink(getConfig()->pidpath);
@@ -77,7 +77,7 @@ void fail( const int error, const char* msg, ... ) {
 /**
  * special handling for the server during information updates
  */
-void s_updateHook( void *ignore ) {
+static void s_updateHook( ) {
 	mpconfig *data=getConfig();
 	if( _curmsg < data->msg->count ) {
 		if( data->isDaemon ) {

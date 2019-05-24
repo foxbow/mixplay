@@ -52,7 +52,7 @@
       <em>Search Mode:</em>
       <input id='searchmode' type='button' onclick='toggleSearch()' value='Play' ><br/>
       <select label='Range' id='srange'>
-        <option value='0x0100' selected>Title</option>
+        <option value='0x0500' selected>Title</option>
         <option value='0x0200'>Artist</option>
       </select>
       <input id='text' type='text'><br>
@@ -62,9 +62,13 @@
       <input id='csearch0' class='cmd' style='background-color: #ddd;'  type='button' onclick='toggleTab("search",0)' value='&#x2630; Titles' >
       <input id='csearch1' class='cmd' type='button' onclick='toggleTab("search",1)' value='&#x2630; Artists' >
       <input id='csearch2' class='cmd' type='button' onclick='toggleTab("search",2)' value='&#x2630; Albums' >
+      <input id='csearch3' class='cmd' type='button' onclick='toggleTab("search",3)' value='&#x2630; DNP' >
+      <input id='csearch4' class='cmd' type='button' onclick='toggleTab("search",4)' value='&#x2630; FAV' >
       <div id='search0' style='display: block; width:100%;'><em>No titles found!</em></div>
       <div id='search1' style='display: none; width:100%;'><em>No artists found!</em></div>
       <div id='search2' style='display: none; width:100%;'><em>No albums found!</em></div>
+      <div id='search3' style='display: none; width:100%;'><em>No DNPs</em></div>
+      <div id='search4' style='display: none; width:100%;'><em>No Favourites</em></div>
     </div>
     <!-- Tools view -->
     <div id='extra2' style='display: none; width:100%;' >
@@ -86,12 +90,6 @@
       <p><em>Database</em><br>
         <input id='rescan' type='button' onclick='sendCMD(0x08)' value='ReScan' >
         <input id='dbinfo' type='button' onclick='sendCMD(0x12)' value='DBInfo' >
-      </p>
-      <p><em>Lists</em></br>
-        <input id='clist0' class='cmd' style='background-color: #ddd;'  type='button' onclick='toggleTab( "list",0)' value='&#x2630; DNP' >
-      	<input id='clist1' class='cmd' type='button' onclick='toggleTab( "list",1)' value='&#x2630; FAV' >
-        <div id='list0' style='display: block; width:100%;'><em>No DNPs yet</em></div>
-        <div id='list1' style='display: none; width:100%;'><em>No Favourites yet</em></div>
       </p>
     </div>
     <!-- Playlist view -->

@@ -335,7 +335,7 @@ static void *clientHandler(void *args ) {
 			switch( state ) {
 			case 1: /* get update */
 				/* normal update requested, is a special update needed? */
-				if( config->found->send == -1 ) {
+				if( config->found->send == 1 ) {
 					fullstat |= MPCOMM_RESULT;
 				}
 				if( config->listDirty ) {
@@ -507,7 +507,7 @@ static void *clientHandler(void *args ) {
  * this must only be called from initAll() and should probably move
  * into player.c
  */
-void *mpserver( void *data ) {
+void *mpserver( ) {
 	fd_set				fds;
 	struct timeval		to;
 	int 		mainsocket ,client_sock ,alen ,*new_sock;

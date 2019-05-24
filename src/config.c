@@ -108,7 +108,7 @@ const char *mpcString( mpcmd rawcmd ) {
 /*
  * transform a string literal into an mpcmd value
  */
-const mpcmd mpcCommand( const char *name ) {
+mpcmd mpcCommand( const char *name ) {
 	int i;
 	for( i=0; i<= mpc_idle; i++ ) {
 		if( strstr( name, mpc_command[i] ) ) break;
@@ -304,6 +304,7 @@ int getArgs( int argc, char ** argv ){
 				break;
 			default:
 				printf( "Unknown option -%c\n", optopt );
+				break;
 			}
 			/* no break */
 

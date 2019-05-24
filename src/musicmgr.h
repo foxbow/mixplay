@@ -47,7 +47,7 @@ struct searchresults_t {
 	char **artists;
 	char **albums;
 	char **albart;
-	int send;
+	unsigned send:1;
 };
 
 struct marklist_t {

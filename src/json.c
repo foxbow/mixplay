@@ -349,7 +349,7 @@ static int jsonParseString( char *json, char **val ) {
 						return jsonParseFail( __func__, json, ip, state );
 					}
 				}
-				/* no break */
+				/* fallthrough */
 			case '"':
 			case '\\':
 			case '/':

@@ -176,7 +176,7 @@ void addUpdateHook( void (*)( void * ) );
 void removeNotifyHook( void (*)( void *), void *arg );
 
 const char *mpcString( mpcmd rawcmd );
-const mpcmd mpcCommand( const char *val );
+mpcmd mpcCommand( const char *val );
 int  setArgument( const char *arg );
 int getArgs( int argc, char ** argv );
 int initAll( void );

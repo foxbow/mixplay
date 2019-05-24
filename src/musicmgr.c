@@ -182,6 +182,7 @@ static int addToList( const char *line, mpcmd cmd ) {
 		addMessage( 0, "Could not open %s", path );
 		return -1;
 	}
+
 	fputs(line,fp);
 	fputc('\n',fp);
 	fclose( fp );
@@ -522,7 +523,6 @@ static int isMatch( const char *term, const char *pat, const int fuzzy ) {
  * Returns the number of found titles.
  * pat - pattern to search for
  * range - search range
- * dnp - search in DNP
  */
 int search( const char *pat, const mpcmd range ) {
 	mptitle *root=getConfig()->root;
@@ -530,8 +530,9 @@ int search( const char *pat, const mpcmd range ) {
 	searchresults *res=getConfig()->found;
 	unsigned int i=0;
 	int found=0;
-	unsigned int cnt=0;
-	int dnp=0;
+	unsigned cnt=0;
+	unsigned dnp=0;
+
 	/* free buffer playlist, the arrays will not get lost due to the realloc later */
 	res->titles=wipePlaylist(res->titles);
 	res->tnum=0;
@@ -546,7 +547,8 @@ int search( const char *pat, const mpcmd range ) {
 	/* if player is in favplay mode and the search in in fav mode
 	   then search for DNP titles. */
 	if ( getConfig()->mpedit && getConfig()->mpfavplay ) {
-		dnp=mpc_dnp;
+		addMessage(1,"DNP search");
+		dnp=MP_DNP;
 	}
 
 	do {
@@ -605,9 +607,9 @@ int search( const char *pat, const mpcmd range ) {
 		runner=runner->next;
 	} while( runner != root );
 
-	res->send=-1;
+	res->send=1;
 
-	return (cnt>MAXSEARCH)?-1:cnt;
+	return (cnt>MAXSEARCH)?-1:(int)cnt;
 }
 
 /**
@@ -699,6 +701,7 @@ int applyFAVlist( struct marklist_t *favourites, int excl ) {
 						runner->flags=MP_FAV;
 					}
 					else {
+						runner->flags&=~MP_DNP;
 						runner->flags|=MP_FAV;
 					}
 					cnt++;
@@ -1724,10 +1727,11 @@ int handleRangeCmd( mptitle *title, mpcmd cmd ) {
 
 		buff=list;
 		while( buff != NULL ) {
-			if( strstr( line, buff->dir ) == 0 ) {
+			if( strcmp( line, buff->dir ) == 0 ) {
 				addMessage(0,"%s already in list!",line);
 				return -1;
 			}
+			buff=buff->next;
 		}
 
 		buff=falloc( 1, sizeof( struct marklist_t ) );
