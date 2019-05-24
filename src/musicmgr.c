@@ -94,6 +94,21 @@ static int checkSim( const char *text, const char *pat ) {
 	}
 }
 
+static int getListPath( char path[MAXPATHLEN], mpcmd cmd ) {
+	if( getConfig()->active < 1 ) {
+		return -1;
+	}
+	snprintf( path, MAXPATHLEN, "%s/.mixplay/%s.", getenv("HOME"),
+			getConfig()->profile[getConfig()->active-1] );
+	if( MPC_CMD(cmd) == mpc_fav ) {
+		strtcat( path, "fav", MAXPATHLEN );
+	}
+	else{
+		strtcat( path, "dnp", MAXPATHLEN );
+	}
+	return 0;
+}
+
 /**
  * always resets the marked flag and
  * resets the counted and skipped flag on all titles if at least 50% of the titles have been counted
@@ -136,10 +151,10 @@ mptitle *wipeTitles( mptitle *root ) {
 }
 
 /**
- * discards a list of searchterms and frees the memory
+ * discards a list of markterms and frees the memory
  * returns NULL for intuitive calling
  */
-struct marklist_t *cleanList( struct marklist_t *root ) {
+struct marklist_t *wipeList( struct marklist_t *root ) {
 	struct marklist_t *runner=root;
 
 	if( NULL != root ) {
@@ -156,44 +171,23 @@ struct marklist_t *cleanList( struct marklist_t *root ) {
 /**
  * add a line to a file
  */
-static int addToFile( const char *path, const char *line ) {
-	char *buff;
-	int cnt=0;
+static int addToList( const char *line, mpcmd cmd ) {
 	FILE *fp;
-	fp=fopen( path, "r" );
+	char path[MAXPATHLEN+1];
 
+	getListPath( path, cmd );
+
+	fp=fopen( path, "a" );
 	if( NULL == fp ) {
 		addMessage( 0, "Could not open %s", path );
 		return -1;
 	}
-
-	buff=(char*)falloc( MAXPATHLEN, 1 );
-
-	while( !feof( fp ) ) {
-		if( fgets( buff, MAXPATHLEN, fp ) == NULL ) {
-			continue;
-		}
-		buff[strlen(buff)-1]=0;
-		if( strcmp( line, buff ) == 0 ) {
-			addMessage(0,"%s is already noted",line,path);
-			cnt++;
-		}
-	}
-
+	fputs(line,fp);
+	fputc('\n',fp);
 	fclose( fp );
 
-	if( cnt == 0 ) {
-		fp=fopen( path, "a" );
-		if( NULL == fp ) {
-			addMessage( 0, "Could not open %s", path );
-			return -1;
-		}
-		fputs(line,fp);
-		fputc('\n',fp);
-		fclose( fp );
-	}
-
-	return cnt;
+	getConfig()->listDirty=1;
+	return 1;
 }
 
 /**
@@ -623,16 +617,12 @@ int search( const char *pat, const mpcmd range ) {
  *
  * returns the number of marked titles or -1 on error
  */
-int applyDNPlist( mptitle *base, struct marklist_t *list ) {
+int applyDNPlist( struct marklist_t *list ) {
+	mptitle *base=getConfig()->root;
 	mptitle  *pos = base;
 	struct marklist_t *ptr = list;
 	mpplaylist *pl=getConfig()->current;
 	int cnt=0;
-
-	if( NULL == base ) {
-		addMessage( 0, "%s: No music loaded", __func__ );
-		return -1;
-	}
 
 	if( NULL == list ) {
 		return 0;
@@ -675,16 +665,26 @@ int applyDNPlist( mptitle *base, struct marklist_t *list ) {
 /**
  * This function sets the favourite bit on titles found in the given list
  */
-int applyFAVlist( mptitle *root, struct marklist_t *favourites, int excl ) {
+int applyFAVlist( struct marklist_t *favourites, int excl ) {
 	struct marklist_t *ptr = NULL;
+	mptitle *root=getConfig()->root;
 	mptitle *runner=root;
 	int cnt=0;
+
+	if( NULL == root ) {
+		addMessage( 0, "%s: No music loaded", __func__ );
+		return -1;
+	}
 
 	if( excl ) {
 		do {
 			runner->flags = MP_DNP;
 			runner=runner->next;
 		} while( runner != root );
+	}
+
+	if( favourites == NULL ) {
+		return 0;
 	}
 
 	do {
@@ -721,13 +721,19 @@ int applyFAVlist( mptitle *root, struct marklist_t *favourites, int excl ) {
 /**
  * does the actual loading of a list
  */
-struct marklist_t *loadList( const char *path ) {
+struct marklist_t *loadList( const mpcmd cmd ) {
 	FILE *file = NULL;
 	struct marklist_t *ptr = NULL;
 	struct marklist_t *bwlist = NULL;
+	char path[MAXPATHLEN+1];
 
 	char *buff;
 	int cnt=0;
+
+	if( getListPath(path, cmd) ) {
+		/* No active profile */
+		return NULL;
+	}
 
 	file=fopen( path, "r" );
 	if( !file ) {
@@ -773,14 +779,27 @@ cleanup:
 	return bwlist;
 }
 
-int saveList( const char *path, struct marklist_t *list ) {
+int writeList( const mpcmd cmd ) {
 	int cnt=0;
-	struct marklist_t *runner=list;
-	struct marklist_t *checker, *buff;
+	struct marklist_t *runner;
+	char path[MAXPATHLEN+1];
 	FILE *fp=NULL;
 
-  fileBackup(path);
-	fp=fopen( path, "a" );
+	if( getListPath(path, cmd) ) {
+		/* No active profile */
+		return -1;
+	}
+
+	if( MPC_CMD(cmd) == mpc_fav ) {
+		runner=getConfig()->favlist;
+	}
+	else {
+		runner=getConfig()->dnplist;
+	}
+
+	fileBackup(path);
+
+	fp=fopen( path, "w" );
 
 	if( NULL == fp ) {
 		addMessage( 0, "Could not open %s for writing ", path );
@@ -793,23 +812,69 @@ int saveList( const char *path, struct marklist_t *list ) {
 			fclose(fp);
 			return -1;
 		};
-		checker=runner;
-		while( ( checker != NULL ) && ( checker->next != NULL ) ) {
-			/* filter out double entries */
-			if( strcmp( checker->next->dir, runner->dir ) == 0 ) {
-				buff=checker->next;
-				checker->next=buff->next;
-				addMessage(1,"%s == %s",runner->dir, buff->dir );
-				free(buff);
-			}
-			if( checker->next != NULL ) {
-				checker=checker->next;
-			}
-		}
 		runner=runner->next;
 		cnt++;
 	}
 	fclose( fp );
+
+	return cnt;
+}
+
+/**
+ * removes an entry from the favourite or DNP list
+ */
+int delFromList( const mpcmd cmd, const char *line ) {
+	struct marklist_t *list;
+	struct marklist_t *buff=NULL;
+	int cnt=0;
+
+	if( MPC_CMD(cmd) == mpc_dnp ) {
+		list=getConfig()->dnplist;
+	}
+	else {
+		list=getConfig()->favlist;
+	}
+
+	if( list == NULL ) {
+		addMessage(0,"No list to remove %s from!", line);
+		return -1;
+	}
+
+	/* check the root entry first */
+	while( ( list!=NULL ) && ( strcmp( list->dir, line ) == 0 ) ) {
+		buff=list->next;
+		free(list);
+		list=buff;
+		cnt++;
+	}
+
+	/* did we remove the first entry? */
+	if( cnt > 0 ) {
+		if( MPC_CMD(cmd) == mpc_dnp ) {
+			getConfig()->dnplist=list;
+		}
+		else {
+			getConfig()->favlist=list;
+		}
+	}
+
+	/* check on */
+	while( ( list != NULL ) && (list->next != NULL ) ) {
+		if( strcmp( list->next->dir, line ) == 0 ) {
+			buff=list->next;
+			list->next=buff->next;
+			free(buff);
+			cnt++;
+		}
+		else {
+			list=list->next;
+		}
+	}
+
+	if( cnt > 0 ) {
+		writeList( cmd );
+		getConfig()->listDirty=1;
+	}
 
 	return cnt;
 }
@@ -1068,7 +1133,9 @@ static mptitle *skipOver( mptitle *current, int dir ) {
  * marks titles that have been skipped for at least level times
  * as DNP so they will not end up in a mix.
  */
-int DNPSkip( mptitle *base, const unsigned int level ) {
+int DNPSkip( void ) {
+	mptitle *base=getConfig()->root;
+	const unsigned int level=getConfig()->skipdnp;
 	mptitle *runner=base;
 	unsigned int skipskip=0;
 
@@ -1618,7 +1685,7 @@ int addRangePrefix( char *line, mpcmd cmd ) {
  */
 int handleRangeCmd( mptitle *title, mpcmd cmd ) {
 	char line[MAXPATHLEN];
-	struct marklist_t buff;
+	struct marklist_t *buff, *list;
 	int cnt=-1;
 	mpconfig *config=getConfig();
 
@@ -1648,20 +1715,48 @@ int handleRangeCmd( mptitle *title, mpcmd cmd ) {
 			return 0;
 		}
 
-		buff.next=NULL;
-		strcpy( buff.dir, line );
-
 		if( MPC_CMD(cmd) == mpc_fav ) {
-			if( addToFile( config->favname, line ) == 0 ) {
-				cnt=applyFAVlist( title, &buff, 0 );
+			list=config->favlist;
+		}
+		else {
+			list=config->dnplist;
+		}
+
+		buff=list;
+		while( buff != NULL ) {
+			if( strstr( line, buff->dir ) == 0 ) {
+				addMessage(0,"%s already in list!",line);
+				return -1;
 			}
 		}
+
+		buff=falloc( 1, sizeof( struct marklist_t ) );
+		strcpy( buff->dir, line );
+		buff->next=NULL;
+
+		if( list == NULL ) {
+			if( MPC_CMD(cmd) == mpc_fav ) {
+				config->favlist=buff;
+			}
+			else {
+				config->dnplist=buff;
+			}
+		}
+		else {
+			while(list->next != NULL ) {
+				list=list->next;
+			}
+			list->next=buff;
+		}
+
+		addToList( buff->dir, cmd );
+		if( MPC_CMD(cmd) == mpc_fav ) {
+			cnt=applyFAVlist( buff, 0 );
+		}
 		else if( MPC_CMD(cmd) == mpc_dnp ) {
-			if( addToFile( config->dnpname, line ) == 0 ) {
-				cnt=applyDNPlist( title, &buff );
-				if( cnt > 0 ) {
-					plCheck(1);
-				}
+			cnt=applyDNPlist( buff );
+			if( cnt > 0 ) {
+				plCheck(1);
 			}
 		}
 	}

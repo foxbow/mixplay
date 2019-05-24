@@ -9,11 +9,11 @@
     <title>Mixplay</title>
   </head>
   <body onload='initScrolls()' onresize='setScrolls()'>
-    <input id='show0' style='background-color: #ddd;' class='cmd' type='button' onclick='toggleVisibility("0")' value='&#x25B6;' >
-    <input id='show1' class='cmd' type='button' onclick='toggleVisibility("1")' value='&#x1F50E;' >
-    <input id='show2' class='cmd' type='button' onclick='toggleVisibility("2")' value='&#x2692;' >
-    <input id='show3' class='cmd' type='button' onclick='toggleVisibility("3")' value='&#x2630;' >
-    <input id='show4' style='display:none;' class='cmd' type='button' onclick='toggleVisibility("4")' value='&#x26A0;' >
+    <input id='cextra0' style='background-color: #ddd;' class='cmd' type='button' onclick='toggleVisibility(0)' value='&#x25B6;' >
+    <input id='cextra1' class='cmd' type='button' onclick='toggleVisibility(1)' value='&#x1F50E;' >
+    <input id='cextra2' class='cmd' type='button' onclick='toggleVisibility(2)' value='&#x2692;' >
+    <input id='cextra3' class='cmd' type='button' onclick='toggleVisibility(3)' value='&#x2630;' >
+    <input id='cextra4' style='display:none;' class='cmd' type='button' onclick='toggleVisibility(4)' value='&#x26A0;' >
     <!-- main -->
     <div id='extra0' onselectstart='return false' onwheel='volWheel(event)'>
       <div class='scroll' onclick='sendCMD(0x02)'><p id='prev'>prev</p></div>
@@ -59,9 +59,9 @@
       <input id='search' type='button' onclick='sendArg(0x13)' value='Search' >
       <input id='search' type='button' onclick='sendArg(0x2013)' value='Fuzzy' >
       <br/>
-      <input id='ctrl0' class='cmd' style='background-color: #ddd;'  type='button' onclick='toggleResults("0")' value='&#x2630; Titles' >
-      <input id='ctrl1' class='cmd' type='button' onclick='toggleResults("1")' value='&#x2630; Artists' >
-      <input id='ctrl2' class='cmd' type='button' onclick='toggleResults("2")' value='&#x2630; Albums' >
+      <input id='csearch0' class='cmd' style='background-color: #ddd;'  type='button' onclick='toggleTab("search",0)' value='&#x2630; Titles' >
+      <input id='csearch1' class='cmd' type='button' onclick='toggleTab("search",1)' value='&#x2630; Artists' >
+      <input id='csearch2' class='cmd' type='button' onclick='toggleTab("search",2)' value='&#x2630; Albums' >
       <div id='search0' style='display: block; width:100%;'><em>No titles found!</em></div>
       <div id='search1' style='display: none; width:100%;'><em>No artists found!</em></div>
       <div id='search2' style='display: none; width:100%;'><em>No albums found!</em></div>
@@ -86,6 +86,12 @@
       <p><em>Database</em><br>
         <input id='rescan' type='button' onclick='sendCMD(0x08)' value='ReScan' >
         <input id='dbinfo' type='button' onclick='sendCMD(0x12)' value='DBInfo' >
+      </p>
+      <p><em>Lists</em></br>
+        <input id='clist0' class='cmd' style='background-color: #ddd;'  type='button' onclick='toggleTab( "list",0)' value='&#x2630; DNP' >
+      	<input id='clist1' class='cmd' type='button' onclick='toggleTab( "list",1)' value='&#x2630; FAV' >
+        <div id='list0' style='display: block; width:100%;'><em>No DNPs yet</em></div>
+        <div id='list1' style='display: none; width:100%;'><em>No Favourites yet</em></div>
       </p>
     </div>
     <!-- Playlist view -->

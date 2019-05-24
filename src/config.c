@@ -73,8 +73,8 @@ static const char *mpc_command[] = {
 		"mpc_path",
 		"mpc_remprof",
 		"mpc_edit",
-		"mpc_wipe",
-		"mpc_save",
+		"mpc_deldnp",
+		"mpc_delfav",
 		"mpc_remove",
 		"mpc_mute",
 		"mpc_favplay",
@@ -624,8 +624,6 @@ void freeConfigContents() {
 	assert( c_config != NULL );
 
 	sfree( &(c_config->dbname) );
-	sfree( &(c_config->dnpname) );
-	sfree( &(c_config->favname) );
 	sfree( &(c_config->musicdir) );
 
 	for( i=0; i<c_config->profiles; i++ ) {
@@ -668,6 +666,9 @@ void freeConfig( ) {
 	/* free root last so playlist cleanup does not double free titles */
 	c_config->root=wipeTitles( c_config->root );
 	free( c_config->found );
+	wipeList(c_config->dnplist);
+	wipeList(c_config->favlist);
+
 	free( c_config );
 	c_config=NULL;
 }

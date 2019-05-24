@@ -44,8 +44,8 @@ enum _mpcmd_t {
 	mpc_path,
 	mpc_remprof,
 	mpc_edit,
-	mpc_wipe,
-	mpc_save,
+	mpc_deldnp,
+	mpc_delfav,
 	mpc_remove,
 	mpc_mute,
 	mpc_favplay,
@@ -107,8 +107,8 @@ struct _mpcontrol_t {
 	searchresults *found;		/* buffer list to contain searchresults etc */
 	mpplaylist *current;		/* the current title */
 	char *dbname;				/* path to the database */
-	char *favname;				/* path to the favourites */
-	char *dnpname;				/* path to the DNPlist */
+	struct marklist_t *favlist;	/* favourites */
+	struct marklist_t *dnplist;	/* DNPlist */
 	char playtime[20];			/* string containing time into song 00:00 */
 	char remtime[20];			/* string containing remaining playtime 00:00 */
 	int percent;				/* how many percent of the song have been played */
@@ -129,6 +129,7 @@ struct _mpcontrol_t {
 	int  port;
 	unsigned playcount;
 	int mpmode;						/* playmode, see PM_* */
+	unsigned dbDirty;
 	/* flags for mpmode */
 	unsigned mpedit:1;
 	unsigned mpfavplay:1;
@@ -138,7 +139,7 @@ struct _mpcontrol_t {
 	unsigned isDaemon:1;
 	unsigned inUI:1;					/* flag to show if the UI is active */
 	unsigned changed:1;
-	unsigned dbDirty;
+	unsigned listDirty:1;
 };
 
 void writeConfig( const char *musicpath );

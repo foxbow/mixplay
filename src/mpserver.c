@@ -104,8 +104,8 @@ static char *strdec( char *target, const char *src ) {
 }
 
 static void mps_notify( void *type ) {
-	addMessage( 1, "Playlist changed" );
-	*(int*)type=MPCOMM_FULLSTAT;
+	addMessage( 2, "Playlist changed" );
+	*(int*)type|=MPCOMM_FULLSTAT;
 }
 
 
@@ -335,16 +335,15 @@ static void *clientHandler(void *args ) {
 			switch( state ) {
 			case 1: /* get update */
 				/* normal update requested, is a special update needed? */
-				if( fullstat == MPCOMM_STAT ) {
-					/* do not miss a fullupdate, the searchresult can wait a moment */
-					if( nextstat == MPCOMM_FULLSTAT ) {
-						fullstat=MPCOMM_FULLSTAT;
-						nextstat=MPCOMM_STAT;
-					}
-					else if( config->found->send == -1 ) {
-						fullstat=MPCOMM_RESULT;
-					}
+				if( config->found->send == -1 ) {
+					fullstat |= MPCOMM_RESULT;
 				}
+				if( config->listDirty ) {
+					fullstat |= MPCOMM_LISTS;
+				}
+				/* add flags that have been set outside */
+				fullstat |= nextstat;
+				nextstat=MPCOMM_STAT;
 				jsonLine=serializeStatus( &clmsg, sock, fullstat );
 				if( jsonLine != NULL ) {
 					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012", (int)strlen(jsonLine) );
@@ -477,16 +476,17 @@ static void *clientHandler(void *args ) {
 						addMessage( 1, "send failed" );
 					}
 				}
-				switch( fullstat ) {
-				case MPCOMM_CONFIG:
-					fullstat=MPCOMM_FULLSTAT;
-					break;
-				case MPCOMM_RESULT:
-					config->found->send=0;
-					/* no break */
-				case MPCOMM_FULLSTAT:
+				if( fullstat == MPCOMM_CONFIG ) {
+					fullstat=MPCOMM_FULLSTAT|MPCOMM_LISTS;
+				}
+				else {
+					if( fullstat & MPCOMM_RESULT ) {
+						config->found->send=0;
+					}
+					if( fullstat & MPCOMM_LISTS ) {
+						config->listDirty=0;
+					}
 					fullstat=MPCOMM_STAT;
-					break;
 				}
 			}
 		} /* if running & !mpc_start */

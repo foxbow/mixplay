@@ -131,44 +131,39 @@ function setProf() {
 	}
 }
 
+/**
+ * toggle search result tabs
+ */
+function toggleTab( element, num ) {
+	var i=0;
+	var b;
+	var e=document.getElementById( element+i );
+	
+	while( e!=null ) {
+		b=document.getElementById( "c"+element+i );
+		if( i == num ) {
+			b.style.backgroundColor='#ddd';
+			e.style.display='block';
+		}
+		else {
+			/* special case for hidden tabs */
+			if( b != null ) {
+				b.style.backgroundColor='#fff';
+			}
+			e.style.display='none';
+		}
+		i=i+1;
+		e=document.getElementById( element+i );
+	}
+}
+
 /*
  * toggle main UI tabs
  */
 function toggleVisibility( element ) {
-var e;
-var b;
-	for( i=0; i<5; i++ ) {
-		e=document.getElementById( "extra"+i );
-		b=document.getElementById( "show"+i );
-		if( i == element ) {
-			b.style.backgroundColor='#ddd';
-			e.style.display='block';
-			if( i == '0' ) {
-				setScrolls();
-			}
-		}
-		else {
-			e.style.display='none';
-			b.style.backgroundColor='#fff';
-		}
-	}
-}
-
-/**
- * toggle search result tabs
- */
-function toggleResults( element ) {
-	for( i=0; i<3; i++ ) {
-		e=document.getElementById( "search"+i );
-		b=document.getElementById( "ctrl"+i );
-		if( i == element ) {
-			b.style.backgroundColor='#ddd';
-			e.style.display='block';
-		}
-		else {
-			b.style.backgroundColor='#fff';
-			e.style.display='none';
-		}
+	toggleTab( "extra", element );	
+	if( element == '0' ) {
+		setScrolls();
 	}
 }
 
@@ -189,7 +184,7 @@ function addText(text) {
 	var line="";
 	var numlines=15;
 	e=document.getElementById('extra4');
-  document.getElementById('show4').style.display='inline';
+  document.getElementById('cextra4').style.display='inline';
 
 	if( msgpos < numlines ) {
 		msglines[msgpos]=text;
@@ -310,6 +305,47 @@ function show() {
   sendCMD(0x19);
 }
 
+function getPattern( line, cmd ) {
+	var encline=line;
+	var reply="<p class='cmd' onclick='this.style.display=\"none\"; sendCMD( "+cmd+", \""+encodeURI(encline)+"\")'>";
+	
+	switch( line.charAt(0) ) {
+		case 't':
+		case 'd':
+			reply+="Title ";
+		break;
+		case 'a':
+			reply+="Artist ";
+		break;
+		case 'l':
+			reply+="Album ";
+		break;
+		case 'g':
+			reply+="Genre ";
+		break;
+		case 'p':
+			reply+="Path ";
+		break;
+		default:
+			reply+=line.charAt(0)+"? ";
+		break;
+	}
+	switch( line.charAt(1) ) {
+		case '*':
+			reply+="~ ";
+		break;
+		case '=':
+			reply+="= ";
+		break;
+		default:
+			reply+=line.charAt(1)+"? ";
+		break;
+	}
+	reply+=line.substring(2);
+	reply+="</p>\n"
+	return reply;
+}
+
 /*
  * get current status from the server and update the UI elements with the data
  * handles different types of status replies
@@ -327,7 +363,7 @@ function updateUI( ){
 						return;
 					}
 					/* full update */
-					if( data.type == 3 ) {
+					if( data.type & 1 ) {
 						e=document.getElementById('plist');
 						e.innerHTML="";
 						document.title=data.current.artist+" - "+data.current.title;
@@ -379,8 +415,8 @@ function updateUI( ){
 					}
 
 					/* search results */
-					else if( data.type == 4 ) {
-						toggleResults(0);
+					if( data.type & 2 ) {
+						toggleTab("search", 0);
 						e=document.getElementById('search0');
 						if( data.titles.length > 0 ) {
               if( data.mpedit ) {
@@ -436,6 +472,30 @@ function updateUI( ){
 						}
 					}
 
+					/* dnp/fav lists */
+					if( data.type & 4 ) {
+						e=document.getElementById("list0");
+						if( data.dnplist.length == 0 ) {
+							e.innerHTML="<em>No DNPs yet</em>";
+						} 
+						else {
+							e.innerHTML="";
+							for( i=0; i<data.dnplist.length; i++) {
+								e.innerHTML+=getPattern(data.dnplist[i],"0x001a");
+							}
+						}
+						e=document.getElementById("list1");
+						if( data.favlist.length == 0 ) {
+							e.innerHTML="<em>No Favourites yet</em>";
+						} 
+						else {
+							e.innerHTML="";
+							for( i=0; i<data.favlist.length; i++) {
+								e.innerHTML+=getPattern(data.favlist[i],"0x001b");
+							}
+						}
+					}
+					
 					/* standard update */
           if( data.mpedit ) {
             document.getElementById('searchmode').value="Fav";
@@ -456,7 +516,7 @@ function updateUI( ){
 					setVisible( 'ctrl', !isstream );
 					setVisible( 'playstr', isstream );
 					setVisible( 'playpack', !isstream );
-					enableTab( 'show1', !isstream );
+					enableTab( 'cextra1', !isstream );
 
           /* switching between stream and normal play */
 					if( isstream ) {
@@ -560,7 +620,7 @@ function getConfig() {
 						fail( "Version clash, expected "+mpver+" and got "+data.version );
 						return;
 					}
-					if( data.type == 2 ) {
+					if( data.type == -1 ) {
 						var s=document.getElementById("profiles");
 						s.options.length=0;
 						for(i=0; i<data.config.profiles; i++) {

@@ -28,6 +28,7 @@ static pthread_mutex_t _asynclock=PTHREAD_MUTEX_INITIALIZER;
  */
 static int asyncTest() {
 	int ret=0;
+	
 	addMessage( 1, "Async test" );
 	if( pthread_mutex_trylock( &_asynclock ) != EBUSY ) {
 		pthread_mutex_unlock( &_asynclock );
@@ -250,8 +251,6 @@ static void sendplay( int fdset ) {
 void *setProfile( void *ignored ) {
 	char		confdir[MAXPATHLEN]; /* = "~/.mixplay"; */
 	char 		*profile;
-	struct marklist_t *dnplist=NULL;
-	struct marklist_t *favourites=NULL;
 	int num;
 	int lastver;
 	int64_t active;
@@ -297,13 +296,10 @@ void *setProfile( void *ignored ) {
 
 		snprintf( confdir, MAXPATHLEN, "%s/.mixplay", home );
 
-		control->dnpname=(char*)falloc( MAXPATHLEN, 1 );
-		snprintf( control->dnpname, MAXPATHLEN, "%s/%s.dnp", confdir, profile );
-
-		control->favname=(char*)falloc( MAXPATHLEN, 1 );
-		snprintf( control->favname, MAXPATHLEN, "%s/%s.fav", confdir, profile );
-		dnplist=loadList( control->dnpname );
-		favourites=loadList( control->favname );
+		control->dnplist=wipeList( control->dnplist );
+		control->favlist=wipeList( control->favlist );
+		control->dnplist=loadList( mpc_dnp );
+		control->favlist=loadList( mpc_fav );
 
 		control->current=wipePlaylist( control->current );
 
@@ -340,20 +336,19 @@ void *setProfile( void *ignored ) {
 			setVerbosity( lastver );
 		}
 
-		if( control->skipdnp ) {
-			DNPSkip( control->root, control->skipdnp );
-		}
 		if( control->mpfavplay ) {
-			applyFAVlist( control->root, favourites, 1 );
-			applyDNPlist( control->root, dnplist );
+			applyFAVlist( control->favlist, 1 );
+			applyDNPlist( control->dnplist );
 		}
 		else {
-			applyDNPlist( control->root, dnplist );
-			applyFAVlist( control->root, favourites, 0 );
+			applyDNPlist( control->dnplist );
+			applyFAVlist( control->favlist, 0 );
 		}
+		if( control->skipdnp ) {
+			DNPSkip( );
+		}
+
 		plCheck( 0 );
-		cleanList( dnplist );
-		cleanList( favourites );
 
 		addMessage( 1, "Profile set to %s.", profile );
 		if( control->argument != NULL ) {
@@ -531,8 +526,6 @@ void *reader( void *data ) {
 	mpcmd	cmd=mpc_idle;
 	int		update=0;
 	int		insert=0;
-	struct marklist_t *dnplist=NULL;
-	struct marklist_t *favourites=NULL;
 
 	blockSigint();
 
@@ -1242,9 +1235,12 @@ void *reader( void *data ) {
 			control->mpedit=~(control->mpedit);
 			break;
 
-		case mpc_wipe:
-		case mpc_save:
-			addMessage( 0, "Removed!" );
+		case mpc_deldnp:
+		case mpc_delfav:
+			if( control->argument != NULL ) {
+				delFromList( (MPC_CMD(cmd)==mpc_deldnp)?mpc_dnp:mpc_fav , control->argument);
+				sfree( &(control->argument) );
+			}
 			break;
 
 		case mpc_remove:
@@ -1272,23 +1268,17 @@ void *reader( void *data ) {
 					control->mpfavplay=!control->mpfavplay;
 					addMessage(1,"%s Favplay",control->mpfavplay?"Enabling":"Disabling");
 
-					dnplist=loadList( control->dnpname );
-					favourites=loadList( control->favname );
-
 					if( control->mpfavplay ) {
-						applyFAVlist( control->root, favourites, 1 );
-						applyDNPlist( control->root, dnplist );
+						applyFAVlist( control->favlist, 1 );
+						applyDNPlist( control->dnplist );
 					}
 					else {
-						applyDNPlist( control->root, dnplist );
-						applyFAVlist( control->root, favourites, 0 );
-						if( control->skipdnp ) {
-							DNPSkip( control->root, control->skipdnp );
-						}
+						applyDNPlist( control->dnplist );
+						applyFAVlist( control->favlist, 0 );
 					}
-
-					cleanList( dnplist );
-					cleanList( favourites );
+					if( control->skipdnp ) {
+						DNPSkip( );
+					}
 
 					control->current=wipePlaylist( control->current );
 					plCheck( 0 );

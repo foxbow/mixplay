@@ -12,13 +12,15 @@
 
 /* message request types */
 /* return simple player status */
-#define MPCOMM_STAT 1
-/* return immutable configuration */
-#define MPCOMM_CONFIG 2
+#define MPCOMM_STAT 0
 /* return full title/playlist info */
-#define MPCOMM_FULLSTAT 3
+#define MPCOMM_FULLSTAT 1
 /* return a search result */
-#define MPCOMM_RESULT 4
+#define MPCOMM_RESULT 2
+/* return DNP and favlists */
+#define MPCOMM_LISTS 4
+/* return immutable configuration */
+#define MPCOMM_CONFIG -1
 
 /* default mixplay HTTP port */
 #define MP_PORT 2347

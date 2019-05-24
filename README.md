@@ -74,8 +74,8 @@ cmd = 00MF RRRR CCCC CCCC
 * 0x17 - play path/url <string>
 * 0x18 - delete profile/channel <string>
 * 0x19 - toggle edit mode
-* 0x1a - wipe playlist
-* 0x1b - save playlist <name>
+* 0x1a - remove <entry> from dnplist
+* 0x1b - remove <entry> from favlist
 * 0x1c - remove title from playlist <key>
 * 0x1d - toggle mute
 * 0x1e - toggle favplay

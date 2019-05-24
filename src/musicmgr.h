@@ -77,17 +77,17 @@ mptitle *wipeTitles( mptitle *root );
 int search( const char *pat, const mpcmd range );
 int playResults( mpcmd range, const char *arg, const int insert );
 
-int DNPSkip( mptitle *base, const unsigned int level );
-int applyDNPlist( mptitle *base, struct marklist_t *list );
-int applyFAVlist( mptitle *root, struct marklist_t *list, int excl );
+int DNPSkip( void );
+int applyDNPlist( struct marklist_t *list );
+int applyFAVlist( struct marklist_t *list, int excl );
 int searchPlay( const char *pat, unsigned num, const int global );
 int handleRangeCmd( mptitle *title, mpcmd cmd );
 int addRangePrefix( char *line, mpcmd cmd );
 
-struct marklist_t *cleanList( struct marklist_t *root );
-struct marklist_t *loadList( const char *path );
-struct marklist_t *addToList( const char *line, struct marklist_t **list );
-int saveList( const char *path, struct marklist_t *list );
+struct marklist_t *wipeList( struct marklist_t *root );
+struct marklist_t *loadList( const mpcmd cmd );
+int delFromList( const mpcmd cmp, const char *line );
+int writeList( const mpcmd cmd );
 
 void newCount( void );
 int isMusic( const char *name );

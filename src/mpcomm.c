@@ -122,6 +122,24 @@ static jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mpplaylist *p
 	return jo;
 }
 
+static jsonObject *jsonAddList( jsonObject *jo, const char *key, struct marklist_t *list ) {
+	int num=0;
+	char buffer[20];
+	jsonObject *buf=NULL;
+	jsonObject *val=NULL;
+
+	while( list != NULL ) {
+		sprintf( buffer, "%i", num );
+		buf=jsonAddStr( buf, buffer, list->dir );
+		if( num == 0 ) {
+			val=buf;
+		}
+		list=list->next;
+		num++;
+	}
+	return jsonAddArr( jo, key, val );
+}
+
 /**
  * put data to be sent over into the buff
  * adds messages only if any are available for the client
@@ -134,7 +152,7 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 	jo=jsonAddInt( jo, "version", MPCOMM_VER );
 	jsonAddInt( jo, "type", type );
 
-	if( type == MPCOMM_FULLSTAT ) {
+	if( type & MPCOMM_FULLSTAT ) {
 		if( current != NULL ) {
 			jsonAddTitles( jo, "prev", current->prev, -1 );
 			jsonAddTitle( jo, "current", current );
@@ -146,11 +164,15 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 			jsonAddTitles( jo, "next", NULL, 1 );
 		}
 	}
-	else if ( type == MPCOMM_RESULT ) {
+	if ( type & MPCOMM_RESULT ) {
 		jsonAddTitles(jo, "titles", data->found->titles, 1 );
 		jsonAddStrs(jo, "artists", data->found->artists, data->found->anum);
 		jsonAddStrs(jo, "albums", data->found->albums, data->found->lnum);
 		jsonAddStrs(jo, "albart", data->found->albart, data->found->lnum);
+	}
+	if ( type & MPCOMM_LISTS ) {
+		jsonAddList( jo, "dnplist", data->dnplist );
+		jsonAddList( jo, "favlist", data->favlist );
 	}
 	jsonAddInt( jo, "active", data->active );
 	jsonAddStr( jo, "playtime", data->playtime );
