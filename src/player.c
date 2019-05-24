@@ -250,7 +250,7 @@ static void sendplay( int fdset ) {
  */
 void *setProfile( ) {
 	char		confdir[MAXPATHLEN]; /* = "~/.mixplay"; */
-	char 		*profile;
+	struct profile_t *profile;
 	int num;
 	int lastver;
 	int64_t active;
@@ -336,7 +336,7 @@ void *setProfile( ) {
 			setVerbosity( lastver );
 		}
 
-		if( control->mpfavplay ) {
+		if( getProfile()->favplay ) {
 			applyFAVlist( control->favlist, 1 );
 			applyDNPlist( control->dnplist );
 		}
@@ -1066,8 +1066,8 @@ void *reader( ) {
 				}
 				else {
 					control->profiles++;
-					control->profile=(char**)frealloc( control->profile, control->profiles*sizeof(char*) );
-					control->profile[control->profiles-1]=control->argument;
+					control->profile=(struct profile_t **)frealloc( control->profile, control->profiles*sizeof(struct profile_t *) );
+					control->profile[control->profiles-1]=createProfile( control->argument, 0 );
 					control->active=control->profiles;
 					writeConfig( NULL );
 					control->argument=NULL;
@@ -1268,10 +1268,11 @@ void *reader( ) {
 						dowrite( p_command[fdset][1], "STOP\n", 6 );
 					}
 					/* toggle favplay */
-					control->mpfavplay=!control->mpfavplay;
-					addMessage(1,"%s Favplay",control->mpfavplay?"Enabling":"Disabling");
+					getProfile()->favplay=!getProfile()->favplay;
+					addMessage(1,"%s Favplay",getProfile()->favplay?"Enabling":"Disabling");
+					control->changed=1;
 
-					if( control->mpfavplay ) {
+					if( getProfile()->favplay ) {
 						applyFAVlist( control->favlist, 1 );
 						applyDNPlist( control->dnplist );
 					}

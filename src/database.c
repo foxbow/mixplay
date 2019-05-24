@@ -390,7 +390,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 			fsroot->next->prev=fsroot->prev;
 
 			/* add title to dbroot */
-			if( getConfig()->mpfavplay ) {
+			if( getProfile()->favplay ) {
 				fsroot->flags=MP_DNP;
 			}
 			if( dbroot == NULL ) {

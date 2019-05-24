@@ -406,6 +406,30 @@ static int scanparts( char *line, char ***target ) {
 	return num;
 }
 
+static int scanprofiles( char *input, struct profile_t ***target ) {
+	char **line;
+	int i, num;
+
+	num=scanparts( input, &line );
+	if( num > 0 ) {
+		*target=(struct profile_t **)falloc( num, sizeof( struct profile_t *) );
+
+		for( i=0; i<num; i++ ) {
+			if( line[i][1] == ':' ) {
+				*target[i]=createProfile( line[i]+2, 0 );
+				if (line[i][0]=='1') {
+					(*target[i])->favplay=1;
+				}
+
+			}
+			else {
+				*target[i]=createProfile( line[i], 0 );
+			}
+		}
+	}
+	return num;
+}
+
 /**
  * reads the configuration file at $HOME/.mixplay/mixplay.conf and stores the settings
  * in the given control structure.
@@ -485,7 +509,7 @@ mpconfig *readConfig( void ) {
 				strip( c_config->channel, pos, strlen(pos) );
 			}
 			if( strstr( line, "profiles=" ) == line ) {
-				c_config->profiles=scanparts( pos, &c_config->profile );
+				c_config->profiles=scanprofiles( pos, &c_config->profile );
 			}
 			if( strstr( line, "streams=" ) == line ) {
 				c_config->streams=scanparts( pos, &c_config->stream );
@@ -560,13 +584,6 @@ void writeConfig( const char *musicpath ) {
 		}
 	}
 
-	snprintf( conffile, MAXPATHLEN, "%s/.mixplay/playlists", home );
-	if( mkdir( conffile, 0700 ) == -1 ) {
-		if( errno != EEXIST ) {
-			fail( errno, "Could not create playlist dir %s", conffile );
-		}
-	}
-
 	snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", home );
 
 	fp=fopen( conffile, "w" );
@@ -582,7 +599,8 @@ void writeConfig( const char *musicpath ) {
 			fprintf( fp, "\nactive=%i", c_config->active );
 			fprintf( fp, "\nprofiles=" );
 			for( i=0; i< c_config->profiles; i++ ) {
-				fprintf( fp, "%s;", c_config->profile[i] );
+				fprintf( fp, "%i:%s;", c_config->profile[i]->favplay,
+					c_config->profile[i]->name );
 			}
 		}
 		fprintf( fp, "\nstreams=" );
@@ -628,7 +646,8 @@ void freeConfigContents() {
 	sfree( &(c_config->musicdir) );
 
 	for( i=0; i<c_config->profiles; i++ ) {
-		sfree( &(c_config->profile[i]) );
+		freeProfile( c_config->profile[i] );
+		c_config->profile=NULL;
 	}
 	c_config->profiles=0;
 	sfree( (char **)&(c_config->profile) );
@@ -927,4 +946,29 @@ char *fullpath( const char *file ) {
 		strtcpy( pbuff, file, MAXPATHLEN );
 	}
 	return pbuff;
+}
+
+struct profile_t *getProfile() {
+	if( getConfig()->active < 1 ) {
+		addMessage(0,"%i is not a valid profile!", getConfig()->active );
+	}
+	return getConfig()->profile[getConfig()->active+1];
+}
+
+struct profile_t *createProfile( const char *name, const unsigned favplay ) {
+	struct profile_t *profile =
+		(struct profile_t *)falloc( 1, sizeof( struct profile_t ) );
+	profile->name=falloc(strlen(name)+1,1);
+	strcpy( profile->name, name );
+	profile->favplay=favplay;
+	return profile;
+}
+
+void freeProfile( struct profile_t *profile ){
+	if( profile != NULL ) {
+		if( profile->name != NULL ) {
+			free( profile->name );
+		}
+		free( profile );
+	}
 }

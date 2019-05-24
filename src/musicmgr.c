@@ -99,7 +99,7 @@ static int getListPath( char path[MAXPATHLEN], mpcmd cmd ) {
 		return -1;
 	}
 	snprintf( path, MAXPATHLEN, "%s/.mixplay/%s.", getenv("HOME"),
-			getConfig()->profile[getConfig()->active-1] );
+			getConfig()->profile[getConfig()->active-1]->name );
 	if( MPC_CMD(cmd) == mpc_fav ) {
 		strtcat( path, "fav", MAXPATHLEN );
 	}
@@ -546,7 +546,7 @@ int search( const char *pat, const mpcmd range ) {
 
 	/* if player is in favplay mode and the search in in fav mode
 	   then search for DNP titles. */
-	if ( getConfig()->mpedit && getConfig()->mpfavplay ) {
+	if ( getConfig()->mpedit && getProfile()->favplay ) {
 		addMessage(1,"DNP search");
 		dnp=MP_DNP;
 	}

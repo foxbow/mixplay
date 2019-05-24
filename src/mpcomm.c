@@ -181,7 +181,7 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 	jsonAddInt( jo, "volume", data->volume );
 	jsonAddInt( jo, "status", data->status );
 	jsonAddInt( jo, "mpmode", data->mpmode );
-	jsonAddBool( jo, "mpfavplay", data->mpfavplay );
+	jsonAddBool( jo, "mpfavplay", getProfile()->favplay );
 	jsonAddBool( jo, "mpedit", data->mpedit );
 
 	/* broadcast */
@@ -216,6 +216,23 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 	return jsonToString( jo );
 }
 
+static jsonObject *jsonAddProfiles( jsonObject *jo, const char *key, struct profile_t **vals, const int num ) {
+	jsonObject *buf=NULL;
+	jsonObject *val=NULL;
+	char buffer[20];
+	int i;
+
+	for( i=0; i<num; i++ ) {
+		sprintf( buffer, "%i", i );
+		buf=jsonAddStr( buf, buffer, vals[i]->name );
+		if( i == 0 ) {
+			val=buf;
+		}
+	}
+
+	return jsonAddArr( jo, key, val );
+}
+
 /**
  * global/static part of the given config
  */
@@ -232,7 +249,7 @@ char *serializeConfig( void ) {
 	jo=jsonAddInt( NULL, "fade", config->fade );
 	jsonAddStr( jo, "musicdir", config->musicdir );
 	jsonAddInt( jo, "profiles", config->profiles );
-	jsonAddStrs( jo, "profile", config->profile, config->profiles );
+	jsonAddProfiles( jo, "profile", config->profile, config->profiles );
 	jsonAddInt( jo, "skipdnp", config->skipdnp );
 	jsonAddInt( jo, "streams", config->streams );
 	jsonAddStrs( jo, "stream", config->stream, config->streams );

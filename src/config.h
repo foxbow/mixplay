@@ -90,6 +90,11 @@ typedef enum _mpcmd_t mpcmd;
 #define PM_PLAYLIST 0x02
 #define PM_DATABASE 0x03
 
+struct profile_t {
+	char *name;
+	unsigned favplay:1;
+};
+
 /**
  * holds the widgets and pipes for communication
  */
@@ -97,9 +102,9 @@ typedef struct _mpcontrol_t mpconfig;
 struct _mpcontrol_t {
 	char *musicdir;				/* path to the music */
 	char pidpath[MAXPATHLEN];	/* path to the pidfile in demon mode */
-	int profiles;				/* number of profiles */
 	int active;					/* active >0 = profile / 0=none / <0 = stream */
-	char **profile;				/* profile names */
+	int profiles;				/* number of profiles */
+	struct profile_t **profile;	/* profiles */
 	int streams;				/* number of streams */
 	char **stream;				/* stream URLs */
 	char **sname;				/* stream names */
@@ -132,7 +137,6 @@ struct _mpcontrol_t {
 	unsigned dbDirty;
 	/* flags for mpmode */
 	unsigned mpedit:1;
-	unsigned mpfavplay:1;
 	unsigned mpmix:1;
 	/* other flags */
 	unsigned fade:1;					/* controls fading between titles */
@@ -147,6 +151,9 @@ mpconfig *readConfig( void );
 mpconfig *getConfig( void );
 void freeConfig( void );
 void freeConfigContents( void );
+struct profile_t *getProfile();
+struct profile_t *createProfile( const char *name, const unsigned favplay );
+void freeProfile( struct profile_t *profile );
 
 void incDebug( void );
 int getDebug( void );
