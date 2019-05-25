@@ -336,18 +336,7 @@ void *setProfile( ) {
 			setVerbosity( lastver );
 		}
 
-		if( profile->favplay ) {
-			applyFAVlist( control->favlist, 1 );
-			applyDNPlist( control->dnplist );
-		}
-		else {
-			applyDNPlist( control->dnplist );
-			applyFAVlist( control->favlist, 0 );
-		}
-		if( control->skipdnp ) {
-			DNPSkip( );
-		}
-
+		applyLists();
 		plCheck( 0 );
 
 		addMessage( 1, "Profile set to %s.", profile->name );
@@ -1270,18 +1259,7 @@ void *reader( ) {
 					getProfile()->favplay=!getProfile()->favplay;
 					addMessage(1,"%s Favplay",getProfile()->favplay?"Enabling":"Disabling");
 					control->changed=1;
-
-					if( getProfile()->favplay ) {
-						applyFAVlist( control->favlist, 1 );
-						applyDNPlist( control->dnplist );
-					}
-					else {
-						applyDNPlist( control->dnplist );
-						applyFAVlist( control->favlist, 0 );
-					}
-					if( control->skipdnp ) {
-						DNPSkip( );
-					}
+					applyLists();
 
 					control->current=wipePlaylist( control->current );
 					plCheck( 0 );

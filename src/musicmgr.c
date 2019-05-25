@@ -619,7 +619,7 @@ int search( const char *pat, const mpcmd range ) {
  *
  * returns the number of marked titles or -1 on error
  */
-int applyDNPlist( struct marklist_t *list ) {
+static int applyDNPlist( struct marklist_t *list ) {
 	mptitle *base=getConfig()->root;
 	mptitle  *pos = base;
 	struct marklist_t *ptr = list;
@@ -667,7 +667,7 @@ int applyDNPlist( struct marklist_t *list ) {
 /**
  * This function sets the favourite bit on titles found in the given list
  */
-int applyFAVlist( struct marklist_t *favourites, int excl ) {
+static int applyFAVlist( struct marklist_t *favourites, int excl ) {
 	struct marklist_t *ptr = NULL;
 	mptitle *root=getConfig()->root;
 	mptitle *runner=root;
@@ -719,6 +719,22 @@ int applyFAVlist( struct marklist_t *favourites, int excl ) {
 	addMessage( 1, "Marked %i favourites", cnt );
 
 	return cnt;
+}
+
+void applyLists( void ) {
+	mpconfig *control=getConfig();
+
+	if( getProfile()->favplay ) {
+		applyFAVlist( control->favlist, 1 );
+		applyDNPlist( control->dnplist );
+	}
+	else {
+		applyDNPlist( control->dnplist );
+		applyFAVlist( control->favlist, 0 );
+	}
+	if( control->skipdnp ) {
+		DNPSkip( );
+	}
 }
 
 /**
@@ -876,6 +892,8 @@ int delFromList( const mpcmd cmd, const char *line ) {
 
 	if( cnt > 0 ) {
 		writeList( cmd );
+		applyLists();
+		plCheck(1);
 		getConfig()->listDirty=1;
 	}
 

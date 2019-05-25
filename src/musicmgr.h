@@ -78,8 +78,7 @@ int search( const char *pat, const mpcmd range );
 int playResults( mpcmd range, const char *arg, const int insert );
 
 int DNPSkip( void );
-int applyDNPlist( struct marklist_t *list );
-int applyFAVlist( struct marklist_t *list, int excl );
+void applyLists( void );
 int searchPlay( const char *pat, unsigned num, const int global );
 int handleRangeCmd( mptitle *title, mpcmd cmd );
 int addRangePrefix( char *line, mpcmd cmd );
