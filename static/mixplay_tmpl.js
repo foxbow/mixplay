@@ -551,7 +551,7 @@ function updateUI( ){
 						e=document.getElementById("search3");
             items=[];
 						if( data.dnplist.length == 0 ) {
-							list[0]="<em>No DNPs yet</em>";
+							items[0]="<em>No DNPs yet</em>";
 						}
 						else {
 							for( i=0; i<data.dnplist.length; i++) {
@@ -561,15 +561,16 @@ function updateUI( ){
             tabify( e, "dlist", items );
 
 						e=document.getElementById("search4");
+            items=[];
 						if( data.favlist.length == 0 ) {
-							e.innerHTML="<em>No Favourites yet</em>";
+							items[0]="<em>No Favourites yet</em>";
 						}
 						else {
-							e.innerHTML="";
 							for( i=0; i<data.favlist.length; i++) {
-								e.innerHTML+=getPattern(data.favlist[i],"0x001b");
+								items[i]=getPattern(data.favlist[i],"0x001b");
 							}
 						}
+            tabify( e, "flist", items );
 					}
 
 					/* standard update */
