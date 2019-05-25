@@ -582,12 +582,15 @@ function updateUI( ){
           favplay=data.mpfavplay;
           if( favplay ) {
             document.getElementById('setfavplay').value="Disable Favplay";
+            document.getElementById('range').selectedIndex=0;
           }
           else {
             document.getElementById('setfavplay').value="Enable Favplay";
           }
 					isstream=( data.mpmode == 1 ); /* PM_STREAM */
 
+          setVisible( 'fav', !favplay );
+          setVisible( 'range', !favplay );
           setVisible( 'setfavplay', !isstream );
 					setVisible( 'ctrl', !isstream );
 					setVisible( 'playstr', isstream );

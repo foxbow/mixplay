@@ -845,6 +845,7 @@ int delFromList( const mpcmd cmd, const char *line ) {
 
 	/* check the root entry first */
 	while( ( list!=NULL ) && ( strcmp( list->dir, line ) == 0 ) ) {
+		addMessage(0,"Removed first entry!");
 		buff=list->next;
 		free(list);
 		list=buff;
@@ -864,6 +865,7 @@ int delFromList( const mpcmd cmd, const char *line ) {
 	/* check on */
 	while( ( list != NULL ) && (list->next != NULL ) ) {
 		if( strcmp( list->next->dir, line ) == 0 ) {
+			addMessage(0,"Removed inbetween");
 			buff=list->next;
 			list->next=buff->next;
 			free(buff);
@@ -875,10 +877,12 @@ int delFromList( const mpcmd cmd, const char *line ) {
 	}
 
 	if( cnt > 0 ) {
+		addMessage(0,"writing..");
 		writeList( cmd );
 		getConfig()->listDirty=1;
 	}
 
+	addMessage(0,"Deleted %i entries",cnt);
 	return cnt;
 }
 
