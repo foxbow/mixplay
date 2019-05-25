@@ -92,7 +92,7 @@ typedef enum _mpcmd_t mpcmd;
 
 struct profile_t {
 	char *name;
-	unsigned favplay:1;
+	unsigned favplay;
 };
 
 /**

@@ -131,12 +131,11 @@ function setProf() {
 	}
 }
 
-/**
- * toggle search result tabs
- * todo: consider using 'this' as a parameter and
- * pull info from this.id
+/*
+ * toggle named tab, usually caleld by toggleTab() but also used
+ * to set active tab explicitly
  */
-function toggleTab( element, num ) {
+function toggleTabByRef( element, num ) {
 	var i=0;
 	var b;
 	var e=document.getElementById( element+i );
@@ -159,11 +158,21 @@ function toggleTab( element, num ) {
 	}
 }
 
+/**
+ * toggle tabified result tabs
+ */
+ function toggleTab( ref ) {
+   var name=ref.id.substring(1,ref.id.length-1);
+   var num=parseInt(ref.id.substring(ref.id.length-1));
+   toggleTabByRef( name, num );
+ }
+
 /*
  * toggle main UI tabs
+ * TODO: use toggleTab() and call setScrolls() on changeVisibility hook
  */
 function toggleVisibility( element ) {
-	toggleTab( "extra", element );
+	toggleTabByRef( "extra", element );
 	if( element == '0' ) {
 		setScrolls();
 	}
@@ -342,16 +351,82 @@ function getPattern( line, cmd ) {
 }
 
 /*
+ * creates a string containing a line that disappers
+ * in click and calls cmd with arg
+ * unfortunately the onclick is not easy to realize in a DOM object
+ */
+function clickline( cmd, arg, text ) {
+  var p="<p class='cmd' ";
+  p+="onclick='this.style.display=\"none\"; sendCMD( "+cmd+", \""+arg+"\" )'>";
+  p+=text;
+  p+="</p>\n";
+  return p;
+}
+
+/*
+ * parent: parent container to put list in
+ * name: unique name for tab control
+ * list: array of DOM elements to tabify
+ */
+function tabify( parent, name, list ) {
+  var num=list.length;
+  var tabs=parseInt(num/20);
+  if( ( tabs % 20 ) == 0  ) {
+    tabs--;
+  }
+  while( parent.hasChildNodes() ) {
+    parent.removeChild(parent.firstChild);
+  }
+  if (tabs > 0 ) {
+    for( i=0; i<=tabs; i++ ) {
+      tabswitch=document.createElement('input');
+      tabswitch.id="c"+name+i;
+      tabswitch.className='cmd';
+      tabswitch.type='button';
+      tabswitch.onclick=function(){toggleTab(this);};
+      tabswitch.value='['+i+']';
+      if( i==0 ) {
+        tabswitch.style.backgroundColor='#ddd';
+      }
+      parent.appendChild(tabswitch);
+    }
+    for( i=0; i<=tabs; i++ ) {
+      if( tabs > 0 ) {
+        tabdiv=document.createElement('div');
+        tabdiv.id=name+i;
+        if(i==0){
+          tabdiv.style.display="block";
+        }
+        else {
+          tabdiv.style.display="none";
+        }
+        tabdiv.width="100%";
+        parent.appendChild(tabdiv);
+      }
+      for( j=0; (j<20) && (20*i+j < num ); j++ ) {
+        tabdiv.innerHTML+=list[20*i+j];
+      }
+    }
+  }
+  else {
+    for( i=0; i < num; i++ ) {
+      parent.innerHTML+=list[i];
+    }
+  }
+}
+
+/*
  * get current status from the server and update the UI elements with the data
  * handles different types of status replies
  */
 function updateUI( ){
-	var e;
 	var xmlhttp=new XMLHttpRequest();
 	xmlhttp.onreadystatechange=function() {
+    var e;
+    var items;
 		if (xmlhttp.readyState==4 ) {
 			if( xmlhttp.status==200 ) {
-				data=JSON.parse(xmlhttp.responseText);
+				var data=JSON.parse(xmlhttp.responseText);
 				if( data !== undefined ) {
 					if( data.version != mpver ) {
 						fail( "Version clash, expected "+mpver+" and got "+data.version );
@@ -411,57 +486,61 @@ function updateUI( ){
 
 					/* search results */
 					if( data.type & 2 ) {
-						toggleTab("search", 0);
+						toggleTabByRef("search", 0);
 						e=document.getElementById('search0');
+            items=[];
 						if( data.titles.length > 0 ) {
               if( data.mpedit ) {
-                e.innerHTML="<a href='/cmd/0114?0'>Fav all</a><br/>";
+                items[0]="<a href='/cmd/0114?0'>Fav all</a><br/>";
               }
               else {
-                e.innerHTML="<a href='/cmd/010c?0'>Play all</a><br/>";
+                items[0]="<a href='/cmd/010c?0'>Play all</a><br/>";
               }
-							for( i=0; i<data.titles.length; i++ ) {
+              for( i=0; i<data.titles.length; i++ ){
                 if( data.mpedit ) {
-                  e.innerHTML+="<p class='cmd' onclick='this.style.display=\"none\"; sendCMD( 0x0809, "+data.titles[i].key+")'>&hearts; "+data.titles[i].artist+" - "+data.titles[i].title+"</p>"
+                  items[i+1]=clickline( 0x0809, data.titles[i].key, "&hearts; "+data.titles[i].artist+" - "+data.titles[i].title );
                 }
                 else {
-                  e.innerHTML+="<p class='cmd' onclick='this.style.display=\"none\"; sendCMD( 0x080c, "+data.titles[i].key+")'>&#x25B6; "+data.titles[i].artist+" - "+data.titles[i].title+"</p>"
+                  items[i+1]=clickline( 0x080c, data.titles[i].key, "&#x25B6; "+data.titles[i].artist+" - "+data.titles[i].title );
                 }
-							}
+              }
 						}
 						else {
-							e.innerHTML="<em>No titles found!</em>";
+							items[0]="<em>No titles found!</em>";
 						}
+            tabify( e, "tres", items );
 						e=document.getElementById('search1');
+            items=[];
 						if( data.artists.length > 0 ) {
-							e.innerHTML="";
 							for( i=0; i<data.artists.length; i++ ) {
                 if( data.mpedit ) {
-                  e.innerHTML+="<p class='cmd' onclick='this.style.display=\"none\"; sendCMD( 0x0209, \""+data.artists[i]+"\")'>&hearts; "+data.artists[i]+"</p>\n"
+                  items[i]=clickline( 0x0209, data.artists[i], "&hearts; "+data.artists[i] );
                 }
                 else {
-                  e.innerHTML+="<p class='cmd' onclick='this.style.display=\"none\"; sendCMD( 0x0213, \""+data.artists[i]+"\")'>&#x1F50E; "+data.artists[i]+"</p>\n"
+                  items[i]=clickline( 0x0213, data.artists[i], "&#x1F50E; "+data.artists[i] );
                 }
 							}
 						}
 						else {
-							e.innerHTML="<em>No artists found!</em>";
+							items[0]="<em>No artists found!</em>";
 						}
+            tabify( e, "ares", items );
 						e=document.getElementById('search2');
+            items=[];
 						if( data.albums.length > 0 ) {
-							e.innerHTML="";
 							for( i=0; i<data.albums.length; i++ ) {
                 if( data.mpedit ) {
-                  e.innerHTML+="<p class='cmd' onclick='this.style.display=\"none\"; sendCMD( 0x0409, \""+data.albums[i]+"\")'>&hearts; "+data.albart[i]+" - "+data.albums[i]+"</p>"
+                  items[i]=clickline( 0x0409, data.albums[i], "&hearts; "+data.albart[i]+" - "+data.albums[i] );
                 }
                 else {
-                  e.innerHTML+="<p class='cmd' onclick='this.style.display=\"none\"; sendCMD( 0x0413, \""+data.albums[i]+"\")'>&#x1F50E; "+data.albart[i]+" - "+data.albums[i]+"</p>"
+                  items[i]=clickline( 0x0413, data.albums[i], "&#x1F50E; "+data.albart[i]+" - "+data.albums[i] );
                 }
 							}
 						}
 						else {
-							e.innerHTML="<em>No albums found!</em>";
+							items[0]="<em>No albums found!</em>";
 						}
+            tabify( e, "lres", items );
 						if( data.titles.lenght == 0 ) {
 							alert( "Search found "+data.artists.length+" artists and "+data.albums.length+" albums" );
 						}
@@ -470,15 +549,17 @@ function updateUI( ){
 					/* dnp/fav lists */
 					if( data.type & 4 ) {
 						e=document.getElementById("search3");
+            items=[];
 						if( data.dnplist.length == 0 ) {
-							e.innerHTML="<em>No DNPs yet</em>";
+							list[0]="<em>No DNPs yet</em>";
 						}
 						else {
-							e.innerHTML="";
 							for( i=0; i<data.dnplist.length; i++) {
-								e.innerHTML+=getPattern(data.dnplist[i],"0x001a");
+								items[i]=getPattern(data.dnplist[i],"0x001a");
 							}
 						}
+            tabify( e, "dlist", items );
+
 						e=document.getElementById("search4");
 						if( data.favlist.length == 0 ) {
 							e.innerHTML="<em>No Favourites yet</em>";

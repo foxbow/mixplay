@@ -416,14 +416,14 @@ static int scanprofiles( char *input, struct profile_t ***target ) {
 
 		for( i=0; i<num; i++ ) {
 			if( line[i][1] == ':' ) {
-				*target[i]=createProfile( line[i]+2, 0 );
+				(*target)[i]=createProfile( line[i]+2, 0 );
 				if (line[i][0]=='1') {
-					(*target[i])->favplay=1;
+					(*target)[i]->favplay=1;
 				}
 
 			}
 			else {
-				*target[i]=createProfile( line[i], 0 );
+				(*target)[i]=createProfile( line[i], 0 );
 			}
 		}
 	}
@@ -647,7 +647,6 @@ void freeConfigContents() {
 
 	for( i=0; i<c_config->profiles; i++ ) {
 		freeProfile( c_config->profile[i] );
-		c_config->profile=NULL;
 	}
 	c_config->profiles=0;
 	sfree( (char **)&(c_config->profile) );
@@ -951,8 +950,9 @@ char *fullpath( const char *file ) {
 struct profile_t *getProfile() {
 	if( getConfig()->active < 1 ) {
 		addMessage(0,"%i is not a valid profile!", getConfig()->active );
+		return NULL;
 	}
-	return getConfig()->profile[getConfig()->active+1];
+	return getConfig()->profile[getConfig()->active-1];
 }
 
 struct profile_t *createProfile( const char *name, const unsigned favplay ) {

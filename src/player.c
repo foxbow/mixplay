@@ -336,7 +336,7 @@ void *setProfile( ) {
 			setVerbosity( lastver );
 		}
 
-		if( getProfile()->favplay ) {
+		if( profile->favplay ) {
 			applyFAVlist( control->favlist, 1 );
 			applyDNPlist( control->dnplist );
 		}
@@ -350,8 +350,7 @@ void *setProfile( ) {
 
 		plCheck( 0 );
 
-
-		addMessage( 1, "Profile set to %s.", profile );
+		addMessage( 1, "Profile set to %s.", profile->name );
 		if( control->argument != NULL ) {
 			progressEnd();
 			/* do not free, the string has become the new profile entry! */
@@ -810,7 +809,6 @@ void *reader( ) {
 							if( order > 0 ) {
 								while( ( control->current->next != NULL ) && order > 0 ) {
 									control->current=control->current->next;
-									plCheck(0);
 									order--;
 								}
 								/* stop on end of playlist */
@@ -822,6 +820,7 @@ void *reader( ) {
 							if( control->status != mpc_idle ) {
 								sendplay( p_command[fdset][1] );
 							}
+							plCheck(0);
 
 							order=1;
 						}
