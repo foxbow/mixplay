@@ -355,13 +355,30 @@ function getPattern( line, cmd ) {
  * in click and calls cmd with arg
  * unfortunately the onclick is not easy to realize in a DOM object
  */
-function clickline( cmd, arg, text ) {
-  var p="<p class='cmd' ";
-  p+="onclick='this.style.display=\"none\"; sendCMD( "+cmd+", \""+arg+"\" )'>";
-  p+=text;
-  p+="</p>\n";
-  return p;
-}
+ function clickline( cmd, arg, text ) {
+   var p="<p class='cmd' ";
+   p+="onclick='this.style.display=\"none\"; sendCMD( "+cmd+", \""+arg+"\" )'>";
+   p+=text;
+   p+="</p>\n";
+   return p;
+ }
+
+ function clickselect( cmd, cmd2, arg ) {
+   if( confirm("Mark as favourite?\nCancel will search") ) {
+     sendCMD( cmd, arg );
+   }
+   else {
+     sendCMD( cmd2, arg );
+   }
+ }
+
+ function clickline2( cmd, cmd2, arg, text ) {
+   var p="<p class='cmd' ";
+   p+="onclick='this.style.display=\"none\"; clickselect( "+cmd+", "+cmd2+", \""+arg+"\" )'>";
+   p+=text;
+   p+="</p>\n";
+   return p;
+ }
 
 /*
  * parent: parent container to put list in
@@ -514,7 +531,7 @@ function updateUI( ){
 						if( data.artists.length > 0 ) {
 							for( i=0; i<data.artists.length; i++ ) {
                 if( data.mpedit ) {
-                  items[i]=clickline( 0x0209, data.artists[i], "&hearts; "+data.artists[i] );
+                  items[i]=clickline2( 0x0209, 0x0213, data.artists[i], "&hearts; "+data.artists[i] );
                 }
                 else {
                   items[i]=clickline( 0x0213, data.artists[i], "&#x1F50E; "+data.artists[i] );
@@ -530,7 +547,7 @@ function updateUI( ){
 						if( data.albums.length > 0 ) {
 							for( i=0; i<data.albums.length; i++ ) {
                 if( data.mpedit ) {
-                  items[i]=clickline( 0x0409, data.albums[i], "&hearts; "+data.albart[i]+" - "+data.albums[i] );
+                  items[i]=clickline2( 0x0409, 0x0413, data.albums[i], "&hearts; "+data.albart[i]+" - "+data.albums[i] );
                 }
                 else {
                   items[i]=clickline( 0x0413, data.albums[i], "&#x1F50E; "+data.albart[i]+" - "+data.albums[i] );

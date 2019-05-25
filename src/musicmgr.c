@@ -582,7 +582,7 @@ int search( const char *pat, const mpcmd range ) {
 					res->artists=(char**)frealloc( res->artists, res->anum*sizeof(char*) );
 					res->artists[i]=runner->artist;
 				}
-
+				/* check for new albums */
 				for( i=0; (i<res->lnum) && strcmp( res->albums[i], runner->album ); i++ );
 				if( i == res->lnum ) {
 					res->lnum++;
