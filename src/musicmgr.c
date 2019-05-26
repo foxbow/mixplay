@@ -1300,7 +1300,8 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 		guard=runner;
 		/* title did not pass playcountcheck and we are not in stuffing mode */
 		while( (valid & 2 ) != 2 ) {
-			if( runner->flags & MP_FAV ) {
+			/* ignore favourites rule on favplay */
+			if( runner->flags & MP_FAV && (!getProfile()->favplay )) {
 				if ( runner-> playcount <= 2*pcount ) {
 					valid|=2;
 				}
