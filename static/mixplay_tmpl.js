@@ -486,7 +486,7 @@ function updateUI( ){
 	              			e.innerHTML+="<input style='width:2em; border:none; background:none; float:left; color:red;' type='button' onclick='sendCMD( 0x1c, "+data.next[i].key+" )' value='X'>"; 
 	              			titleline="<p class='cmd' onclick='sendCMD( 0x0003, "+(i+1)+")'>";
 	              			if( data.next[i].playcount >= 0 ) {
-								titleline+="["+data.next[i].playcount+"] ";
+								titleline+="["+data.next[i].playcount+"/"+data.next[i].skipcount+"] ";
 							}
 							titleline+=data.next[i].artist+" - "+data.next[i].title+"</p>";
 							e.innerHTML+=titleline;
