@@ -604,14 +604,16 @@ function updateUI( ){
 			        if( favplay ) {
             			document.getElementById('setfavplay').value="Disable Favplay";
             			document.getElementById('range').selectedIndex=0;
+						document.getElementById('fav').style.display='none';
+						document.getElementById('range').style.display='none';
 			        }
 			        else {
 				        document.getElementById('setfavplay').value="Enable Favplay";
+						document.getElementById('fav').style.display='inline';
+						document.getElementById('range').style.display='inline';
 			        }
 					isstream=( data.mpmode == 1 ); /* PM_STREAM */
 
-			        setVisible( 'fav', !favplay );
-			        setVisible( 'range', !favplay );
 			        setVisible( 'setfavplay', !isstream );
 					setVisible( 'ctrl', !isstream );
 					setVisible( 'playstr', isstream );
