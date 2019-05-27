@@ -661,10 +661,10 @@ function updateUI( ){
 			        }
 
 					if( data.msg != "" ) {
-						if( data.msg.startsWith( "ALERT:" ) {
+						if( data.msg.startsWith( "ALERT:" ) ) {
 							alert( data.msg.substring(6) );
 						}
-						else if ( data.msg != "Done." ) ) {
+						else if ( data.msg != "Done." ) {
 							addText(data.msg);
 						}
 					}
