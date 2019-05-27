@@ -43,7 +43,7 @@ static char lasttitle[MAXPATHLEN+1];
  * update the display with the current title and buttons
  * runs in it's own thread to not block updating
  */
-static void *_update( void *ignored ) {
+static void *_update( ) {
 	mpplaylist *current=NULL;
 
 	blockSigint();
@@ -138,7 +138,7 @@ static void *_update( void *ignored ) {
 /**
  * special handling for the server during information updates
  */
-void ep_updateHook( void *ignore ) {
+void ep_updateHook( ) {
 	char *title=NULL;
 	if( epsGetState() < 0 ) {
 		return;
@@ -306,7 +306,7 @@ void epExit( void ) {
  * this is an own thread to not block on initialization
  * and PowerOn
  */
-static void *_setButtons( void *ignored ) {
+static void *_setButtons( ) {
 	addMessage( 2, "New Thread: _setButtons()" );
 	/* init buttons */
 	epsButton( KEY1, key1_cb );

@@ -89,7 +89,7 @@ typedef enum epsymbols_t epsymbol;
 
 void epsDrawString( epsmap map, unsigned posx, unsigned posy, char *txt, int mag );
 void epsDrawSymbol( epsmap map, unsigned x, unsigned y, epsymbol sym );
-int  epsDrawChar( epsmap map, unsigned x, unsigned y, unsigned char c, int mag );
+int  epsDrawChar( epsmap map, unsigned x, unsigned y, int c, int mag );
 void epsSetup( void );
 void epsDisplay( void );
 void epsPartialDisplay( unsigned x, unsigned y, unsigned w, unsigned l );

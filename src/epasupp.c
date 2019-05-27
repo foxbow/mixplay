@@ -338,7 +338,7 @@ static void epsUnsetPixel( epsmap map, unsigned x, unsigned y ) {
 }
 
 void epsWipe( epsmap map, unsigned x, unsigned y, unsigned w, unsigned l ) {
-	int i, j;
+	unsigned i, j;
 	for( i=x; i<x+l; i++ ) {
 		for( j=y; j<y+w; j++ ) {
 			epsUnsetPixel( map, i, j );
@@ -375,7 +375,7 @@ static void epsPutByte( epsmap map, unsigned posx, unsigned posy, unsigned char 
 	}
 }
 
-int epsDrawChar( epsmap map, unsigned posx, unsigned posy, unsigned char c, int mag ) {
+int epsDrawChar( epsmap map, unsigned posx, unsigned posy, int c, int mag ) {
 	int i, m, ym=(mag==2)?2:1;
 
 	if( ( mag < 0 ) || ( mag > 2 ) ) {
@@ -406,7 +406,7 @@ int epsDrawChar( epsmap map, unsigned posx, unsigned posy, unsigned char c, int 
    this may also come in handy if fonts with variable width were supported. */
 static int epsstrlen( const char *txt ) {
 	int len=0;
-	int pos=0;
+	unsigned pos=0;
 	for( pos=0; pos <strlen(txt); pos++ ) {
 		if( ( txt[pos]-' ' >= 0 ) && ( txt[pos]-' '  < 95 ) ) {
 			len++;
@@ -420,7 +420,7 @@ static int epsstrlen( const char *txt ) {
 	 parameter */
 void epsDrawString( epsmap map, unsigned posx, unsigned posy, char *txt, int mag ) {
 	unsigned end=0;
-	int i, ill=0;
+	unsigned i, ill=0;
 	int m=(mag>0)?2:1;
 
 	if( ( mag < 0 ) || ( mag > 2 ) ) {
