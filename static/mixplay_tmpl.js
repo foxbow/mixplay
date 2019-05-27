@@ -441,123 +441,126 @@ function updateUI( ){
 	xmlhttp.onreadystatechange=function() {
     var e;
     var items;
-		if (xmlhttp.readyState==4 ) {
-			if( xmlhttp.status==200 ) {
-				var data=JSON.parse(xmlhttp.responseText);
-				if( data !== undefined ) {
-					if( data.version != mpver ) {
-						fail( "Version clash, expected "+mpver+" and got "+data.version );
-						return;
+	if (xmlhttp.readyState==4 ) {
+		if( xmlhttp.status==200 ) {
+			var data=JSON.parse(xmlhttp.responseText);
+			if( data !== undefined ) {
+				if( data.version != mpver ) {
+					fail( "Version clash, expected "+mpver+" and got "+data.version );
+					return;
+				}
+				/* full update */
+				if( data.type & 1 ) {
+					e=document.getElementById('plist');
+					e.innerHTML="";
+					document.title=data.current.artist+" - "+data.current.title;
+					if( data.prev.length > 0 ) {
+	              		if( data.mpmode == 1 ) {
+	                	/* only the stream title */
+	                		setElement( 'prev', data.prev[0].title );
+	              		}
+	              		else {
+							setElement( 'prev', data.prev[0].artist+" - "+data.prev[0].title );
+	              		}
+						for( i = Math.min( 4, data.prev.length-1 ); i >= 0 ; i-- ) {
+							e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0002, "+(i+1)+")'>"+data.prev[i].artist+" - "+data.prev[i].title+"</p>";
+						}
 					}
-					/* full update */
-					if( data.type & 1 ) {
-						e=document.getElementById('plist');
-						e.innerHTML="";
-						document.title=data.current.artist+" - "+data.current.title;
-						if( data.prev.length > 0 ) {
-              if( data.mpmode == 1 ) {
-                /* only the stream title */
-                setElement( 'prev', data.prev[0].title );
-              }
-              else {
-						    setElement( 'prev', data.prev[0].artist+" - "+data.prev[0].title );
-              }
-							for( i = Math.min( 4, data.prev.length-1 ); i >= 0 ; i-- ) {
-								e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0002, "+(i+1)+")'>"+data.prev[i].artist+" - "+data.prev[i].title+"</p>";
-							}
-						}
-						else {
-							setElement( 'prev', "- - -" );
-						}
-						setElement( 'title', data.current.title );
-						setElement( 'artist', data.current.artist );
-						setElement( 'album', data.current.album );
-						setElement( 'genre', data.current.genre );
-						e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0000 )' style='background-color: #ddd;' ><em>"+data.current.artist+" - "+data.current.title+"</em></p>";
-						if( data.next.length > 0 ) {
-              if( data.next[0].artist == "" ) {
-                /* only the stream title */
-                setElement( 'next', data.next[0].title );
-              }
-              else {
-						    setElement( 'next', data.next[0].artist+" - "+data.next[0].title );
-              }
-							for( i=0; i<data.next.length; i++ ) {
-                if( data.mpmode != 1 ) {
-                  e.innerHTML+="<input style='width:2em; border:none; background:none; float:left; color:red;' type='button' onclick='sendCMD( 0x1c, "+data.next[i].key+" )' value='X'>";
-                }
-								e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0003, "+(i+1)+")'>"+data.next[i].artist+" - "+data.next[i].title+"</p>";
-							}
-						}
-						else {
-							setElement( 'next', "- - -" );
-						}
-						if( data.current.flags & 1 )  {
-							document.getElementById( 'fav' ).disabled=true;
-						}
-						else {
-							document.getElementById( 'fav' ).disabled=false;
-						}
-						setScrolls();
+					else {
+						setElement( 'prev', "- - -" );
 					}
+					setElement( 'title', data.current.title );
+					setElement( 'artist', data.current.artist );
+					setElement( 'album', data.current.album );
+					setElement( 'genre', data.current.genre );
+					e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0000 )' style='background-color: #ddd;' ><em>"+data.current.artist+" - "+data.current.title+"</em></p>";
+					if( data.next.length > 0 ) {
+		          		if( data.next[0].artist == "" ) {
+		            		/* only the stream title */
+		            		setElement( 'next', data.next[0].title );
+		          		}
+		          		else {
+							setElement( 'next', data.next[0].artist+" - "+data.next[0].title );
+		          		}
+						for( i=0; i<data.next.length; i++ ) {
+	              			e.innerHTML+="<input style='width:2em; border:none; background:none; float:left; color:red;' type='button' onclick='sendCMD( 0x1c, "+data.next[i].key+" )' value='X'>"; 
+	              			titleline="<p class='cmd' onclick='sendCMD( 0x0003, "+(i+1)+")'>";
+	              			if( data.next[i].playcount >= 0 ) {
+								titleline+="["+data.next[i].playcount+"] ";
+							}
+							titleline+=data.next[i].artist+" - "+data.next[i].title+"</p>";
+							e.innerHTML+=titleline;
+						}
+					}
+					else {
+						setElement( 'next', "- - -" );
+					}
+					if( data.current.flags & 1 )  {
+						document.getElementById( 'fav' ).disabled=true;
+					}
+					else {
+						document.getElementById( 'fav' ).disabled=false;
+					}
+					setScrolls();
+				}
 
-					/* search results */
-					if( data.type & 2 ) {
-						toggleTabByRef("search", 0);
-						e=document.getElementById('search0');
-            items=[];
-						if( data.titles.length > 0 ) {
-              if( data.mpedit ) {
-                items[0]="<a href='/cmd/0114?0'>Fav all</a><br/>";
-              }
-              else {
-                items[0]="<a href='/cmd/010c?0'>Play all</a><br/>";
-              }
-              for( i=0; i<data.titles.length; i++ ){
-                if( data.mpedit ) {
-                  items[i+1]=clickline( 0x0809, data.titles[i].key, "&hearts; "+data.titles[i].artist+" - "+data.titles[i].title );
-                }
-                else {
-                  items[i+1]=clickline( 0x080c, data.titles[i].key, "&#x25B6; "+data.titles[i].artist+" - "+data.titles[i].title );
-                }
-              }
+				/* search results */
+				if( data.type & 2 ) {
+					toggleTabByRef("search", 0);
+					e=document.getElementById('search0');
+		            items=[];
+					if( data.titles.length > 0 ) {
+						if( data.mpedit ) {
+							items[0]="<a href='/cmd/0114?0'>Fav all</a><br/>";
 						}
 						else {
-							items[0]="<em>No titles found!</em>";
+							items[0]="<a href='/cmd/010c?0'>Play all</a><br/>";
 						}
-            tabify( e, "tres", items );
-						e=document.getElementById('search1');
-            items=[];
-						if( data.artists.length > 0 ) {
-							for( i=0; i<data.artists.length; i++ ) {
-                if( data.mpedit ) {
-                  items[i]=clickline2( 0x0209, 0x0213, data.artists[i], "&hearts; "+data.artists[i] );
-                }
-                else {
-                  items[i]=clickline( 0x0213, data.artists[i], "&#x1F50E; "+data.artists[i] );
-                }
+						for( i=0; i<data.titles.length; i++ ){
+		              		if( data.mpedit ) {
+                  				items[i+1]=clickline( 0x0809, data.titles[i].key, "&hearts; "+data.titles[i].artist+" - "+data.titles[i].title );
 							}
+        			        else {
+                	  			items[i+1]=clickline( 0x080c, data.titles[i].key, "&#x25B6; "+data.titles[i].artist+" - "+data.titles[i].title );
+                			}
+              			}
+					}
+					else {
+						items[0]="<em>No titles found!</em>";
+					}
+		            tabify( e, "tres", items );
+					e=document.getElementById('search1');
+        		    items=[];
+					if( data.artists.length > 0 ) {
+						for( i=0; i<data.artists.length; i++ ) {
+        			        if( data.mpedit ) {
+        			        	items[i]=clickline2( 0x0209, 0x0213, data.artists[i], "&hearts; "+data.artists[i] );
+                			}
+                			else {
+			                	items[i]=clickline( 0x0213, data.artists[i], "&#x1F50E; "+data.artists[i] );
+                			}
 						}
-						else {
-							items[0]="<em>No artists found!</em>";
-						}
-            tabify( e, "ares", items );
+					}
+					else {
+						items[0]="<em>No artists found!</em>";
+					}
+		            tabify( e, "ares", items );
 						e=document.getElementById('search2');
-            items=[];
+            			items=[];
 						if( data.albums.length > 0 ) {
 							for( i=0; i<data.albums.length; i++ ) {
-                if( data.mpedit ) {
-                  items[i]=clickline2( 0x0409, 0x0413, data.albums[i], "&hearts; "+data.albart[i]+" - "+data.albums[i] );
-                }
-                else {
-                  items[i]=clickline( 0x0413, data.albums[i], "&#x1F50E; "+data.albart[i]+" - "+data.albums[i] );
-                }
+                				if( data.mpedit ) {
+                  					items[i]=clickline2( 0x0409, 0x0413, data.albums[i], "&hearts; "+data.albart[i]+" - "+data.albums[i] );
+                				}
+                				else {
+                  					items[i]=clickline( 0x0413, data.albums[i], "&#x1F50E; "+data.albart[i]+" - "+data.albums[i] );
+                				}
 							}
 						}
 						else {
 							items[0]="<em>No albums found!</em>";
 						}
-            tabify( e, "lres", items );
+			            tabify( e, "lres", items );
 						if( data.titles.lenght == 0 ) {
 							alert( "Search found "+data.artists.length+" artists and "+data.albums.length+" albums" );
 						}
@@ -566,7 +569,7 @@ function updateUI( ){
 					/* dnp/fav lists */
 					if( data.type & 4 ) {
 						e=document.getElementById("search3");
-            items=[];
+            			items=[];
 						if( data.dnplist.length == 0 ) {
 							items[0]="<em>No DNPs yet</em>";
 						}
@@ -575,10 +578,10 @@ function updateUI( ){
 								items[i]=getPattern(data.dnplist[i],"0x001a");
 							}
 						}
-            tabify( e, "dlist", items );
+            			tabify( e, "dlist", items );
 
 						e=document.getElementById("search4");
-            items=[];
+            			items=[];
 						if( data.favlist.length == 0 ) {
 							items[0]="<em>No Favourites yet</em>";
 						}
@@ -587,56 +590,56 @@ function updateUI( ){
 								items[i]=getPattern(data.favlist[i],"0x001b");
 							}
 						}
-            tabify( e, "flist", items );
+            			tabify( e, "flist", items );
 					}
 
 					/* standard update */
-          if( data.mpedit ) {
-            document.getElementById('searchmode').value="Fav";
-          }
-          else {
-            document.getElementById('searchmode').value="Play";
-          }
-          favplay=data.mpfavplay;
-          if( favplay ) {
-            document.getElementById('setfavplay').value="Disable Favplay";
-            document.getElementById('range').selectedIndex=0;
-          }
-          else {
-            document.getElementById('setfavplay').value="Enable Favplay";
-          }
+					if( data.mpedit ) {
+						document.getElementById('searchmode').value="Fav";
+          			}
+          			else {
+			            document.getElementById('searchmode').value="Play";
+          			}
+			        favplay=data.mpfavplay;
+			        if( favplay ) {
+            			document.getElementById('setfavplay').value="Disable Favplay";
+            			document.getElementById('range').selectedIndex=0;
+			        }
+			        else {
+				        document.getElementById('setfavplay').value="Enable Favplay";
+			        }
 					isstream=( data.mpmode == 1 ); /* PM_STREAM */
 
-          setVisible( 'fav', !favplay );
-          setVisible( 'range', !favplay );
-          setVisible( 'setfavplay', !isstream );
+			        setVisible( 'fav', !favplay );
+			        setVisible( 'range', !favplay );
+			        setVisible( 'setfavplay', !isstream );
 					setVisible( 'ctrl', !isstream );
 					setVisible( 'playstr', isstream );
 					setVisible( 'playpack', !isstream );
 					enableTab( 'cextra1', !isstream );
 
-          /* switching between stream and normal play */
+			        /* switching between stream and normal play */
 					if( isstream ) {
 						setElement( 'splaytime', data.playtime );
-            document.getElementById( 'lscroll' ).style.height='0px';
+        			    document.getElementById( 'lscroll' ).style.height='0px';
 					}
 					else {
 						setElement( 'playtime', data.playtime );
 						setElement( 'remtime', data.remtime );
 						document.getElementById( 'progress' ).value=data.percent;
-            document.getElementById( 'lscroll' ).style.height='30px';
+			            document.getElementById( 'lscroll' ).style.height='30px';
 					}
 
-          if( ( isstream != wasstream ) &&
-              ( window.innerHeight != window.outerHeight ) ) {
-            if( isstream ) {
-              window.resizeTo( 300, 250 );
-            }
-            else {
-              window.resizeTo( 300, 380 );
-            }
-          }
-          wasstream=isstream;
+			        if( ( isstream != wasstream ) &&
+            			  ( window.innerHeight != window.outerHeight ) ) {
+			            if( isstream ) {
+              				window.resizeTo( 300, 250 );
+			            }
+			            else {
+				            window.resizeTo( 300, 380 );
+			            }
+			        }
+			        wasstream=isstream;
 
 					if( active != data.active ) {
 						active=data.active;
@@ -649,19 +652,19 @@ function updateUI( ){
 						document.getElementById('current').style.backgroundColor="#daa";
 					}
 
-          if(data.volume==-2) {
-            document.getElementById('speaker').innerHTML='&#x1F507;';
-          }
-          else {
-            document.getElementById('speaker').innerHTML='&#x1F50A;';
-					  document.getElementById( 'vol' ).value=data.volume;
-          }
-          if( data.mpedit == true ) {
-            document.body.style.backgroundColor='#ddf'
-          }
-          else {
-            document.body.style.backgroundColor='#fff'
-          }
+			        if(data.volume==-2) {
+            			document.getElementById('speaker').innerHTML='&#x1F507;';
+			        }
+          			else {
+				        document.getElementById('speaker').innerHTML='&#x1F50A;';
+						document.getElementById( 'vol' ).value=data.volume;
+			        }
+			        if( data.mpedit == true ) {
+            			document.body.style.backgroundColor='#ddf'
+			        }
+			        else {
+            			document.body.style.backgroundColor='#fff'
+			        }
 
 					if( ( data.msg != "" ) && ( data.msg != "Done." ) ) {
 						addText(data.msg);
