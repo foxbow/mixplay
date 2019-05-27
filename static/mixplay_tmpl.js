@@ -659,15 +659,14 @@ function updateUI( ){
 				        document.getElementById('speaker').innerHTML='&#x1F50A;';
 						document.getElementById( 'vol' ).value=data.volume;
 			        }
-			        if( data.mpedit == true ) {
-            			document.body.style.backgroundColor='#ddf'
-			        }
-			        else {
-            			document.body.style.backgroundColor='#fff'
-			        }
 
-					if( ( data.msg != "" ) && ( data.msg != "Done." ) ) {
-						addText(data.msg);
+					if( data.msg != "" ) {
+						if( data.msg.startsWith( "ALERT:" ) {
+							alert( data.msg.substring(6) );
+						}
+						else if ( data.msg != "Done." ) ) {
+							addText(data.msg);
+						}
 					}
 				}
 			}

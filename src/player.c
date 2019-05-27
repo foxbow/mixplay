@@ -475,7 +475,7 @@ static void *plSetProfile( ) {
 static void asyncRun( void *cmd(void *) ) {
 	pthread_t pid;
 	if( pthread_mutex_trylock( &_asynclock ) == EBUSY ) {
-		addMessage( 0, "Sorry, still blocked!" );
+		addMessage( -1, "Sorry, still blocked!" );
 	}
 	else {
 		if( pthread_create( &pid, NULL, cmd, NULL ) < 0) {
@@ -1185,7 +1185,7 @@ void *reader( ) {
 				}
 				else {
 					if ( search( control->argument, MPC_RANGE(control->command) ) == -1 ) {
-						addMessage( 0, "Too many titles found!" );
+						addMessage( -1, "Too many titles found!" );
 					}
 					/* todo: a signal/unblock would be nicer here */
 					while( control->found->send == 1 ) {
@@ -1248,7 +1248,7 @@ void *reader( ) {
 			if( asyncTest() ) {
 				if( control->mpmode == PM_DATABASE ) {
 					if( countTitles( MP_FAV, 0 ) < 15 ) {
-						addMessage( 0, "Need at least 15 Favourites to enable Favplay." );
+						addMessage( -1, "Need at least 15 Favourites to enable Favplay." );
 						break;
 					}
 					if( control->status == mpc_play ) {

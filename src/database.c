@@ -261,7 +261,7 @@ int dbCheckExist( const char *dbname ) {
 
 	root=dbGetMusic( dbname );
 	if( root == NULL ) {
-		addMessage( 0, "No music in database!" );
+		addMessage( -1, "No music in database!" );
 		return -1;
 	}
 	runner=root;
@@ -360,7 +360,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 	addMessage( 0, "Scanning..." );
 	fsroot=recurse( basedir, NULL );
 	if( fsroot == NULL ) {
-		addMessage( 0, "No music found in %s!", basedir );
+		addMessage( -1, "No music found in %s!", basedir );
 		return 0;
 	}
 
@@ -458,7 +458,7 @@ int dbNameCheck( const char *dbname ) {
 
 	root=dbGetMusic( dbname );
 	if( root == NULL ) {
-		addMessage( 0, "No music in database!");
+		addMessage( -1, "No music in database!");
 		return -1;
 	}
 

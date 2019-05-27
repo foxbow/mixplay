@@ -179,7 +179,7 @@ static int addToList( const char *line, mpcmd cmd ) {
 
 	fp=fopen( path, "a" );
 	if( NULL == fp ) {
-		addMessage( 0, "Could not open %s", path );
+		addMessage( -1, "Could not open %s", path );
 		return -1;
 	}
 
@@ -540,7 +540,7 @@ int search( const char *pat, const mpcmd range ) {
 	res->lnum=0;
 
 	if( root == NULL ) {
-		addMessage( 0, "No database loaded." );
+		addMessage(-1, "No database loaded." );
 		return 0;
 	}
 
@@ -1189,7 +1189,7 @@ static mptitle *skipTitles( mptitle *current, long num ) {
 	for( ; num > 0; num-- ) {
 		current=skipOver(current->next,1);
 		if( current == NULL ) {
-			addMessage( 0, "Database title ring broken!" );
+			addMessage( -1, "Database title ring broken!" );
 			return NULL;
 		}
 	}
@@ -1197,7 +1197,7 @@ static mptitle *skipTitles( mptitle *current, long num ) {
 	for( ; num < 0; num++ ) {
 		current=skipOver(current->prev,-1);
 		if( current == NULL ) {
-			addMessage( 0, "Database title ring broken!" );
+			addMessage( -1, "Database title ring broken!" );
 			return NULL;
 		}
 	}
@@ -1262,7 +1262,7 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 		num = countTitles( MP_ALL, MP_DNP|MP_MARK|MP_CNTD );
 		runner=skipTitles( runner, rand()%num );
 		if( runner == NULL ) {
-			addMessage( 0, "No more titles in the database!?" );
+			addMessage( -1, "No more titles in the database!?" );
 			return NULL;
 		}
 	}

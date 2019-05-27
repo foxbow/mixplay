@@ -706,7 +706,7 @@ void addMessage( int v, const char *msg, ... ) {
 	char *line;
 
 	pthread_mutex_lock( &_addmsglock );
-	line = (char*)falloc( MP_MSGLEN, 1 );
+	line = (char*)falloc( MP_MSGLEN+1, 1 );
 	va_start( args, msg );
 	vsnprintf( line, MP_MSGLEN, msg, args );
 	va_end( args );
@@ -722,10 +722,16 @@ void addMessage( int v, const char *msg, ... ) {
 	else {
 		if( v <= getVerbosity() ) {
 			if( c_config->inUI ) {
-				msgBuffAdd( c_config->msg, line );
 				if( v < getDebug() ) {
 					fprintf( stderr, "d%i %s\n", v, line );
 				}
+				/* not just a message but something important */
+				if( v == -1 ) {
+					memmove( line+6, line, MP_MSGLEN-6 );
+					strncpy( line, "ALERT:", 6 );
+					line[MP_MSGLEN]=0;
+				}
+				msgBuffAdd( c_config->msg, line );
 			}
 			else {
 				printf( "V %s\n", line );

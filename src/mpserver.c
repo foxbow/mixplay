@@ -50,7 +50,7 @@ static int filePost( int sock, const char *fname ) {
 		close(fd);
 	}
 	else {
-		addMessage( 0, "%s not found!", fname );
+		addMessage( -1, "%s not found!", fname );
 	}
 	pthread_mutex_unlock(&_sendlock);
 	return 0;
