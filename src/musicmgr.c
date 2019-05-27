@@ -22,6 +22,8 @@
 
 #include "database.h"
 
+static pthread_mutex_t _pllock=PTHREAD_MUTEX_INITIALIZER;
+
 static char ARTIST_SAMPLER[]="Various";
 /*
  * checks if pat has a matching in text. If text is shorter than pat then
@@ -725,8 +727,10 @@ void applyLists( void ) {
 	mpconfig *control=getConfig();
 
 	if( getProfile()->favplay ) {
+		pthread_mutex_lock( &_pllock );
 		applyFAVlist( control->favlist, 1 );
 		applyDNPlist( control->dnplist );
+		pthread_mutex_unlock( &_pllock );
 	}
 	else {
 		applyDNPlist( control->dnplist );
@@ -890,10 +894,12 @@ int delFromList( const mpcmd cmd, const char *line ) {
 		}
 	}
 
+	addMessage(1,"Removed %i entries",cnt);
+
 	if( cnt > 0 ) {
 		writeList( cmd );
 		applyLists();
-		plCheck(1);
+/*		plCheck(1); */
 		getConfig()->listDirty=1;
 	}
 
@@ -1408,6 +1414,8 @@ void plCheck( int del ) {
 			addMessage( 0, "There should not be no playlist!" );
 		}
 		else {
+			/* make sure the playlist is not marked DNP right now */
+			pthread_mutex_lock( &_pllock );
 			/* go to the end of the playlist */
 			while( pl->next != NULL ) {
 				/* clean up on the way to remove DNP marked or deleted files? */
@@ -1428,6 +1436,7 @@ void plCheck( int del ) {
 				}
 				cnt++;
 			}
+			pthread_mutex_unlock( &_pllock );
 		}
 	}
 

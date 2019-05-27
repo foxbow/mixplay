@@ -311,8 +311,8 @@ function enableTab( e, i ) {
 
 function getPattern( line, cmd ) {
 	var encline=line;
-	var reply="<p class='cmd' onclick='this.style.display=\"none\"; sendCMD( "+cmd+", \""+encodeURI(encline)+"\")'>";
-
+	var reply="<p class='cmd' onclick='this.style.display=\"none\"; sendCMD( "+cmd+", encodeURI(this.innerHTML) )'>";
+/*
 	switch( line.charAt(0) ) {
 		case 't':
 		case 'd':
@@ -346,7 +346,9 @@ function getPattern( line, cmd ) {
 		break;
 	}
 	reply+=line.substring(2);
-	reply+="</p>\n"
+*/
+	reply+=line;
+	reply+="</p>"
 	return reply;
 }
 
