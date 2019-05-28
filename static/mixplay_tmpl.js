@@ -87,9 +87,9 @@ function initScroll(index,id) {
 		var element=document.getElementById(id);
 		var scroll={"id":id,"element":element,"offset":"0px"};
 		scrolls[index]=scroll;
-    if( index+1 > numscrolls ) {
-      numscrolls=index+1;
-    }
+    	if( index+1 > numscrolls ) {
+      		numscrolls=index+1;
+    	}
 	}
 }
 
@@ -99,9 +99,9 @@ function initScroll(index,id) {
 function initScrolls() {
 	initScroll(0, 'prev');
 	initScroll(1, 'title');
-  initScroll(2, 'next');
-  initScroll(3, 'artist');
-  initScroll(4, 'album');
+	initScroll(2, 'next');
+	initScroll(3, 'artist');
+	initScroll(4, 'album');
 }
 
 /*
@@ -172,6 +172,12 @@ function toggleTabByRef( element, num ) {
  * TODO: use toggleTab() and call setScrolls() on changeVisibility hook
  */
 function toggleVisibility( element ) {
+	var e;
+	if( element == '4' ) {
+		e=document.getElementById('cextra4');
+		e.value='\u2713';
+		e.style.display='inline';
+	}
 	toggleTabByRef( "extra", element );
 	if( element == '0' ) {
 		setScrolls();
@@ -195,7 +201,10 @@ function addText(text) {
 	var line="";
 	var numlines=15;
 	e=document.getElementById('extra4');
-  document.getElementById('cextra4').style.display='inline';
+	if( e.style.display=='none' ) {
+		document.getElementById('cextra4').style.display='inline';
+		document.getElementById('cextra4').value='\u26A0';
+	}
 
 	if( msgpos < numlines ) {
 		msglines[msgpos]=text;
@@ -212,6 +221,12 @@ function addText(text) {
 		line+=msglines[i]+"<br>\n";
 	}
 	e.innerHTML=line;
+}
+
+function wipeLog() {
+	e=document.getElementById('extra4');
+	document.getElementById('cextra4').style.display='none';
+	e.innerHTML="";
 }
 
 /*
