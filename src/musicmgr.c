@@ -899,7 +899,6 @@ int delFromList( const mpcmd cmd, const char *line ) {
 	if( cnt > 0 ) {
 		writeList( cmd );
 		applyLists();
-/*		plCheck(1); */
 		getConfig()->listDirty=1;
 	}
 

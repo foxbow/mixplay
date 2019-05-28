@@ -309,46 +309,16 @@ function enableTab( e, i ) {
 	}
 }
 
-function getPattern( line, cmd ) {
-	var encline=line;
-	var reply="<p class='cmd' onclick='this.style.display=\"none\"; sendCMD( "+cmd+", encodeURI(this.innerHTML) )'>";
-/*
-	switch( line.charAt(0) ) {
-		case 't':
-		case 'd':
-			reply+="Title ";
-		break;
-		case 'a':
-			reply+="Artist ";
-		break;
-		case 'l':
-			reply+="Album ";
-		break;
-		case 'g':
-			reply+="Genre ";
-		break;
-		case 'p':
-			reply+="Path ";
-		break;
-		default:
-			reply+=line.charAt(0)+"? ";
-		break;
+
+function cmdline( cmd, arg, text ) {
+	var reply=document.createElement('p');
+	reply.className='cmd';
+	reply.setAttribute('data-arg', arg);
+	reply.setAttribute('data-cmd', cmd);
+	reply.onclick=function(){
+		sendCMD( this.getAttribute('data-cmd'), this.getAttribute('data-arg') );
 	}
-	switch( line.charAt(1) ) {
-		case '*':
-			reply+="~ ";
-		break;
-		case '=':
-			reply+="= ";
-		break;
-		default:
-			reply+=line.charAt(1)+"? ";
-		break;
-	}
-	reply+=line.substring(2);
-*/
-	reply+=line;
-	reply+="</p>"
+	reply.innerHTML=text;
 	return reply;
 }
 
@@ -357,29 +327,80 @@ function getPattern( line, cmd ) {
  * in click and calls cmd with arg
  * unfortunately the onclick is not easy to realize in a DOM object
  */
- function clickline( cmd, arg, text ) {
-   var p="<p class='cmd' ";
-   p+="onclick='this.style.display=\"none\"; sendCMD( "+cmd+", \""+arg+"\" )'>";
-   p+=text;
-   p+="</p>\n";
-   return p;
- }
+function clickline( cmd, arg, text ) {
+	var reply=document.createElement('p');
+	reply.className='cmd';
+	reply.setAttribute('data-arg', arg);
+	reply.setAttribute('data-cmd', cmd);
+	reply.onclick=function(){
+		this.style.display='none';
+		sendCMD( this.getAttribute('data-cmd'), this.getAttribute('data-arg') );
+	}
+	reply.innerHTML=text;
+	return reply;
+}
 
- function clickselect( cmd, cmd2, arg ) {
-   if( confirm("Mark as favourite?\nCancel will search") ) {
-     sendCMD( cmd, arg );
-   }
-   else {
-     sendCMD( cmd2, arg );
-   }
- }
+/**
+ * wrapper to call clickline with a FAV/DNP line
+ */
+function getPattern( cmd, line ) {
+	var text=""
+	switch( line.charAt(0) ) {
+		case 't':
+		case 'd':
+			text="Title ";
+		break;
+		case 'a':
+			text="Artist ";
+		break;
+		case 'l':
+			text="Album ";
+		break;
+		case 'g':
+			text="Genre ";
+		break;
+		case 'p':
+			text="Path ";
+		break;
+		default:
+			text=line.charAt(0)+"? ";
+		break;
+	}
+	switch( line.charAt(1) ) {
+		case '*':
+			text+="~ ";
+		break;
+		case '=':
+			text+="= ";
+		break;
+		default:
+			text+=line.charAt(1)+"? ";
+		break;
+	}
+	text+=line.substring(2);
+	return clickline( cmd, line, text );
+}
 
- function clickline2( cmd, cmd2, arg, text ) {
-   var p="<p class='cmd' ";
-   p+="onclick='this.style.display=\"none\"; clickselect( "+cmd+", "+cmd2+", \""+arg+"\" )'>";
-   p+=text;
-   p+="</p>\n";
-   return p;
+/**
+ * clickline with a selection between two choices
+ */
+function clickline2( cmd1, cmd2, arg, text ) {
+	var reply=document.createElement('p');
+	reply.className='cmd';
+	reply.setAttribute('data-arg', arg);
+	reply.setAttribute('data-cmd1', cmd1);
+	reply.setAttribute('data-cmd2', cmd2);
+	reply.onclick=function(){
+		this.style.display='none';
+		if( confirm("Mark as favourite?\nCancel will search") ) {
+			sendCMD( this.getAttribute('data-cmd1'), this.getAttribute('data-arg') );
+		}
+		else {
+			sendCMD( this.getAttribute('data-cmd2'), this.getAttribute('data-arg') );
+		}
+	}
+	reply.innerHTML=text;
+	return reply;
  }
 
 /*
@@ -423,13 +444,13 @@ function tabify( parent, name, list ) {
         parent.appendChild(tabdiv);
       }
       for( j=0; (j<20) && (20*i+j < num ); j++ ) {
-        tabdiv.innerHTML+=list[20*i+j];
+        tabdiv.appendChild(list[20*i+j]);
       }
     }
   }
   else {
     for( i=0; i < num; i++ ) {
-      parent.innerHTML+=list[i];
+      parent.appendChild(list[i]);
     }
   }
 }
@@ -465,7 +486,9 @@ function updateUI( ){
 							setElement( 'prev', data.prev[0].artist+" - "+data.prev[0].title );
 	              		}
 						for( i = Math.min( 4, data.prev.length-1 ); i >= 0 ; i-- ) {
-							e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0002, "+(i+1)+")'>"+data.prev[i].artist+" - "+data.prev[i].title+"</p>";
+							cline=cmdline(0x0002, (i+1),
+								data.prev[i].artist+" - "+data.prev[i].title ); 
+							e.appendChild(cline);
 						}
 					}
 					else {
@@ -475,7 +498,9 @@ function updateUI( ){
 					setElement( 'artist', data.current.artist );
 					setElement( 'album', data.current.album );
 					setElement( 'genre', data.current.genre );
-					e.innerHTML+="<p class='cmd' onclick='sendCMD( 0x0000 )' style='background-color: #ddd;' ><em>"+data.current.artist+" - "+data.current.title+"</em></p>";
+					cline=cmdline(0x0000, "", "<em>"+data.current.artist+" - "+data.current.title+"</em>" );
+					cline.style.backgroundColor='#ddd';
+					e.appendChild(cline);
 					if( data.next.length > 0 ) {
 		          		if( data.next[0].artist == "" ) {
 		            		/* only the stream title */
@@ -485,13 +510,26 @@ function updateUI( ){
 							setElement( 'next', data.next[0].artist+" - "+data.next[0].title );
 		          		}
 						for( i=0; i<data.next.length; i++ ) {
-	              			e.innerHTML+="<input style='width:2em; border:none; background:none; float:left; color:red;' type='button' onclick='sendCMD( 0x1c, "+data.next[i].key+" )' value='X'>"; 
-	              			titleline="<p class='cmd' onclick='sendCMD( 0x0003, "+(i+1)+")'>";
+							cline=document.createElement('input');
+							cline.style.width='2em';
+							cline.style.border='none';
+							cline.style.background='none';
+							cline.style.float='left';
+							cline.style.color='red';
+							cline.type='button';
+							cline.setAttribute('data-arg',data.next[i].key);
+							cline.onclick=function() {
+								sendCMD(0x1c, this.getAttribute('data-arg'));
+							}
+							cline.value='X';
+							e.appendChild(cline);
+							titleline="";
 	              			if( data.next[i].playcount >= 0 ) {
 								titleline+="["+data.next[i].playcount+"/"+data.next[i].skipcount+"] ";
 							}
-							titleline+=data.next[i].artist+" - "+data.next[i].title+"</p>";
-							e.innerHTML+=titleline;
+							titleline+=data.next[i].artist+" - "+data.next[i].title;
+							cline=cmdline(0x0003,(i+1),titleline);
+							e.appendChild(cline);
 						}
 					}
 					else {
@@ -513,22 +551,29 @@ function updateUI( ){
 		            items=[];
 					if( data.titles.length > 0 ) {
 						if( data.mpedit ) {
-							items[0]="<a href='/cmd/0114?0'>Fav all</a><br/>";
+							items[0]=document.createElement('a');
+							items[0].href='/cmd/0114?0';
+							items[0].innerHTML='Fav all';
 						}
 						else {
-							items[0]="<a href='/cmd/010c?0'>Play all</a><br/>";
+							items[0]=document.createElement('a');
+							items[0].href='/cmd/010c?0';
+							items[0].innerHTML='Play all';
 						}
 						for( i=0; i<data.titles.length; i++ ){
 		              		if( data.mpedit ) {
-                  				items[i+1]=clickline( 0x0809, data.titles[i].key, "&hearts; "+data.titles[i].artist+" - "+data.titles[i].title );
+                  				items[i+1]=clickline( 0x0809, data.titles[i].key, 
+                  					"&hearts; "+data.titles[i].artist+" - "+data.titles[i].title );
 							}
         			        else {
-                	  			items[i+1]=clickline( 0x080c, data.titles[i].key, "&#x25B6; "+data.titles[i].artist+" - "+data.titles[i].title );
+                	  			items[i+1]=clickline( 0x080c, data.titles[i].key, 
+                	  				"&#x25B6; "+data.titles[i].artist+" - "+data.titles[i].title );
                 			}
               			}
 					}
 					else {
-						items[0]="<em>No titles found!</em>";
+						items[0]=document.createElement('em');
+						items[0].innerHTML="No titles found!";
 					}
 		            tabify( e, "tres", items );
 					e=document.getElementById('search1');
@@ -536,15 +581,18 @@ function updateUI( ){
 					if( data.artists.length > 0 ) {
 						for( i=0; i<data.artists.length; i++ ) {
         			        if( data.mpedit ) {
-        			        	items[i]=clickline2( 0x0209, 0x0213, data.artists[i], "&hearts; "+data.artists[i] );
+        			        	items[i]=clickline2( 0x0209, 0x0213, data.artists[i], 
+        			        		"&hearts; "+data.artists[i] );
                 			}
                 			else {
-			                	items[i]=clickline( 0x0213, data.artists[i], "&#x1F50E; "+data.artists[i] );
+			                	items[i]=clickline( 0x0213, data.artists[i], 
+			                		"&#x1F50E; "+data.artists[i] );
                 			}
 						}
 					}
 					else {
-						items[0]="<em>No artists found!</em>";
+						items[0]=document.createElement('em');
+						items[0].innerHTML="No artists found!";
 					}
 		            tabify( e, "ares", items );
 						e=document.getElementById('search2');
@@ -552,15 +600,18 @@ function updateUI( ){
 						if( data.albums.length > 0 ) {
 							for( i=0; i<data.albums.length; i++ ) {
                 				if( data.mpedit ) {
-                  					items[i]=clickline2( 0x0409, 0x0413, data.albums[i], "&hearts; "+data.albart[i]+" - "+data.albums[i] );
+                  					items[i]=clickline2( 0x0409, 0x0413, data.albums[i], 
+                  						"&hearts; "+data.albart[i]+" - "+data.albums[i] );
                 				}
                 				else {
-                  					items[i]=clickline( 0x0413, data.albums[i], "&#x1F50E; "+data.albart[i]+" - "+data.albums[i] );
+                  					items[i]=clickline( 0x0413, data.albums[i], 
+                  						"&#x1F50E; "+data.albart[i]+" - "+data.albums[i] );
                 				}
 							}
 						}
 						else {
-							items[0]="<em>No albums found!</em>";
+							items[0]=document.createElement('em');
+							items[0].innerHTML="No albums found!";
 						}
 			            tabify( e, "lres", items );
 						if( data.titles.lenght == 0 ) {
@@ -573,11 +624,12 @@ function updateUI( ){
 						e=document.getElementById("search3");
             			items=[];
 						if( data.dnplist.length == 0 ) {
-							items[0]="<em>No DNPs yet</em>";
+							items[0]=document.createElement('em');
+							items[0].innerHTML="No DNPs yet";
 						}
 						else {
 							for( i=0; i<data.dnplist.length; i++) {
-								items[i]=getPattern(data.dnplist[i],"0x001a");
+								items[i]=getPattern(0x001a,data.dnplist[i]);
 							}
 						}
             			tabify( e, "dlist", items );
@@ -585,11 +637,12 @@ function updateUI( ){
 						e=document.getElementById("search4");
             			items=[];
 						if( data.favlist.length == 0 ) {
-							items[0]="<em>No Favourites yet</em>";
+							items[0]=document.createElement('em');
+							items[0].innerHTML="No favourites yet";
 						}
 						else {
 							for( i=0; i<data.favlist.length; i++) {
-								items[i]=getPattern(data.favlist[i],"0x001b");
+								items[i]=getPattern(0x001b,data.favlist[i]);
 							}
 						}
             			tabify( e, "flist", items );
