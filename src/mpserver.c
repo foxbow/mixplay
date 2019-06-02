@@ -117,7 +117,7 @@ static void *clientHandler(void *args ) {
 	size_t len=0;
 	size_t sent, msglen;
 	struct timeval to;
-	int running=-1;
+	int running=1;
 	char *commdata=NULL;
 	char *jsonLine=NULL;
 	fd_set fds;
@@ -151,9 +151,8 @@ static void *clientHandler(void *args ) {
 
 	/* this one may terminate all willy nilly */
 	pthread_detach(pthread_self());
-	addNotifyHook( &mps_notify, &nextstat );
 	addMessage( 2, "Client handler started" );
-	while( running && ( config->status!=mpc_quit ) ) {
+	while( ( running & 1 ) && ( config->status!=mpc_quit ) ) {
 		FD_ZERO( &fds );
 		FD_SET( sock, &fds );
 
@@ -172,11 +171,11 @@ static void *clientHandler(void *args ) {
 			switch( retval ) {
 			case -1:
 				addMessage( 1, "Read error on socket!\n%s", strerror( errno ) );
-				running=0;
+				running&=~1;
 				break;
 			case 0:
 				addMessage( 1, "Client disconnected");
-				running=0;
+				running&=~1;
 				break;
 			default:
 				toLower( commdata );
@@ -245,7 +244,6 @@ static void *clientHandler(void *args ) {
 							flen=static_mprc_html_len;
 							mtype="text/html; charset=utf-8";
 							state=5;
-
 						}
 						else if( strstr( pos, "/mixplay.css " ) == pos ) {
 							pthread_mutex_lock(&_sendlock);
@@ -301,14 +299,14 @@ static void *clientHandler(void *args ) {
 							else {
 								send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
 								state=0;
-								running=0;
+								running&=~1;
 							}
 						}
 						else if( strstr( pos, "/favicon.ico " ) == pos ) {
 							/* ignore for now */
 							send( sock, "HTTP/1.1 204 No Content\015\012\015\012", 28, 0 );
 							state=0;
-							running=0;
+							running&=~1;
 						}
 						else if( strstr( pos, "/config ") == pos ) {
 							state=6;
@@ -320,7 +318,7 @@ static void *clientHandler(void *args ) {
 							addMessage( 0, "Illegal get %s", pos );
 							send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
 							state=0;
-							running=0;
+							running&=~1;
 						}
 					}
 				} /* /get command */
@@ -334,6 +332,12 @@ static void *clientHandler(void *args ) {
 			memset( commdata, 0, commsize );
 			switch( state ) {
 			case 1: /* get update */
+				/* an update client! Good, that one should get status updates too! */
+				if( running == 1 ) {
+					addMessage(1,"Update Handler (%u) initialized", &nextstat );
+					addNotifyHook( &mps_notify, &nextstat );
+					running|=2;
+				}
 				/* normal update requested, is a special update needed? */
 				if( config->found->send == 1 ) {
 					fullstat |= MPCOMM_RESULT;
@@ -430,13 +434,13 @@ static void *clientHandler(void *args ) {
 					pthread_mutex_unlock(&_sendlock);
 				}
 				len=0;
-				running=0;
+				running&=~1;
 				break;
 			case 7: /* get current build version */
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
 						(int)strlen(VERSION), VERSION );
 				len=strlen(commdata);
-				running=0;
+				running&=~1;
 				break;
 				/* todo: attachment or inline? */
 			case 8: /* send mp3 */
@@ -448,7 +452,7 @@ static void *clientHandler(void *args ) {
 				filePost( sock, fullpath(title->path) );
 				title=NULL;
 				len=0;
-				running=0;
+				running&=~1;
 				break;
 
 			case 9: /* return "artist - title" line */
@@ -456,7 +460,7 @@ static void *clientHandler(void *args ) {
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
 						(int)strlen(line), line );
 				len=strlen(commdata);
-				running=0;
+				running&=~1;
 				break;
 
 			default:
@@ -491,7 +495,10 @@ static void *clientHandler(void *args ) {
 			}
 		} /* if running & !mpc_start */
 	}
-	removeNotifyHook( &mps_notify, &nextstat );
+	if( running & 2 ) {
+		removeNotifyHook( &mps_notify, &nextstat );
+		addMessage(1,"Update Handler (%u) terminates", &nextstat );
+	}
 
 	addMessage( 2, "Client handler exited" );
 	unlockClient( sock );
