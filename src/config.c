@@ -838,12 +838,12 @@ static void removeHook( void (*func)( void* ), void *arg, _mpFunc **list ) {
 	_mpFunc *pos=*list;
 	_mpFunc *pre=NULL;
 
+	pthread_mutex_lock(&_cblock);
+
 	if( pos == NULL ) {
 		addMessage( 0 ,"Empty callback list!" );
 		return;
 	}
-
-	pthread_mutex_lock(&_cblock);
 
 	/* does the callback to be removed lead the list? */
 	if( ( pos->func == func ) && ( pos->arg == arg ) ){
