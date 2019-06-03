@@ -961,10 +961,15 @@ void *reader( ) {
 				}
 
 				if( ( control->current->title->key != 0 ) &&
-					!( control->current->title->flags & ( MP_CNTD ) ) &&
-					!( control->current->title->flags & ( MP_MARK ) ) ) {
+					!( control->current->title->flags & MP_CNTD ) ) {
 					control->current->title->skipcount++;
+					addMessage(1,"Skipped");
 					/* updateCurrent( control ); - done in STOP handling */
+				}
+				else {
+					addMessage(1,"Not skipped %i, COUNT: %s",
+						control->current->title->key,
+						ONOFF(control->current->title->flags & MP_CNTD) );
 				}
 
 				dowrite( p_command[fdset][1], "STOP\n", 6 );

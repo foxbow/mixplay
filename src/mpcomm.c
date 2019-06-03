@@ -76,7 +76,7 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplayli
 		jsonAddStr( val, "title", title->title );
 		jsonAddInt( val, "flags", title->flags );
 		jsonAddStr( val, "genre", title->genre );
-		if( getDebug() > 1 ) {
+		if( getDebug() ) {
 			jsonAddInt( val, "playcount", title->playcount );
 			jsonAddInt( val, "skipcount", title->skipcount );
 		}
@@ -88,7 +88,7 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplayli
 		jsonAddStr( val, "title", getCurrentActivity() );
 		jsonAddInt( val, "flags", 0 );
 		jsonAddStr( val, "genre", "-" );
-		if( getDebug() > 1 ) {
+		if( getDebug() ) {
 			jsonAddInt( val, "playcount", title->playcount );
 			jsonAddInt( val, "skipcount", title->skipcount );
 		}

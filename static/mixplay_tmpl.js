@@ -498,8 +498,12 @@ function updateUI( ){
 							setElement( 'prev', data.prev[0].artist+" - "+data.prev[0].title );
 	              		}
 						for( i = Math.min( 4, data.prev.length-1 ); i >= 0 ; i-- ) {
+              titleline="";
+              if( data.prev[i].playcount >= 0 ) {
+                titleline+="["+data.prev[i].playcount+"/"+data.prev[i].skipcount+"] ";
+              }
 							cline=cmdline(0x0002, (i+1),
-								data.prev[i].artist+" - "+data.prev[i].title );
+								titleline+data.prev[i].artist+" - "+data.prev[i].title );
 							e.appendChild(cline);
 						}
 					}
@@ -510,7 +514,11 @@ function updateUI( ){
 					setElement( 'artist', data.current.artist );
 					setElement( 'album', data.current.album );
 					setElement( 'genre', data.current.genre );
-					cline=cmdline(0x0000, "", "<em>"+data.current.artist+" - "+data.current.title+"</em>" );
+          titleline="";
+          if( data.current.playcount >= 0 ) {
+            titleline+="["+data.current.playcount+"/"+data.current.skipcount+"] ";
+          }
+					cline=cmdline(0x0000, "", "<em>"+titleline+data.current.artist+" - "+data.current.title+"</em>" );
 					cline.style.backgroundColor='#ddd';
 					e.appendChild(cline);
 					if( data.next.length > 0 ) {
@@ -536,7 +544,7 @@ function updateUI( ){
 							cline.value='X';
 							e.appendChild(cline);
 							titleline="";
-	              			if( data.next[i].playcount >= 0 ) {
+	            if( data.next[i].playcount >= 0 ) {
 								titleline+="["+data.next[i].playcount+"/"+data.next[i].skipcount+"] ";
 							}
 							titleline+=data.next[i].artist+" - "+data.next[i].title;

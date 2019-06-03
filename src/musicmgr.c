@@ -312,6 +312,10 @@ mpplaylist *remFromPLByKey( mpplaylist *root, const unsigned key ) {
 	}
 
 	if( pl != NULL ) {
+		/* This may be too hard */
+		if( !( pl->title->flags & MP_CNTD ) ) {
+			pl->title->skipcount++;
+		}
 		if( pl->prev != NULL ) {
 			pl->prev->next=pl->next;
 		}
