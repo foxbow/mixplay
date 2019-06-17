@@ -21,12 +21,12 @@ struct mptitle_t {
 	char artist[NAMELEN];		/* Artist info */
 	char title[NAMELEN];		/* Title info (from mp3) */
 	char album[NAMELEN];		/* Album info (from mp3) */
-	unsigned int playcount;		/* play counter */
-	unsigned int skipcount;		/* skip counter */
+	unsigned playcount;		/* play counter */
+	unsigned skipcount;		/* skip counter */
 	char genre[NAMELEN];
-	unsigned int key;			/* DB key/index  - internal */
+	unsigned key;			/* DB key/index  - internal */
 	char display[MAXPATHLEN];	/* Title display - internal */
-	unsigned int flags;			/* 1=favourite   - internal */
+	unsigned flags;			/* 1=favourite   - internal */
 	mptitle *prev;				/* database pointer */
 	mptitle *next;
 };
@@ -77,6 +77,7 @@ mptitle *wipeTitles( mptitle *root );
 int search( const char *pat, const mpcmd range );
 int playResults( mpcmd range, const char *arg, const int insert );
 
+void markSkip( mptitle *title );
 int DNPSkip( void );
 void applyLists( void );
 int searchPlay( const char *pat, unsigned num, const int global );

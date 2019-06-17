@@ -122,7 +122,7 @@ struct _mpcontrol_t {
 	mpcmd status;					/* status of the player/system */
 	pthread_t rtid;				/* thread ID of the reader */
 	pthread_t stid;				/* thread ID of the server */
-	int skipdnp;				/* how many skips mean dnp? */
+	unsigned skipdnp;				/* how many skips mean dnp? */
 	int volume;					/* current volume [0..100] */
 	char *channel;				/* the name of the ALSA master channel */
 	int verbosity;

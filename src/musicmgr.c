@@ -314,7 +314,7 @@ mpplaylist *remFromPLByKey( mpplaylist *root, const unsigned key ) {
 	if( pl != NULL ) {
 		/* This may be too hard */
 		if( !( pl->title->flags & MP_CNTD ) ) {
-			pl->title->skipcount++;
+			markSkip(pl->title);
 		}
 		if( pl->prev != NULL ) {
 			pl->prev->next=pl->next;
@@ -1157,6 +1157,13 @@ static mptitle *skipOver( mptitle *current, int dir ) {
 	}
 
 	return marker;
+}
+
+void markSkip( mptitle *title ) {
+	title->skipcount++;
+	if( title->skipcount > getConfig()->skipdnp ) {
+		title->flags |= MP_DNP;
+	}
 }
 
 /**
