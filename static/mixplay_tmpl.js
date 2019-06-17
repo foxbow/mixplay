@@ -905,6 +905,17 @@ function download(key=0) {
 	}
 }
 
+/**
+ * helper function to react on enter in a text
+ * input without form
+ */
+function isEnter( event, cmd ){
+    if( event.keyCode == 13) {
+		    sendArg(cmd);
+        return false;
+    }
+}
+
 /*
  * start the UI update thread loops
  */
