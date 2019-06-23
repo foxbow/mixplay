@@ -369,13 +369,19 @@ static void playCount( mptitle *title ) {
 	}
 
 	/* marked - default play, not marked - searchplay */
-	if ( (title->flags&MP_MARK) && !(title->flags&MP_CNTD) ) {
-		title->flags |= MP_CNTD; /* make sure a title is only counted once per session */
-		title->playcount++;
-		if( title->skipcount > 0 ) {
-			title->skipcount--;
+	if ( title->flags&MP_MARK ) {
+		if ( title->flags&MP_CNTD ) {
+			/* this usually means something is amiss! */
+			addMessage(0,"%s already counted!", title->display );
 		}
-		dbMarkDirty();
+		else {
+			title->flags |= MP_CNTD; /* make sure a title is only counted once per session */
+			title->playcount++;
+			if( title->skipcount > 0 ) {
+				title->skipcount--;
+			}
+			dbMarkDirty();
+		}
 	}
 }
 
