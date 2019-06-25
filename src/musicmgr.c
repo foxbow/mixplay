@@ -565,19 +565,19 @@ int search( const char *pat, const mpcmd range ) {
 			/* check for searchrange and pattern */
 			if( MPC_ISTITLE(range) &&
 					isMatch( runner->title, pat, MPC_ISFUZZY(range) ) ) {
-				found=1;
+				found=mpc_title;
 			}
 			if( MPC_ISDISPLAY( range ) &&
 					isMatch( runner->display, pat, MPC_ISFUZZY(range) ) ) {
-				found=1;
+				found=mpc_display;
 			}
 			if( MPC_ISARTIST(range) &&
 					isMatch( runner->artist, pat, MPC_ISFUZZY(range) ) ) {
-				found=1;
+				found=mpc_artist;
 			}
 			if( MPC_ISALBUM( range ) &&
 					isMatch( runner->album, pat, MPC_ISFUZZY(range) ) ) {
-				found=1;
+				found=mpc_album;
 			}
 			/* todo: genre and path are missing here */
 			if( found ) {
@@ -602,12 +602,15 @@ int search( const char *pat, const mpcmd range ) {
 					addMessage(1, "%s is considered a sampler (%s <> %s).", runner->album, runner->artist, res->albart[i] );
 					res->albart[i]=ARTIST_SAMPLER;
 				}
-			}
 
-			/* add titles too */
-			if( ( found != 0 ) && ( cnt++ < MAXSEARCH ) ) {
-				res->titles=appendToPL( runner, res->titles, 0 );
-				res->tnum++;
+				/* add titles too */
+				if( ( cnt++ < MAXSEARCH ) &&
+						(	MPC_ISARTIST( found ) || MPC_ISTITLE( found ) ||
+						  MPC_ISDISPLAY(found) ||
+						  MPC_EQALBUM( range ) || MPC_EQARTIST( range ) ) ) {
+					res->titles=appendToPL( runner, res->titles, 0 );
+					res->tnum++;
+				}
 			}
 		}
 		runner=runner->next;
@@ -1261,26 +1264,19 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 	/* skip forward until a title is found that is neither DNP nor MARK */
 	num = countTitles( MP_ALL, MP_DNP|MP_MARK|MP_CNTD );
 	if( num == 0 ) {
-		addMessage(0, "No titles to be played!" );
-		return NULL;
+		num = countTitles( MP_ALL, MP_DNP|MP_MARK );
+		if( num == 0 ) {
+			addMessage(-1, "No titles to be played!" );
+			return NULL;
+		}
+		addMessage(0, "All titles played, next round!" );
+		newCount();
 	}
 	runner=skipTitles( runner, rand()%num );
 
 	if( runner==NULL ) {
-		if( pl == NULL ) {
-			addMessage( 0, "No titles in database and no playlist to add them to.." );
-			return NULL;
-		}
-		runner=pl->title;
-		addMessage( 0, "Next round!" );
-		newCount( );
-		/* Try again */
-		num = countTitles( MP_ALL, MP_DNP|MP_MARK|MP_CNTD );
-		runner=skipTitles( runner, rand()%num );
-		if( runner == NULL ) {
-			addMessage( -1, "No more titles in the database!?" );
-			return NULL;
-		}
+		addMessage( -1, "No titles in the database!?" );
+		return NULL;
 	}
 
 	cycles=0;
@@ -1332,9 +1328,11 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 				activity( "Playcountskipping" );
 				/* simply pick a new title at random to avoid edge cases */
 				runner=skipTitles( runner, rand()%num );
-				valid=0;
 
-				if( (runner == NULL ) || ( guard == runner ) ) {
+				if( runner != NULL ) {
+					valid=0;
+				}
+				else {
 					pcount++;	/* allow more replays */
 					getConfig()->playcount=pcount;
 					addMessage( 1, "Increasing maxplaycount to %li", pcount );
@@ -1343,8 +1341,9 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 			}
 		}
 
+		/* 10 may not be enough in practice */
 		if( ++cycles > 10 ) {
-			addMessage( 1, "Looks like we ran into a loop" );
+			addMessage( 0, "Looks like we ran into a loop!" );
 			cycles=0;
 			pcount++;	/* allow replays */
 			getConfig()->playcount=pcount;
