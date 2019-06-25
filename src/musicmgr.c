@@ -646,9 +646,9 @@ static int applyDNPlist( struct marklist_t *list ) {
 			if( matchTitle( pos, ptr->dir ) ) {
 				addMessage( 3, "[D] %s: %s", ptr->dir, pos->display );
 				pos->flags |= MP_DNP;
+				cnt++;
 				break;
 			}
-
 			ptr=ptr->next;
 		}
 
@@ -1145,7 +1145,6 @@ static mptitle *skipOver( mptitle *current, int dir ) {
 	mptitle *marker=current;
 
 	while( marker->flags & ( MP_DNP|MP_MARK|MP_CNTD ) ) {
-		activity("skipping");
 		if( dir > 0 ) {
 			marker=marker->next;
 		}
@@ -1313,7 +1312,7 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 		/* title did not pass playcountcheck and we are not in stuffing mode */
 		while( (valid & 2 ) != 2 ) {
 			/* ignore favourites rule on favplay */
-			if( runner->flags & MP_FAV && (!getProfile()->favplay )) {
+			if( ( runner->flags & MP_FAV ) && (!getProfile()->favplay )) {
 				if ( runner-> playcount <= 2*pcount ) {
 					valid|=2;
 				}
@@ -1327,16 +1326,18 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 			if( ( valid & 2 ) != 2 ) {
 				activity( "Playcountskipping" );
 				/* simply pick a new title at random to avoid edge cases */
-				runner=skipTitles( runner, rand()%num );
+				/* runner=skipTitles( runner, rand()%num ); */
+				/* revert to old handling */
+				/* TODO check if this is better or worse.. */
+				runner=skipTitles( runner, 1 );
 
-				if( runner != NULL ) {
-					valid=0;
-				}
-				else {
+				if( runner == guard ) {
 					pcount++;	/* allow more replays */
 					getConfig()->playcount=pcount;
 					addMessage( 1, "Increasing maxplaycount to %li", pcount );
-					runner=guard;
+				}
+				else {
+					valid=0;
 				}
 			}
 		}
