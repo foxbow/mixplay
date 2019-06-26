@@ -969,6 +969,7 @@ void *reader( ) {
 				if( ( control->current->title->key != 0 ) &&
 					!( control->current->title->flags & MP_CNTD ) ) {
 					markSkip(control->current->title);
+					control->current->title->skipcount++;
 					addMessage(1,"Skipped");
 					/* updateCurrent( control ); - done in STOP handling */
 				}
