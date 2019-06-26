@@ -1443,7 +1443,7 @@ void plCheck( int del ) {
 						pl->next->prev=pl->prev;
 						/* do not accidentally destroy the current title */
 						if( pl == getConfig()->current ) {
-							getConfig->current=buf;
+							getConfig()->current=buf;
 						}
 						free(pl);
 						pl=buf;
