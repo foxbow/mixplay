@@ -1144,6 +1144,11 @@ unsigned getLowestPlaycount( void ) {
 static mptitle *skipOver( mptitle *current, int dir ) {
 	mptitle *marker=current;
 
+	if( marker == NULL ) {
+		addMessage( 0, "No current title to skip over!" );
+		return NULL;
+	}
+
 	while( marker->flags & ( MP_DNP|MP_MARK|MP_CNTD ) ) {
 		if( dir > 0 ) {
 			marker=marker->next;
@@ -1352,13 +1357,13 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 		}
 	} /* while( valid != 3 ) */
 
-	addMessage( 3, "[+] (%i/%li/%3s) %s", runner->playcount, pcount, ONOFF( runner->flags&MP_FAV ), runner->display );
+	addMessage( 1, "[+] (%i/%li/%3s) %5d %s", runner->playcount, pcount,
+			ONOFF( runner->flags&MP_FAV ), runner->key, runner->display );
 
 	/* count again in case this is a favourite */
 	if( runner->flags & MP_FAV ) {
 		runner->flags &= ~MP_CNTD;
 	}
-	addMessage(2,"Added %2d %5d - %s", runner->playcount, runner->key, runner->display );
 	return appendToPL( runner, pl, -1 );
 }
 
@@ -1436,6 +1441,10 @@ void plCheck( int del ) {
 							pl->prev->next=pl->next;
 						}
 						pl->next->prev=pl->prev;
+						/* do not accidentally destroy the current title */
+						if( pl == getConfig()->current ) {
+							getConfig->current=buf;
+						}
 						free(pl);
 						pl=buf;
 						cnt--;
