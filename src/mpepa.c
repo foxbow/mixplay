@@ -50,6 +50,10 @@ static void *_update( ) {
 
 	while( getConfig()->command != mpc_quit ) {
 		pthread_mutex_lock( &_updatelock );
+		/* don't update on exit! */
+		if( getConfig()->command == mpc_quit ) {
+			continue;
+		}
 		current=getConfig()->current;
 		epsWipeFull( epm_both );
 
