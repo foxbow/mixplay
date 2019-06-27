@@ -647,7 +647,7 @@ static int applyDNPlist( struct marklist_t *list ) {
 		while( ptr ) {
 			if( matchTitle( pos, ptr->dir ) ) {
 				addMessage( 3, "[D] %s: %s", ptr->dir, pos->display );
-				pos->flags |= MP_DNP;
+				pos->flags = MP_DNP;
 				cnt++;
 				break;
 			}
@@ -689,15 +689,15 @@ static int applyFAVlist( struct marklist_t *favourites, int excl ) {
 		return -1;
 	}
 
+	if( favourites == NULL ) {
+		return 0;
+	}
+
 	if( excl ) {
 		do {
 			runner->flags = MP_DNP;
 			runner=runner->next;
 		} while( runner != root );
-	}
-
-	if( favourites == NULL ) {
-		return 0;
 	}
 
 	do {
@@ -706,13 +706,13 @@ static int applyFAVlist( struct marklist_t *favourites, int excl ) {
 
 		while( ptr ) {
 			if( matchTitle( runner, ptr->dir ) ) {
-				addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
 				if( !( runner->flags & MP_FAV ) ) {
 					if( excl ) {
+						addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
 						runner->flags=MP_FAV;
 					}
-					else {
-						runner->flags&=~MP_DNP;
+					else if( !(runner->flags & MP_DNP ) ) {
+						addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
 						runner->flags|=MP_FAV;
 					}
 					cnt++;
@@ -735,16 +735,11 @@ static int applyFAVlist( struct marklist_t *favourites, int excl ) {
 void applyLists( void ) {
 	mpconfig *control=getConfig();
 
-	if( getProfile()->favplay ) {
-		pthread_mutex_lock( &_pllock );
-		applyFAVlist( control->favlist, 1 );
-		applyDNPlist( control->dnplist );
-		pthread_mutex_unlock( &_pllock );
-	}
-	else {
-		applyDNPlist( control->dnplist );
-		applyFAVlist( control->favlist, 0 );
-	}
+	pthread_mutex_lock( &_pllock );
+	applyFAVlist( control->favlist, getProfile()->favplay );
+	applyDNPlist( control->dnplist );
+	pthread_mutex_unlock( &_pllock );
+
 	if( control->skipdnp ) {
 		DNPSkip( );
 	}
@@ -1346,7 +1341,7 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 				if( runner == guard ) {
 					pcount++;	/* allow more replays */
 					getConfig()->playcount=pcount;
-					addMessage( 1, "Increasing maxplaycount to %li", pcount );
+					addMessage( 1, "Increasing maxplaycount to %li (skip)", pcount );
 				}
 				else {
 					valid=0;
@@ -1356,11 +1351,10 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 
 		/* 10 may not be enough in practice */
 		if( ++cycles > 10 ) {
-			addMessage( 0, "Looks like we ran into a loop!" );
 			cycles=0;
 			pcount++;	/* allow replays */
 			getConfig()->playcount=pcount;
-			addMessage( 1, "Increasing maxplaycount to %li", pcount );
+			addMessage( 1, "Increasing maxplaycount to %li (loop)", pcount );
 		}
 	} /* while( valid != 3 ) */
 
