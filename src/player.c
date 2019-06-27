@@ -539,6 +539,8 @@ void *reader( ) {
 	/* these may wait in the background until */
 	/* something needs to be played at all */
 	for( i=0; i <= control->fade; i++ ) {
+		addMessage(  2, "Starting player %i", i+1 );
+
 		/* create communication pipes */
 		if( ( pipe( p_status[i] ) != 0 ) || ( pipe( p_command[i] ) != 0 ) ) {
 			fail( errno, "Could not create pipes!" );
@@ -554,8 +556,6 @@ void *reader( ) {
 
 		/* child process */
 		if ( 0 == pid[i] ) {
-			addMessage(  2, "Starting player %i", i+1 );
-
 			if ( dup2( p_command[i][0], STDIN_FILENO ) != STDIN_FILENO ) {
 				fail( errno, "Could not dup stdin for player %i", i+1 );
 			}
