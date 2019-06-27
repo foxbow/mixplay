@@ -113,7 +113,8 @@ static int getListPath( char path[MAXPATHLEN], mpcmd cmd ) {
 
 /**
  * always resets the marked flag and
- * resets the counted and skipped flag on all titles if at least 50% of the titles have been counted
+ * resets the counted and skipped flag on all titles if at least 50% of the
+ * titles have been counted
  */
 void newCount( ) {
 	mptitle *root=getConfig()->root;
@@ -599,7 +600,8 @@ int search( const char *pat, const mpcmd range ) {
 				}
 				else if( !strcmp( res->albart[i], ARTIST_SAMPLER ) &&
 						strcmp( res->albart[i], runner->artist ) ){
-					addMessage(1, "%s is considered a sampler (%s <> %s).", runner->album, runner->artist, res->albart[i] );
+					addMessage(1, "%s is considered a sampler (%s <> %s).",
+							runner->album, runner->artist, res->albart[i] );
 					res->albart[i]=ARTIST_SAMPLER;
 				}
 
@@ -955,7 +957,8 @@ mptitle *loadPlaylist( const char *path ) {
 	if( !fp ) {
 		/* try standard playlist directory */
 		/* getenv("HOME") was valid before already.. */
-		snprintf( titlePath, MAXPATHLEN-1, "%s/.mixplay/playlists/%s", getenv("HOME"), path );
+		snprintf( titlePath, MAXPATHLEN-1, "%s/.mixplay/playlists/%s",
+				getenv("HOME"), path );
 		fp=fopen( titlePath, "r" );
 		if( !fp ) {
 			addMessage( 0, "Could not open playlist %s", path );
@@ -977,7 +980,8 @@ mptitle *loadPlaylist( const char *path ) {
 				snprintf( titlePath, MAXPATHLEN, "%s%s", mdir, buff );
 				strtcpy( buff, titlePath, MAXPATHLEN );
 			}
-			strip( titlePath, buff, MAXPATHLEN ); /* remove control chars like CR/LF */
+			 /* remove control chars like CR/LF */
+			strip( titlePath, buff, MAXPATHLEN );
 			current=insertTitle( current, titlePath );
 			cnt++;
 			/* turn list into playlist too */
@@ -1189,7 +1193,8 @@ int DNPSkip( void ) {
 
 		if( runner->skipcount > level ) {
 			runner->flags |= MP_DNP;
-			addMessage( 2, "Marked %s as DNP after %i skips", runner->display, runner->skipcount );
+			addMessage( 2, "Marked %s as DNP after %i skips",
+					runner->display, runner->skipcount );
 			skipskip++;
 		}
 
@@ -1306,10 +1311,12 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 			addMessage( 3, "%s != %s", runner->artist, lastpat==NULL?"---":lastpat );
 
 			if( guard != runner ) {
-				valid=1; /* we skipped and need to check playcount */
+				/* we skipped and need to check playcount */
+				valid=1;
 			}
 			else {
-				valid |= 1; /* we did not skip, so if playcount was fine it's still fine */
+				/* we did not skip, so if playcount was fine it's still fine */
+				valid |= 1;
 			}
 		}
 
@@ -1472,7 +1479,7 @@ void plCheck( int del ) {
  * Steps recursively through a directory and collects all music files in a list
  * curdir: current directory path
  * files:  the list to store filenames in
- * returns the LAST entry of the list. So the next item is the first in the list
+ * returns the LAST entry of the list.
  */
 mptitle *recurse( char *curdir, mptitle *files ) {
 	char dirbuff[2*MAXPATHLEN];
@@ -1615,10 +1622,12 @@ void dumpInfo( mptitle *root, unsigned int skip ) {
 }
 
 /**
- * Copies the given title to the target and turns the name into 'track###.mp3' with ### being the index.
+ * Copies the given title to the target and turns the name into 'track###.mp3'
+ * with ### being the index.
  * Returns -1 when the target runs out of space.
  */
-static int copyTitle( mptitle *title, const char* target, const unsigned int index ) {
+static int copyTitle( mptitle *title, const char* target,
+		const unsigned int index ) {
 	int in=-1, out=-1, rv=-1;
 	size_t len;
 	char filename[MAXPATHLEN];
@@ -1737,19 +1746,19 @@ int handleRangeCmd( mptitle *title, mpcmd cmd ) {
 	if( addRangePrefix(line, cmd) == 0 ) {
 		switch( MPC_RANGE(cmd) ) {
 		case mpc_title:
-			strtcat( line, title->title, NAMELEN );
+			strltcat( line, title->title, NAMELEN );
 			break;
 		case mpc_artist:
-			strtcat( line, title->artist, NAMELEN );
+			strltcat( line, title->artist, NAMELEN );
 			break;
 		case mpc_album:
-			strtcat( line, title->album, NAMELEN );
+			strltcat( line, title->album, NAMELEN );
 			break;
 		case mpc_genre:
-			strtcat( line, title->genre, NAMELEN );
+			strltcat( line, title->genre, NAMELEN );
 			break;
 		case mpc_display:
-			strtcat( line, title->display, MAXPATHLEN );
+			strltcat( line, title->display, MAXPATHLEN );
 			break;
 		default:
 			addMessage( 0, "Illegal range 0x%04x", MPC_RANGE(cmd) );
@@ -1837,7 +1846,8 @@ int playResults( mpcmd range, const char *arg, const int insert ) {
 				return 0;
 			}
 			if( config->found->titles == NULL ) {
-				addMessage( 0, "%i titles found but none in list!", config->found->tnum );
+				addMessage( 0, "%i titles found but none in list!",
+						config->found->tnum );
 				return 0;
 			}
 
@@ -1869,14 +1879,15 @@ int playResults( mpcmd range, const char *arg, const int insert ) {
 			return 0;
 		}
 		/*
-		 * do not count this title as played and do not mark it skipped during this play
-		 * this will be reverted after play if needed.
+		 * do not count this title as played and do not mark it skipped during
+		 * this play this will be reverted after play if needed.
 		 */
 		title->flags|=MP_CNTD;
 		/*
-		 * Do not touch marking, we searched the title so it's playing out of order.
-		 * It has been played before? Don't care, we want it now and it won't come back!
-		 * It's not been played before? Then play it now and whenever it's time comes.
+		 * Do not touch marking, we searched the title so it's playing out of
+		 * order. It has been played before? Don't care, we want it now and it
+		 * won't come back! It's not been played before? Then play it now and
+		 * whenever it's time comes.
 		 */
 		pos=addToPL( title, pos, 0 );
 		if( config->current == NULL ) {

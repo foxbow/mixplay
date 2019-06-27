@@ -788,8 +788,9 @@ void *reader( ) {
 						/* we're playing a playlist */
 						else if( control->current != NULL ){
 							addMessage(2,"Title change on player %i", fdset );
-							/* should the playcount be increased? */
-							if( control->fade == 0 ) {
+							/* TODO: this will increase playcount on skipped titles too
+							         is this expected? */
+							if( ( order == 1 ) && ( control->fade == 0 ) ) {
 								playCount( control->current->title );
 							}
 
