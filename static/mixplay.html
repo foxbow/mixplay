@@ -88,16 +88,15 @@
         <input id='rescan' type='button' onclick='sendCMD(0x08)' value='ReScan' >
         <input id='dbinfo' type='button' onclick='sendCMD(0x12)' value='DBInfo' >
       </p>
-      <input id='cdnpfav0' class='cmd' style='background-color: #ddd;' type='button' onclick='toggleTab(this)' value='&#x2630; DNP' >
-      <input id='cdnpfav1' class='cmd' type='button' onclick='toggleTab(this)' value='&#x2630; FAV' >
-      <div id='dnpfav0' style='display: block; width:100%;'><em>No DNPs</em></div>
-      <div id='dnpfav1' style='display: none; width:100%;'><em>No Favourites</em></div>
     </div>
     <!-- Playlist view -->
     <div id='extra3' style='display: none; width: 100%;' >
-      <div id='plist'>
-        <em>No Playlist.</em><br>
-      </div>
+      <input id='cdnpfav0' class='cmd' style='background-color: #ddd;' type='button' onclick='toggleTab(this)' value='&#x2630; Playlist' >
+      <input id='cdnpfav1' class='cmd' type='button' onclick='toggleTab(this)' value='&#x2630; DNP' >
+      <input id='cdnpfav2' class='cmd' type='button' onclick='toggleTab(this)' value='&#x2630; FAV' >
+      <div id='dnpfav0' style='display: block; width:100%;'><em>No Playlist</em></div>
+      <div id='dnpfav1' style='display: none; width:100%;'><em>No DNPs</em></div>
+      <div id='dnpfav2' style='display: none; width:100%;'><em>No Favourites</em></div>
     </div>
     <!-- Message view -->
     <div id='extra4' style='display: none; width: 100%;' >
