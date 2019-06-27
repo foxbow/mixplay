@@ -1434,20 +1434,15 @@ void plCheck( int del ) {
 			/* go to the end of the playlist */
 			while( pl->next != NULL ) {
 				/* clean up on the way to remove DNP marked or deleted files? */
-				if( del != 0 ) {
+				if( ( del != 0 ) && ( pl != getConfig()->current ) ) {
 					if ( ( pl->title->flags | MP_DNP ) || ( !mp3Exists( pl->title ) ) ){
 						buf=pl->next;
 						if( pl->prev != NULL ) {
 							pl->prev->next=pl->next;
 						}
 						pl->next->prev=pl->prev;
-						/* do not accidentally destroy the current title */
-						if( pl == getConfig()->current ) {
-							getConfig()->current=buf;
-						}
 						free(pl);
 						pl=buf;
-						cnt--;
 					}
 				}
 				else {
