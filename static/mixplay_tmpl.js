@@ -568,7 +568,7 @@ function updateUI( ){
 				if( data.type & 2 ) {
 					toggleTabByRef("search", 0);
 					e=document.getElementById('search0');
-		            items=[];
+		      items=[];
 					if( data.titles.length > 0 ) {
 						if( data.mpedit ) {
 							items[0]=document.createElement('a');
@@ -581,15 +581,15 @@ function updateUI( ){
 							items[0].innerHTML='Play all';
 						}
 						for( i=0; i<data.titles.length; i++ ){
-		              		if( data.mpedit ) {
-                  				items[i+1]=clickline( 0x0809, data.titles[i].key,
-                  					"&hearts; "+data.titles[i].artist+" - "+data.titles[i].title );
+			        if( data.mpedit ) {
+              	items[i+1]=clickline( 0x0809, data.titles[i].key,
+                  "&hearts; "+data.titles[i].artist+" - "+data.titles[i].title );
 							}
-        			        else {
-                	  			items[i+1]=clickline( 0x080c, data.titles[i].key,
-                	  				"&#x25B6; "+data.titles[i].artist+" - "+data.titles[i].title );
-                			}
-              			}
+              else {
+                items[i+1]=clickline( 0x080c, data.titles[i].key,
+                  "&#x25B6; "+data.titles[i].artist+" - "+data.titles[i].title );
+              }
+            }
 					}
 					else {
 						items[0]=document.createElement('em');
@@ -641,7 +641,7 @@ function updateUI( ){
 
 					/* dnp/fav lists */
 					if( data.type & 4 ) {
-						e=document.getElementById("search3");
+						e=document.getElementById("dnpfav0");
             			items=[];
 						if( data.dnplist.length == 0 ) {
 							items[0]=document.createElement('em');
@@ -652,10 +652,10 @@ function updateUI( ){
 								items[i]=getPattern(0x001a,data.dnplist[i]);
 							}
 						}
-            			tabify( e, "dlist", items );
+            tabify( e, "dlist", items );
 
-						e=document.getElementById("search4");
-            			items=[];
+						e=document.getElementById("dnpfav1");
+            items=[];
 						if( data.favlist.length == 0 ) {
 							items[0]=document.createElement('em');
 							items[0].innerHTML="No favourites yet";
@@ -665,7 +665,7 @@ function updateUI( ){
 								items[i]=getPattern(0x001b,data.favlist[i]);
 							}
 						}
-            			tabify( e, "flist", items );
+            tabify( e, "flist", items );
 					}
 
 					/* standard update */

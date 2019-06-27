@@ -399,14 +399,14 @@ static void *plCheckDoublets( ) {
 	if( control->dbDirty > 0 ) {
 		dbWrite( );
 	}
-	addMessage( 0, "Checking for doubles.." );
+	addMessage( 0, "Checking for doublets.." );
 	i=dbNameCheck( control->dbname );
 	if( i > 0 ) {
-		addMessage( 0, "Deleted %i titles", i );
+		addMessage( 0, "Deleted %i doublets", i );
 		plCheck( 1 );
 	}
 	else {
-		addMessage( 0, "No titles deleted" );
+		addMessage( 0, "No doublets found" );
 	}
 	progressEnd( );
 	pthread_mutex_unlock( &_asynclock );;

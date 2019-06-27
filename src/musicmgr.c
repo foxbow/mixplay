@@ -1801,9 +1801,6 @@ int handleRangeCmd( mptitle *title, mpcmd cmd ) {
 		}
 		else if( MPC_CMD(cmd) == mpc_dnp ) {
 			cnt=applyDNPlist( buff );
-			if( cnt > 0 ) {
-				plCheck(1);
-			}
 		}
 	}
 
