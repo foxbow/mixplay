@@ -294,10 +294,10 @@ function setElement (e, val) {
  * show/hide a <div>
  */
 function enableDiv (e, i) {
-  if (i === 0) {
-    document.getElementById(e).style.display = 'none'
-  } else {
+  if (i) {
     document.getElementById(e).style.display = 'block'
+  } else {
+    document.getElementById(e).style.display = 'none'
   }
 }
 
@@ -305,10 +305,10 @@ function enableDiv (e, i) {
  * show/hide an inline element
  */
 function enableButton (e, i) {
-  if (i === 0) {
-    document.getElementById(e).style.display = 'none'
-  } else {
+  if (i) {
     document.getElementById(e).style.display = 'inline'
+  } else {
+    document.getElementById(e).style.display = 'none'
   }
 }
 
