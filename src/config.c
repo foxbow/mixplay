@@ -896,8 +896,12 @@ void progressEnd( void ) {
 	invokeHooks(_pfunc);
 }
 
+/*
+ * a single line that is sent to the current client
+ * this should handled as an alert (e.g.: PopUp) on the client
+ */
 void progressMsg( const char *msg ) {
-	progressStart( "%s", msg );
+	progressStart( "ALERT:%s", msg );
 	progressEnd();
 }
 
