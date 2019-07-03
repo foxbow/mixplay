@@ -79,3 +79,36 @@ a.download {
 	border: none;
 	background: none;
 }
+
+.popselect {
+	position: relative;
+	display: block;
+	cursor: pointer;
+	margin-top: 4px;
+	margin-bottom: 4px;
+	border: none;
+	background: none;
+}
+
+.popselect .popup {
+	visibility: hidden;
+	background-color: #555;
+	color: #fff;
+	text-align: center;
+	border-radius: 6px;
+	padding: 8px;
+	position: absolute;
+	z-index: 1;
+	left: 20px;
+	top: -8px;
+}
+
+.popselect .show {
+  visibility: visible;
+  animation: fadeIn 1s
+}
+
+@keyframes fadeIn {
+  from {opacity: 0;}
+  to {opacity:1 ;}
+}

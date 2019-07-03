@@ -1,7 +1,7 @@
 /* -1: configuration; 0: no update; 1: normal updates */
 var doUpdate = -1
 var data = null
-var mpver = ~~MPCOMM_VER~~
+var mpver = Number('~~MPCOMM_VER~~')
 var serverver = '~~MIXPLAY_VER~~'
 var isstream = 0
 var msglines = ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
@@ -69,7 +69,8 @@ function setScrolls () {
     scroll.offset = offRight
     if (offRight.charAt(0) === '-') {
       element.style.right = offRight
-      element.offsetHeight
+      /* dummy call to force reset of element */
+      right = element.offsetHeight
       element.style.transition = 'right 5s ease-in-out'
     } else {
       element.style.left = (right / 2) + 'px'
@@ -129,7 +130,7 @@ function setProf () {
 }
 
 /*
- * toggle named tab, usually caleld by toggleTab() but also used
+ * toggle named tab, usually called by toggleTab() but also used
  * to set active tab explicitly
  */
 function toggleTabByRef (element, num) {
@@ -182,7 +183,6 @@ function toggleVisibility (element) {
  */
 function killServer () {
   if (window.confirm('Do you really want to stop the Server?')) {
-    toggleVisibility('4')
     sendCMD(0x11)
   }
 }
@@ -231,20 +231,32 @@ function sendCMD (cmd, arg = '') {
     code = '0' + code
   }
 
-  /* filter out commands that make no sense in stream */
+  /* filter out some commands that make no sense in stream */
   if ((isstream) && (
     (code === '0002') ||
     (code === '0003') ||
     (code === '0005') ||
+    (code === '0005') ||
+    (code === '0008') ||
+    (code === '0009') ||
+    (code === '000a') ||
+    (code === '000b') ||
+    (code === '000c') ||
     (code === '000f') ||
     (code === '0010') ||
+    (code === '0012') ||
+    (code === '0013') ||
+    (code === '0014') ||
+    (code === '0019') ||
+    (code === '001c') ||
     (code === '001e'))) return
 
   /* these commands should pull main to front */
-  if ((code === '001e')) toggleVisibility('0')
+  if (code === '001e') toggleVisibility('0')
 
   /* These command should pull the messages to front */
   if ((code === '0008') ||
+     (code === '0011') ||
      (code === '0012')) toggleVisibility('4')
 
   xmlhttp.onreadystatechange = function () {
@@ -326,8 +338,7 @@ function cmdline (cmd, arg, text) {
 
 /*
  * creates a string containing a line that disappers
- * in click and calls cmd with arg
- * unfortunately the onclick is not easy to realize in a DOM object
+ * on click and calls cmd with arg
  */
 function clickline (cmd, arg, text) {
   var reply = document.createElement('p')
@@ -383,24 +394,38 @@ function getPattern (cmd, line) {
   return clickline(cmd, line, text)
 }
 
-/**
- * clickline with a selection between two choices
- */
-function clickline2 (cmd1, cmd2, arg, text) {
-  var reply = document.createElement('p')
+/* creates a selection in a popselect popup */
+function clickable (text, cmd, arg, popname) {
+  var reply = document.createElement('em')
   reply.className = 'cmd'
   reply.setAttribute('data-arg', arg)
-  reply.setAttribute('data-cmd1', cmd1)
-  reply.setAttribute('data-cmd2', cmd2)
+  reply.setAttribute('data-cmd', cmd)
   reply.onclick = function () {
-    this.style.display = 'none'
-    if (window.confirm('Mark as favourite?\nCancel will search')) {
-      sendCMD(this.getAttribute('data-cmd1'), this.getAttribute('data-arg'))
-    } else {
-      sendCMD(this.getAttribute('data-cmd2'), this.getAttribute('data-arg'))
-    }
+    var popup = document.getElementById(popname)
+    popup.classList.toggle('show')
+    sendCMD(this.getAttribute('data-cmd'), this.getAttribute('data-arg'))
   }
   reply.innerHTML = text
+  return reply
+}
+
+/* returns a <div> with text that when clicked presents the two choices */
+function popselect (choice1, cmd1, arg1, choice2, cmd2, arg2, text) {
+  var reply = document.createElement('p')
+  reply.innerText = text
+  reply.className = 'popselect'
+  reply.onclick = function () {
+    var popup = document.getElementById('popup' + arg1)
+    popup.classList.toggle('show')
+  }
+  var popspan = document.createElement('span')
+  popspan.className = 'popup'
+  popspan.id = 'popup' + arg1
+  var select = clickable(choice1 + '&nbsp;', cmd1, arg1, popspan.id)
+  popspan.appendChild(select)
+  select = clickable('&nbsp;' + choice2, cmd2, arg2, popspan.id)
+  popspan.appendChild(select)
+  reply.appendChild(popspan)
   return reply
 }
 
@@ -515,25 +540,14 @@ function updateUI () {
                 setElement('next', data.next[0].artist + ' - ' + data.next[0].title)
               }
               for (i = 0; i < data.next.length; i++) {
-                cline = document.createElement('input')
-                cline.style.width = '2em'
-                cline.style.border = 'none'
-                cline.style.background = 'none'
-                cline.style.float = 'left'
-                cline.style.color = 'red'
-                cline.type = 'button'
-                cline.setAttribute('data-arg', data.next[i].key)
-                cline.onclick = function () {
-                  sendCMD(0x1c, this.getAttribute('data-arg'))
-                }
-                cline.value = 'X'
-                e.appendChild(cline)
                 titleline = ''
                 if (data.next[i].playcount >= 0) {
-                  titleline += '[' + data.next[i].playcount + '/' + data.next[i].skipcount + '] '
+                  titleline = '[' + data.next[i].playcount + '/' + data.next[i].skipcount + '] '
                 }
                 titleline += data.next[i].artist + ' - ' + data.next[i].title
-                cline = cmdline(0x0003, (i + 1), titleline)
+                cline = popselect('Skip to', 0x03, (i + 1),
+                  'Remove', 0x1c, data.next[i].key,
+                  titleline)
                 e.appendChild(cline)
               }
             } else {
@@ -580,7 +594,9 @@ function updateUI () {
             if (data.artists.length > 0) {
               for (i = 0; i < data.artists.length; i++) {
                 if (data.mpedit) {
-                  items[i] = clickline2(0x0209, 0x0213, data.artists[i], '&hearts; ' + data.artists[i])
+                  items[i] = popselect('Search', 0x0213, data.artists[i],
+                    'Favourite', 0x0209, data.artists[i],
+                    '&hearts; ' + data.artists[i])
                 } else {
                   items[i] = clickline(0x0213, data.artists[i], '&#x1F50E; ' + data.artists[i])
                 }
@@ -596,7 +612,9 @@ function updateUI () {
             if (data.albums.length > 0) {
               for (i = 0; i < data.albums.length; i++) {
                 if (data.mpedit) {
-                  items[i] = clickline2(0x0409, 0x0413, data.albums[i], '&hearts; ' + data.albart[i] + ' - ' + data.albums[i])
+                  items[i] = popselect('Search', 0x0409, data.albums[i],
+                    'Favourite', 0x0413, data.albums[i],
+                    '&hearts; ' + data.albart[i] + ' - ' + data.albums[i])
                 } else {
                   items[i] = clickline(0x0413, data.albums[i], '&#x1F50E; ' + data.albart[i] + ' - ' + data.albums[i])
                 }
