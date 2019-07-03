@@ -389,8 +389,9 @@ static void playCount( mptitle *title ) {
  * asnchronous functions to run in the background and allow updates being sent to the
  * client
  */
-static void *plCheckDoublets( ) {
+static void *plCheckDoublets( void *arg ) {
 	mpconfig *control=getConfig();
+	pthread_mutex_t *lock=(pthread_mutex_t *) arg;
 	int i;
 
 	progressStart( "Filesystem Cleanup" );
@@ -409,12 +410,13 @@ static void *plCheckDoublets( ) {
 		addMessage( 0, "No doublets found" );
 	}
 	progressEnd( );
-	pthread_mutex_unlock( &_asynclock );;
+	pthread_mutex_unlock( lock );
 	return NULL;
 }
 
-static void *plDbClean( ) {
+static void *plDbClean( void *arg ) {
 	mpconfig *control=getConfig();
+	pthread_mutex_t *lock=(pthread_mutex_t *) arg;
 	int i;
 	progressStart( "Database Cleanup" );
 
@@ -444,22 +446,26 @@ static void *plDbClean( ) {
 	}
 
 	progressEnd( );
-	pthread_mutex_unlock( &_asynclock );;
+	pthread_mutex_unlock( lock );;
 	return NULL;
 }
 
-static void *plDbInfo( ) {
+static void *plDbInfo( void *arg ) {
 	mpconfig *control=getConfig();
+	pthread_mutex_t *lock=(pthread_mutex_t *) arg;
+
 	progressStart( "Database Info" );
 	addMessage( 0, "Music dir: %s", control->musicdir );
 	dumpInfo( control->root, control->skipdnp );
 	progressEnd();
-	pthread_mutex_unlock( &_asynclock );;
+	pthread_mutex_unlock( lock );;
 	return NULL;
 }
 
-static void *plSetProfile( ) {
+static void *plSetProfile( void *arg ) {
 	mpconfig *control=getConfig();
+	pthread_mutex_t *lock=(pthread_mutex_t *) arg;
+
 	/* control->status=mpc_start; */
 	if( control->dbname[0] == 0 ) {
 		readConfig( );
@@ -470,7 +476,7 @@ static void *plSetProfile( ) {
 	}
 	setProfile( NULL );
 	sfree( &(control->argument) );
-	pthread_mutex_unlock( &_asynclock );;
+	pthread_mutex_unlock( lock );;
 	return NULL;
 }
 
@@ -484,7 +490,7 @@ static void asyncRun( void *cmd(void *) ) {
 		addMessage( -1, "Sorry, still blocked!" );
 	}
 	else {
-		if( pthread_create( &pid, NULL, cmd, NULL ) < 0) {
+		if( pthread_create( &pid, NULL, cmd, &_asynclock ) < 0) {
 			addMessage( 0, "Could not create async thread!" );
 		}
 	}
@@ -1193,18 +1199,16 @@ void *reader( ) {
 		case mpc_search:
 			if( asyncTest() ) {
 				if( control->argument == NULL ) {
-					progressStart( "Nothing to search for!" );
-					progressEnd();
+					progressMsg( "Nothing to search for!" );
 				}
 				else {
 					if ( search( control->argument, MPC_RANGE(control->command) ) == -1 ) {
-						addMessage( -1, "Too many titles found!" );
+						progressMsg( "Too many titles found!" );
 					}
 					/* todo: a signal/unblock would be nicer here */
 					while( control->found->send == 1 ) {
 						nanosleep( &ts, NULL );
 					}
-					progressEnd();
 					sfree( &(control->argument) );
 				}
 			}
