@@ -122,7 +122,7 @@ function setProf () {
   var id = e.value
   if (id !== 0) {
     /* pull main to front */
-    toggleVisibility('0')
+    toggleVisibility(0)
     sendCMD(0x06, id)
   } else {
     e.value = active
@@ -167,13 +167,13 @@ function toggleTab (ref) {
  */
 function toggleVisibility (element) {
   var e
-  if (element === '4') {
+  if (element === 4) {
     e = document.getElementById('cextra4')
     e.value = '\u2713'
     e.style.display = 'inline'
   }
   toggleTabByRef('extra', element)
-  if (element === '0') {
+  if (element === 0) {
     setScrolls()
   }
 }
@@ -252,12 +252,12 @@ function sendCMD (cmd, arg = '') {
     (code === '001e'))) return
 
   /* these commands should pull main to front */
-  if (code === '001e') toggleVisibility('0')
+  if (code === '001e') toggleVisibility(0)
 
   /* These command should pull the messages to front */
   if ((code === '0008') ||
      (code === '0011') ||
-     (code === '0012')) toggleVisibility('4')
+     (code === '0012')) toggleVisibility(4)
 
   xmlhttp.onreadystatechange = function () {
     if (xmlhttp.readyState === 4) {
@@ -849,7 +849,7 @@ function createLoad () {
       }
     }
     /* pull main to front */
-    toggleVisibility('0')
+    toggleVisibility(0)
   }
 }
 
