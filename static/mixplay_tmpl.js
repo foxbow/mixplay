@@ -45,7 +45,6 @@ function scrollToggle () {
       }
     }
   }
-
   setTimeout(function () { scrollToggle() }, to)
 }
 

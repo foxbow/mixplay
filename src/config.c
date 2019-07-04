@@ -130,7 +130,7 @@ static void printUsage( char *name ) {
 	printf( " -d : increase debug message level to display on console\n" );
 	printf( " -f : single channel - disable fading\n" );
 	printf( " -F : enable fading\n");
-	printf( " -h <addr> : set host\n" );
+	printf( " -h : print help\n" );
 	printf( " -p <port> : set port [2347]\n" );
 	printf( " -m : force mix on playlist\n" );
 	printf( " -W': write changed config (used with -r,-l,-h,-p)\n" );
@@ -279,9 +279,8 @@ int getArgs( int argc, char ** argv ){
 			break;
 
 		case 'h':
-			sfree( &(config->host) );
-			config->host=(char*)falloc( strlen(optarg)+1, 1 );
-			strcpy( config->host, optarg );
+			printUsage( argv[0] );
+			exit( 0 );
 			break;
 
 		case 'p':
@@ -472,8 +471,6 @@ mpconfig *readConfig( void ) {
 	c_config->msg->lines=0;
 	c_config->msg->current=0;
 	c_config->playcount=0;
-	c_config->host=(char*)falloc(16,1);
-	strcpy( c_config->host, "127.0.0.1" );
 	c_config->port=MP_PORT;
 	c_config->changed=0;
 	c_config->isDaemon=0;
@@ -532,10 +529,6 @@ mpconfig *readConfig( void ) {
 			}
 			if( strstr( line, "fade=" ) == line ) {
 				c_config->fade=atoi(pos);
-			}
-			if( strstr( line, "host=" ) == line ) {
-				c_config->host=(char*)frealloc( c_config->host, strlen(pos)+1 );
-				strip( c_config->host, pos, strlen(pos) );
 			}
 			if( strstr( line, "port=" ) == line ) {
 				c_config->port=atoi(pos);
@@ -622,7 +615,6 @@ void writeConfig( const char *musicpath ) {
 			fprintf( fp, "\n# channel=Main");
 			fprintf( fp, "\n# channel=DAC");
 		}
-		fprintf( fp, "\nhost=%s", c_config->host );
 		if( c_config->port != MP_PORT ) {
 			fprintf( fp, "\nport=%i", c_config->port );
 		}
@@ -660,7 +652,6 @@ void freeConfigContents() {
 	sfree( (char **)&(c_config->sname) );
 
 	sfree( (char **)&(c_config->channel) );
-	sfree( (char **)&(c_config->host) );
 
 	msgBuffDiscard( c_config->msg );
 }

@@ -26,7 +26,7 @@ demon version of the player. Communicates via HTTP/GET and JSON replies with cli
 * -d         : increase console verbosity. Tells mixplayd to not detach and run in debug mode (this reads web files from the filesystem and does not use the hard coded versions.)
 * -f         : disable fading
 * -F         : enable fading
-* -h <host>  : set hostname for remote play [127.0.0.1]
+* -h         : print help
 * -p <port>  : set port for remote play [2347]
 * -v         : increase application verbosity
 * [path|URL] : path to the music files [play from db]

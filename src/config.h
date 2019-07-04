@@ -130,7 +130,6 @@ struct _mpcontrol_t {
 	char *streamURL;
 	struct msgbuf_t *msg;		/* generic message buffer */
 	void *data;					/* extended data for gmixplay */
-	char *host;
 	int  port;
 	unsigned playcount;
 	int mpmode;						/* playmode, see PM_* */
