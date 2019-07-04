@@ -1016,6 +1016,7 @@ void *reader( ) {
 		case mpc_fav:
 			if( (title != NULL ) && asyncTest() ) {
 				handleRangeCmd( title, control->command );
+				notifyChange();
 			}
 			break;
 
