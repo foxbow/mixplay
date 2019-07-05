@@ -501,7 +501,9 @@ static void *clientHandler(void *args ) {
 	}
 
 	addMessage( 2, "Client handler exited" );
-	unlockClient( sock );
+	if( isCurClient(sock) ){
+		unlockClient( sock );
+	}
 	close(sock);
 	sfree( &commdata );
 	sfree( &jsonLine );
