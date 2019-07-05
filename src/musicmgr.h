@@ -79,7 +79,7 @@ int playResults( mpcmd range, const char *arg, const int insert );
 
 void markSkip( mptitle *title );
 int DNPSkip( void );
-void applyLists( void );
+void applyLists( int clean );
 int searchPlay( const char *pat, unsigned num, const int global );
 int handleRangeCmd( mptitle *title, mpcmd cmd );
 int addRangePrefix( char *line, mpcmd cmd );

@@ -336,7 +336,7 @@ void *setProfile( ) {
 			setVerbosity( lastver );
 		}
 
-		applyLists();
+		applyLists( 1 );
 		plCheck( 0 );
 
 		addMessage( 1, "Profile set to %s.", profile->name );
@@ -372,7 +372,7 @@ static void playCount( mptitle *title ) {
 	if ( title->flags&MP_MARK ) {
 		if ( title->flags&MP_CNTD ) {
 			/* this usually means something is amiss! */
-			addMessage(0,"%s already counted!", title->display );
+			addMessage( 0, "%s already counted!", title->display );
 		}
 		else {
 			title->flags |= MP_CNTD; /* make sure a title is only counted once per session */
@@ -691,7 +691,7 @@ void *reader( ) {
 								strip( control->current->title->artist, a, NAMELEN );
 								strip( control->current->title->title, t, NAMELEN );
 							}
-							plCheck(0);
+							plCheck( 0 );
 							update=1;
 						}
 					}
@@ -824,7 +824,7 @@ void *reader( ) {
 							else {
 								order=0;
 							}
-							plCheck(0);
+							plCheck( 0 );
 						}
 						else {
 							addMessage( 1, "Player status without current title" );
@@ -906,7 +906,7 @@ void *reader( ) {
 					}
 					/* someone is testing parameters, mh? */
 					if( title == NULL ) {
-						addMessage(0,"Nothing matches %s!", control->argument );
+						addMessage( 0, "Nothing matches %s!", control->argument );
 					}
 					sfree( &(control->argument) );
 				}
@@ -1253,7 +1253,7 @@ void *reader( ) {
 		case mpc_remove:
 			if( control->argument != NULL ) {
 				control->current=remFromPLByKey( control->current, atoi( control->argument ) );
-				plCheck(0);
+				plCheck( 0 );
 				sfree( &(control->argument) );
 			}
 			break;
@@ -1275,16 +1275,16 @@ void *reader( ) {
 					}
 					/* toggle favplay */
 					getProfile()->favplay=!getProfile()->favplay;
-					addMessage(1,"%s Favplay",getProfile()->favplay?"Enabling":"Disabling");
+					addMessage( 1, "%s Favplay", getProfile()->favplay?"Enabling":"Disabling");
 					control->changed=1;
-					applyLists();
+					applyLists( 0 );
 
 					control->current=wipePlaylist( control->current );
 					plCheck( 0 );
 					sendplay( p_command[fdset][1] );
 				}
 				else {
-					addMessage(0,"Favplay only works in database mode!");
+					addMessage( 0, "Favplay only works in database mode!");
 				}
 			}
 			break;

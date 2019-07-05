@@ -732,10 +732,17 @@ static int applyFAVlist( struct marklist_t *favourites, int excl ) {
 	return cnt;
 }
 
-void applyLists( void ) {
+void applyLists( int clean ) {
 	mpconfig *control=getConfig();
+	mptitle *title = control->root;
 
 	pthread_mutex_lock( &_pllock );
+	if( clean ) {
+		do {
+			title->flags=0;
+			title=title->next;
+		} while( title != control->root );
+	}
 	applyFAVlist( control->favlist, getProfile()->favplay );
 	applyDNPlist( control->dnplist );
 	pthread_mutex_unlock( &_pllock );
@@ -757,7 +764,8 @@ struct marklist_t *loadList( const mpcmd cmd ) {
 	char *buff;
 	int cnt=0;
 
-	if( getListPath(path, cmd) ) {
+	if( getListPath(path, cmd) == -1 ) {
+		addMessage(0,"Trying top get %s list for stream!",cmd==mpc_fav?"FAV":"DNP");
 		/* No active profile */
 		return NULL;
 	}
@@ -797,7 +805,7 @@ struct marklist_t *loadList( const mpcmd cmd ) {
 		}
 	}
 
-	addMessage( 2, "Marklist %s with %i entries.", path, cnt );
+	addMessage( 1, "Marklist %s with %i entries.", path, cnt );
 
 cleanup:
 	free( buff );
@@ -902,7 +910,7 @@ int delFromList( const mpcmd cmd, const char *line ) {
 
 	if( cnt > 0 ) {
 		writeList( cmd );
-		applyLists();
+		applyLists(0);
 		getConfig()->listDirty=1;
 	}
 
