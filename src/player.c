@@ -794,8 +794,6 @@ void *reader( ) {
 						/* we're playing a playlist */
 						else if( control->current != NULL ){
 							addMessage(2,"Title change on player %i", fdset );
-							/* TODO: this will increase playcount on skipped titles too
-							         is this expected? */
 							if( ( order == 1 ) && ( control->fade == 0 ) ) {
 								playCount( control->current->title );
 							}
@@ -821,10 +819,12 @@ void *reader( ) {
 
 							if( control->status != mpc_idle ) {
 								sendplay( p_command[fdset][1] );
+								order=1;
+							}
+							else {
+								order=0;
 							}
 							plCheck(0);
-
-							order=1;
 						}
 						else {
 							addMessage( 1, "Player status without current title" );
