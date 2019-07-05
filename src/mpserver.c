@@ -108,7 +108,6 @@ static void mps_notify( void *type ) {
 	*(int*)type|=MPCOMM_FULLSTAT;
 }
 
-
 /**
  * This will handle connection for each client
  */
@@ -339,7 +338,7 @@ static void *clientHandler(void *args ) {
 					running|=2;
 				}
 				/* normal update requested, is a special update needed? */
-				if( config->found->send == 1 ) {
+				if( ( config->found->send == 1 ) && isCurClient( sock ) ) {
 					fullstat |= MPCOMM_RESULT;
 				}
 				if( config->listDirty ) {
@@ -486,6 +485,7 @@ static void *clientHandler(void *args ) {
 				else {
 					if( fullstat & MPCOMM_RESULT ) {
 						config->found->send=0;
+						unlockClient( sock );
 					}
 					if( fullstat & MPCOMM_LISTS ) {
 						config->listDirty=0;
