@@ -254,12 +254,12 @@ mptitle *dbGetMusic( const char *dbname ) {
  * checks for removed entries in the database
  * i.e. titles that are in the database but no longer on the medium
  */
-int dbCheckExist( const char *dbname ) {
+int dbCheckExist( void ) {
 	mptitle *root;
 	mptitle *runner;
 	int num=0;
 
-	root=dbGetMusic( dbname );
+	root=getConfig()->root;
 	if( root == NULL ) {
 		addMessage( -1, "No music in database!" );
 		return -1;
@@ -287,8 +287,6 @@ int dbCheckExist( const char *dbname ) {
 	if( num > 0 ) {
 		dbMarkDirty();
 	}
-
-	wipeTitles( root );
 
 	return num;
 }

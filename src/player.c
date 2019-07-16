@@ -425,10 +425,11 @@ static void *plDbClean( void *arg ) {
 		dbWrite( );
 	}
 	addMessage( 0, "Checking for deleted titles.." );
-	i=dbCheckExist( control->dbname );
+	i=dbCheckExist( );
 
 	if( i > 0 ) {
 		addMessage( 0, "Removed %i titles", i );
+		dbWrite();
 		plCheck( 1 );
 	}
 	else {
@@ -440,6 +441,7 @@ static void *plDbClean( void *arg ) {
 
 	if( i > 0 ) {
 		addMessage( 0, "Added %i new titles", i );
+		dbWrite();
 	}
 	else {
 		addMessage( 0, "No titles to be added" );

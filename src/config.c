@@ -791,11 +791,18 @@ void activity( const char *msg, ... ) {
 	vsnprintf( _curact, 80, msg, args );
 	va_end( args );
 
+	/* remove trailing special chars */
+	pos=strlen(_curact);
+	while( _curact[pos] < '!' ) {
+		_curact[pos]=0;
+		pos--;
+	}
+
 	if( getDebug() ) {
 		_ftrpos=( _ftrpos+1 )%( 400/getDebug() );
 		if ( _ftrpos%( 100/getDebug() ) == 0 ) {
 			pos=( _ftrpos/( 100/getDebug() ) )%4;
-			printf( "%c %s                                  \r", roller[pos], _curact );
+			printf( "%c %s ..\r", roller[pos], _curact );
 			fflush( stdout );
 		}
 	}

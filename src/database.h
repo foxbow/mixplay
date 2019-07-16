@@ -25,7 +25,7 @@ struct dbentry_t {
 int dbOpen( const char *path );
 mptitle *dbGetMusic( const char *dbname );
 int dbRemTitle( int db, mptitle *title );
-int dbCheckExist( const char *dbname );
+int dbCheckExist( void );
 int dbAddTitles( const char *dbname, char *basedir );
 void dbClose( int db );
 void dbWrite( void );
