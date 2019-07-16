@@ -22,14 +22,11 @@ struct dbentry_t {
 #define DBESIZE sizeof(struct dbentry_t)
 #define ESIZE sizeof(mptitle)
 
-int dbOpen( const char *path );
-mptitle *dbGetMusic( const char *dbname );
-int dbRemTitle( int db, mptitle *title );
+mptitle *dbGetMusic( void );
 int dbCheckExist( void );
 int dbAddTitles( const char *dbname, char *basedir );
-void dbClose( int db );
 void dbWrite( void );
-int dbNameCheck( const char *dbname );
+int dbNameCheck( void );
 mptitle *getTitleByIndex( unsigned int index );
 mptitle *getTitleForRange( const mpcmd range, const char *name );
 void dbMarkDirty( void );

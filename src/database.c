@@ -12,6 +12,15 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+
+/**
+ * closes the database file
+ */
+static void dbClose( int db ) {
+	close( db );
+	return;
+}
+
 void dbMarkDirty( void ) {
 	if( getConfig()->dbDirty++ > 25 ) {
 		dbWrite( );
@@ -147,7 +156,7 @@ static void entry2db( mptitle *entry, struct dbentry_t *dbentry ) {
 /**
  * opens the database file and handles errors
  */
-int dbOpen( const char *path ) {
+static int dbOpen( const char *path ) {
 	int db=-1;
 	db = open( path, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR );
 
@@ -220,13 +229,13 @@ static mptitle *addDBTitle( struct dbentry_t dbentry, mptitle *root, unsigned in
 /**
  * gets all titles from the database and returns them as a mixplay entry list
  */
-mptitle *dbGetMusic( const char *dbname ) {
+mptitle *dbGetMusic( ) {
 	struct dbentry_t dbentry;
 	unsigned int index = 1; /* index 0 is reserved for titles not in the db! */
 	mptitle *dbroot=NULL;
 	int db;
 	size_t len;
-	db=dbOpen( dbname );
+	db=dbOpen( getConfig()->dbname );
 
 	while( ( len = read( db, &dbentry, DBESIZE ) ) == DBESIZE ) {
 		/* support old database title path format */
@@ -242,7 +251,7 @@ mptitle *dbGetMusic( const char *dbname ) {
 	dbClose( db );
 
 	if( 0 != len ) {
-		fail( F_FAIL, "Database %s is corrupt!\nRun 'mixplay -C' to rescan", dbname );
+		fail( F_FAIL, "Database %s is corrupt!\nRun 'mixplay -C' to rescan", getConfig()->dbname );
 	}
 
 	addMessage( 1, "Loaded %i titles from the database", index-1 );
@@ -446,7 +455,7 @@ static int checkPath( mptitle *entry, int range ) {
 }
 
 
-int dbNameCheck( const char *dbname ) {
+int dbNameCheck( void ) {
 	mptitle	*root;
 	mptitle	*currentEntry;
 	mptitle	*runner;
@@ -454,7 +463,7 @@ int dbNameCheck( const char *dbname ) {
 	FILE 			*fp;
 	int				match;
 
-	root=dbGetMusic( dbname );
+	root=dbGetMusic( );
 	if( root == NULL ) {
 		addMessage( -1, "No music in database!");
 		return -1;
@@ -544,14 +553,6 @@ int dbNameCheck( const char *dbname ) {
 	fclose( fp );
 
 	return count;
-}
-
-/**
- * closes the database file
- */
-void dbClose( int db ) {
-	close( db );
-	return;
 }
 
 /**

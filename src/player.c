@@ -306,7 +306,7 @@ void *setProfile( ) {
 		/* only load database if it has not yet been used */
 		if( control->mpmode != PM_DATABASE ) {
 			control->root=wipeTitles( control->root );
-			control->root=dbGetMusic( control->dbname );
+			control->root=dbGetMusic( );
 			control->mpmode=PM_DATABASE;
 		}
 		control->playcount=getLowestPlaycount();
@@ -326,7 +326,7 @@ void *setProfile( ) {
 			}
 
 			addMessage( 0, "Added %i titles.", num );
-			control->root=dbGetMusic( control->dbname );
+			control->root=dbGetMusic( );
 
 			if( NULL == control->root ) {
 				fail( F_FAIL, "No music found at %s for database %s!\nThis should never happen!",
@@ -401,7 +401,7 @@ static void *plCheckDoublets( void *arg ) {
 		dbWrite( );
 	}
 	addMessage( 0, "Checking for doublets.." );
-	i=dbNameCheck( control->dbname );
+	i=dbNameCheck( );
 	if( i > 0 ) {
 		addMessage( 0, "Deleted %i doublets", i );
 		plCheck( 1 );

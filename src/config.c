@@ -903,19 +903,23 @@ void progressMsg( const char *msg ) {
 	progressEnd();
 }
 
+/**
+ * register a progress function.
+ * Not used yet, may replace setCurrentClient()
+ */
 void addProgressHook( void (*func)( void * ) ){
 	addHook( func, NULL, &_pfunc );
 }
 
 /**
- * register an update function
+ * register an update function, called on minor updates like playtime
  */
  void addUpdateHook( void (*func)( void * ) ){
  	addHook( func, NULL, &_ufunc );
  }
 
 /**
- * register a notification function
+ * register a notification function, called when title/playlist has changed
  */
 void addNotifyHook( void (*func)( void * ), void *arg ){
 	addHook( func, arg, &_nfunc );

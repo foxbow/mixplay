@@ -67,18 +67,6 @@ char *abspath( char *path, const char *basedir, const size_t len ) {
 }
 
 /**
- * Some ANSI code magic to set the terminal title
- **/
-void setTitle( const char* title ) {
-	char buff[128];
-	strtcpy( buff, "\033]2;", 128 );
-	strtcat( buff, title, 128 );
-	strtcat( buff, "\007\000", 128 );
-	fputs( buff, stdout );
-	fflush( stdout );
-}
-
-/**
  * Strip spaces and special chars from the beginning and the end
  * of 'text', truncate it to 'maxlen' to keep space for the terminating null
  * and store the result in 'buff'. buff MUST have a size of at least maxlen+1!

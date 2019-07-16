@@ -41,10 +41,8 @@ size_t strtcat( char *t,const  char *s, size_t l );
 
 /*
  * These functions need to be implemented in the UI
- * See: ncbox.c, gladeutils.c
  */
 void fail( const int error, const char* msg, ... ) __attribute__ ((noreturn));
-void activity( const char *msg, ... );
 
 /**
  * helperfunction to implement message ringbuffer
@@ -60,7 +58,6 @@ void msgBuffDiscard( struct msgbuf_t *msgbuf );
 /**
  * General utility functions
  */
-void setTitle( const char* title );
 int strltcpy( char *dest, const char *src, const size_t len );
 int strltcat( char *dest, const char *src, const size_t len );
 char *strip( char *buff, const char *text, const size_t maxlen );
