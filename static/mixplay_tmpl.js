@@ -215,8 +215,12 @@ function addText (text) {
 }
 
 function wipeLog () {
+  var i
   var e = document.getElementById('extra4')
   enableButton('cextra4', 0)
+  for (i = 0; i < 15; i++) {
+    msglines[i] = ''
+  }
   e.innerHTML = ''
 }
 
@@ -577,7 +581,7 @@ function updateUI () {
               }
               for (i = 0; i < data.titles.length; i++) {
                 if (data.mpedit) {
-                  items[i + 1] = clickline(0x0809, data.titles[i].key, '&hearts; ' + data.titles[i].artist + ' - ' + data.titles[i].title)
+                  items[i + 1] = clickline(0x0809, data.titles[i].key, '\u2665 ' + data.titles[i].artist + ' - ' + data.titles[i].title)
                 } else {
                   items[i + 1] = clickline(0x080c, data.titles[i].key, '&#x25B6; ' + data.titles[i].artist + ' - ' + data.titles[i].title)
                 }
@@ -595,7 +599,7 @@ function updateUI () {
                 if (data.mpedit) {
                   items[i] = popselect('Search', 0x0213, data.artists[i],
                     'Favourite', 0x0209, data.artists[i],
-                    '&hearts; ' + data.artists[i])
+                    '\u2665 ' + data.artists[i])
                 } else {
                   items[i] = clickline(0x0213, data.artists[i], '&#x1F50E; ' + data.artists[i])
                 }
@@ -613,7 +617,7 @@ function updateUI () {
                 if (data.mpedit) {
                   items[i] = popselect('Search', 0x0409, data.albums[i],
                     'Favourite', 0x0413, data.albums[i],
-                    '&hearts; ' + data.albart[i] + ' - ' + data.albums[i])
+                    '\u2665 ' + data.albart[i] + ' - ' + data.albums[i])
                 } else {
                   items[i] = clickline(0x0413, data.albums[i], '&#x1F50E; ' + data.albart[i] + ' - ' + data.albums[i])
                 }

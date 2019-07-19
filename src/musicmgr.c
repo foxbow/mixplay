@@ -707,7 +707,7 @@ static int applyFAVlist( struct marklist_t *favourites, int excl ) {
 		while( ptr ) {
 			if( matchTitle( runner, ptr->dir ) ) {
 				if( !( runner->flags & MP_FAV ) ) {
-					if( excl ) {
+					if( excl || getProfile()->favplay ) {
 						addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
 						runner->flags=MP_FAV;
 					}

@@ -776,7 +776,8 @@ void muteVerbosity() {
 }
 
 static int _ftrpos=0;
-static char _curact[80]="";
+#define MP_ACTLEN 75
+static char _curact[MP_ACTLEN]="";
 
 /**
  * show activity roller on console
@@ -788,21 +789,19 @@ void activity( const char *msg, ... ) {
 	va_list args;
 
 	va_start( args, msg );
-	vsnprintf( _curact, 80, msg, args );
+	vsnprintf( _curact, MP_ACTLEN, msg, args );
 	va_end( args );
 
-	/* remove trailing special chars */
-	pos=strlen(_curact);
-	while( _curact[pos] < '!' ) {
-		_curact[pos]=0;
-		pos--;
+	for( pos=strlen(_curact); pos < (MP_ACTLEN-1); pos++ ){
+		_curact[pos]=' ';
 	}
+	_curact[MP_ACTLEN-1]=0;
 
 	if( getDebug() ) {
 		_ftrpos=( _ftrpos+1 )%( 400/getDebug() );
 		if ( _ftrpos%( 100/getDebug() ) == 0 ) {
 			pos=( _ftrpos/( 100/getDebug() ) )%4;
-			printf( "%c %s ..\r", roller[pos], _curact );
+			printf( "%c %s\r", roller[pos], _curact );
 			fflush( stdout );
 		}
 	}
