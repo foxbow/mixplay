@@ -12,6 +12,9 @@ build/*
 .project
 .settings/*
 
+# VS stuff
+.vscode
+
 # Binaries
 mixplayd
 core
