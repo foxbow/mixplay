@@ -10,6 +10,7 @@
 
 #include <pthread.h>
 #include <sys/types.h>
+#include <inttypes.h>
 
 #define MP_MSGLEN 512
 

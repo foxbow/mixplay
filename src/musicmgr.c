@@ -685,7 +685,7 @@ static int applyFAVlist( struct marklist_t *favourites, int excl ) {
 	int cnt=0;
 
 	if( NULL == root ) {
-		addMessage( 0, "%s: No music loaded", __func__ );
+		addMessage( 0, "No music loaded for FAVlist" );
 		return -1;
 	}
 

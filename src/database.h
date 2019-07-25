@@ -8,6 +8,7 @@
 #ifndef DATABASE_H_
 #define DATABASE_H_
 #include "musicmgr.h"
+#include <assert.h>
 
 struct dbentry_t {
 	char path[MAXPATHLEN];		/* path on the filesystem to the file */

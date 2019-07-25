@@ -42,7 +42,7 @@ size_t strtcat( char *t,const  char *s, size_t l );
 /*
  * These functions need to be implemented in the UI
  */
-void fail( const int error, const char* msg, ... ) __attribute__ ((noreturn));
+void fail( const int error, const char* msg, ... ) __attribute__((__format__(__printf__, 2, 3))) __attribute__ ((noreturn));
 
 /**
  * helperfunction to implement message ringbuffer

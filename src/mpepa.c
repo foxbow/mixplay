@@ -213,7 +213,7 @@ void ep_updateHook( ) {
 static void debounceCmd( mpcmd cmd ) {
 	struct timeval now, diff;
 	if( pthread_mutex_trylock( &_debouncelock ) ) {
-		addMessage( 2,"EP: mutex debounce %s", mpcString( cmd ) );
+		addMessage( 2, "EP: mutex debounce %s", mpcString( cmd ) );
 		return;
 	}
 	gettimeofday( &now, NULL );
@@ -227,7 +227,7 @@ static void debounceCmd( mpcmd cmd ) {
 	}
 	else {
 		addMessage( 2,"EP: debounce %s", mpcString( cmd ) );
-		addMessage( 1,"EP: tv %u - %u", diff.tv_sec, diff.tv_usec );
+		addMessage( 1,"EP: tv %u - %u", (unsigned)diff.tv_sec, (unsigned)diff.tv_usec );
 	}
 	pthread_mutex_unlock( &_debouncelock );
 }

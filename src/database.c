@@ -174,9 +174,7 @@ static int dbOpen( const char *path ) {
 static int dbPutTitle( int db, mptitle *title ) {
 	struct dbentry_t dbentry;
 
-	if( 0 == db ) {
-		fail( F_FAIL, "%s - Database not open", __func__ );
-	}
+	assert( 0 != db );
 
 	if( 0 == title->key ) {
 		lseek( db, 0, SEEK_END );
@@ -202,11 +200,7 @@ static int dbPutTitle( int db, mptitle *title ) {
  */
 static mptitle *addDBTitle( struct dbentry_t dbentry, mptitle *root, unsigned int index ) {
 	mptitle *entry;
-	entry=(mptitle*)malloc( sizeof( mptitle ) );
-
-	if( NULL == entry ) {
-		fail( errno, " %s - Could not create new entry", __func__ );
-	}
+	entry=(mptitle*)falloc( 1, sizeof( mptitle ) );
 
 	db2entry( &dbentry, entry );
 	entry->key=index;
@@ -303,9 +297,7 @@ int dbCheckExist( void ) {
 static int dbAddTitle( int db, mptitle *title ) {
     struct dbentry_t dbentry;
 
-    if( 0 == db ) {
-        fail( F_FAIL, "%s - Database not open", __func__ );
-    }
+    assert( 0 != db );
 
     lseek( db, 0, SEEK_END );
 

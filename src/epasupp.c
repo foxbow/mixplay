@@ -118,7 +118,7 @@ static void epsSend( unsigned char cmd, int datamode ) {
  * unlock the display functions
  */
 static void epsUnidle(){
-	addMessage(2,"EPS: idle unlocked!");
+	addMessage( 2, "EPS: idle unlocked!");
 	pthread_mutex_unlock( &_idlelock );
 }
 
@@ -127,7 +127,7 @@ static void epsUnidle(){
  * This should probably become epsLock()
  */
 static void epsIdle(int unlock) {
-	addMessage(2,"EPS: idle locked!");
+	addMessage( 2, "EPS: idle locked!" );
 	pthread_mutex_lock( &_idlelock );
 	if(  _state == -2 ) {
 		addMessage( 1, "EPS: Idling on unitialized Screen!" );
@@ -379,13 +379,13 @@ int epsDrawChar( epsmap map, unsigned posx, unsigned posy, int c, int mag ) {
 	int i, m, ym=(mag==2)?2:1;
 
 	if( ( mag < 0 ) || ( mag > 2 ) ) {
-		addMessage( 0, "EPS: illegal magnification of %i ('%c')!", mag, c );
+		addMessage( 0, "EPS: illegal magnification of %i ('%c')!", mag, (char)c );
 		return 1;
 	}
 
 	c=c-' ';
 	if( ( c < 0 ) || ( c > 94 ) ) {
-		addMessage( 2 , "EPS: character %i is out of range!", c );
+		addMessage( 2 , "EPS: character #%i is out of range!", c );
 		return 1;
 	}
 
@@ -449,7 +449,7 @@ void epsDrawString( epsmap map, unsigned posx, unsigned posy, char *txt, int mag
 void epsDrawSymbol( epsmap map, unsigned posx, unsigned posy, epsymbol sym ) {
 	unsigned x, y;
 	if( sym >= ep_max ) {
-		addMessage( 0, "EPS: Illegal symbol #%i!", sym );
+		addMessage( 0, "EPS: Illegal symbol #%i!", (int)sym );
 		return;
 	}
 
