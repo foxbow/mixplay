@@ -333,7 +333,7 @@ static void *clientHandler(void *args ) {
 			case 1: /* get update */
 				/* an update client! Good, that one should get status updates too! */
 				if( running == 1 ) {
-					addMessage(1,"Update Handler (%u) initialized", &nextstat );
+					addMessage( 1, "Update Handler (%p) initialized", (void *)&nextstat );
 					addNotifyHook( &mps_notify, &nextstat );
 					running|=2;
 				}
@@ -497,7 +497,7 @@ static void *clientHandler(void *args ) {
 	}
 	if( running & 2 ) {
 		removeNotifyHook( &mps_notify, &nextstat );
-		addMessage(1,"Update Handler (%u) terminates", &nextstat );
+		addMessage(1, "Update Handler (%p) terminates", (void *)&nextstat );
 	}
 
 	addMessage( 2, "Client handler exited" );

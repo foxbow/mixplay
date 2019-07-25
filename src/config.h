@@ -160,15 +160,14 @@ int getVerbosity( void );
 int setVerbosity( int );
 int incVerbosity( void );
 void muteVerbosity( void );
-
-void addMessage( int v, const char *msg, ... );
+void addMessage( int v, const char *msg, ... ) __attribute__((__format__(__printf__, 2, 3)));
 #define addError(x) addMessage( 0, "%i - %s", x, strerror(x) );
 char *getMessage( void );
 
 char *getCurrentActivity( void );
-void activity( const char *msg, ... );
+void activity( const char *msg, ... ) __attribute__((__format__(__printf__, 1, 2)));
 
-void progressStart( const char *msg, ... );
+void progressStart( const char *msg, ... ) __attribute__((__format__(__printf__, 1, 2)));
 void progressEnd( void );
 void progressMsg( const char *msg );
 void updateUI( void );

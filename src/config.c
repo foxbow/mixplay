@@ -879,7 +879,7 @@ void progressStart( const char* msg, ... ) {
 	vsnprintf( line, 512, msg, args );
 	va_end( args );
 
-	addMessage( 0, line );
+	addMessage( 0, "%s", line );
 	invokeHooks(_pfunc);
 
 	free( line );

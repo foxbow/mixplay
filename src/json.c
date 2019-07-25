@@ -13,10 +13,8 @@
 #include <string.h>
 #include <stdarg.h>
 
-/*
- * todo: 'true', 'false' and 'null' are not yet supported
- */
 static char _jsonError[512];
+static int jsonFail( const char *msg, ... ) __attribute__((__format__(__printf__, 1, 2)));
 
 /* forward definitions of cyclic dependencies in static functions */
 static char *jsonWriteObj( jsonObject *jo, char *json, size_t *len );

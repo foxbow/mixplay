@@ -1349,7 +1349,7 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 				if( runner == guard ) {
 					pcount++;	/* allow more replays */
 					getConfig()->playcount=pcount;
-					addMessage( 1, "Increasing maxplaycount to %li (skip)", pcount );
+					addMessage( 1, "Increasing maxplaycount to %i (skip)", pcount );
 				}
 				else {
 					valid=0;
@@ -1362,11 +1362,11 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
 			cycles=0;
 			pcount++;	/* allow replays */
 			getConfig()->playcount=pcount;
-			addMessage( 1, "Increasing maxplaycount to %li (loop)", pcount );
+			addMessage( 1, "Increasing maxplaycount to %i (loop)", pcount );
 		}
 	} /* while( valid != 3 ) */
 
-	addMessage( 1, "[+] (%i/%li/%3s) %5d %s", runner->playcount, pcount,
+	addMessage( 1, "[+] (%i/%i/%3s) %5d %s", runner->playcount, pcount,
 			ONOFF( runner->flags&MP_FAV ), runner->key, runner->display );
 
 	/* count again in case this is a favourite */
