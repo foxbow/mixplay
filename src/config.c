@@ -20,7 +20,6 @@
 #include <unistd.h>
 #include <syslog.h>
 
-#include "utils.h"
 #include "musicmgr.h"
 #include "config.h"
 #include "mpcomm.h"
@@ -29,7 +28,7 @@
 
 static pthread_mutex_t _addmsglock=PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t _cblock=PTHREAD_MUTEX_INITIALIZER;
-static mpconfig *c_config=NULL;
+static mpconfig_t *c_config=NULL;
 
 /**
  * the progress function list
@@ -94,9 +93,9 @@ static void invokeHooks( _mpFunc *hooks ){
 /*
  * transform an mpcmd value into a string literal
  */
-const char *mpcString( mpcmd rawcmd ) {
-	int cmd=(int)MPC_CMD(rawcmd);
-	if( cmd <= (int)mpc_idle ) {
+const char *mpcString( mpcmd_t rawcmd ) {
+	mpcmd_t cmd=MPC_CMD(rawcmd);
+	if( cmd <= mpc_idle ) {
 		return mpc_command[cmd];
 	}
 	else {
@@ -108,7 +107,7 @@ const char *mpcString( mpcmd rawcmd ) {
 /*
  * transform a string literal into an mpcmd value
  */
-mpcmd mpcCommand( const char *name ) {
+mpcmd_t mpcCommand( const char *name ) {
 	int i;
 	for( i=0; i<= mpc_idle; i++ ) {
 		if( strstr( name, mpc_command[i] ) ) break;
@@ -117,7 +116,7 @@ mpcmd mpcCommand( const char *name ) {
 		addMessage( 1, "Unknown command %s!", name );
 		return mpc_idle;
 	}
-	return (mpcmd)i;
+	return (mpcmd_t)i;
 }
 
 /*
@@ -138,8 +137,8 @@ static void printUsage( char *name ) {
 	printf( "		   URL, directory, mp3 file, playlist\n" );
 }
 
-static mpplaylist *titleToPlaylist( mptitle *title, mpplaylist *pl ) {
-	mptitle *guard=title;
+static mpplaylist *titleToPlaylist( mptitle_t *title, mpplaylist *pl ) {
+	mptitle_t *guard=title;
 
 	pl=wipePlaylist(pl);
 
@@ -160,9 +159,9 @@ static mpplaylist *titleToPlaylist( mptitle *title, mpplaylist *pl ) {
  * also handles playing of a single file, a directory, a playlist or an URL
  */
 int setArgument( const char *arg ) {
-	mptitle *title=NULL;
+	mptitle_t *title=NULL;
 	char line [MAXPATHLEN+1];
-	mpconfig *control=getConfig();
+	mpconfig_t *control=getConfig();
 
 	control->active=0;
 	control->mpmode=PM_NONE;
@@ -251,7 +250,7 @@ int setArgument( const char *arg ) {
  * parses the given flags and arguments
  */
 int getArgs( int argc, char ** argv ){
-	mpconfig *config=getConfig();
+	mpconfig_t *config=getConfig();
 	int c;
 
 	/* parse command line options */
@@ -330,7 +329,7 @@ int getArgs( int argc, char ** argv ){
  * this will also start the communication thread is remote=2
  */
 int initAll( ) {
-	mpconfig *control;
+	mpconfig_t *control;
 	pthread_t tid;
 	struct timespec ts;
 	control=getConfig();
@@ -362,7 +361,7 @@ int initAll( ) {
 /**
  * returns the current configuration
  */
-mpconfig *getConfig() {
+mpconfig_t *getConfig() {
 	assert( c_config != NULL );
 	return c_config;
 }
@@ -405,13 +404,13 @@ static int scanparts( char *line, char ***target ) {
 	return num;
 }
 
-static int scanprofiles( char *input, struct profile_t ***target ) {
+static int scanprofiles( char *input, profile_t ***target ) {
 	char **line;
 	int i, num;
 
 	num=scanparts( input, &line );
 	if( num > 0 ) {
-		*target=(struct profile_t **)falloc( num, sizeof( struct profile_t *) );
+		*target=(profile_t **)falloc( num, sizeof( profile_t *) );
 
 		for( i=0; i<num; i++ ) {
 			if( line[i][1] == ':' ) {
@@ -436,7 +435,7 @@ static int scanprofiles( char *input, struct profile_t ***target ) {
  *
  * This function should be called more or less first thing in the application
  */
-mpconfig *readConfig( void ) {
+mpconfig_t *readConfig( void ) {
 	char	conffile[MAXPATHLEN+1]; /*  = "mixplay.conf"; */
 	char	line[MAXPATHLEN+1];
 	char	*pos;
@@ -449,7 +448,7 @@ mpconfig *readConfig( void ) {
 	}
 
 	if( c_config == NULL ) {
-		c_config=(mpconfig*)falloc( 1, sizeof( mpconfig ) );
+		c_config=(mpconfig_t*)falloc( 1, sizeof( mpconfig_t ) );
 		c_config->msg=msgBuffInit();
 		c_config->found=(searchresults*)falloc(1,sizeof(searchresults));
 	}
@@ -958,7 +957,7 @@ char *fullpath( const char *file ) {
 	return pbuff;
 }
 
-struct profile_t *getProfile() {
+profile_t *getProfile() {
 	if( getConfig()->active < 1 ) {
 		addMessage(0,"%i is not a valid profile!", getConfig()->active );
 		return NULL;
@@ -966,16 +965,16 @@ struct profile_t *getProfile() {
 	return getConfig()->profile[getConfig()->active-1];
 }
 
-struct profile_t *createProfile( const char *name, const unsigned favplay ) {
-	struct profile_t *profile =
-		(struct profile_t *)falloc( 1, sizeof( struct profile_t ) );
+profile_t *createProfile( const char *name, const unsigned favplay ) {
+	profile_t *profile =
+		(profile_t *)falloc( 1, sizeof( profile_t ) );
 	profile->name=falloc(strlen(name)+1,1);
 	strcpy( profile->name, name );
 	profile->favplay=favplay;
 	return profile;
 }
 
-void freeProfile( struct profile_t *profile ){
+void freeProfile( profile_t *profile ){
 	if( profile != NULL ) {
 		if( profile->name != NULL ) {
 			free( profile->name );

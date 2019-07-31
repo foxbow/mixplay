@@ -7,7 +7,7 @@ OBJDIR=build
 CCFLAGS=-DMPCOMM_VER="$(MPCOMM_VER)"
 CCFLAGS+=-DVERSION=\"$(VERSION)\"
 CCFLAGS+=-std=gnu99 -Wall -Wextra -pedantic -Werror -I . -g
-#CCFLAGS+=-O2 -Wall -Wextra -Werror -pedantic -I .
+#CCFLAGS+=-std=gnu99 -Wall -Wextra -Werror -pedantic -I . -O2
 
 OBJS=$(addprefix $(OBJDIR)/,mpserver.o utils.o musicmgr.o database.o \
   mpgutils.o player.o config.o mpcomm.o json.o )

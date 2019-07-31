@@ -101,7 +101,7 @@ static long controlVolume( long volume, int absolute ) {
 	int mswitch=0;
 	long retval = 0;
 	char *channel;
-	mpconfig *config;
+	mpconfig_t *config;
 	config=getConfig();
 	channel=config->channel;
 
@@ -159,7 +159,7 @@ static long controlVolume( long volume, int absolute ) {
  *         the current volume on unmute
  */
 int toggleMute() {
-	mpconfig *config=getConfig();
+	mpconfig_t *config=getConfig();
 	int mswitch;
 
 	if( config->volume == -1 ) {
@@ -193,7 +193,7 @@ int toggleMute() {
  * sets the given stream
  */
 void setStream( const char* stream, const char *name ) {
-	mpconfig *control=getConfig();
+	mpconfig_t *control=getConfig();
 	control->current=wipePlaylist( control->current );
 	control->root=wipeTitles(control->root);
 	control->current=addPLDummy( control->current, "Playing stream" );
@@ -208,7 +208,7 @@ void setStream( const char* stream, const char *name ) {
  * sends a command to the player
  * also makes sure that commands are queued
  */
-void setCommand( mpcmd cmd ) {
+void setCommand( mpcmd_t cmd ) {
 	if( cmd == mpc_idle ) {
 		return;
 	}
@@ -226,7 +226,7 @@ void setCommand( mpcmd cmd ) {
  */
 static void sendplay( int fdset ) {
 	char line[MAXPATHLEN+6]="load ";
-	mpconfig *control=getConfig();
+	mpconfig_t *control=getConfig();
 	assert( control->current != NULL );
 
 	if( getConfig()->mpmode == PM_STREAM ) {
@@ -250,12 +250,12 @@ static void sendplay( int fdset ) {
  */
 void *setProfile( ) {
 	char		confdir[MAXPATHLEN]; /* = "~/.mixplay"; */
-	struct profile_t *profile;
+	profile_t *profile;
 	int num;
 	int lastver;
 	int64_t active;
 	int64_t cactive;
-	mpconfig *control=getConfig();
+	mpconfig_t *control=getConfig();
 	char *home=getenv("HOME");
 
 	blockSigint();
@@ -362,7 +362,7 @@ void *setProfile( ) {
  * needs to be decreased. In both cases the updated information is written
  * back into the db.
  */
-static void playCount( mptitle *title ) {
+static void playCount( mptitle_t *title ) {
 	/* playcount only makes sense with a database */
 	if( getConfig()->mpmode != PM_DATABASE ) {
 		return;
@@ -390,7 +390,7 @@ static void playCount( mptitle *title ) {
  * client
  */
 static void *plCheckDoublets( void *arg ) {
-	mpconfig *control=getConfig();
+	mpconfig_t *control=getConfig();
 	pthread_mutex_t *lock=(pthread_mutex_t *) arg;
 	int i;
 
@@ -415,7 +415,7 @@ static void *plCheckDoublets( void *arg ) {
 }
 
 static void *plDbClean( void *arg ) {
-	mpconfig *control=getConfig();
+	mpconfig_t *control=getConfig();
 	pthread_mutex_t *lock=(pthread_mutex_t *) arg;
 	int i;
 	progressStart( "Database Cleanup" );
@@ -453,7 +453,7 @@ static void *plDbClean( void *arg ) {
 }
 
 static void *plDbInfo( void *arg ) {
-	mpconfig *control=getConfig();
+	mpconfig_t *control=getConfig();
 	pthread_mutex_t *lock=(pthread_mutex_t *) arg;
 
 	progressStart( "Database Info" );
@@ -465,7 +465,7 @@ static void *plDbInfo( void *arg ) {
 }
 
 static void *plSetProfile( void *arg ) {
-	mpconfig *control=getConfig();
+	mpconfig_t *control=getConfig();
 	pthread_mutex_t *lock=(pthread_mutex_t *) arg;
 
 	/* control->status=mpc_start; */
@@ -507,9 +507,9 @@ static void asyncRun( void *cmd(void *) ) {
  * in mixplay, gmixplay and probably other GUI variants (ie: web)
  */
 void *reader( ) {
-	mpconfig	*control=getConfig();
-	mptitle		*title=NULL;
-	fd_set			fds;
+	mpconfig_t  *control=getConfig();
+	mptitle_t *title=NULL;
+	fd_set		fds;
 	struct timeval	to;
 	struct timespec ts;
 	int64_t	i, key;
@@ -526,7 +526,7 @@ void *reader( ) {
 	int 	p_status[2][2];			/* status pipes to mpg123 */
 	int 	p_command[2][2];		/* command pipes to mpg123 */
 	pid_t	pid[2];
-	mpcmd	cmd=mpc_idle;
+	mpcmd_t	cmd=mpc_idle;
 	unsigned	update=0;
 	unsigned	insert=0;
 
@@ -1075,7 +1075,7 @@ void *reader( ) {
 				}
 				else {
 					control->profiles++;
-					control->profile=(struct profile_t **)frealloc( control->profile, control->profiles*sizeof(struct profile_t *) );
+					control->profile=(profile_t **)frealloc( control->profile, control->profiles*sizeof(profile_t *) );
 					control->profile[control->profiles-1]=createProfile( control->argument, 0 );
 					control->active=control->profiles;
 					writeConfig( NULL );

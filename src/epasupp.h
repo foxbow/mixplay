@@ -64,15 +64,14 @@
 #define READ_OTP_DATA                               0xA2
 #define POWER_OPT                                   0xF8
 
-enum epsmap_t {
+typedef enum {
 	epm_none,
 	epm_black,
 	epm_red,
 	epm_both
-};
-typedef enum epsmap_t epsmap;
+} epsmap_t;
 
-enum epsymbols_t {
+typedef enum {
 	ep_null=0,
 	ep_box,
 	ep_play,
@@ -84,23 +83,22 @@ enum epsymbols_t {
 	ep_fav,
 	ep_dnp,
 	ep_max
-};
-typedef enum epsymbols_t epsymbol;
+} epsymbol_t;
 
-void epsDrawString( epsmap map, unsigned posx, unsigned posy, char *txt, int mag );
-void epsDrawSymbol( epsmap map, unsigned x, unsigned y, epsymbol sym );
-int  epsDrawChar( epsmap map, unsigned x, unsigned y, int c, int mag );
+void epsDrawString( epsmap_t map, unsigned posx, unsigned posy, char *txt, int mag );
+void epsDrawSymbol( epsmap_t map, unsigned x, unsigned y, epsymbol_t sym );
+int  epsDrawChar( epsmap_t map, unsigned x, unsigned y, int c, int mag );
 void epsSetup( void );
 void epsDisplay( void );
 void epsPartialDisplay( unsigned x, unsigned y, unsigned w, unsigned l );
 #define epsClear() epsDisplay( NULL, NULL );
 void epsPoweroff( void );
 int epsPoweron( void );
-void epsSetPixel( epsmap map, unsigned x, unsigned y );
-void epsWipe( epsmap map, unsigned x, unsigned y, unsigned w, unsigned l );
-void epsWipeFull( epsmap map );
-void epsLine( epsmap map, int x0, int y0, int x1, int y1 );
-void epsBox( epsmap map, unsigned x0, unsigned y0, unsigned x1, unsigned y1, int filled );
+void epsSetPixel( epsmap_t map, unsigned x, unsigned y );
+void epsWipe( epsmap_t map, unsigned x, unsigned y, unsigned w, unsigned l );
+void epsWipeFull( epsmap_t map );
+void epsLine( epsmap_t map, int x0, int y0, int x1, int y1 );
+void epsBox( epsmap_t map, unsigned x0, unsigned y0, unsigned x1, unsigned y1, int filled );
 void epsButton( unsigned key, void(*func)(void) );
 int epsGetState( void );
 

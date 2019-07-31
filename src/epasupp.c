@@ -296,7 +296,7 @@ void epsPartialDisplay( unsigned x, unsigned y, unsigned w, unsigned h ) {
 	epsUnidle();
 }
 
-void epsSetPixel( epsmap map, unsigned x, unsigned y ) {
+void epsSetPixel( epsmap_t map, unsigned x, unsigned y ) {
 	unsigned pos=0;
 
 	/* clipping */
@@ -317,7 +317,7 @@ void epsSetPixel( epsmap map, unsigned x, unsigned y ) {
 	}
 }
 
-static void epsUnsetPixel( epsmap map, unsigned x, unsigned y ) {
+static void epsUnsetPixel( epsmap_t map, unsigned x, unsigned y ) {
 	unsigned pos=0;
 
 	if( ( x > X_MAX ) || ( y > Y_MAX ) ) {
@@ -337,7 +337,7 @@ static void epsUnsetPixel( epsmap map, unsigned x, unsigned y ) {
 	}
 }
 
-void epsWipe( epsmap map, unsigned x, unsigned y, unsigned w, unsigned l ) {
+void epsWipe( epsmap_t map, unsigned x, unsigned y, unsigned w, unsigned l ) {
 	unsigned i, j;
 	for( i=x; i<x+l; i++ ) {
 		for( j=y; j<y+w; j++ ) {
@@ -346,7 +346,7 @@ void epsWipe( epsmap map, unsigned x, unsigned y, unsigned w, unsigned l ) {
 	}
 }
 
-void epsWipeFull( epsmap map ) {
+void epsWipeFull( epsmap_t map ) {
 	int i;
 	for( i=0; i<EPDBYTES; i++ ) {
 		if( map & epm_black ) {
@@ -358,7 +358,7 @@ void epsWipeFull( epsmap map ) {
 	}
 }
 
-static void epsPutByte( epsmap map, unsigned posx, unsigned posy, unsigned char b, int mag ) {
+static void epsPutByte( epsmap_t map, unsigned posx, unsigned posy, unsigned char b, int mag ) {
 	int i, j;
 	int m=(mag>0)?2:1;
 
@@ -375,7 +375,7 @@ static void epsPutByte( epsmap map, unsigned posx, unsigned posy, unsigned char 
 	}
 }
 
-int epsDrawChar( epsmap map, unsigned posx, unsigned posy, int c, int mag ) {
+int epsDrawChar( epsmap_t map, unsigned posx, unsigned posy, int c, int mag ) {
 	int i, m, ym=(mag==2)?2:1;
 
 	if( ( mag < 0 ) || ( mag > 2 ) ) {
@@ -418,7 +418,7 @@ static int epsstrlen( const char *txt ) {
 /* draws a text string and tries to center it between posx and the right
    edge of the display. This may not always be expected. Probably add a maxx
 	 parameter */
-void epsDrawString( epsmap map, unsigned posx, unsigned posy, char *txt, int mag ) {
+void epsDrawString( epsmap_t map, unsigned posx, unsigned posy, char *txt, int mag ) {
 	unsigned end=0;
 	unsigned i, ill=0;
 	int m=(mag>0)?2:1;
@@ -446,7 +446,7 @@ void epsDrawString( epsmap map, unsigned posx, unsigned posy, char *txt, int mag
 /*
  * draw one of the predefined Symbols
  */
-void epsDrawSymbol( epsmap map, unsigned posx, unsigned posy, epsymbol sym ) {
+void epsDrawSymbol( epsmap_t map, unsigned posx, unsigned posy, epsymbol_t sym ) {
 	unsigned x, y;
 	if( sym >= ep_max ) {
 		addMessage( 0, "EPS: Illegal symbol #%i!", (int)sym );
@@ -469,7 +469,7 @@ void epsDrawSymbol( epsmap map, unsigned posx, unsigned posy, epsymbol sym ) {
 /*
  * draw a line in the given bitmap
  */
-void epsLine( epsmap map, int x0, int y0, int x1, int y1 ) {
+void epsLine( epsmap_t map, int x0, int y0, int x1, int y1 ) {
 	int xs, xe, ys, ye;
 	int x,y;
 	int step;
@@ -533,7 +533,7 @@ void epsLine( epsmap map, int x0, int y0, int x1, int y1 ) {
 /*
  * draw a box in the given bitmap
  */
-void epsBox( epsmap map, unsigned x0, unsigned y0, unsigned x1, unsigned y1, int filled ) {
+void epsBox( epsmap_t map, unsigned x0, unsigned y0, unsigned x1, unsigned y1, int filled ) {
 	unsigned x;
 	if( filled ) {
 		if( x0 < x1 ) {

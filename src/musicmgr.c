@@ -96,7 +96,7 @@ static int checkSim( const char *text, const char *pat ) {
 	}
 }
 
-static int getListPath( char path[MAXPATHLEN], mpcmd cmd ) {
+static int getListPath( char path[MAXPATHLEN], mpcmd_t cmd ) {
 	if( getConfig()->active < 1 ) {
 		return -1;
 	}
@@ -117,8 +117,8 @@ static int getListPath( char path[MAXPATHLEN], mpcmd cmd ) {
  * titles have been counted
  */
 void newCount( ) {
-	mptitle *root=getConfig()->root;
-	mptitle *runner = root;
+	mptitle_t *root=getConfig()->root;
+	mptitle_t *runner = root;
 	mpplaylist *pl=getConfig()->current;
 
 	if( pl == NULL ) {
@@ -136,8 +136,8 @@ void newCount( ) {
  * discards a list of titles and frees the memory
  * returns NULL for intuitive calling
  */
-mptitle *wipeTitles( mptitle *root ) {
-	mptitle *runner=root;
+mptitle_t *wipeTitles( mptitle_t *root ) {
+	mptitle_t *runner=root;
 
 	if( NULL != root ) {
 		root->prev->next=NULL;
@@ -157,8 +157,8 @@ mptitle *wipeTitles( mptitle *root ) {
  * discards a list of markterms and frees the memory
  * returns NULL for intuitive calling
  */
-struct marklist_t *wipeList( struct marklist_t *root ) {
-	struct marklist_t *runner=root;
+marklist_t *wipeList( marklist_t *root ) {
+	marklist_t *runner=root;
 
 	if( NULL != root ) {
 		while( runner != NULL ) {
@@ -174,7 +174,7 @@ struct marklist_t *wipeList( struct marklist_t *root ) {
 /**
  * add a line to a file
  */
-static int addToList( const char *line, mpcmd cmd ) {
+static int addToList( const char *line, mpcmd_t cmd ) {
 	FILE *fp;
 	char path[MAXPATHLEN+1];
 
@@ -222,7 +222,7 @@ mpplaylist *wipePlaylist( mpplaylist *pl ) {
 
 mpplaylist *addPLDummy( mpplaylist *pl, const char *name ){
 	mpplaylist *buf;
-	mptitle *title=(mptitle*)falloc(1, sizeof(mptitle));
+	mptitle_t *title=(mptitle_t*)falloc(1, sizeof(mptitle_t));
 
 	if( pl == NULL ) {
 		pl=(mpplaylist*)falloc(1, sizeof(mpplaylist));
@@ -252,7 +252,7 @@ mpplaylist *addPLDummy( mpplaylist *pl, const char *name ){
  * if pl is NULL a new Playlist is created
  * this function either returns pl or the head of the new playlist
  */
-mpplaylist *appendToPL( mptitle *title, mpplaylist *pl, const int mark ) {
+mpplaylist *appendToPL( mptitle_t *title, mpplaylist *pl, const int mark ) {
 	mpplaylist *runner=pl;
 
 	if( runner != NULL ) {
@@ -352,7 +352,7 @@ mpplaylist *remFromPLByKey( mpplaylist *root, const unsigned key ) {
  * default mixplay, otherwise it is a searched title and will be
  * played out of order.
  */
-mpplaylist *addToPL( mptitle *title, mpplaylist *target, const int mark ) {
+mpplaylist *addToPL( mptitle_t *title, mpplaylist *target, const int mark ) {
 	mpplaylist *buf=NULL;
 
 	if( mark && ( title->flags & MP_MARK ) ) {
@@ -450,7 +450,7 @@ static int getDirs( const char *cd, struct dirent ***dirlist ) {
  * the second character notes if the search should be
  * exact or fuzzy (=*)
  */
-static int matchTitle( mptitle *title, const char* pat ) {
+static int matchTitle( mptitle_t *title, const char* pat ) {
 	int fuzzy=0;
 	char loname[1024];
 	char *lopat;
@@ -531,9 +531,9 @@ static int isMatch( const char *term, const char *pat, const int fuzzy ) {
  * pat - pattern to search for
  * range - search range
  */
-int search( const char *pat, const mpcmd range ) {
-	mptitle *root=getConfig()->root;
-	mptitle *runner=root;
+int search( const char *pat, const mpcmd_t range ) {
+	mptitle_t *root=getConfig()->root;
+	mptitle_t *runner=root;
 	searchresults *res=getConfig()->found;
 	unsigned int i=0;
 	int found=0;
@@ -630,10 +630,10 @@ int search( const char *pat, const mpcmd range ) {
  *
  * returns the number of marked titles or -1 on error
  */
-static int applyDNPlist( struct marklist_t *list ) {
-	mptitle *base=getConfig()->root;
-	mptitle  *pos = base;
-	struct marklist_t *ptr = list;
+static int applyDNPlist( marklist_t *list ) {
+	mptitle_t *base=getConfig()->root;
+	mptitle_t  *pos = base;
+	marklist_t *ptr = list;
 	mpplaylist *pl=getConfig()->current;
 	int cnt=0;
 
@@ -678,10 +678,10 @@ static int applyDNPlist( struct marklist_t *list ) {
 /**
  * This function sets the favourite bit on titles found in the given list
  */
-static int applyFAVlist( struct marklist_t *favourites, int excl ) {
-	struct marklist_t *ptr = NULL;
-	mptitle *root=getConfig()->root;
-	mptitle *runner=root;
+static int applyFAVlist( marklist_t *favourites, int excl ) {
+	marklist_t *ptr = NULL;
+	mptitle_t *root=getConfig()->root;
+	mptitle_t *runner=root;
 	int cnt=0;
 
 	if( NULL == root ) {
@@ -733,8 +733,8 @@ static int applyFAVlist( struct marklist_t *favourites, int excl ) {
 }
 
 void applyLists( int clean ) {
-	mpconfig *control=getConfig();
-	mptitle *title = control->root;
+	mpconfig_t *control=getConfig();
+	mptitle_t *title = control->root;
 
 	pthread_mutex_lock( &_pllock );
 	if( clean ) {
@@ -755,10 +755,10 @@ void applyLists( int clean ) {
 /**
  * does the actual loading of a list
  */
-struct marklist_t *loadList( const mpcmd cmd ) {
+marklist_t *loadList( const mpcmd_t cmd ) {
 	FILE *file = NULL;
-	struct marklist_t *ptr = NULL;
-	struct marklist_t *bwlist = NULL;
+	marklist_t *ptr = NULL;
+	marklist_t *bwlist = NULL;
 	char path[MAXPATHLEN+1];
 
 	char *buff;
@@ -785,11 +785,11 @@ struct marklist_t *loadList( const mpcmd cmd ) {
 
 		if( buff && strlen( buff ) > 1 ) {
 			if( !bwlist ) {
-				bwlist=(struct marklist_t *)falloc( 1, sizeof( struct marklist_t ) );
+				bwlist=(marklist_t *)falloc( 1, sizeof( marklist_t ) );
 				ptr=bwlist;
 			}
 			else {
-				ptr->next=(struct marklist_t *)falloc( 1, sizeof( struct marklist_t ) );
+				ptr->next=(marklist_t *)falloc( 1, sizeof( marklist_t ) );
 				ptr=ptr->next;
 			}
 
@@ -814,9 +814,9 @@ cleanup:
 	return bwlist;
 }
 
-int writeList( const mpcmd cmd ) {
+int writeList( const mpcmd_t cmd ) {
 	int cnt=0;
-	struct marklist_t *runner;
+	marklist_t *runner;
 	char path[MAXPATHLEN+1];
 	FILE *fp=NULL;
 
@@ -858,9 +858,9 @@ int writeList( const mpcmd cmd ) {
 /**
  * removes an entry from the favourite or DNP list
  */
-int delFromList( const mpcmd cmd, const char *line ) {
-	struct marklist_t *list;
-	struct marklist_t *buff=NULL;
+int delFromList( const mpcmd_t cmd, const char *line ) {
+	marklist_t *list;
+	marklist_t *buff=NULL;
 	int cnt=0;
 
 	if( MPC_CMD(cmd) == mpc_dnp ) {
@@ -936,10 +936,10 @@ void moveEntry( mpplaylist *entry, mpplaylist *pos ) {
 /**
  * load a standard m3u playlist into a list of titles that the tools can handle
  */
-mptitle *loadPlaylist( const char *path ) {
+mptitle_t *loadPlaylist( const char *path ) {
 	FILE *fp;
 	int cnt=0;
-	mptitle *current=NULL;
+	mptitle_t *current=NULL;
 	char *buff;
 	char titlePath[MAXPATHLEN];
 	char mdir[MAXPATHLEN+1]="";
@@ -1009,8 +1009,8 @@ mptitle *loadPlaylist( const char *path ) {
  */
 mpplaylist *removeByPattern( mpplaylist *plentry, const char *pat ) {
 	char pattern[NAMELEN+2];
-	mptitle *entry=plentry->title;
-	mptitle *runner=entry;
+	mptitle_t *entry=plentry->title;
+	mptitle_t *runner=entry;
 
 	strncpy( pattern, pat, 2 );
 
@@ -1062,10 +1062,10 @@ mpplaylist *removeByPattern( mpplaylist *plentry, const char *pat ) {
  * Insert an entry into the database list and fill it with
  * path and if available, mp3 tag info.
  */
-mptitle *insertTitle( mptitle *base, const char *path ) {
-	mptitle *root;
+mptitle_t *insertTitle( mptitle_t *base, const char *path ) {
+	mptitle_t *root;
 
-	root = ( mptitle* ) falloc( 1, sizeof( mptitle ) );
+	root = ( mptitle_t* ) falloc( 1, sizeof( mptitle_t ) );
 
 	if( NULL == base ) {
 		base=root;
@@ -1095,8 +1095,8 @@ mptitle *insertTitle( mptitle *base, const char *path ) {
  */
 unsigned long countTitles( const unsigned int inc, const unsigned int exc ) {
 	unsigned long cnt=0;
-	mptitle *base=getConfig()->root;
-	mptitle *runner=base;
+	mptitle_t *base=getConfig()->root;
+	mptitle_t *runner=base;
 
 	if( NULL == base ) {
 		addMessage(1,"Counting without Database!");
@@ -1122,8 +1122,8 @@ unsigned long countTitles( const unsigned int inc, const unsigned int exc ) {
  * returns the lowest playcount of the current list
  */
 unsigned getLowestPlaycount( void ) {
-	mptitle *base=getConfig()->root;
-	mptitle *runner=base;
+	mptitle_t *base=getConfig()->root;
+	mptitle_t *runner=base;
 	unsigned min=UINT_MAX;
 
 	if( base == NULL ) {
@@ -1148,8 +1148,8 @@ unsigned getLowestPlaycount( void ) {
  * skips the global list until a title is found that has not been played
  * is not in the current playlist and is not marked as DNP
  */
-static mptitle *skipOver( mptitle *current, int dir ) {
-	mptitle *marker=current;
+static mptitle_t *skipOver( mptitle_t *current, int dir ) {
+	mptitle_t *marker=current;
 
 	if( marker == NULL ) {
 		addMessage( 0, "No current title to skip over!" );
@@ -1173,7 +1173,7 @@ static mptitle *skipOver( mptitle *current, int dir ) {
 	return marker;
 }
 
-void markSkip( mptitle *title ) {
+void markSkip( mptitle_t *title ) {
 	title->skipcount++;
 	if( title->skipcount > getConfig()->skipdnp ) {
 		title->flags |= MP_DNP;
@@ -1185,9 +1185,9 @@ void markSkip( mptitle *title ) {
  * as DNP so they will not end up in a mix.
  */
 int DNPSkip( void ) {
-	mptitle *base=getConfig()->root;
+	mptitle_t *base=getConfig()->root;
 	const unsigned int level=getConfig()->skipdnp;
-	mptitle *runner=base;
+	mptitle_t *runner=base;
 	unsigned int skipskip=0;
 
 /* Sort out skipped titles */
@@ -1212,7 +1212,7 @@ int DNPSkip( void ) {
 /**
  * skips the given number of titles
  */
-static mptitle *skipTitles( mptitle *current, long num ) {
+static mptitle_t *skipTitles( mptitle_t *current, long num ) {
 	if( NULL == current ) {
 		return NULL;
 	}
@@ -1245,9 +1245,9 @@ static mptitle *skipTitles( mptitle *current, long num ) {
  *
  * returns the head of the (new/current) playlist or NULL on error
  */
-mpplaylist *addNewTitle( mpplaylist *pl, mptitle *root ) {
-	mptitle *runner=NULL;
-	mptitle *guard=NULL;
+mpplaylist *addNewTitle( mpplaylist *pl, mptitle_t *root ) {
+	mptitle_t *runner=NULL;
+	mptitle_t *guard=NULL;
 	unsigned long num=0;
 	char *lastpat=NULL;
 	unsigned int pcount=getConfig()->playcount;
@@ -1483,7 +1483,7 @@ void plCheck( int del ) {
  * files:  the list to store filenames in
  * returns the LAST entry of the list.
  */
-mptitle *recurse( char *curdir, mptitle *files ) {
+mptitle_t *recurse( char *curdir, mptitle_t *files ) {
 	char dirbuff[2*MAXPATHLEN];
 	struct dirent **entry;
 	int num, i;
@@ -1534,8 +1534,8 @@ mptitle *recurse( char *curdir, mptitle *files ) {
  * does a database scan and dumps information about playrate
  * favourites and DNPs
  */
-void dumpInfo( mptitle *root, unsigned int skip ) {
-	mptitle *current=root;
+void dumpInfo( mptitle_t *root, unsigned int skip ) {
+	mptitle_t *current=root;
 	unsigned int maxplayed=0;
 	unsigned int minplayed=-1; /* UINT_MAX; */
 	unsigned int pl=0;
@@ -1628,7 +1628,7 @@ void dumpInfo( mptitle *root, unsigned int skip ) {
  * with ### being the index.
  * Returns -1 when the target runs out of space.
  */
-static int copyTitle( mptitle *title, const char* target,
+static int copyTitle( mptitle_t *title, const char* target,
 		const unsigned int index ) {
 	int in=-1, out=-1, rv=-1;
 	size_t len;
@@ -1686,9 +1686,9 @@ cleanup:
  *
  * TODO this does not make any sense with the new playlist structure
  */
-int fillstick( mptitle *root, const char *target ) {
+int fillstick( mptitle_t *root, const char *target ) {
 	unsigned int index=0;
-	mptitle *current;
+	mptitle_t *current;
 
 	current=root;
 
@@ -1707,7 +1707,7 @@ int fillstick( mptitle *root, const char *target ) {
 	return index;
 }
 
-int addRangePrefix( char *line, mpcmd cmd ) {
+int addRangePrefix( char *line, mpcmd_t cmd ) {
 	line[2]=0;
 	line[1]=MPC_ISFUZZY(cmd)?'*':'=';
 	switch( MPC_RANGE(cmd) ) {
@@ -1739,11 +1739,11 @@ int addRangePrefix( char *line, mpcmd cmd ) {
  * definitions in cmd to create the proper config line and immediately
  * applies it to the current database and playlist
  */
-int handleRangeCmd( mptitle *title, mpcmd cmd ) {
+int handleRangeCmd( mptitle_t *title, mpcmd_t cmd ) {
 	char line[MAXPATHLEN];
-	struct marklist_t *buff, *list;
+	marklist_t *buff, *list;
 	int cnt=-1;
-	mpconfig *config=getConfig();
+	mpconfig_t *config=getConfig();
 
 	if( addRangePrefix(line, cmd) == 0 ) {
 		switch( MPC_RANGE(cmd) ) {
@@ -1787,7 +1787,7 @@ int handleRangeCmd( mptitle *title, mpcmd cmd ) {
 			buff=buff->next;
 		}
 
-		buff=falloc( 1, sizeof( struct marklist_t ) );
+		buff=falloc( 1, sizeof( marklist_t ) );
 		strcpy( buff->dir, line );
 		buff->next=NULL;
 
@@ -1824,12 +1824,12 @@ int handleRangeCmd( mptitle *title, mpcmd cmd ) {
  * arg - either a title key or a string
  * insert - play next or append to the end of the playlist
  */
-int playResults( mpcmd range, const char *arg, const int insert ) {
-	mpconfig   *config=getConfig();
+int playResults( mpcmd_t range, const char *arg, const int insert ) {
+	mpconfig_t   *config=getConfig();
 	mpplaylist *pos=config->current;
 	mpplaylist *end=NULL;
 	mpplaylist *res=config->found->titles;
-	mptitle *title=NULL;
+	mptitle_t *title=NULL;
 	int key=atoi(arg);
 
 	/* insert results at current pos or at the end? */

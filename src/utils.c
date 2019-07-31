@@ -291,8 +291,8 @@ void sfree( char **ptr ) {
 /*
  * initialize a message ringbuffer
  */
-msgbuf *msgBuffInit() {
-	msgbuf *msgBuf=(msgbuf *)falloc( 1, sizeof( msgbuf ) );
+msgbuf_t *msgBuffInit() {
+	msgbuf_t *msgBuf=(msgbuf_t *)falloc( 1, sizeof( msgbuf_t ) );
 	msgBuf->msgLock=(pthread_mutex_t *)falloc( 1, sizeof( pthread_mutex_t ) );
 	msgBuf->lines=0;
 	msgBuf->current=0;
@@ -306,7 +306,7 @@ msgbuf *msgBuffInit() {
  * adds message 'line' to the buffer.
  * returns the current message number
  */
-unsigned long msgBuffAdd( msgbuf *msgbuf, char *line ) {
+unsigned long msgBuffAdd( msgbuf_t *msgbuf, char *line ) {
 	char *myline;
 	myline=(char*)falloc( strlen(line)+1, 1 );
 	strcpy( myline, line );
@@ -335,7 +335,7 @@ unsigned long msgBuffAdd( msgbuf *msgbuf, char *line ) {
  * returns the current message and removes it from the buffer
  * Return pointer must be free'd after use!
  */
-char *msgBuffGet( struct msgbuf_t *msgbuf ) {
+char *msgBuffGet( msgbuf_t *msgbuf ) {
 	char *retval = NULL;
 	pthread_mutex_lock( msgbuf->msgLock );
 	if( msgbuf->lines > 0 ) {
@@ -354,7 +354,7 @@ char *msgBuffGet( struct msgbuf_t *msgbuf ) {
  * Return pointer MUST NOT be free'd after use!
  * Caveat: Returns "" if no messages are available
  */
-const char *msgBuffPeek( struct msgbuf_t *msgbuf, unsigned long msgno ) {
+const char *msgBuffPeek( msgbuf_t *msgbuf, unsigned long msgno ) {
 	const char *retval = "";
 	int pos;
 
@@ -378,7 +378,7 @@ const char *msgBuffPeek( struct msgbuf_t *msgbuf, unsigned long msgno ) {
  * Return pointer SHOULD be free'd after use!
  * Caveat: Returns NULL if no messages are available
  */
-char *msgBuffAll( struct msgbuf_t *msgbuf ) {
+char *msgBuffAll( msgbuf_t *msgbuf ) {
 	int i, lineno;
 	char *buff;
 	size_t len=256;
@@ -404,7 +404,7 @@ char *msgBuffAll( struct msgbuf_t *msgbuf ) {
 /**
  * empties the message buffer
  */
-void msgBuffClear( struct msgbuf_t *msgbuf ) {
+void msgBuffClear( msgbuf_t *msgbuf ) {
 	char *line;
 	while( ( line=msgBuffGet( msgbuf ) ) != NULL ) {
 		free( line );
@@ -414,7 +414,7 @@ void msgBuffClear( struct msgbuf_t *msgbuf ) {
 /*
  * Discards the message buffer and all contents
  */
-void msgBuffDiscard( struct msgbuf_t *msgbuf ) {
+void msgBuffDiscard( msgbuf_t *msgbuf ) {
 	msgBuffClear( msgbuf );
 	free( msgbuf->msgLock );
 	free( msgbuf );

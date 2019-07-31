@@ -27,9 +27,9 @@ void dbMarkDirty( void ) {
 	}
 }
 
-mptitle *getTitleByIndex( unsigned int index ) {
-	mptitle *root=getConfig()->root;
-	mptitle *run=root;
+mptitle_t *getTitleByIndex( unsigned int index ) {
+	mptitle_t *root=getConfig()->root;
+	mptitle_t *run=root;
 	if( root == NULL ) {
 		return NULL;
 	}
@@ -49,9 +49,9 @@ mptitle *getTitleByIndex( unsigned int index ) {
  * This is kind of a hack to turn an artist name or an album name into
  * a title that can be used for FAV/DNP marking.
  */
-mptitle *getTitleForRange( const mpcmd range, const char *name ) {
-	mptitle *root=getConfig()->root;
-	mptitle *run=root;
+mptitle_t *getTitleForRange( const mpcmd_t range, const char *name ) {
+	mptitle_t *root=getConfig()->root;
+	mptitle_t *run=root;
 
 	if( root == NULL ) {
 		return NULL;
@@ -78,8 +78,8 @@ mptitle *getTitleForRange( const mpcmd range, const char *name ) {
 /**
  * 	searches for a given path in the mixplay entry list
  */
-static mptitle *findTitle( mptitle *base, const char *path ) {
-	mptitle *runner;
+static mptitle_t *findTitle( mptitle_t *base, const char *path ) {
+	mptitle_t *runner;
 
 	if( NULL == base ) {
 		return NULL;
@@ -102,7 +102,7 @@ static mptitle *findTitle( mptitle *base, const char *path ) {
 /**
  * checks if a given title still exists on the filesystem
  */
-int mp3Exists( const mptitle *title ) {
+int mp3Exists( const mptitle_t *title ) {
 	return( access( fullpath(title->path), F_OK ) == 0 );
 }
 
@@ -110,8 +110,8 @@ int mp3Exists( const mptitle *title ) {
  * deletes an entry from the database list
  * This should only be used on a database cleanup!
  */
-static mptitle *removeTitle( mptitle *entry ) {
-	mptitle *next=NULL;
+static mptitle_t *removeTitle( mptitle_t *entry ) {
+	mptitle_t *next=NULL;
 
 	if( entry->next != entry ) {
 		next=entry->next;
@@ -127,7 +127,7 @@ static mptitle *removeTitle( mptitle *entry ) {
 /**
  * turn a database entry into a mixplay structure
  */
-static void db2entry( struct dbentry_t *dbentry, mptitle *entry ) {
+static void db2entry( dbentry_t *dbentry, mptitle_t *entry ) {
 	memset( entry, 0, ESIZE );
 	strcpy( entry->path, dbentry->path );
 	strcpy( entry->artist, dbentry->artist );
@@ -142,7 +142,7 @@ static void db2entry( struct dbentry_t *dbentry, mptitle *entry ) {
 /**
  * pack a mixplay entry into a database structure
  */
-static void entry2db( mptitle *entry, struct dbentry_t *dbentry ) {
+static void entry2db( mptitle_t *entry, dbentry_t *dbentry ) {
 	memset( dbentry, 0, DBESIZE );
 	strcpy( dbentry->path, entry->path );
 	strcpy( dbentry->artist, entry->artist );
@@ -171,8 +171,8 @@ static int dbOpen( const char *path ) {
 /**
  * adds/overwrites a title to/in the database
  */
-static int dbPutTitle( int db, mptitle *title ) {
-	struct dbentry_t dbentry;
+static int dbPutTitle( int db, mptitle_t *title ) {
+	dbentry_t dbentry;
 
 	assert( 0 != db );
 
@@ -198,9 +198,9 @@ static int dbPutTitle( int db, mptitle *title ) {
  * takes a database entry and adds it to a mixplay entry list
  * if there is no list, a new one will be created
  */
-static mptitle *addDBTitle( struct dbentry_t dbentry, mptitle *root, unsigned int index ) {
-	mptitle *entry;
-	entry=(mptitle*)falloc( 1, sizeof( mptitle ) );
+static mptitle_t *addDBTitle( dbentry_t dbentry, mptitle_t *root, unsigned int index ) {
+	mptitle_t *entry;
+	entry=(mptitle_t*)falloc( 1, sizeof( mptitle_t ) );
 
 	db2entry( &dbentry, entry );
 	entry->key=index;
@@ -223,10 +223,10 @@ static mptitle *addDBTitle( struct dbentry_t dbentry, mptitle *root, unsigned in
 /**
  * gets all titles from the database and returns them as a mixplay entry list
  */
-mptitle *dbGetMusic( ) {
-	struct dbentry_t dbentry;
+mptitle_t *dbGetMusic( ) {
+	dbentry_t dbentry;
 	unsigned int index = 1; /* index 0 is reserved for titles not in the db! */
-	mptitle *dbroot=NULL;
+	mptitle_t *dbroot=NULL;
 	int db;
 	size_t len;
 	db=dbOpen( getConfig()->dbname );
@@ -258,8 +258,8 @@ mptitle *dbGetMusic( ) {
  * i.e. titles that are in the database but no longer on the medium
  */
 int dbCheckExist( void ) {
-	mptitle *root;
-	mptitle *runner;
+	mptitle_t *root;
+	mptitle_t *runner;
 	int num=0;
 
 	root=getConfig()->root;
@@ -294,8 +294,8 @@ int dbCheckExist( void ) {
 	return num;
 }
 
-static int dbAddTitle( int db, mptitle *title ) {
-    struct dbentry_t dbentry;
+static int dbAddTitle( int db, mptitle_t *title ) {
+    dbentry_t dbentry;
 
     assert( 0 != db );
 
@@ -316,10 +316,10 @@ static int dbAddTitle( int db, mptitle *title ) {
  * the new titles will have a playcount set to blend into the mix
  */
 int dbAddTitles( const char *dbname, char *basedir ) {
-	mptitle *fsroot;
-	mptitle *fsnext;
-	mptitle *dbroot;
-	mptitle *dbrunner;
+	mptitle_t *fsroot;
+	mptitle_t *fsnext;
+	mptitle_t *dbroot;
+	mptitle_t *dbrunner;
 	unsigned count=0, mean=0;
 	unsigned index=0;
 	int num=0, db=0;
@@ -421,7 +421,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 	return num;
 }
 
-static int checkPath( mptitle *entry, int range ) {
+static int checkPath( mptitle_t *entry, int range ) {
 	char	path[MAXPATHLEN];
 	char	check[NAMELEN]="";
 	char *pos;
@@ -448,9 +448,9 @@ static int checkPath( mptitle *entry, int range ) {
 
 
 int dbNameCheck( void ) {
-	mptitle	*root;
-	mptitle	*currentEntry;
-	mptitle	*runner;
+	mptitle_t *root;
+	mptitle_t *currentEntry;
+	mptitle_t *runner;
 	int				count=0;
 	FILE 			*fp;
 	int				match;
@@ -555,8 +555,8 @@ void dbWrite( void ) {
 	int db;
 	unsigned int index=1;
 	const char *dbname=getConfig()->dbname;
-	mptitle *root=getConfig()->root;
-	mptitle *runner=root;
+	mptitle_t *root=getConfig()->root;
+	mptitle_t *runner=root;
 
 	if( NULL == root ) {
 		fail( F_FAIL, "Not dumping an empty database!" );

@@ -78,7 +78,7 @@ void fail( const int error, const char* msg, ... ) {
  * special handling for the server during information updates
  */
 static void s_updateHook( ) {
-	mpconfig *data=getConfig();
+	mpconfig_t *data=getConfig();
 	if( _curmsg < data->msg->count ) {
 		if( data->isDaemon ) {
 			syslog( LOG_NOTICE, "%s", msgBuffPeek( data->msg, _curmsg ) );
@@ -88,7 +88,7 @@ static void s_updateHook( ) {
 }
 
 int main( int argc, char **argv ) {
-	mpconfig	*control;
+	mpconfig_t	*control;
 	char *path;
 	FILE *pidlog=NULL;
 	struct timeval tv;
@@ -198,7 +198,7 @@ int main( int argc, char **argv ) {
 	sleep(1);
 	if( control->status != mpc_quit ) {
 		epSetup();
-		addUpdateHook( &ep_updateHook );
+		addUpdateHook( &epUpdateHook );
 	}
 	#endif
 	pthread_join( control->stid, NULL );

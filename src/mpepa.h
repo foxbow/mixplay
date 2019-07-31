@@ -3,6 +3,6 @@
 #include "epasupp.h"
 
 void epSetup( void );
-void ep_updateHook( );
+void epUpdateHook( );
 void epExit( void );
 #endif

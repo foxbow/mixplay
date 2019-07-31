@@ -10,7 +10,7 @@
 #include "musicmgr.h"
 #include <assert.h>
 
-struct dbentry_t {
+typedef struct {
 	char path[MAXPATHLEN];		/* path on the filesystem to the file */
 	char artist[NAMELEN];		/* Artist info */
 	char title[NAMELEN];		/* Title info (from mp3) */
@@ -18,21 +18,21 @@ struct dbentry_t {
 	char genre[NAMELEN];		/* Album info (from mp3) */
 	unsigned int playcount;		/* play counter */
 	unsigned int skipcount;		/* skip counter */
-};
+} dbentry_t;
 
-#define DBESIZE sizeof(struct dbentry_t)
-#define ESIZE sizeof(mptitle)
+#define DBESIZE sizeof(dbentry_t)
+#define ESIZE sizeof(mptitle_t)
 
-mptitle *dbGetMusic( void );
+mptitle_t *dbGetMusic( void );
 int dbCheckExist( void );
 int dbAddTitles( const char *dbname, char *basedir );
 void dbWrite( void );
 int dbNameCheck( void );
-mptitle *getTitleByIndex( unsigned int index );
-mptitle *getTitleForRange( const mpcmd range, const char *name );
+mptitle_t *getTitleByIndex( unsigned int index );
+mptitle_t *getTitleForRange( const mpcmd_t range, const char *name );
 void dbMarkDirty( void );
-int mp3Exists( const mptitle *title );
+int mp3Exists( const mptitle_t *title );
 
-/* void dbDump( const char *dbname, mptitle *root ); */
+/* void dbDump( const char *dbname, mptitle_t *root ); */
 
 #endif /* DATABASE_H_ */

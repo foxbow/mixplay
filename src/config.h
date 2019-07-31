@@ -11,6 +11,7 @@
 #include <pthread.h>
 #include <sys/types.h>
 #include <inttypes.h>
+#include "utils.h"
 
 #define MP_MSGLEN 512
 
@@ -18,7 +19,7 @@
  * commands and states
  * caveat: when changing this check *mpc_command[] in config.c too!
  */
-enum _mpcmd_t {
+typedef enum {
 	mpc_play=0,
 	mpc_stop,
 	mpc_prev,
@@ -58,8 +59,7 @@ enum _mpcmd_t {
 	mpc_genre=1<<12,
 	mpc_fuzzy=1<<13,
 	mpc_mix=1<<13
-};
-typedef enum _mpcmd_t mpcmd;
+} mpcmd_t;
 
 #include "musicmgr.h"
 
@@ -68,9 +68,9 @@ typedef enum _mpcmd_t mpcmd;
  * 000F RRRR CCCC CCCC
  */
 /* extract raw command */
-#define MPC_CMD(x)   (mpcmd)((int)x&0x00ff)
+#define MPC_CMD(x)   (mpcmd_t)((int)x&0x00ff)
 /* determine range */
-#define MPC_RANGE(x) (mpcmd)((int)x&0xff00)
+#define MPC_RANGE(x) (mpcmd_t)((int)x&0xff00)
 #define MPC_ISTITLE(x) (x & mpc_title)
 #define MPC_ISARTIST(x) (x & mpc_artist)
 #define MPC_ISALBUM(x) ( x & mpc_album)
@@ -91,36 +91,35 @@ typedef enum _mpcmd_t mpcmd;
 #define PM_PLAYLIST 0x02
 #define PM_DATABASE 0x03
 
-struct profile_t {
+typedef struct {
 	char *name;
 	unsigned favplay;
-};
+} profile_t ;
 
 /**
  * holds the widgets and pipes for communication
  */
-typedef struct _mpcontrol_t mpconfig;
-struct _mpcontrol_t {
+typedef struct {
 	char *musicdir;				/* path to the music */
 	char pidpath[MAXPATHLEN];	/* path to the pidfile in demon mode */
 	int active;					/* active >0 = profile / 0=none / <0 = stream */
 	int profiles;				/* number of profiles */
-	struct profile_t **profile;	/* profiles */
+	profile_t **profile;	/* profiles */
 	int streams;				/* number of streams */
 	char **stream;				/* stream URLs */
 	char **sname;				/* stream names */
-	mptitle *root;				/* the root title */
+	mptitle_t *root;				/* the root title */
 	searchresults *found;		/* buffer list to contain searchresults etc */
 	mpplaylist *current;		/* the current title */
 	char *dbname;				/* path to the database */
-	struct marklist_t *favlist;	/* favourites */
-	struct marklist_t *dnplist;	/* DNPlist */
+	marklist_t *favlist;	/* favourites */
+	marklist_t *dnplist;	/* DNPlist */
 	char playtime[20];			/* string containing time into song 00:00 */
 	char remtime[20];			/* string containing remaining playtime 00:00 */
 	int percent;				/* how many percent of the song have been played */
-	mpcmd command;				/* command to the player */
+	mpcmd_t command;				/* command to the player */
 	char *argument;				/* arguments to command */
-	mpcmd status;					/* status of the player/system */
+	mpcmd_t status;					/* status of the player/system */
 	pthread_t rtid;				/* thread ID of the reader */
 	pthread_t stid;				/* thread ID of the server */
 	unsigned skipdnp;				/* how many skips mean dnp? */
@@ -129,7 +128,7 @@ struct _mpcontrol_t {
 	int verbosity;
 	int debug;
 	char *streamURL;
-	struct msgbuf_t *msg;		/* generic message buffer */
+	msgbuf_t *msg;		/* generic message buffer */
 	void *data;					/* extended data for gmixplay */
 	int  port;
 	unsigned playcount;
@@ -144,16 +143,16 @@ struct _mpcontrol_t {
 	unsigned inUI:1;					/* flag to show if the UI is active */
 	unsigned changed:1;
 	unsigned listDirty:1;
-};
+} mpconfig_t;
 
 void writeConfig( const char *musicpath );
-mpconfig *readConfig( void );
-mpconfig *getConfig( void );
+mpconfig_t *readConfig( void );
+mpconfig_t *getConfig( void );
 void freeConfig( void );
 void freeConfigContents( void );
-struct profile_t *getProfile();
-struct profile_t *createProfile( const char *name, const unsigned favplay );
-void freeProfile( struct profile_t *profile );
+profile_t *getProfile();
+profile_t *createProfile( const char *name, const unsigned favplay );
+void freeProfile( profile_t *profile );
 
 void incDebug( void );
 int getDebug( void );
@@ -181,8 +180,8 @@ void addUpdateHook( void (*)( void * ) );
 
 void removeNotifyHook( void (*)( void *), void *arg );
 
-const char *mpcString( mpcmd rawcmd );
-mpcmd mpcCommand( const char *val );
+const char *mpcString( mpcmd_t rawcmd );
+mpcmd_t mpcCommand( const char *val );
 int  setArgument( const char *arg );
 int getArgs( int argc, char ** argv );
 int initAll( void );

@@ -257,7 +257,7 @@ static int tagCopy( char *target, mpg123_string *tag ) {
  * Either it's Artist/Album for directories or just the Artist from an mp3
  * Used as base settings in case no mp3 tag info is available
  */
-static void genPathName( mptitle *entry  ) {
+static void genPathName( mptitle_t *entry  ) {
 	char *p;
 	char curdir[MAXPATHLEN];
 	int blen=0;
@@ -311,7 +311,7 @@ static void genPathName( mptitle *entry  ) {
  * read tag data from the file
  * todo use the mpg123 provided text conversion functions
  */
-static void fillInfo( mpg123_handle *mh, mptitle *title ) {
+static void fillInfo( mpg123_handle *mh, mptitle_t *title ) {
 	mpg123_id3v1 *v1;
 	mpg123_id3v2 *v2;
 	int meta;
@@ -449,7 +449,7 @@ static void fillInfo( mpg123_handle *mh, mptitle *title ) {
 /**
  * read tags for a single title
  */
-int fillTagInfo( mptitle *title ) {
+int fillTagInfo( mptitle_t *title ) {
 	mpg123_handle* mh;
 	/* Do not try to scan non mp3 files */
 	if( !isMusic( title->path) ) {

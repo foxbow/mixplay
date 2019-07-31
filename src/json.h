@@ -18,17 +18,16 @@
 /*
  * JSON defined datatypes
  */
-enum _jsonTypes_t {
+typedef enum  {
 	json_null,
 	json_boolean,
 	json_string,
 	json_number,
 	json_object,
 	json_array
-};
+} jsonType;
 
-typedef enum _jsonTypes_t jsonType;
-typedef struct _jsonObject_t jsonObject;
+typedef struct  jsonObject_s jsonObject;
 /*
  * key, val - the JSON key and value pair
  * type	 - JSON type of val
@@ -37,7 +36,7 @@ typedef struct _jsonObject_t jsonObject;
  *			2 - neither key nor val shall be free'd
  * next	 - next json pair
  */
-struct _jsonObject_t {
+struct jsonObject_s{
 	char *key;
 	void *val;
 	jsonType type;

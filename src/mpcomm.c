@@ -72,7 +72,7 @@ void unlockClient( int client ) {
  */
 static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplaylist *pl ) {
 	jsonObject *val=NULL;
-	mptitle *title=NULL;
+	mptitle_t *title=NULL;
 
 	if( pl != NULL ) {
 		title=pl->title;
@@ -135,7 +135,7 @@ static jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mpplaylist *p
 	return jo;
 }
 
-static jsonObject *jsonAddList( jsonObject *jo, const char *key, struct marklist_t *list ) {
+static jsonObject *jsonAddList( jsonObject *jo, const char *key, marklist_t *list ) {
 	int num=0;
 	char buffer[20];
 	jsonObject *buf=NULL;
@@ -158,7 +158,7 @@ static jsonObject *jsonAddList( jsonObject *jo, const char *key, struct marklist
  * adds messages only if any are available for the client
 **/
 char *serializeStatus( unsigned long *count, int clientid, int type ) {
-	mpconfig *data=getConfig();
+	mpconfig_t *data=getConfig();
 	jsonObject *jo=NULL;
 	mpplaylist *current=data->current;
 
@@ -229,7 +229,7 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 	return jsonToString( jo );
 }
 
-static jsonObject *jsonAddProfiles( jsonObject *jo, const char *key, struct profile_t **vals, const int num ) {
+static jsonObject *jsonAddProfiles( jsonObject *jo, const char *key, profile_t **vals, const int num ) {
 	jsonObject *buf=NULL;
 	jsonObject *val=NULL;
 	char buffer[20];
@@ -250,7 +250,7 @@ static jsonObject *jsonAddProfiles( jsonObject *jo, const char *key, struct prof
  * global/static part of the given config
  */
 char *serializeConfig( void ) {
-	mpconfig *config=getConfig();
+	mpconfig_t *config=getConfig();
 	jsonObject *joroot=NULL;
 	jsonObject *jo=NULL;
 

@@ -9,35 +9,39 @@
 #include "utils.h"
 #define TOSLEEP 25
 
+/* enable partial updates */
 #define EPS_PARTIAL 1
 
-/* the button modes
-	 -1 - not initialized
-	  0 - default (pause/next/DNP)
-	  1 - stream  (pause/up/down)
-*/
-static int _epmode=-1;
+/* the button mode */
+typedef enum {
+	bt_noinit=-1,
+	bt_dbplay=0,
+	bt_stream=1
+} _btmode_t;
 
-/* update mode
-	-1 - full
-	 0 - none
-	 1 - play/pause
-	 2 - buttons
-	 4 - title
-*/
-static int _umode=-1;
+/* update mode */
+typedef enum {
+	um_full=-1,
+	um_none=0,
+	um_play=1,
+	um_buttons=2,
+	um_icons=3,		/* play and buttons */
+	um_title=4
+}  _umode_t;
 
 /*
  * the last known state. Used to avoid updating too much.
  * set to mpc_start to force update.
  */
-static mpcmd last=mpc_start;
+static mpcmd_t _last=mpc_start;
 static int _updating=0;
-static struct timeval lastevent;
+static struct timeval _lastevent;
 static pthread_mutex_t _debouncelock=PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t _updatelock=PTHREAD_MUTEX_INITIALIZER;
-static unsigned ucount=0;
-static char lasttitle[MAXPATHLEN+1];
+static unsigned _ucount=0;
+static char _lasttitle[MAXPATHLEN+1];
+static _btmode_t _btmode=bt_noinit;
+static _umode_t _umode=um_full;
 
 /*
  * update the display with the current title and buttons
@@ -52,7 +56,7 @@ static void *_update( ) {
 		pthread_mutex_lock( &_updatelock );
 		/* don't update on exit! */
 		if( getConfig()->command == mpc_quit ) {
-			continue;
+			break;
 		}
 		current=getConfig()->current;
 		epsWipeFull( epm_both );
@@ -71,7 +75,7 @@ static void *_update( ) {
 				epsDrawString( epm_red, 40, 0, "---", 0 );
 			}
 
-			if( last != mpc_idle ) {
+			if( _last != mpc_idle ) {
 				if( current->title->flags & MP_FAV ) {
 					epsDrawSymbol( epm_red, 5, 150, ep_fav );
 				}
@@ -100,40 +104,40 @@ static void *_update( ) {
 		epsLine( epm_black, 30, 20, X_MAX, 20 );
 		epsLine( epm_black, 30, 150, X_MAX, 150 );
 
-		switch( _epmode ) {
-			case -1:
+		switch( _btmode ) {
+			case bt_noinit:
 			/* no break */
-			case 0: /* -/next/dnp */
+			case bt_dbplay: /* -/next/dnp */
 			epsDrawSymbol( epm_black, 5, 90, ep_next );
 			epsDrawSymbol( epm_black, 5, 30, ep_dnp );
 			break;
-			case 1: /* -/^/v */
+			case bt_stream: /* -/^/v */
 			epsDrawSymbol( epm_black, 5, 90, ep_up );
 			epsDrawSymbol( epm_black, 5, 30, ep_down );
 			break;
 			default:
-			addMessage( 0, "EP: update illegal epmode %i", _epmode );
+			addMessage( 0, "EP: update illegal epmode %i", _btmode );
 		}
 
 		/* update full or partial depending on mode */
 		switch( _umode ) {
-			case 0:
+			case um_none:
 				/* no update.. */
 			break;
-			case 1: /* play/pause */
+			case um_play: /* play/pause */
 				epsPartialDisplay( 5, 150, 16, 16 );
 			break;
-			case 2: /* buttons */
+			case um_buttons: /* buttons */
 				epsPartialDisplay( 5, 30, 16, 76 );
 			break;
-			case 3: /* play and buttons */
+			case um_icons: /* play and buttons */
 				epsPartialDisplay( 5, 30, 16, 141 );
 			break;
 			default: /* full */
 				epsDisplay( );
 		}
 
-		_umode=0;
+		_umode=um_none;
 		_updating=0;
 	}
 	return NULL;
@@ -142,7 +146,7 @@ static void *_update( ) {
 /**
  * special handling for the server during information updates
  */
-void ep_updateHook( ) {
+void epUpdateHook( ) {
 	char *title=NULL;
 	if( epsGetState() < 0 ) {
 		return;
@@ -160,28 +164,29 @@ void ep_updateHook( ) {
 	}
 
 	/* has the status changed? */
-	if( getConfig()->status != last ) {
-		last=getConfig()->status;
-		_umode|=1;
+	if( getConfig()->status != _last ) {
+		_last=getConfig()->status;
+		_umode|=um_play;
 	}
 
 	/* has the title changed? */
-	if ( ( title != NULL ) && ( strcmp( title, lasttitle ) != 0 ) ) {
-		strtcpy( lasttitle, title, MAXPATHLEN );
+	if ( ( title != NULL ) && ( strcmp( title, _lasttitle ) != 0 ) ) {
+		strtcpy( _lasttitle, title, MAXPATHLEN );
 		/* also get the status to avoid double draw on start */
-		last=getConfig()->status;
-		_umode|=4;
+		_last=getConfig()->status;
+		_umode|=um_title;
 	}
 
 	/* disable DNP/FAV on stream play */
-	if( ( getConfig()->mpmode == PM_STREAM ) && ( _epmode != 3 ) ) {
-		_epmode=3;
-		_umode|=6;
+	if( ( getConfig()->mpmode == PM_STREAM ) && ( _btmode != bt_stream ) ) {
+		_btmode=bt_stream;
+		_umode|=um_title;
+		_umode|=um_icons;
 	}
 
 	/* do we need an update? */
-	if( _umode != 0 ) {
-		if( ucount > TOSLEEP ) {
+	if( _umode != um_none ) {
+		if( _ucount > TOSLEEP ) {
 			addMessage( 2, "EP: Display sleeps!" );
 			if( epsPoweron() ) {
 				/* display did not wake up - shame! */
@@ -189,7 +194,7 @@ void ep_updateHook( ) {
 				return;
 			}
 		}
-		ucount=0;
+		_ucount=0;
 		/* unlock update thread */
 		pthread_mutex_unlock(&_updatelock);
 	}
@@ -197,29 +202,29 @@ void ep_updateHook( ) {
 		_updating=0;
 	}
 
-	if( ucount == TOSLEEP ) {
+	if( _ucount == TOSLEEP ) {
 		addMessage( 2, "EP: Send Display to sleep.." );
 		epsPoweroff();
-		ucount++;
+		_ucount++;
 	}
-	else if( ( epsGetState() >= 0 ) && ( ucount < TOSLEEP ) ) {
-		ucount++;
+	else if( ( epsGetState() >= 0 ) && ( _ucount < TOSLEEP ) ) {
+		_ucount++;
 	}
 }
 
 /*
  * debounce the buttons
  */
-static void debounceCmd( mpcmd cmd ) {
+static void debounceCmd( mpcmd_t cmd ) {
 	struct timeval now, diff;
 	if( pthread_mutex_trylock( &_debouncelock ) ) {
 		addMessage( 2, "EP: mutex debounce %s", mpcString( cmd ) );
 		return;
 	}
 	gettimeofday( &now, NULL );
-	timersub( &now, &lastevent, &diff );
-	lastevent.tv_sec=now.tv_sec;
-	lastevent.tv_usec=now.tv_usec;
+	timersub( &now, &_lastevent, &diff );
+	_lastevent.tv_sec=now.tv_sec;
+	_lastevent.tv_usec=now.tv_usec;
 
 	if( ( diff.tv_sec > 0 ) || ( diff.tv_usec > 200000 ) ) {
 		addMessage( 2,"EP: cmd %s", mpcString( cmd ) );
@@ -236,7 +241,7 @@ static void debounceCmd( mpcmd cmd ) {
  * cycle through the key modes on Button 1
  */
 static void key1_cb( void ) {
-	if( _epmode == -1 ) {
+	if( _btmode == bt_noinit ) {
 		addMessage( 0, "EP: Key1, not yet.." );
 		return;
 	}
@@ -248,18 +253,18 @@ static void key1_cb( void ) {
  * Key2: next/vol+
  */
 static void key2_cb( void ) {
-	switch( _epmode ) {
-		case -1:
+	switch( _btmode ) {
+		case bt_noinit:
 			addMessage( 0, "EP: Key2, not yet.." );
 		break;
-		case 0:
+		case bt_dbplay:
 			debounceCmd(mpc_next);
 		break;
-		case 1:
+		case bt_stream:
 			debounceCmd(mpc_ivol);
 		break;
 		default:
-			addMessage( 0, "EP: Unknown epMode %i for button2!", _epmode );
+			addMessage( 0, "EP: Unknown epMode %i for button2!", _btmode );
 	}
 }
 
@@ -267,18 +272,18 @@ static void key2_cb( void ) {
  * Key3: DNP, Vol-
  */
 static void key3_cb( void ) {
-	switch( _epmode ) {
-		case -1:
+	switch( _btmode ) {
+		case bt_noinit:
 			addMessage( 0, "EP: Key3, not yet.." );
 		break;
-		case 0:
+		case bt_dbplay:
 			debounceCmd( mpc_dnp|mpc_display );
 		break;
-		case 1:
+		case bt_stream:
 			debounceCmd(mpc_dvol);
 		break;
 		default:
-			addMessage( 0, "EP: Unknown epMode %i for button3!", _epmode );
+			addMessage( 0, "EP: Unknown epMode %i for button3!", _btmode );
 	}
 }
 
@@ -318,7 +323,7 @@ static void *_setButtons( ) {
 	epsButton( KEY3, key3_cb );
 	/* DO NOT USE BUTTON4, it will break the HiFiBerry function!
 		 However it will act like a MUTE button as is... */
-	_epmode=0;
+	_btmode=0;
 	addMessage( 2, "End Thread: _setButtons()" );
 	return NULL;
 }

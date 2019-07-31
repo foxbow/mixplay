@@ -120,11 +120,11 @@ static void *clientHandler(void *args ) {
 	char *commdata=NULL;
 	char *jsonLine=NULL;
 	fd_set fds;
-	mpconfig *config;
+	mpconfig_t *config;
 	unsigned long clmsg;
 	int state=0;
 	char *pos, *end, *arg;
-	mpcmd cmd=mpc_idle;
+	mpcmd_t cmd=mpc_idle;
 	static const char *mtype;
 	char line[MAXPATHLEN]="";
 	ssize_t commsize=MP_BLKSIZE;
@@ -138,7 +138,7 @@ static void *clientHandler(void *args ) {
 	int okreply=-1;
 	int rawcmd;
 	int index=0;
-	mptitle *title=NULL;
+	mptitle_t *title=NULL;
 	struct stat sbuf;
 
 	commdata=(char*)falloc( commsize, sizeof( char ) );
@@ -208,7 +208,7 @@ static void *clientHandler(void *args ) {
 								cmd=mpc_idle;
 							}
 							else {
-								cmd=(mpcmd)rawcmd;
+								cmd=(mpcmd_t)rawcmd;
 								addMessage( 1, "Got command 0x%04x - %s", cmd, mpcString(cmd) );
 							}
 							if( arg != NULL ) {
@@ -521,7 +521,7 @@ void *mpserver( ) {
 	struct timeval		to;
 	int 		mainsocket ,client_sock ,alen ,*new_sock;
 	struct sockaddr_in server , client;
-	mpconfig	*control;
+	mpconfig_t	*control;
 	int devnull=0;
 
 	blockSigint();
