@@ -119,7 +119,7 @@ static int getListPath( char path[MAXPATHLEN], mpcmd_t cmd ) {
 void newCount( ) {
 	mptitle_t *root=getConfig()->root;
 	mptitle_t *runner = root;
-	mpplaylist *pl=getConfig()->current;
+	mpplaylist_t *pl=getConfig()->current;
 
 	if( pl == NULL ) {
 		return;
@@ -197,8 +197,8 @@ static int addToList( const char *line, mpcmd_t cmd ) {
 /**
  * deletes the current playlist
  */
-mpplaylist *wipePlaylist( mpplaylist *pl ) {
-	mpplaylist *next=NULL;
+mpplaylist_t *wipePlaylist( mpplaylist_t *pl ) {
+	mpplaylist_t *next=NULL;
 
 	if( pl == NULL ) {
 		return NULL;
@@ -220,18 +220,18 @@ mpplaylist *wipePlaylist( mpplaylist *pl ) {
 	return NULL;
 }
 
-mpplaylist *addPLDummy( mpplaylist *pl, const char *name ){
-	mpplaylist *buf;
+mpplaylist_t *addPLDummy( mpplaylist_t *pl, const char *name ){
+	mpplaylist_t *buf;
 	mptitle_t *title=(mptitle_t*)falloc(1, sizeof(mptitle_t));
 
 	if( pl == NULL ) {
-		pl=(mpplaylist*)falloc(1, sizeof(mpplaylist));
+		pl=(mpplaylist_t*)falloc(1, sizeof(mpplaylist_t));
 		pl->prev=NULL;
 		pl->next=NULL;
 	}
 	else {
 		buf=pl->prev;
-		pl->prev=(mpplaylist*)falloc(1,sizeof(mpplaylist));
+		pl->prev=(mpplaylist_t*)falloc(1,sizeof(mpplaylist_t));
 		pl->prev->prev=buf;
 		pl->prev->next=pl;
 		if( buf != NULL ) {
@@ -252,8 +252,8 @@ mpplaylist *addPLDummy( mpplaylist *pl, const char *name ){
  * if pl is NULL a new Playlist is created
  * this function either returns pl or the head of the new playlist
  */
-mpplaylist *appendToPL( mptitle_t *title, mpplaylist *pl, const int mark ) {
-	mpplaylist *runner=pl;
+mpplaylist_t *appendToPL( mptitle_t *title, mpplaylist_t *pl, const int mark ) {
+	mpplaylist_t *runner=pl;
 
 	if( runner != NULL ) {
 		while( runner->next != NULL ) {
@@ -270,8 +270,8 @@ mpplaylist *appendToPL( mptitle_t *title, mpplaylist *pl, const int mark ) {
 /*
  * removes a title from the current playlist chain and returns the next title
  */
-static mpplaylist *remFromPL( mpplaylist *pltitle ) {
-	mpplaylist *ret=pltitle->next;
+static mpplaylist_t *remFromPL( mpplaylist_t *pltitle ) {
+	mpplaylist_t *ret=pltitle->next;
 
 	if( pltitle->prev != NULL ) {
 		pltitle->prev->next=pltitle->next;
@@ -293,8 +293,8 @@ static mpplaylist *remFromPL( mpplaylist *pltitle ) {
  * this returns NULL or a valid playlist anchor in case the current title was
  * removed
  */
-mpplaylist *remFromPLByKey( mpplaylist *root, const unsigned key ) {
-	mpplaylist *pl=root;
+mpplaylist_t *remFromPLByKey( mpplaylist_t *root, const unsigned key ) {
+	mpplaylist_t *pl=root;
 	if( pl == NULL ) {
 		addMessage( 0, "Cannot remove titles from an empty playlist" );
 		return NULL;
@@ -352,15 +352,15 @@ mpplaylist *remFromPLByKey( mpplaylist *root, const unsigned key ) {
  * default mixplay, otherwise it is a searched title and will be
  * played out of order.
  */
-mpplaylist *addToPL( mptitle_t *title, mpplaylist *target, const int mark ) {
-	mpplaylist *buf=NULL;
+mpplaylist_t *addToPL( mptitle_t *title, mpplaylist_t *target, const int mark ) {
+	mpplaylist_t *buf=NULL;
 
 	if( mark && ( title->flags & MP_MARK ) ) {
 		addMessage( 0, "Trying to add %s twice! (%i)", title->display, title->flags );
 	}
 
-	buf=(mpplaylist*)falloc(1, sizeof( mpplaylist ) );
-	memset( buf, 0, sizeof( mpplaylist ) );
+	buf=(mpplaylist_t*)falloc(1, sizeof( mpplaylist_t ) );
+	memset( buf, 0, sizeof( mpplaylist_t ) );
 	buf->title=title;
 
 	if( target != NULL ) {
@@ -534,7 +534,7 @@ static int isMatch( const char *term, const char *pat, const int fuzzy ) {
 int search( const char *pat, const mpcmd_t range ) {
 	mptitle_t *root=getConfig()->root;
 	mptitle_t *runner=root;
-	searchresults *res=getConfig()->found;
+	searchresults_t *res=getConfig()->found;
 	unsigned int i=0;
 	int found=0;
 	unsigned cnt=0;
@@ -634,7 +634,7 @@ static int applyDNPlist( marklist_t *list ) {
 	mptitle_t *base=getConfig()->root;
 	mptitle_t  *pos = base;
 	marklist_t *ptr = list;
-	mpplaylist *pl=getConfig()->current;
+	mpplaylist_t *pl=getConfig()->current;
 	int cnt=0;
 
 	if( NULL == list ) {
@@ -920,7 +920,7 @@ int delFromList( const mpcmd_t cmd, const char *line ) {
 /**
  * moves an entry in the playlist
  */
-void moveEntry( mpplaylist *entry, mpplaylist *pos ) {
+void moveEntry( mpplaylist_t *entry, mpplaylist_t *pos ) {
 	if( pos->next == entry ) {
 		return;
 	}
@@ -1007,7 +1007,7 @@ mptitle_t *loadPlaylist( const char *path ) {
  * item will be returned. If entry was the last item in the list NULL will be
  * returned.
  */
-mpplaylist *removeByPattern( mpplaylist *plentry, const char *pat ) {
+mpplaylist_t *removeByPattern( mpplaylist_t *plentry, const char *pat ) {
 	char pattern[NAMELEN+2];
 	mptitle_t *entry=plentry->title;
 	mptitle_t *runner=entry;
@@ -1245,7 +1245,7 @@ static mptitle_t *skipTitles( mptitle_t *current, long num ) {
  *
  * returns the head of the (new/current) playlist or NULL on error
  */
-mpplaylist *addNewTitle( mpplaylist *pl, mptitle_t *root ) {
+mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 	mptitle_t *runner=NULL;
 	mptitle_t *guard=NULL;
 	unsigned long num=0;
@@ -1383,8 +1383,8 @@ mpplaylist *addNewTitle( mpplaylist *pl, mptitle_t *root ) {
  */
 void plCheck( int del ) {
 	int cnt=0;
-	mpplaylist *pl=getConfig()->current;
-	mpplaylist *buf=pl;
+	mpplaylist_t *pl=getConfig()->current;
+	mpplaylist_t *buf=pl;
 
 	if( ( getConfig()->mpmode == PM_PLAYLIST ) && !getConfig()->mpmix ) {
 		addMessage(1,"plCheck: Sorted playlist");
@@ -1826,9 +1826,9 @@ int handleRangeCmd( mptitle_t *title, mpcmd_t cmd ) {
  */
 int playResults( mpcmd_t range, const char *arg, const int insert ) {
 	mpconfig_t   *config=getConfig();
-	mpplaylist *pos=config->current;
-	mpplaylist *end=NULL;
-	mpplaylist *res=config->found->titles;
+	mpplaylist_t *pos=config->current;
+	mpplaylist_t *end=NULL;
+	mpplaylist_t *res=config->found->titles;
 	mptitle_t *title=NULL;
 	int key=atoi(arg);
 

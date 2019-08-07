@@ -65,7 +65,7 @@ cmd = 00MF RRRR CCCC CCCC
 * 0x0e - decrease volume
 * 0x0f - fast forward
 * 0x10 - reverse rewind
-* 0x11 - stop server*
+* 0x11 - -- NONE --
 * 0x12 - send database information
 * 0x13 - search title +arg <string>
 * 0x14 - append title to playlist <key>

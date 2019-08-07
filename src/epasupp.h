@@ -91,7 +91,6 @@ int  epsDrawChar( epsmap_t map, unsigned x, unsigned y, int c, int mag );
 void epsSetup( void );
 void epsDisplay( void );
 void epsPartialDisplay( unsigned x, unsigned y, unsigned w, unsigned l );
-#define epsClear() epsDisplay( NULL, NULL );
 void epsPoweroff( void );
 int epsPoweron( void );
 void epsSetPixel( epsmap_t map, unsigned x, unsigned y );

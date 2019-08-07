@@ -3,6 +3,7 @@
  */
 #include <stdio.h>
 #include <sys/time.h>
+#include <assert.h>
 #include "mpepa.h"
 #include "config.h"
 #include "player.h"
@@ -27,7 +28,7 @@ typedef enum {
 	um_buttons=2,
 	um_icons=3,		/* play and buttons */
 	um_title=4
-}  _umode_t;
+} _umode_t;
 
 /*
  * the last known state. Used to avoid updating too much.
@@ -48,7 +49,7 @@ static _umode_t _umode=um_full;
  * runs in it's own thread to not block updating
  */
 static void *_update( ) {
-	mpplaylist *current=NULL;
+	mpplaylist_t *current=NULL;
 
 	blockSigint();
 
@@ -238,7 +239,7 @@ static void debounceCmd( mpcmd_t cmd ) {
 }
 
 /*
- * cycle through the key modes on Button 1
+ * Play/Pause button
  */
 static void key1_cb( void ) {
 	if( _btmode == bt_noinit ) {
@@ -291,6 +292,8 @@ static void key3_cb( void ) {
  * Draw a little heart in the center of the display and switch it off
  */
 void epExit( void ) {
+	/* this must not be called on anything but exit */
+	assert( getConfig()->status == mpc_quit );
 	/* allow the update thread to terminate */
 	pthread_mutex_unlock(&_updatelock);
 
@@ -321,7 +324,7 @@ static void *_setButtons( ) {
 	epsButton( KEY1, key1_cb );
 	epsButton( KEY2, key2_cb );
 	epsButton( KEY3, key3_cb );
-	/* DO NOT USE BUTTON4, it will break the HiFiBerry function!
+	/* DO NOT USE KEY4, it will break the HiFiBerry function!
 		 However it will act like a MUTE button as is... */
 	_btmode=0;
 	addMessage( 2, "End Thread: _setButtons()" );

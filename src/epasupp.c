@@ -175,7 +175,7 @@ static void epsReset( void ) {
  * Not sure if it's due to the wrong command being send or due to the
  * set up of the lookup tables.
  */
-void epsDisplay( ) {
+void epsDisplay( void ) {
 	unsigned i;
 	if (  _state == -2 ) {
 		addMessage( 0, "EPS: Display is not initialized!");

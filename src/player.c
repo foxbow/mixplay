@@ -1023,9 +1023,10 @@ void *reader( ) {
 
 		case mpc_repl:
 			dowrite( p_command[fdset][1], "JUMP 0\n", 8 );
+			control->percent=0;
+			strcpy(control->playtime, "00:00" );
 			break;
 
-		case mpc_QUIT:
 		case mpc_quit:
 			/* The player does not know about the main App so anything setting mcp_quit
 			 * MUST make sure that the main app terminates as well ! */

@@ -37,7 +37,7 @@ typedef enum {
 	mpc_dvol,
 	mpc_fskip,
 	mpc_bskip,
-	mpc_QUIT,
+	mpc_NONE,
 	mpc_dbinfo,
 	mpc_search,
 	mpc_append,
@@ -109,8 +109,8 @@ typedef struct {
 	char **stream;				/* stream URLs */
 	char **sname;				/* stream names */
 	mptitle_t *root;				/* the root title */
-	searchresults *found;		/* buffer list to contain searchresults etc */
-	mpplaylist *current;		/* the current title */
+	searchresults_t *found;		/* buffer list to contain searchresults etc */
+	mpplaylist_t *current;		/* the current title */
 	char *dbname;				/* path to the database */
 	marklist_t *favlist;	/* favourites */
 	marklist_t *dnplist;	/* DNPlist */

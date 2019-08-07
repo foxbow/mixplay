@@ -31,23 +31,23 @@ struct mptitle_s {
 	mptitle_t *next;
 };
 
-typedef struct playlist_t mpplaylist;
-struct playlist_t {
+typedef struct mpplaylist_s mpplaylist_t;
+struct mpplaylist_s {
 	mptitle_t  *title;
-	mpplaylist *prev;
-	mpplaylist *next;
+	mpplaylist_t *prev;
+	mpplaylist_t *next;
 };
 
 typedef struct {
 	unsigned tnum;
 	unsigned anum;
 	unsigned lnum;
-	mpplaylist *titles;
+	mpplaylist_t *titles;
 	char **artists;
 	char **albums;
 	char **albart;
 	unsigned send:1;
-} searchresults;
+} searchresults_t;
 
 typedef struct marklist_s marklist_t;
 struct marklist_s {
@@ -60,14 +60,14 @@ struct marklist_s {
 /**
  * playlist functions
  */
-mpplaylist *appendToPL( mptitle_t *title, mpplaylist *pl, const int mark );
-mpplaylist *addToPL( mptitle_t *title, mpplaylist *target, const int mark );
-mpplaylist *remFromPLByKey( mpplaylist *root, const unsigned key );
-void moveEntry( mpplaylist *entry, mpplaylist *pos );
-mpplaylist *wipePlaylist( mpplaylist *pl );
-mpplaylist *addPLDummy( mpplaylist *pl, const char *name );
+mpplaylist_t *appendToPL( mptitle_t *title, mpplaylist_t *pl, const int mark );
+mpplaylist_t *addToPL( mptitle_t *title, mpplaylist_t *target, const int mark );
+mpplaylist_t *remFromPLByKey( mpplaylist_t *root, const unsigned key );
+void moveEntry( mpplaylist_t *entry, mpplaylist_t *pos );
+mpplaylist_t *wipePlaylist( mpplaylist_t *pl );
+mpplaylist_t *addPLDummy( mpplaylist_t *pl, const char *name );
 void plCheck( int del );
-int writePlaylist( mpplaylist *pl, const char *name );
+int writePlaylist( mpplaylist_t *pl, const char *name );
 
 mptitle_t *recurse( char *curdir, mptitle_t *files );
 mptitle_t *rewindTitles( mptitle_t *base );

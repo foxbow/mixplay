@@ -3,9 +3,9 @@
  *
  * handles reading and writing the configuration
  *
- * the configuration file looks like a standard GTK configuration for historical reasons.
- * It should also parse with the gtk_* functions but those are not always available in headless
- * environments.
+ * the configuration file looks like a standard GTK configuration for
+ * historical reasons. It should also parse with the gtk_* functions but those
+ * are not always available in headless environments.
  *
  *  Created on: 16.11.2017
  *	  Author: bweber
@@ -28,24 +28,24 @@
 
 static pthread_mutex_t _addmsglock=PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t _cblock=PTHREAD_MUTEX_INITIALIZER;
-static mpconfig_t *c_config=NULL;
+static mpconfig_t *_cconfig=NULL;
 
 /**
  * the progress function list
  */
-typedef struct _mpFunc_t _mpFunc;
-struct _mpFunc_t {
+typedef struct _mpfunc_t _mpfunc;
+struct _mpfunc_t {
 	void (*func)( void * );
 	void *arg;
-	_mpFunc *next;
+	_mpfunc *next;
 };
 
 /* callback hooks */
-static _mpFunc *_pfunc=NULL;
-static _mpFunc *_ufunc=NULL;
-static _mpFunc *_nfunc=NULL;
+static _mpfunc *_pfunc=NULL;
+static _mpfunc *_ufunc=NULL;
+static _mpfunc *_nfunc=NULL;
 
-static const char *mpc_command[] = {
+static const char *mpccommand[] = {
 		"mpc_play",
 		"mpc_stop",
 		"mpc_prev",
@@ -63,7 +63,7 @@ static const char *mpc_command[] = {
 		"mpc_dvol",
 		"mpc_bskip",
 		"mpc_fskip",
-		"mpc_QUIT",
+		"mpc_NONE",
 		"mpc_dbinfo",
 		"mpc_search",
 		"mpc_append",
@@ -80,8 +80,8 @@ static const char *mpc_command[] = {
 		"mpc_idle"
 };
 
-static void invokeHooks( _mpFunc *hooks ){
-	_mpFunc *pos=hooks;
+static void invokeHooks( _mpfunc *hooks ){
+	_mpfunc *pos=hooks;
 	pthread_mutex_lock(&_cblock);
 	while( pos != NULL ) {
 		pos->func(pos->arg);
@@ -96,7 +96,7 @@ static void invokeHooks( _mpFunc *hooks ){
 const char *mpcString( mpcmd_t rawcmd ) {
 	mpcmd_t cmd=MPC_CMD(rawcmd);
 	if( cmd <= mpc_idle ) {
-		return mpc_command[cmd];
+		return mpccommand[cmd];
 	}
 	else {
 		addMessage( 1, "Unknown command code %i", cmd );
@@ -110,7 +110,7 @@ const char *mpcString( mpcmd_t rawcmd ) {
 mpcmd_t mpcCommand( const char *name ) {
 	int i;
 	for( i=0; i<= mpc_idle; i++ ) {
-		if( strstr( name, mpc_command[i] ) ) break;
+		if( strstr( name, mpccommand[i] ) ) break;
 	}
 	if( i>mpc_idle ) {
 		addMessage( 1, "Unknown command %s!", name );
@@ -137,7 +137,7 @@ static void printUsage( char *name ) {
 	printf( "		   URL, directory, mp3 file, playlist\n" );
 }
 
-static mpplaylist *titleToPlaylist( mptitle_t *title, mpplaylist *pl ) {
+static mpplaylist_t *titleToPlaylist( mptitle_t *title, mpplaylist_t *pl ) {
 	mptitle_t *guard=title;
 
 	pl=wipePlaylist(pl);
@@ -362,8 +362,8 @@ int initAll( ) {
  * returns the current configuration
  */
 mpconfig_t *getConfig() {
-	assert( c_config != NULL );
-	return c_config;
+	assert( _cconfig != NULL );
+	return _cconfig;
 }
 
 /**
@@ -447,35 +447,35 @@ mpconfig_t *readConfig( void ) {
 		fail( F_FAIL, "Cannot get HOME!" );
 	}
 
-	if( c_config == NULL ) {
-		c_config=(mpconfig_t*)falloc( 1, sizeof( mpconfig_t ) );
-		c_config->msg=msgBuffInit();
-		c_config->found=(searchresults*)falloc(1,sizeof(searchresults));
+	if( _cconfig == NULL ) {
+		_cconfig=(mpconfig_t*)falloc( 1, sizeof( mpconfig_t ) );
+		_cconfig->msg=msgBuffInit();
+		_cconfig->found=(searchresults_t*)falloc(1,sizeof(searchresults_t));
 	}
 
 	/* Set some default values */
-	c_config->root=NULL;
-	c_config->current=NULL;
-	c_config->volume=80;
-	strcpy( c_config->playtime, "00:00" );
-	strcpy( c_config->remtime, "00:00" );
-	c_config->percent=0;
-	c_config->status=mpc_idle;
-	c_config->command=mpc_idle;
-	c_config->dbname=(char*)falloc( MAXPATHLEN+1, 1 );
-	c_config->verbosity=0;
-	c_config->debug=0;
-	c_config->fade=1;
-	c_config->inUI=0;
-	c_config->msg->lines=0;
-	c_config->msg->current=0;
-	c_config->playcount=0;
-	c_config->port=MP_PORT;
-	c_config->changed=0;
-	c_config->isDaemon=0;
-	c_config->streamURL=NULL;
+	_cconfig->root=NULL;
+	_cconfig->current=NULL;
+	_cconfig->volume=80;
+	strcpy( _cconfig->playtime, "00:00" );
+	strcpy( _cconfig->remtime, "00:00" );
+	_cconfig->percent=0;
+	_cconfig->status=mpc_idle;
+	_cconfig->command=mpc_idle;
+	_cconfig->dbname=(char*)falloc( MAXPATHLEN+1, 1 );
+	_cconfig->verbosity=0;
+	_cconfig->debug=0;
+	_cconfig->fade=1;
+	_cconfig->inUI=0;
+	_cconfig->msg->lines=0;
+	_cconfig->msg->current=0;
+	_cconfig->playcount=0;
+	_cconfig->port=MP_PORT;
+	_cconfig->changed=0;
+	_cconfig->isDaemon=0;
+	_cconfig->streamURL=NULL;
 
-	snprintf( c_config->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", home );
+	snprintf( _cconfig->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", home );
 
 	snprintf( conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", home );
 	fp=fopen( conffile, "r" );
@@ -497,47 +497,47 @@ mpconfig_t *readConfig( void ) {
 					line[strlen(line)] = '/';
 				}
 
-				c_config->musicdir=(char*)falloc( strlen(pos)+1, 1 );
-				strip( c_config->musicdir, pos, strlen(pos) );
+				_cconfig->musicdir=(char*)falloc( strlen(pos)+1, 1 );
+				strip( _cconfig->musicdir, pos, strlen(pos) );
 			}
 			if( strstr( line, "channel=" ) == line ) {
-				c_config->channel=(char*)falloc( strlen(pos)+1, 1 );
-				strip( c_config->channel, pos, strlen(pos) );
+				_cconfig->channel=(char*)falloc( strlen(pos)+1, 1 );
+				strip( _cconfig->channel, pos, strlen(pos) );
 			}
 			if( strstr( line, "profiles=" ) == line ) {
-				c_config->profiles=scanprofiles( pos, &c_config->profile );
+				_cconfig->profiles=scanprofiles( pos, &_cconfig->profile );
 			}
 			if( strstr( line, "streams=" ) == line ) {
-				c_config->streams=scanparts( pos, &c_config->stream );
+				_cconfig->streams=scanparts( pos, &_cconfig->stream );
 			}
 			if( strstr( line, "snames=" ) == line ) {
-				if( scanparts( pos, &c_config->sname ) != c_config->streams ) {
+				if( scanparts( pos, &_cconfig->sname ) != _cconfig->streams ) {
 					fclose(fp);
 					fail( F_FAIL, "Number of streams and stream names does not match!");
 				}
 			}
 			if( strstr( line, "active=" ) == line ) {
-				c_config->active=atoi(pos);
-				if( c_config->active == 0 ) {
+				_cconfig->active=atoi(pos);
+				if( _cconfig->active == 0 ) {
 					addMessage(0,"Setting default profile!");
-					c_config->active=1;
+					_cconfig->active=1;
 				}
 			}
 			if( strstr( line, "skipdnp=" ) == line ) {
-				c_config->skipdnp=atoi(pos);
+				_cconfig->skipdnp=atoi(pos);
 			}
 			if( strstr( line, "fade=" ) == line ) {
-				c_config->fade=atoi(pos);
+				_cconfig->fade=atoi(pos);
 			}
 			if( strstr( line, "port=" ) == line ) {
-				c_config->port=atoi(pos);
+				_cconfig->port=atoi(pos);
 			}
 		}
 		while( !feof( fp ) );
 
 		fclose(fp);
 
-		return c_config;
+		return _cconfig;
 	}
 
 	return NULL;
@@ -554,7 +554,7 @@ void writeConfig( const char *musicpath ) {
 	char *home=NULL;
 
 	addMessage( 0, "Saving config" );
-	assert( c_config != NULL );
+	assert( _cconfig != NULL );
 
 	home=getenv("HOME");
 	if( home == NULL ) {
@@ -562,10 +562,10 @@ void writeConfig( const char *musicpath ) {
 	}
 
 	if( musicpath != NULL ) {
-		c_config->musicdir=(char*)falloc( strlen(musicpath)+2, sizeof( char ) );
-		strip( c_config->musicdir, musicpath, strlen(musicpath)+1 );
-		if( c_config->musicdir[strlen(c_config->musicdir)] != '/' ) {
-			strtcat( c_config->musicdir, "/", strlen(musicpath)+2 );
+		_cconfig->musicdir=(char*)falloc( strlen(musicpath)+2, sizeof( char ) );
+		strip( _cconfig->musicdir, musicpath, strlen(musicpath)+1 );
+		if( _cconfig->musicdir[strlen(_cconfig->musicdir)] != '/' ) {
+			strtcat( _cconfig->musicdir, "/", strlen(musicpath)+2 );
 		}
 	}
 
@@ -582,31 +582,31 @@ void writeConfig( const char *musicpath ) {
 
 	if( NULL != fp ) {
 		fprintf( fp, "[mixplay]" );
-		fprintf( fp, "\nmusicdir=%s", c_config->musicdir );
-		if( c_config->profiles == 0 ) {
+		fprintf( fp, "\nmusicdir=%s", _cconfig->musicdir );
+		if( _cconfig->profiles == 0 ) {
 		fprintf( fp, "\nactive=1" );
 			fprintf( fp, "\nprofiles=mixplay;" );
 		}
 		else {
-			fprintf( fp, "\nactive=%i", c_config->active );
+			fprintf( fp, "\nactive=%i", _cconfig->active );
 			fprintf( fp, "\nprofiles=" );
-			for( i=0; i< c_config->profiles; i++ ) {
-				fprintf( fp, "%i:%s;", c_config->profile[i]->favplay,
-					c_config->profile[i]->name );
+			for( i=0; i< _cconfig->profiles; i++ ) {
+				fprintf( fp, "%i:%s;", _cconfig->profile[i]->favplay,
+					_cconfig->profile[i]->name );
 			}
 		}
 		fprintf( fp, "\nstreams=" );
-		for( i=0; i< c_config->streams; i++ ) {
-			fprintf( fp, "%s;", c_config->stream[i] );
+		for( i=0; i< _cconfig->streams; i++ ) {
+			fprintf( fp, "%s;", _cconfig->stream[i] );
 		}
 		fprintf( fp, "\nsnames=" );
-		for( i=0; i< c_config->streams; i++ ) {
-			fprintf( fp, "%s;", c_config->sname[i] );
+		for( i=0; i< _cconfig->streams; i++ ) {
+			fprintf( fp, "%s;", _cconfig->sname[i] );
 		}
-		fprintf( fp, "\nskipdnp=%i", c_config->skipdnp );
-		fprintf( fp, "\nfade=%i", c_config->fade );
-		if( c_config->channel != NULL ) {
-			fprintf( fp, "\nchannel=%s", c_config->channel );
+		fprintf( fp, "\nskipdnp=%i", _cconfig->skipdnp );
+		fprintf( fp, "\nfade=%i", _cconfig->fade );
+		if( _cconfig->channel != NULL ) {
+			fprintf( fp, "\nchannel=%s", _cconfig->channel );
 		}
 		else {
 			fprintf( fp, "\nchannel=Master");
@@ -614,12 +614,12 @@ void writeConfig( const char *musicpath ) {
 			fprintf( fp, "\n# channel=Main");
 			fprintf( fp, "\n# channel=DAC");
 		}
-		if( c_config->port != MP_PORT ) {
-			fprintf( fp, "\nport=%i", c_config->port );
+		if( _cconfig->port != MP_PORT ) {
+			fprintf( fp, "\nport=%i", _cconfig->port );
 		}
 		fprintf( fp, "\n" );
 		fclose( fp );
-		c_config->changed=0;
+		_cconfig->changed=0;
 	}
 	else {
 		fail( errno, "Could not open %s", conffile );
@@ -631,55 +631,55 @@ void writeConfig( const char *musicpath ) {
  */
 void freeConfigContents() {
 	int i;
-	assert( c_config != NULL );
+	assert( _cconfig != NULL );
 
-	sfree( &(c_config->dbname) );
-	sfree( &(c_config->musicdir) );
+	sfree( &(_cconfig->dbname) );
+	sfree( &(_cconfig->musicdir) );
 
-	for( i=0; i<c_config->profiles; i++ ) {
-		freeProfile( c_config->profile[i] );
+	for( i=0; i<_cconfig->profiles; i++ ) {
+		freeProfile( _cconfig->profile[i] );
 	}
-	c_config->profiles=0;
-	sfree( (char **)&(c_config->profile) );
+	_cconfig->profiles=0;
+	sfree( (char **)&(_cconfig->profile) );
 
-	for( i=0; i<c_config->streams; i++ ) {
-		sfree( &(c_config->stream[i]) );
-		sfree( &(c_config->sname[i]) );
+	for( i=0; i<_cconfig->streams; i++ ) {
+		sfree( &(_cconfig->stream[i]) );
+		sfree( &(_cconfig->sname[i]) );
 	}
-	c_config->streams=0;
-	sfree( (char **)&(c_config->stream) );
-	sfree( (char **)&(c_config->sname) );
+	_cconfig->streams=0;
+	sfree( (char **)&(_cconfig->stream) );
+	sfree( (char **)&(_cconfig->sname) );
 
-	sfree( (char **)&(c_config->channel) );
+	sfree( (char **)&(_cconfig->channel) );
 
-	msgBuffDiscard( c_config->msg );
+	msgBuffDiscard( _cconfig->msg );
 }
 
 /**
  * recursive free() to clean up all of the configuration
  */
 void freeConfig( ) {
-	assert( c_config != NULL );
+	assert( _cconfig != NULL );
 	freeConfigContents( );
-	c_config->current=wipePlaylist( c_config->current );
-	c_config->found->titles=wipePlaylist( c_config->found->titles );
-	if( c_config->found->artists != NULL ) {
-		free( c_config->found->artists );
+	_cconfig->current=wipePlaylist( _cconfig->current );
+	_cconfig->found->titles=wipePlaylist( _cconfig->found->titles );
+	if( _cconfig->found->artists != NULL ) {
+		free( _cconfig->found->artists );
 	}
-	if( c_config->found->albums != NULL ) {
-		free( c_config->found->albums );
+	if( _cconfig->found->albums != NULL ) {
+		free( _cconfig->found->albums );
 	}
-	if( c_config->found->albart != NULL ) {
-		free( c_config->found->albart );
+	if( _cconfig->found->albart != NULL ) {
+		free( _cconfig->found->albart );
 	}
 	/* free root last so playlist cleanup does not double free titles */
-	c_config->root=wipeTitles( c_config->root );
-	free( c_config->found );
-	wipeList(c_config->dnplist);
-	wipeList(c_config->favlist);
+	_cconfig->root=wipeTitles( _cconfig->root );
+	free( _cconfig->found );
+	wipeList(_cconfig->dnplist);
+	wipeList(_cconfig->favlist);
 
-	free( c_config );
-	c_config=NULL;
+	free( _cconfig );
+	_cconfig=NULL;
 }
 
 /**
@@ -706,12 +706,12 @@ void addMessage( int v, const char *msg, ... ) {
 		line[strlen(line)] = 0;
 	}
 
-	if( c_config == NULL ) {
+	if( _cconfig == NULL ) {
 		fprintf( stderr, "* %s\n", line );
 	}
 	else {
 		if( v <= getVerbosity() ) {
-			if( c_config->inUI ) {
+			if( _cconfig->inUI ) {
 				if( v < getDebug() ) {
 					fprintf( stderr, "d%i %s\n", v, line );
 				}
@@ -721,7 +721,7 @@ void addMessage( int v, const char *msg, ... ) {
 					strncpy( line, "ALERT:", 6 );
 					line[MP_MSGLEN]=0;
 				}
-				msgBuffAdd( c_config->msg, line );
+				msgBuffAdd( _cconfig->msg, line );
 			}
 			else {
 				printf( "V %s\n", line );
@@ -740,34 +740,34 @@ void addMessage( int v, const char *msg, ... ) {
  * gets the current message removes it from the ring
  */
 char *getMessage() {
-	return msgBuffGet( c_config->msg );
+	return msgBuffGet( _cconfig->msg );
 }
 
 void incDebug( void ) {
-	assert( c_config != NULL );
-	c_config->debug++;
+	assert( _cconfig != NULL );
+	_cconfig->debug++;
 }
 
 int getDebug( void ) {
-	assert( c_config != NULL );
-	return c_config->debug;
+	assert( _cconfig != NULL );
+	return _cconfig->debug;
 }
 
 int setVerbosity( int v ) {
-	assert( c_config != NULL );
-	c_config->verbosity=v;
-	return c_config->verbosity;
+	assert( _cconfig != NULL );
+	_cconfig->verbosity=v;
+	return _cconfig->verbosity;
 }
 
 int getVerbosity( void ) {
-	assert( c_config != NULL );
-	return c_config->verbosity;
+	assert( _cconfig != NULL );
+	return _cconfig->verbosity;
 }
 
 int incVerbosity() {
-	assert( c_config != NULL );
-	c_config->verbosity++;
-	return c_config->verbosity;
+	assert( _cconfig != NULL );
+	_cconfig->verbosity++;
+	return _cconfig->verbosity;
 }
 
 void muteVerbosity() {
@@ -810,18 +810,18 @@ char *getCurrentActivity( void ) {
 	return _curact;
 }
 
-static void addHook( void (*func)( void* ), void *arg, _mpFunc **list ) {
-	_mpFunc *pos=*list;
+static void addHook( void (*func)( void* ), void *arg, _mpfunc **list ) {
+	_mpfunc *pos=*list;
 	pthread_mutex_lock(&_cblock);
 	if( pos == NULL ) {
-		*list=(_mpFunc*)falloc(1,  sizeof(_mpFunc) );
+		*list=(_mpfunc*)falloc(1,  sizeof(_mpfunc) );
 		pos=*list;
 	}
 	else {
 		while( pos->next != NULL ) {
 			pos=pos->next;
 		}
-		pos->next=(_mpFunc*)falloc(1,  sizeof(_mpFunc) );
+		pos->next=(_mpfunc*)falloc(1,  sizeof(_mpfunc) );
 		pos=pos->next;
 	}
 	pos->func=func;
@@ -830,9 +830,9 @@ static void addHook( void (*func)( void* ), void *arg, _mpFunc **list ) {
 	pthread_mutex_unlock(&_cblock);
 }
 
-static void removeHook( void (*func)( void* ), void *arg, _mpFunc **list ) {
-	_mpFunc *pos=*list;
-	_mpFunc *pre=NULL;
+static void removeHook( void (*func)( void* ), void *arg, _mpfunc **list ) {
+	_mpfunc *pos=*list;
+	_mpfunc *pre=NULL;
 
 	pthread_mutex_lock(&_cblock);
 

@@ -70,7 +70,7 @@ void unlockClient( int client ) {
  * helperfunction to add a title to the given jsonOblect
  * if title is NULL an empty title will be created
  */
-static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplaylist *pl ) {
+static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplaylist_t *pl ) {
 	jsonObject *val=NULL;
 	mptitle_t *title=NULL;
 
@@ -109,7 +109,7 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplayli
 /**
  * turns a playlist into a jsonObject.
  */
-static jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mpplaylist *pl, int dir ) {
+static jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mpplaylist_t *pl, int dir ) {
 	jsonObject *jsonTitle=NULL;
 	jsonObject *ret=NULL;
 	char ikey[20];
@@ -160,7 +160,7 @@ static jsonObject *jsonAddList( jsonObject *jo, const char *key, marklist_t *lis
 char *serializeStatus( unsigned long *count, int clientid, int type ) {
 	mpconfig_t *data=getConfig();
 	jsonObject *jo=NULL;
-	mpplaylist *current=data->current;
+	mpplaylist_t *current=data->current;
 
 	jo=jsonAddInt( jo, "version", MPCOMM_VER );
 	jsonAddInt( jo, "type", type );

@@ -202,7 +202,7 @@ static void *clientHandler(void *args ) {
 						else if( strstr( pos, "/cmd/" ) == pos ) {
 							addMessage( 2, "received cmd: %s", pos );
 							pos+=5;
-							rawcmd=readHex(pos,&pos);
+							rawcmd=strtol( pos, &pos, 16 );
 							if( rawcmd == -1 ) {
 								addMessage( 1, "Illegal command %s", pos );
 								cmd=mpc_idle;

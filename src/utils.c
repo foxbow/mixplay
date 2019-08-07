@@ -431,10 +431,10 @@ void dumpbin( const void *data, size_t len ) {
 				printf("%02x ", ((char*)data)[(j*8)+i] );
 			}
 			else {
-				printf("00 ");
+				printf("-- ");
 			}
 		}
-		printf( "	" );
+		putchar(' ');
 		for( i=0; i< 8; i++ ) {
 			if( ( (j*8)+i <= len ) && isprint( ((char*)data)[(j*8)+i] ) ) {
 				putchar( ((char*)data)[(j*8)+i] );
@@ -451,7 +451,7 @@ void dumpbin( const void *data, size_t len ) {
  * treats a single character as a hex value
  */
 int hexval( const char c ) {
-	if( ( c-'0' >= 0 ) && ( c-'9' <= 9 ) ) {
+	if( ( c >= '0' ) && ( c <= '9' ) ) {
 		return c-'0';
 	}
 
@@ -464,31 +464,6 @@ int hexval( const char c ) {
 	}
 
 	return -1;
-}
-
-/*
- * reads a hex number
- * if end != NULL it will point to the first unknown character.
- */
-long readHex( char *txt, char **end ) {
-	int pos=0;
-	long retval=0;
-
-	if( ( txt==NULL ) || ( strlen(txt) == 0 ) ) {
-		return -1;
-	}
-
-	while( isxdigit(txt[pos]) ) {
-		retval*=16;
-		retval+=hexval(txt[pos]);
-		pos++;
-	}
-
-	if( end != NULL ) {
-		*end=txt+pos;
-	}
-
-	return retval;
 }
 
 /**
