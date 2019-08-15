@@ -1031,7 +1031,14 @@ void *reader( ) {
 			/* The player does not know about the main App so anything setting mcp_quit
 			 * MUST make sure that the main app terminates as well ! */
 			if( asyncTest() ) {
-				control->status=mpc_quit;
+				if( control->argument != NULL ) {
+					if( strcmp( "mixplay", control->argument ) == 0 ) {
+						control->status=mpc_quit;
+					}
+					else {
+						progressMsg( "Wrong password!" );
+					}
+				}
 			}
 			break;
 

@@ -12,11 +12,30 @@ var numscrolls = 0
 var wasstream = -1
 var favplay = 0
 
+function replaceChild (e, c) {
+  while (e.hasChildNodes()) {
+    e.removeChild(e.firstChild)
+  }
+  e.appendChild(c)
+}
+
 /*
- * TODO: update searchresults on the fly
+ * switches search mode and removes previous results
  */
 function toggleSearch () {
   sendCMD(0x0019)
+  var e = document.getElementById('search0')
+  var text = document.createElement('em')
+  text.innerHTML = 'No titles found!'
+  replaceChild(e, text)
+  e = document.getElementById('search1')
+  text = document.createElement('em')
+  text.innerHTML = 'No artists found!'
+  replaceChild(e, text)
+  e = document.getElementById('search2')
+  text = document.createElement('em')
+  text.innerHTML = 'No albums found!'
+  replaceChild(e, text)
 }
 
 /*
@@ -178,11 +197,12 @@ function toggleVisibility (element) {
 }
 
 /*
- * stop the server - this should really not be here =)
+ * stop the server
  */
 function killServer () {
-  if (window.confirm('Do you really want to stop the Server?')) {
-    sendCMD(0x11)
+  var reply = window.prompt('Really stop?')
+  if ((reply !== null) && (reply !== '')) {
+    sendCMD(0x07, reply)
   }
 }
 
@@ -415,7 +435,7 @@ function clickable (text, cmd, arg, popname) {
 /* returns a <div> with text that when clicked presents the two choices */
 function popselect (choice1, cmd1, arg1, choice2, cmd2, arg2, text) {
   var reply = document.createElement('p')
-  reply.innerText = text
+  reply.innerText = '> ' + text
   reply.className = 'popselect'
   reply.onclick = function () {
     var popup = document.getElementById('popup' + arg1)
@@ -424,7 +444,7 @@ function popselect (choice1, cmd1, arg1, choice2, cmd2, arg2, text) {
   var popspan = document.createElement('span')
   popspan.className = 'popup'
   popspan.id = 'popup' + arg1
-  var select = clickable(choice1 + '&nbsp;', cmd1, arg1, popspan.id)
+  var select = clickable(choice1 + '&nbsp;/', cmd1, arg1, popspan.id)
   popspan.appendChild(select)
   select = clickable('&nbsp;' + choice2, cmd2, arg2, popspan.id)
   popspan.appendChild(select)
@@ -599,7 +619,7 @@ function updateUI () {
                 if (data.mpedit) {
                   items[i] = popselect('Search', 0x0213, data.artists[i],
                     'Favourite', 0x0209, data.artists[i],
-                    '\u2665 ' + data.artists[i])
+                    data.artists[i])
                 } else {
                   items[i] = clickline(0x0213, data.artists[i], '&#x1F50E; ' + data.artists[i])
                 }
@@ -615,9 +635,9 @@ function updateUI () {
             if (data.albums.length > 0) {
               for (i = 0; i < data.albums.length; i++) {
                 if (data.mpedit) {
-                  items[i] = popselect('Search', 0x0409, data.albums[i],
-                    'Favourite', 0x0413, data.albums[i],
-                    '\u2665 ' + data.albart[i] + ' - ' + data.albums[i])
+                  items[i] = popselect('Search', 0x0413, data.albums[i],
+                    'Favourite', 0x0409, data.albums[i],
+                    data.albart[i] + ' - ' + data.albums[i])
                 } else {
                   items[i] = clickline(0x0413, data.albums[i], '&#x1F50E; ' + data.albart[i] + ' - ' + data.albums[i])
                 }
@@ -721,7 +741,7 @@ function updateUI () {
           }
 
           if (data.msg !== '') {
-            if (data.msg.startsWith('window.alert:')) {
+            if (data.msg.startsWith('ALERT:')) {
               window.alert(data.msg.substring(6))
             } else if (data.msg !== 'Done.') {
               addText(data.msg)
