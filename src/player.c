@@ -1038,6 +1038,7 @@ void *reader( ) {
 					else {
 						progressMsg( "Wrong password!" );
 					}
+					sfree( &(control->argument) );
 				}
 			}
 			break;
