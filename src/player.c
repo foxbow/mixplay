@@ -309,7 +309,6 @@ void *setProfile( ) {
 			control->root=dbGetMusic( );
 			control->mpmode=PM_DATABASE;
 		}
-		control->playcount=getLowestPlaycount();
 
 		if( NULL == control->root ) {
 			addMessage( 0, "Scanning musicdir" );

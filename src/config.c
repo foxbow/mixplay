@@ -469,7 +469,6 @@ mpconfig_t *readConfig( void ) {
 	_cconfig->inUI=0;
 	_cconfig->msg->lines=0;
 	_cconfig->msg->current=0;
-	_cconfig->playcount=0;
 	_cconfig->port=MP_PORT;
 	_cconfig->changed=0;
 	_cconfig->isDaemon=0;

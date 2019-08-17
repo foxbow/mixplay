@@ -1250,7 +1250,7 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 	mptitle_t *guard=NULL;
 	unsigned long num=0;
 	char *lastpat=NULL;
-	unsigned int pcount=getConfig()->playcount;
+	unsigned int pcount=getLowestPlaycount();
 	unsigned int cycles=0;
 	int valid=0;
 	/* 0 - nothing checked
@@ -1292,7 +1292,6 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 	}
 
 	cycles=0;
-
 	while( ( valid & 3 ) != 3 ) {
 		if( lastpat == NULL ) valid |=1;
 		/* title did not pass namecheck */
@@ -1348,7 +1347,6 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 
 				if( runner == guard ) {
 					pcount++;	/* allow more replays */
-					getConfig()->playcount=pcount;
 					addMessage( 1, "Increasing maxplaycount to %i (skip)", pcount );
 				}
 				else {
@@ -1360,8 +1358,7 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 		/* 10 may not be enough in practice */
 		if( ++cycles > 10 ) {
 			cycles=0;
-			pcount++;	/* allow replays */
-			getConfig()->playcount=pcount;
+			pcount++;	/* temprorarily allow replays */
 			addMessage( 1, "Increasing maxplaycount to %i (loop)", pcount );
 		}
 	} /* while( valid != 3 ) */

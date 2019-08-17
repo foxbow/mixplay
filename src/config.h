@@ -131,7 +131,6 @@ typedef struct {
 	msgbuf_t *msg;		/* generic message buffer */
 	void *data;					/* extended data for gmixplay */
 	int  port;
-	unsigned playcount;
 	int mpmode;						/* playmode, see PM_* */
 	unsigned dbDirty;
 	/* flags for mpmode */
