@@ -348,7 +348,6 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 		/* round down so new titles have a slightly better chance to be played
 		   and to equalize favourites */
 		mean=(mean/count);
-
 	}
 
 	addMessage( 0, "Using mean playcount %d", mean );

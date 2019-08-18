@@ -659,6 +659,7 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 	marklist_t *ptr = NULL;
 	mptitle_t *root=getConfig()->root;
 	mptitle_t *runner=root;
+	unsigned minpc=getLowestPlaycount();
 	int cnt=0;
 
 	if( NULL == root ) {
@@ -687,6 +688,13 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 					if( excl || getProfile()->favplay ) {
 						addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
 						runner->flags=MP_FAV;
+						/* title joins favplay if it's the initial favlist application
+						   minpc is alway larger or equal to playcount and nothing changes.
+							 If it's added during a favplay session it should blend into the
+							 titles but not repeated until playcount matches */
+						if( runner->playcount < minpc ) {
+							runner->playcount=minpc;
+						}
 					}
 					else if( !(runner->flags & MP_DNP ) ) {
 						addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
