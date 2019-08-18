@@ -112,27 +112,6 @@ static int getListPath( char path[MAXPATHLEN], mpcmd_t cmd ) {
 }
 
 /**
- * always resets the marked flag and
- * resets the counted and skipped flag on all titles if at least 50% of the
- * titles have been counted
- */
-void newCount( ) {
-	mptitle_t *root=getConfig()->root;
-	mptitle_t *runner = root;
-	mpplaylist_t *pl=getConfig()->current;
-
-	if( pl == NULL ) {
-		return;
-	}
-
-	do {
-		activity("Unmarking");
-		runner-> flags &= ~(MP_CNTD);
-		runner=runner->next;
-	} while( runner != root );
-}
-
-/**
  * discards a list of titles and frees the memory
  * returns NULL for intuitive calling
  */
@@ -279,10 +258,8 @@ static mpplaylist_t *remFromPL( mpplaylist_t *pltitle ) {
 	if( pltitle->next != NULL ) {
 		pltitle->next->prev=pltitle->prev;
 	}
-	/* if the title has not been played yet, unmark it */
-	if( !(pltitle->title->flags & MP_CNTD) ) {
-		pltitle->title->flags&=~MP_MARK;
-	}
+	/* title is no longer in the playlist */
+	pltitle->title->flags&=~MP_MARK;
 
 	free(pltitle);
 	return ret;
@@ -314,7 +291,7 @@ mpplaylist_t *remFromPLByKey( mpplaylist_t *root, const unsigned key ) {
 
 	if( pl != NULL ) {
 		/* This may be too hard */
-		if( !( pl->title->flags & MP_CNTD ) ) {
+		if( pl->title->flags & MP_MARK ) {
 			markSkip(pl->title);
 		}
 		if( pl->prev != NULL ) {
@@ -1156,7 +1133,7 @@ static mptitle_t *skipOver( mptitle_t *current, int dir ) {
 		return NULL;
 	}
 
-	while( marker->flags & ( MP_DNP|MP_MARK|MP_CNTD ) ) {
+	while( marker->flags & ( MP_DNP|MP_MARK ) ) {
 		if( dir > 0 ) {
 			marker=marker->next;
 		}
@@ -1274,15 +1251,10 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 
 	/* select a random title from the database */
 	/* skip forward until a title is found that is neither DNP nor MARK */
-	num = countTitles( MP_ALL, MP_DNP|MP_MARK|MP_CNTD );
+	num = countTitles( MP_ALL, MP_DNP|MP_MARK );
 	if( num == 0 ) {
-		num = countTitles( MP_ALL, MP_DNP|MP_MARK );
-		if( num == 0 ) {
-			addMessage(-1, "No titles to be played!" );
-			return NULL;
-		}
-		addMessage(0, "All titles played, next round!" );
-		newCount();
+		addMessage(-1, "No titles to be played!" );
+		return NULL;
 	}
 	runner=skipTitles( runner, rand()%num );
 
@@ -1301,12 +1273,12 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 			while( checkSim( runner->artist, lastpat ) ) {
 				addMessage( 3, "%s = %s", runner->artist, lastpat );
 				activity( "Nameskipping" );
+				/* If we put pcount check here, we could simplify everything.. */
 				runner=skipOver( runner->next, 1 );
 
 				/* hopefully this will not happen */
 				if( (runner == guard ) || ( runner == NULL ) ) {
 					addMessage( 0, "Only %s left..", lastpat );
-					newCount( );
 					return(	addNewTitle( pl, root ) );
 				}
 			}
@@ -1367,9 +1339,6 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 			ONOFF( runner->flags&MP_FAV ), runner->key, runner->display );
 
 	/* count again in case this is a favourite */
-	if( runner->flags & MP_FAV ) {
-		runner->flags &= ~MP_CNTD;
-	}
 	return appendToPL( runner, pl, -1 );
 }
 
@@ -1539,6 +1508,7 @@ void dumpInfo( mptitle_t *root, unsigned int skip ) {
 	unsigned int skipped=0;
 	unsigned int dnp=0;
 	unsigned int fav=0;
+	unsigned int marked=0;
 
 	do {
 		if( current->flags & MP_FAV ) {
@@ -1547,6 +1517,10 @@ void dumpInfo( mptitle_t *root, unsigned int skip ) {
 
 		if( current->flags & MP_DNP ) {
 			dnp++;
+		}
+
+		if( current->flags & MP_MARK ) {
+			marked++;
 		}
 
 		if( !( current->flags &MP_DNP ) ) {
@@ -1571,6 +1545,7 @@ void dumpInfo( mptitle_t *root, unsigned int skip ) {
 		unsigned int pcount=0;
 		unsigned int dnpcnt=0;
 		unsigned int favcnt=0;
+		unsigned int markcnt=0;
 		char line[MAXPATHLEN];
 
 		do {
@@ -1581,6 +1556,9 @@ void dumpInfo( mptitle_t *root, unsigned int skip ) {
 				}
 				if( current->flags & MP_FAV ) {
 					favcnt++;
+				}
+				if( current->flags & MP_MARK ) {
+					markcnt++;
 				}
 			}
 			current=current->next;
@@ -1618,6 +1596,7 @@ void dumpInfo( mptitle_t *root, unsigned int skip ) {
 	addMessage( 0, "%4i\tfavourites", fav );
 	addMessage( 0, "%4i\tdo not plays", dnp );
 	addMessage( 0, "%4i\tskipped", skipped );
+	addMessage( 0, "%4i\tmarked", marked );
 }
 
 /**
@@ -1824,7 +1803,6 @@ int handleRangeCmd( mptitle_t *title, mpcmd_t cmd ) {
 int playResults( mpcmd_t range, const char *arg, const int insert ) {
 	mpconfig_t   *config=getConfig();
 	mpplaylist_t *pos=config->current;
-	mpplaylist_t *end=NULL;
 	mpplaylist_t *res=config->found->titles;
 	mptitle_t *title=NULL;
 	int key=atoi(arg);
@@ -1850,16 +1828,7 @@ int playResults( mpcmd_t range, const char *arg, const int insert ) {
 				return 0;
 			}
 
-			end=res;
-			/* find end of searchresults and mark titles as counted on the way */
-			end->title->flags|=MP_CNTD;
-			while( end->next != NULL ) {
-				end=end->next;
-				end->title->flags|=MP_CNTD;
-			}
-
 			while( res!=NULL ) {
-				res->title->flags|=MP_CNTD;
 				pos=addToPL( res->title, pos, 0 );
 				if( config->current == NULL ) {
 					config->current=pos;
@@ -1877,11 +1846,6 @@ int playResults( mpcmd_t range, const char *arg, const int insert ) {
 			addMessage( 0, "No title with key %i!", key );
 			return 0;
 		}
-		/*
-		 * do not count this title as played and do not mark it skipped during
-		 * this play this will be reverted after play if needed.
-		 */
-		title->flags|=MP_CNTD;
 		/*
 		 * Do not touch marking, we searched the title so it's playing out of
 		 * order. It has been played before? Don't care, we want it now and it

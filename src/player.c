@@ -369,18 +369,11 @@ static void playCount( mptitle_t *title ) {
 
 	/* marked - default play, not marked - searchplay */
 	if ( title->flags&MP_MARK ) {
-		if ( title->flags&MP_CNTD ) {
-			/* this usually means something is amiss! */
-			addMessage( 0, "%s already counted!", title->display );
+		title->playcount++;
+		if( title->skipcount > 0 ) {
+			title->skipcount--;
 		}
-		else {
-			title->flags |= MP_CNTD; /* make sure a title is only counted once per session */
-			title->playcount++;
-			if( title->skipcount > 0 ) {
-				title->skipcount--;
-			}
-			dbMarkDirty();
-		}
+		dbMarkDirty();
 	}
 }
 
@@ -975,15 +968,10 @@ void *reader( ) {
 				}
 
 				if( ( control->current->title->key != 0 ) &&
-					!( control->current->title->flags & MP_CNTD ) ) {
+					  ( control->current->title->flags & MP_MARK ) ) {
 					markSkip(control->current->title);
 					addMessage(1,"Skipped");
 					/* updateCurrent( control ); - done in STOP handling */
-				}
-				else {
-					addMessage(1,"Not skipped %i, COUNT: %s",
-						control->current->title->key,
-						ONOFF(control->current->title->flags & MP_CNTD) );
 				}
 
 				dowrite( p_command[fdset][1], "STOP\n", 6 );

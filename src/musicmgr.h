@@ -11,7 +11,7 @@
 
 #define MP_FAV  1	/* Favourite */
 #define MP_DNP  2	/* do not play */
-#define MP_CNTD 4	/* has been counted */
+/* #define MP_CNTD  has been counted */
 #define MP_MARK 8	/* is currently in the playlist */
 #define MP_ALL  31
 
@@ -89,7 +89,6 @@ marklist_t *loadList( const mpcmd_t cmd );
 int delFromList( const mpcmd_t cmp, const char *line );
 int writeList( const mpcmd_t cmd );
 
-void newCount( void );
 int isMusic( const char *name );
 void dumpTitles( mptitle_t *root, const int pl );
 void dumpInfo( mptitle_t *root, unsigned int skip );
