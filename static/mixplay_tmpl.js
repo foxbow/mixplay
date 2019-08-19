@@ -267,6 +267,7 @@ function sendCMD (cmd, arg = '') {
     (code === '000c') ||
     (code === '000f') ||
     (code === '0010') ||
+    (code === '0011') ||
     (code === '0012') ||
     (code === '0013') ||
     (code === '0014') ||
@@ -279,7 +280,7 @@ function sendCMD (cmd, arg = '') {
 
   /* These command should pull the messages to front */
   if ((code === '0008') ||
-     (code === '0011') ||
+     (code === '0007') ||
      (code === '0012')) toggleVisibility(4)
 
   xmlhttp.onreadystatechange = function () {
@@ -568,7 +569,7 @@ function updateUI () {
                   titleline = '[' + data.next[i].playcount + '/' + data.next[i].skipcount + '] '
                 }
                 titleline += data.next[i].artist + ' - ' + data.next[i].title
-                cline = popselect('Skip to', 0x03, (i + 1),
+                cline = popselect('Play next', 0x11, data.next[i].key,
                   'Remove', 0x1c, data.next[i].key,
                   titleline)
                 e.appendChild(cline)

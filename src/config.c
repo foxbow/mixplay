@@ -63,7 +63,7 @@ static const char *mpccommand[] = {
 		"mpc_dvol",
 		"mpc_bskip",
 		"mpc_fskip",
-		"mpc_NONE",
+		"mpc_move",
 		"mpc_dbinfo",
 		"mpc_search",
 		"mpc_append",

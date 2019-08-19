@@ -918,6 +918,23 @@ void moveEntry( mpplaylist_t *entry, mpplaylist_t *pos ) {
 	remFromPL( entry );
 }
 
+/*
+ * play the given title next
+ * if it's in the playlist it gets moved forward
+ * otherwise it gets inserted
+ */
+void playNext( mptitle_t *title ) {
+	mpplaylist_t *runner = getConfig()->current;
+	while( runner->next != NULL ) {
+		runner=runner->next;
+		if( runner->title == title ) {
+			moveEntry( runner, getConfig()->current );
+			return;
+		}
+	}
+	addToPL( title, getConfig()->current, 0 );
+}
+
 /**
  * load a standard m3u playlist into a list of titles that the tools can handle
  */

@@ -1,6 +1,6 @@
 CC=gcc
 VERSION=$(shell git describe --tags --abbrev=1 --dirty=-dev --always)
-MPCOMM_VER=18
+MPCOMM_VER=19
 SRCDIR=src
 OBJDIR=build
 

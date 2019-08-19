@@ -37,7 +37,7 @@ typedef enum {
 	mpc_dvol,
 	mpc_fskip,
 	mpc_bskip,
-	mpc_NONE,
+	mpc_move,
 	mpc_dbinfo,
 	mpc_search,
 	mpc_append,

@@ -1286,6 +1286,16 @@ void *reader( ) {
 			}
 			break;
 
+		case mpc_move:
+			if( control->argument != NULL ) {
+				title=getTitleByIndex(atoi( control->argument ) );
+				if( title != NULL ) {
+					playNext(title);
+					notifyChange();
+				}
+				sfree( &(control->argument) );
+			}
+
 		case mpc_idle:
 			/* read current Hardware volume in case it changed externally
 			 * don't read before control->argument is NULL as someone may be
