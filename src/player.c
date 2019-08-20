@@ -1295,6 +1295,7 @@ void *reader( ) {
 				}
 				sfree( &(control->argument) );
 			}
+			break;
 
 		case mpc_idle:
 			/* read current Hardware volume in case it changed externally
