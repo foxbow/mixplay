@@ -254,27 +254,6 @@ function sendCMD (cmd, arg = '') {
     code = '0' + code
   }
 
-  /* filter out some commands that make no sense in stream */
-  if ((isstream) && (
-    (code === '0002') ||
-    (code === '0003') ||
-    (code === '0005') ||
-    (code === '0005') ||
-    (code === '0008') ||
-    (code === '0009') ||
-    (code === '000a') ||
-    (code === '000b') ||
-    (code === '000c') ||
-    (code === '000f') ||
-    (code === '0010') ||
-    (code === '0011') ||
-    (code === '0012') ||
-    (code === '0013') ||
-    (code === '0014') ||
-    (code === '0019') ||
-    (code === '001c') ||
-    (code === '001e'))) return
-
   /* these commands should pull main to front */
   if (code === '001e') toggleVisibility(0)
 
@@ -539,7 +518,7 @@ function updateUI () {
                 if (data.prev[i].playcount >= 0) {
                   titleline += '[' + data.prev[i].playcount + '/' + data.prev[i].skipcount + '] '
                 }
-                var cline = cmdline(0x0002, (i + 1), titleline + data.prev[i].artist + ' - ' + data.prev[i].title)
+                var cline = cmdline(0x11, data.prev[i].key, titleline + data.prev[i].artist + ' - ' + data.prev[i].title)
                 e.appendChild(cline)
               }
             } else {

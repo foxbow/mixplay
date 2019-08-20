@@ -698,7 +698,11 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 					}
 					else if( !(runner->flags & MP_DNP ) ) {
 						addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
-						runner->flags|=MP_FAV;
+						/* raise playcount to a proper value
+						   otherwise it may mean that the title gets repeated too often
+							 until it fits in */
+						runner->playcount=2*minpc;
+						runner->flags|=MP_FAV;1
 					}
 					cnt++;
 				}
