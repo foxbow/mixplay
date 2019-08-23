@@ -702,7 +702,7 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 						   otherwise it may mean that the title gets repeated too often
 							 until it fits in */
 						runner->playcount=2*minpc;
-						runner->flags|=MP_FAV;1
+						runner->flags|=MP_FAV;
 					}
 					cnt++;
 				}
