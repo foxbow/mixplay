@@ -11,6 +11,8 @@ var scrolls = []
 var numscrolls = 0
 var wasstream = -1
 var favplay = 0
+var cmdtosend = ''
+var argtosend = ''
 
 function replaceChild (e, c) {
   while (e.hasChildNodes()) {
@@ -262,6 +264,28 @@ function sendCMD (cmd, arg = '') {
      (code === '0007') ||
      (code === '0012')) toggleVisibility(4)
 
+  if ((cmd & 0x00ff) === 0x0013) {
+    if (cmdtosend === '') {
+      cmdtosend = code
+      argtosend = arg
+      var e = document.getElementById('search0')
+      var text = document.createElement('em')
+      text.innerHTML = '.. searching ..'
+      replaceChild(e, text)
+      e = document.getElementById('search1')
+      text = document.createElement('em')
+      text.innerHTML = '.. searching ..'
+      replaceChild(e, text)
+      e = document.getElementById('search2')
+      text = document.createElement('em')
+      text.innerHTML = '.. searching ..'
+      replaceChild(e, text)
+    } else {
+      window.alert('Wait for previous search to be sent')
+    }
+    return
+  }
+
   xmlhttp.onreadystatechange = function () {
     if (xmlhttp.readyState === 4) {
       switch (xmlhttp.status) {
@@ -413,20 +437,23 @@ function clickable (text, cmd, arg, popname) {
 }
 
 /* returns a <div> with text that when clicked presents the two choices */
-function popselect (choice1, cmd1, arg1, choice2, cmd2, arg2, text) {
+function popselect (choice1, cmd1, choice2, cmd2, arg, text) {
   var reply = document.createElement('p')
   reply.innerText = '> ' + text
   reply.className = 'popselect'
   reply.onclick = function () {
-    var popup = document.getElementById('popup' + arg1)
+    var popup = document.getElementById('popup' + arg)
     popup.classList.toggle('show')
   }
   var popspan = document.createElement('span')
   popspan.className = 'popup'
-  popspan.id = 'popup' + arg1
-  var select = clickable(choice1 + '&nbsp;/', cmd1, arg1, popspan.id)
+  if (document.getElementById('popup' + arg)) {
+    document.alert('popup' + arg + ' already exists!')
+  }
+  popspan.id = 'popup' + arg
+  var select = clickable(choice1 + '&nbsp;/', cmd1, arg, popspan.id)
   popspan.appendChild(select)
-  select = clickable('&nbsp;' + choice2, cmd2, arg2, popspan.id)
+  select = clickable('&nbsp;' + choice2, cmd2, arg, popspan.id)
   popspan.appendChild(select)
   reply.appendChild(popspan)
   return reply
@@ -482,6 +509,268 @@ function tabify (parent, name, list) {
   }
 }
 
+function fullUpdate (data) {
+  var e = document.getElementById('dnpfav0')
+  while (e.hasChildNodes()) {
+    e.removeChild(e.firstChild)
+  }
+  document.title = data.current.artist + ' - ' + data.current.title
+  if (data.prev.length > 0) {
+    if (data.mpmode === 1) {
+    /* only the stream title */
+      setElement('prev', data.prev[0].title)
+    } else {
+      setElement('prev', data.prev[0].artist + ' - ' + data.prev[0].title)
+    }
+    for (var i = Math.min(4, data.prev.length - 1); i >= 0; i--) {
+      var titleline = ''
+      if (data.prev[i].playcount >= 0) {
+        titleline += '[' + data.prev[i].playcount + '/' + data.prev[i].skipcount + '] '
+      }
+      var cline = cmdline(0x11, data.prev[i].key,
+        titleline + data.prev[i].artist + ' - ' + data.prev[i].title)
+      e.appendChild(cline)
+    }
+  } else {
+    setElement('prev', '- - -')
+  }
+  setElement('title', data.current.title)
+  setElement('artist', data.current.artist)
+  setElement('album', data.current.album)
+  setElement('genre', data.current.genre)
+  titleline = ''
+  if (data.current.playcount >= 0) {
+    titleline += '[' + data.current.playcount + '/' + data.current.skipcount + '] '
+  }
+  cline = cmdline(0x0000, '',
+    '<em>' + titleline + data.current.artist + ' - ' + data.current.title + '</em>')
+  cline.style.backgroundColor = '#ddd'
+  e.appendChild(cline)
+  if (data.next.length > 0) {
+    if (data.next[0].artist === '') {
+      /* only the stream title */
+      setElement('next', data.next[0].title)
+    } else {
+      setElement('next', data.next[0].artist + ' - ' + data.next[0].title)
+    }
+    for (i = 0; i < data.next.length; i++) {
+      titleline = ''
+      if (data.next[i].playcount >= 0) {
+        titleline = '[' + data.next[i].playcount + '/' + data.next[i].skipcount + '] '
+      }
+      titleline += data.next[i].artist + ' - ' + data.next[i].title
+      cline = popselect('Play next', 0x11,
+        'Remove', 0x1c,
+        data.next[i].key, titleline)
+      e.appendChild(cline)
+    }
+  } else {
+    setElement('next', '- - -')
+  }
+  if (data.current.flags & 1) {
+    document.getElementById('fav').disabled = true
+  } else {
+    document.getElementById('fav').disabled = false
+  }
+  setScrolls()
+}
+
+function searchUpdate (data) {
+  toggleTabByRef('search', 0)
+  var e = document.getElementById('search0')
+  var items = []
+  var i
+  if (data.titles.length > 0) {
+    if (data.mpedit) {
+      items[0] = document.createElement('a')
+      items[0].href = '/cmd/0114?0'
+      items[0].innerHTML = 'Fav all'
+    } else {
+      items[0] = popselect(0x0809, 'Insert',
+        0x0814, 'Append',
+        0, 'Play all')
+    }
+    for (i = 0; i < data.titles.length; i++) {
+      if (data.mpedit) {
+        items[i + 1] = popselect(0x0809, 'Insert',
+          0x0814, 'Insert',
+          data.titles[i].key,
+          data.titles[i].artist + ' - ' + data.titles[i].title)
+      } else {
+        items[i + 1] = clickline(0x080c, data.titles[i].key,
+          '&#x25B6; ' + data.titles[i].artist + ' - ' + data.titles[i].title)
+      }
+    }
+  } else {
+    items[0] = document.createElement('em')
+    items[0].innerHTML = 'No titles found!'
+  }
+  tabify(e, 'tres', items)
+
+  e = document.getElementById('search1')
+  items = []
+  if (data.artists.length > 0) {
+    for (i = 0; i < data.artists.length; i++) {
+      if (data.mpedit) {
+        items[i] = popselect('Search', 0x0213,
+          'Favourite', 0x0209,
+          data.artists[i], data.artists[i])
+      } else {
+        items[i] = clickline(0x0213, data.artists[i], '&#x1F50E; ' + data.artists[i])
+      }
+    }
+  } else {
+    items[0] = document.createElement('em')
+    items[0].innerHTML = 'No artists found!'
+  }
+  tabify(e, 'ares', items)
+
+  e = document.getElementById('search2')
+  items = []
+  if (data.albums.length > 0) {
+    for (i = 0; i < data.albums.length; i++) {
+      if (data.mpedit) {
+        items[i] = popselect('Search', 0x0413,
+          'Favourite', 0x0409, data.albums[i],
+          data.albart[i] + ' - ' + data.albums[i])
+      } else {
+        items[i] = clickline(0x0413, data.albums[i],
+          '&#x1F50E; ' + data.albart[i] + ' - ' + data.albums[i])
+      }
+    }
+  } else {
+    items[0] = document.createElement('em')
+    items[0].innerHTML = 'No albums found!'
+  }
+  tabify(e, 'lres', items)
+
+  if (data.titles.lenght === 0) {
+    window.alert('Search found ' + data.artists.length + ' artists and ' + data.albums.length + ' albums')
+  }
+}
+
+function dnpfavUpdate (data) {
+  var e = document.getElementById('dnpfav1')
+  var items = []
+  var i
+  if (data.dnplist.length === 0) {
+    items[0] = document.createElement('em')
+    items[0].innerHTML = 'No DNPs yet'
+  } else {
+    for (i = 0; i < data.dnplist.length; i++) {
+      items[i] = getPattern(0x001a, data.dnplist[i])
+    }
+  }
+  tabify(e, 'dlist', items)
+
+  e = document.getElementById('dnpfav2')
+  items = []
+  if (data.favlist.length === 0) {
+    items[0] = document.createElement('em')
+    items[0].innerHTML = 'No favourites yet'
+  } else {
+    for (i = 0; i < data.favlist.length; i++) {
+      items[i] = getPattern(0x001b, data.favlist[i])
+    }
+  }
+  tabify(e, 'flist', items)
+}
+
+function playerUpdate (data) {
+  if (data.mpedit) {
+    document.getElementById('searchmode').value = 'Fav'
+  } else {
+    document.getElementById('searchmode').value = 'Play'
+  }
+  favplay = data.mpfavplay
+  if (favplay) {
+    document.getElementById('setfavplay').value = 'Disable Favplay'
+    document.getElementById('range').selectedIndex = 0
+  } else {
+    document.getElementById('setfavplay').value = 'Enable Favplay'
+  }
+  isstream = (data.mpmode === 1) /* PM_STREAM */
+
+  enableButton('fav', !favplay)
+  enableButton('range', !favplay)
+  enableButton('setfavplay', !isstream)
+  enableDiv('ctrl', !isstream)
+  enableDiv('playstr', isstream)
+  enableDiv('playpack', !isstream)
+  enableButton('cextra1', !isstream)
+
+  /* switching between stream and normal play */
+  if (isstream) {
+    setElement('splaytime', data.playtime)
+    document.getElementById('lscroll').style.height = '0px'
+  } else {
+    setElement('playtime', data.playtime)
+    setElement('remtime', data.remtime)
+    document.getElementById('progress').value = data.percent
+    document.getElementById('lscroll').style.height = '30px'
+  }
+
+  if ((isstream !== wasstream) && (window.innerHeight !== window.outerHeight)) {
+    if (isstream) {
+      window.resizeTo(300, 250)
+    } else {
+      window.resizeTo(300, 380)
+    }
+  }
+  wasstream = isstream
+
+  if (active !== data.active) {
+    active = data.active
+    setActive(active)
+  }
+  if (data.status === 0) {
+    document.getElementById('current').style.backgroundColor = '#ddd'
+  } else {
+    document.getElementById('current').style.backgroundColor = '#daa'
+  }
+
+  if (data.volume === -2) {
+    document.getElementById('speaker').innerHTML = '&#x1F507;'
+  } else {
+    document.getElementById('speaker').innerHTML = '&#x1F50A;'
+    document.getElementById('vol').value = data.volume
+  }
+
+  if (data.msg !== '') {
+    if (data.msg.startsWith('ALERT:')) {
+      window.alert(data.msg.substring(6))
+    } else if (data.msg !== 'Done.') {
+      addText(data.msg)
+    }
+  }
+}
+
+function parseReply (reply) {
+  var data = JSON.parse(reply)
+  if (data !== undefined) {
+    if (data.version !== mpver) {
+      fail('Version clash, expected ' + mpver + ' and got ' + data.version)
+      return
+    }
+    /* full update */
+    if (data.type & 1) {
+      fullUpdate(data)
+    }
+    /* search results */
+    if (data.type & 2) {
+      searchUpdate(data)
+    }
+
+    /* dnp/fav lists */
+    if (data.type & 4) {
+      dnpfavUpdate(data)
+    }
+
+    /* standard update */
+    playerUpdate(data)
+  }
+}
+
 /*
  * get current status from the server and update the UI elements with the data
  * handles different types of status replies
@@ -489,249 +778,21 @@ function tabify (parent, name, list) {
 function updateUI () {
   var xmlhttp = new XMLHttpRequest()
   xmlhttp.onreadystatechange = function () {
-    var e
-    var items
     if (xmlhttp.readyState === 4) {
-      if (xmlhttp.status === 200) {
-        var data = JSON.parse(xmlhttp.responseText)
-        if (data !== undefined) {
-          if (data.version !== mpver) {
-            fail('Version clash, expected ' + mpver + ' and got ' + data.version)
-            return
-          }
-          /* full update */
-          if (data.type & 1) {
-            e = document.getElementById('dnpfav0')
-            while (e.hasChildNodes()) {
-              e.removeChild(e.firstChild)
-            }
-            document.title = data.current.artist + ' - ' + data.current.title
-            if (data.prev.length > 0) {
-              if (data.mpmode === 1) {
-              /* only the stream title */
-                setElement('prev', data.prev[0].title)
-              } else {
-                setElement('prev', data.prev[0].artist + ' - ' + data.prev[0].title)
-              }
-              for (var i = Math.min(4, data.prev.length - 1); i >= 0; i--) {
-                var titleline = ''
-                if (data.prev[i].playcount >= 0) {
-                  titleline += '[' + data.prev[i].playcount + '/' + data.prev[i].skipcount + '] '
-                }
-                var cline = cmdline(0x11, data.prev[i].key, titleline + data.prev[i].artist + ' - ' + data.prev[i].title)
-                e.appendChild(cline)
-              }
-            } else {
-              setElement('prev', '- - -')
-            }
-            setElement('title', data.current.title)
-            setElement('artist', data.current.artist)
-            setElement('album', data.current.album)
-            setElement('genre', data.current.genre)
-            titleline = ''
-            if (data.current.playcount >= 0) {
-              titleline += '[' + data.current.playcount + '/' + data.current.skipcount + '] '
-            }
-            cline = cmdline(0x0000, '', '<em>' + titleline + data.current.artist + ' - ' + data.current.title + '</em>')
-            cline.style.backgroundColor = '#ddd'
-            e.appendChild(cline)
-            if (data.next.length > 0) {
-              if (data.next[0].artist === '') {
-                /* only the stream title */
-                setElement('next', data.next[0].title)
-              } else {
-                setElement('next', data.next[0].artist + ' - ' + data.next[0].title)
-              }
-              for (i = 0; i < data.next.length; i++) {
-                titleline = ''
-                if (data.next[i].playcount >= 0) {
-                  titleline = '[' + data.next[i].playcount + '/' + data.next[i].skipcount + '] '
-                }
-                titleline += data.next[i].artist + ' - ' + data.next[i].title
-                cline = popselect('Play next', 0x11, data.next[i].key,
-                  'Remove', 0x1c, data.next[i].key,
-                  titleline)
-                e.appendChild(cline)
-              }
-            } else {
-              setElement('next', '- - -')
-            }
-            if (data.current.flags & 1) {
-              document.getElementById('fav').disabled = true
-            } else {
-              document.getElementById('fav').disabled = false
-            }
-            setScrolls()
-          }
-
-          /* search results */
-          if (data.type & 2) {
-            toggleTabByRef('search', 0)
-            e = document.getElementById('search0')
-            items = []
-            if (data.titles.length > 0) {
-              if (data.mpedit) {
-                items[0] = document.createElement('a')
-                items[0].href = '/cmd/0114?0'
-                items[0].innerHTML = 'Fav all'
-              } else {
-                items[0] = document.createElement('a')
-                items[0].href = '/cmd/010c?0'
-                items[0].innerHTML = 'Play all'
-              }
-              for (i = 0; i < data.titles.length; i++) {
-                if (data.mpedit) {
-                  items[i + 1] = clickline(0x0809, data.titles[i].key, '\u2665 ' + data.titles[i].artist + ' - ' + data.titles[i].title)
-                } else {
-                  items[i + 1] = clickline(0x080c, data.titles[i].key, '&#x25B6; ' + data.titles[i].artist + ' - ' + data.titles[i].title)
-                }
-              }
-            } else {
-              items[0] = document.createElement('em')
-              items[0].innerHTML = 'No titles found!'
-            }
-            tabify(e, 'tres', items)
-
-            e = document.getElementById('search1')
-            items = []
-            if (data.artists.length > 0) {
-              for (i = 0; i < data.artists.length; i++) {
-                if (data.mpedit) {
-                  items[i] = popselect('Search', 0x0213, data.artists[i],
-                    'Favourite', 0x0209, data.artists[i],
-                    data.artists[i])
-                } else {
-                  items[i] = clickline(0x0213, data.artists[i], '&#x1F50E; ' + data.artists[i])
-                }
-              }
-            } else {
-              items[0] = document.createElement('em')
-              items[0].innerHTML = 'No artists found!'
-            }
-            tabify(e, 'ares', items)
-
-            e = document.getElementById('search2')
-            items = []
-            if (data.albums.length > 0) {
-              for (i = 0; i < data.albums.length; i++) {
-                if (data.mpedit) {
-                  items[i] = popselect('Search', 0x0413, data.albums[i],
-                    'Favourite', 0x0409, data.albums[i],
-                    data.albart[i] + ' - ' + data.albums[i])
-                } else {
-                  items[i] = clickline(0x0413, data.albums[i], '&#x1F50E; ' + data.albart[i] + ' - ' + data.albums[i])
-                }
-              }
-            } else {
-              items[0] = document.createElement('em')
-              items[0].innerHTML = 'No albums found!'
-            }
-            tabify(e, 'lres', items)
-
-            if (data.titles.lenght === 0) {
-              window.alert('Search found ' + data.artists.length + ' artists and ' + data.albums.length + ' albums')
-            }
-          }
-
-          /* dnp/fav lists */
-          if (data.type & 4) {
-            e = document.getElementById('dnpfav1')
-            items = []
-            if (data.dnplist.length === 0) {
-              items[0] = document.createElement('em')
-              items[0].innerHTML = 'No DNPs yet'
-            } else {
-              for (i = 0; i < data.dnplist.length; i++) {
-                items[i] = getPattern(0x001a, data.dnplist[i])
-              }
-            }
-            tabify(e, 'dlist', items)
-
-            e = document.getElementById('dnpfav2')
-            items = []
-            if (data.favlist.length === 0) {
-              items[0] = document.createElement('em')
-              items[0].innerHTML = 'No favourites yet'
-            } else {
-              for (i = 0; i < data.favlist.length; i++) {
-                items[i] = getPattern(0x001b, data.favlist[i])
-              }
-            }
-            tabify(e, 'flist', items)
-          }
-
-          /* standard update */
-          if (data.mpedit) {
-            document.getElementById('searchmode').value = 'Fav'
-          } else {
-            document.getElementById('searchmode').value = 'Play'
-          }
-          favplay = data.mpfavplay
-          if (favplay) {
-            document.getElementById('setfavplay').value = 'Disable Favplay'
-            document.getElementById('range').selectedIndex = 0
-          } else {
-            document.getElementById('setfavplay').value = 'Enable Favplay'
-          }
-          isstream = (data.mpmode === 1) /* PM_STREAM */
-
-          enableButton('fav', !favplay)
-          enableButton('range', !favplay)
-          enableButton('setfavplay', !isstream)
-          enableDiv('ctrl', !isstream)
-          enableDiv('playstr', isstream)
-          enableDiv('playpack', !isstream)
-          enableButton('cextra1', !isstream)
-
-          /* switching between stream and normal play */
-          if (isstream) {
-            setElement('splaytime', data.playtime)
-            document.getElementById('lscroll').style.height = '0px'
-          } else {
-            setElement('playtime', data.playtime)
-            setElement('remtime', data.remtime)
-            document.getElementById('progress').value = data.percent
-            document.getElementById('lscroll').style.height = '30px'
-          }
-
-          if ((isstream !== wasstream) && (window.innerHeight !== window.outerHeight)) {
-            if (isstream) {
-              window.resizeTo(300, 250)
-            } else {
-              window.resizeTo(300, 380)
-            }
-          }
-          wasstream = isstream
-
-          if (active !== data.active) {
-            active = data.active
-            setActive(active)
-          }
-          if (data.status === 0) {
-            document.getElementById('current').style.backgroundColor = '#ddd'
-          } else {
-            document.getElementById('current').style.backgroundColor = '#daa'
-          }
-
-          if (data.volume === -2) {
-            document.getElementById('speaker').innerHTML = '&#x1F507;'
-          } else {
-            document.getElementById('speaker').innerHTML = '&#x1F50A;'
-            document.getElementById('vol').value = data.volume
-          }
-
-          if (data.msg !== '') {
-            if (data.msg.startsWith('ALERT:')) {
-              window.alert(data.msg.substring(6))
-            } else if (data.msg !== 'Done.') {
-              addText(data.msg)
-            }
-          }
-        }
-      } else if (xmlhttp.status === 0) {
-        fail('Update Error: connection lost!')
-      } else {
-        fail('Received Error ' + xmlhttp.status + ' after sending command')
+      switch (xmlhttp.status) {
+        case 0:
+          fail('CMD Error: connection lost!')
+          break
+        case 200:
+          parseReply(xmlhttp.responseText)
+          break
+        case 204:
+          break
+        case 503:
+          window.alert('Sorry, we\'re busy!')
+          break
+        default:
+          fail('Received Error ' + xmlhttp.status)
       }
 
       if (doUpdate !== 0) {
@@ -748,8 +809,21 @@ function updateUI () {
     doUpdate = 1
   }
 
-  xmlhttp.open('GET', '/status', true)
-  xmlhttp.send()
+  if (cmdtosend !== '') {
+    /* snchronous command */
+    if (argtosend !== '') {
+      xmlhttp.open('GET', '/cmd/' + cmdtosend + '?' + argtosend, true)
+    } else {
+      xmlhttp.open('GET', '/cmd/' + cmdtosend, true)
+    }
+    xmlhttp.send()
+    cmdtosend = ''
+    argtosend = ''
+  } else {
+    /* normal status update */
+    xmlhttp.open('GET', '/status', true)
+    xmlhttp.send()
+  }
 }
 
 /*

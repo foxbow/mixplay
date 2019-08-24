@@ -38,6 +38,12 @@ struct mpplaylist_s {
 	mpplaylist_t *next;
 };
 
+typedef enum {
+	mpsearch_idle,
+	mpsearch_busy,
+	mpsearch_done
+} mpsearch_t;
+
 typedef struct {
 	unsigned tnum;
 	unsigned anum;
@@ -46,7 +52,7 @@ typedef struct {
 	char **artists;
 	char **albums;
 	char **albart;
-	unsigned send:1;
+	mpsearch_t state;
 } searchresults_t;
 
 typedef struct marklist_s marklist_t;

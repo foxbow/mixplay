@@ -1194,8 +1194,15 @@ void *reader( ) {
 			asyncRun( plDbInfo );
 			break;
 
+		/* this is kinda ugly as the logic needs to be all over the place
+		   the state is initially set to busy in the server code, then the server
+			 waits for the search() called here to set the state to send thus
+			 unlocking the server to send the reply and finally sets it to idle
+			 again, unlocking the player */
 		case mpc_search:
 			if( asyncTest() ) {
+				/* if we mix two searches we're in trouble! */
+				assert( control->found->state != mpsearch_idle );
 				if( control->argument == NULL ) {
 					progressMsg( "Nothing to search for!" );
 				}
@@ -1204,11 +1211,16 @@ void *reader( ) {
 						progressMsg( "Too many titles found!" );
 					}
 					/* todo: a signal/unblock would be nicer here */
-					while( control->found->send == 1 ) {
+					addMessage(1,"Waiting for results..");
+					while( control->found->state != mpsearch_idle ) {
 						nanosleep( &ts, NULL );
 					}
+					addMessage(1,"Results sent!");
 					sfree( &(control->argument) );
 				}
+			}
+			else {
+				addMessage(1,"search async locked!");
 			}
 			break;
 
@@ -1262,8 +1274,8 @@ void *reader( ) {
 		case mpc_favplay:
 			if( asyncTest() ) {
 				if( control->mpmode == PM_DATABASE ) {
-					if( countTitles( MP_FAV, 0 ) < 15 ) {
-						addMessage( -1, "Need at least 15 Favourites to enable Favplay." );
+					if( countTitles( MP_FAV, 0 ) < 21 ) {
+						addMessage( -1, "Need at least 21 Favourites to enable Favplay." );
 						break;
 					}
 					if( control->status == mpc_play ) {
@@ -1274,7 +1286,7 @@ void *reader( ) {
 					getProfile()->favplay=!getProfile()->favplay;
 					addMessage( 1, "%s Favplay", getProfile()->favplay?"Enabling":"Disabling");
 					control->changed=1;
-					applyLists( 0 );
+					applyLists( 1 );
 
 					control->current=wipePlaylist( control->current );
 					plCheck( 0 );

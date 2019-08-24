@@ -517,6 +517,9 @@ int search( const char *pat, const mpcmd_t range ) {
 	unsigned cnt=0;
 	unsigned dnp=0;
 
+	/* enter while the last result has not been sent yet! */
+	assert(res->state!=mpsearch_done);
+
 	/* free buffer playlist, the arrays will not get lost due to the realloc later */
 	res->titles=wipePlaylist(res->titles);
 	res->tnum=0;
@@ -555,7 +558,8 @@ int search( const char *pat, const mpcmd_t range ) {
 			}
 			if( MPC_ISALBUM( range ) &&
 					isMatch( runner->album, pat, MPC_ISFUZZY(range) ) ) {
-				found=mpc_album;
+				/* if a album title equals a title on the album we need both! */
+				found|=mpc_album;
 			}
 			/* todo: genre and path are missing here */
 			if( found ) {
@@ -595,7 +599,8 @@ int search( const char *pat, const mpcmd_t range ) {
 		runner=runner->next;
 	} while( runner != root );
 
-	res->send=1;
+	/* result can be sent out now */
+	res->state=mpsearch_done;
 
 	return (cnt>MAXSEARCH)?-1:(int)cnt;
 }
@@ -692,7 +697,7 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 						   minpc is alway larger or equal to playcount and nothing changes.
 							 If it's added during a favplay session it should blend into the
 							 titles but not repeated until playcount matches */
-						if( runner->playcount < minpc ) {
+						if( ( minpc > 0 ) && ( runner->playcount < minpc ) ) {
 							runner->playcount=minpc;
 						}
 					}

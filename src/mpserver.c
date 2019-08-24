@@ -140,6 +140,10 @@ static void *clientHandler(void *args ) {
 	int index=0;
 	mptitle_t *title=NULL;
 	struct stat sbuf;
+	/* for search polling */
+	struct timespec ts;
+	ts.tv_nsec=250000;
+	ts.tv_sec=0;
 
 	commdata=(char*)falloc( commsize, sizeof( char ) );
 	sock=*(int*)args;
@@ -226,7 +230,18 @@ static void *clientHandler(void *args ) {
 								addMessage( 1, "Decoded arg: %s", config->argument );
 							}
 
-							state=2;
+							state = 2;
+							/* search is synchronous */
+							if( MPC_CMD(cmd) == mpc_search ) {
+								if ( getConfig()->found->state == mpsearch_idle ) {
+									getConfig()->found->state=mpsearch_busy;
+									setCommand(cmd);
+									state=1;
+								}
+								else {
+									progressMsg("Active search!");
+								}
+							}
 						}
 						else if( ( strstr( pos, "/ ") == pos ) || ( strstr( pos, "/index.html " ) == pos ) ) {
 							pthread_mutex_lock(&_sendlock);
@@ -337,16 +352,20 @@ static void *clientHandler(void *args ) {
 					addNotifyHook( &mps_notify, &nextstat );
 					running|=2;
 				}
-				/* normal update requested, is a special update needed? */
-				if( ( config->found->send == 1 ) && isCurClient( sock ) ) {
-					fullstat |= MPCOMM_RESULT;
-				}
 				if( config->listDirty ) {
 					fullstat |= MPCOMM_LISTS;
 				}
 				/* add flags that have been set outside */
 				fullstat |= nextstat;
 				nextstat=MPCOMM_STAT;
+				if( config->found->state != mpsearch_idle ) {
+					fullstat |= MPCOMM_RESULT;
+addMessage(1,"Busy?");
+ 					while( config->found->state == mpsearch_busy ) {
+						nanosleep( &ts, NULL );
+					}
+addMessage(1,"Cool.");
+				}
 				jsonLine=serializeStatus( &clmsg, sock, fullstat );
 				if( jsonLine != NULL ) {
 					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012", (int)strlen(jsonLine) );
@@ -387,8 +406,7 @@ static void *clientHandler(void *args ) {
 				if( cmd != mpc_idle ) {
 					/* check commands that lock the reply channel */
 					if( ( cmd == mpc_dbinfo ) || ( cmd == mpc_dbclean) ||
-							( cmd == mpc_doublets ) ||
-							( MPC_CMD(cmd) == mpc_search ) ) {
+							( cmd == mpc_doublets ) ){
 						if( setCurClient( sock ) == -1 ) {
 							addMessage( 1, "%s was blocked!", mpcString(cmd) );
 							sprintf( commdata, "HTTP/1.1 503 Service Unavailable\015\012Content-Length: 0\015\012\015\012" );
@@ -484,8 +502,7 @@ static void *clientHandler(void *args ) {
 				}
 				else {
 					if( fullstat & MPCOMM_RESULT ) {
-						config->found->send=0;
-						unlockClient( sock );
+						config->found->state=mpsearch_idle;
 					}
 					if( fullstat & MPCOMM_LISTS ) {
 						config->listDirty=0;
