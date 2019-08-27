@@ -108,6 +108,11 @@ static void mps_notify( void *type ) {
 	*(int*)type|=MPCOMM_FULLSTAT;
 }
 
+static size_t serviceUnavailable( char *commdata ) {
+	sprintf( commdata, "HTTP/1.1 503 Service Unavailable\015\012Content-Length: 0\015\012\015\012" );
+	return strlen(commdata);
+}
+
 /**
  * This will handle connection for each client
  */
@@ -233,13 +238,17 @@ static void *clientHandler(void *args ) {
 							state = 2;
 							/* search is synchronous */
 							if( MPC_CMD(cmd) == mpc_search ) {
-								if ( getConfig()->found->state == mpsearch_idle ) {
-									getConfig()->found->state=mpsearch_busy;
-									setCommand(cmd);
-									state=1;
-								}
-								else {
-									progressMsg("Active search!");
+								if( setCurClient(sock) == -1 ) {
+									if ( getConfig()->found->state == mpsearch_idle ) {
+										getConfig()->found->state=mpsearch_busy;
+										setCommand(cmd);
+										state=1;
+									}
+									else {
+										progressMsg("Active search!");
+									}
+								} else {
+									state=9;
 								}
 							}
 						}
@@ -360,11 +369,9 @@ static void *clientHandler(void *args ) {
 				nextstat=MPCOMM_STAT;
 				if( config->found->state != mpsearch_idle ) {
 					fullstat |= MPCOMM_RESULT;
-addMessage(1,"Busy?");
  					while( config->found->state == mpsearch_busy ) {
 						nanosleep( &ts, NULL );
 					}
-addMessage(1,"Cool.");
 				}
 				jsonLine=serializeStatus( &clmsg, sock, fullstat );
 				if( jsonLine != NULL ) {
@@ -379,29 +386,10 @@ addMessage(1,"Cool.");
 				}
 				else {
 					addMessage( 0, "Could not turn status into JSON" );
-					sprintf( commdata, "HTTP/1.1 503 Service Unavailable\015\012Content-Length: 0\015\012\015\012" );
-					len=strlen(commdata);
+					len=serviceUnavailable( commdata );
 				}
 				break;
-			case 6: /* get config */
-				jsonLine=serializeConfig( );
-				if( jsonLine != NULL ) {
-					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012", (int)strlen(jsonLine) );
-					while( (ssize_t)( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
-						commsize+=MP_BLKSIZE;
-						commdata=(char*)frealloc( commdata, commsize );
-					}
-					strcat( commdata, jsonLine );
-					len=strlen(commdata);
-					sfree( &jsonLine );
-					fullstat=MPCOMM_CONFIG;
-				}
-				else {
-					addMessage( 0, "Could not turn config into JSON" );
-					sprintf( commdata, "HTTP/1.1 503 Service Unavailable\015\012Content-Length: 0\015\012\015\012" );
-					len=strlen(commdata);
-				}
-				break;
+
 			case 2: /* set command */
 				if( cmd != mpc_idle ) {
 					/* check commands that lock the reply channel */
@@ -409,8 +397,7 @@ addMessage(1,"Cool.");
 							( cmd == mpc_doublets ) ){
 						if( setCurClient( sock ) == -1 ) {
 							addMessage( 1, "%s was blocked!", mpcString(cmd) );
-							sprintf( commdata, "HTTP/1.1 503 Service Unavailable\015\012Content-Length: 0\015\012\015\012" );
-							len=strlen(commdata);
+							len=serviceUnavailable( commdata );
 							break;
 						}
 						clmsg=config->msg->count;
@@ -426,10 +413,16 @@ addMessage(1,"Cool.");
 					len=strlen( commdata );
 				}
 				break;
+
 			case 3: /* unknown command */
 				sprintf( commdata, "HTTP/1.1 501 Not Implemented\015\012\015\012" );
 				len=strlen( commdata );
 				break;
+
+			case 4: /* service unavailable */
+				len=serviceUnavailable( commdata );
+				break;
+
 			case 5: /* send file */
 				if( getDebug() ) {
 					if( stat(fname,&sbuf) == -1 ) {
@@ -453,6 +446,26 @@ addMessage(1,"Cool.");
 				len=0;
 				running&=~1;
 				break;
+
+				case 6: /* get config */
+					jsonLine=serializeConfig( );
+					if( jsonLine != NULL ) {
+						sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012", (int)strlen(jsonLine) );
+						while( (ssize_t)( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
+							commsize+=MP_BLKSIZE;
+							commdata=(char*)frealloc( commdata, commsize );
+						}
+						strcat( commdata, jsonLine );
+						len=strlen(commdata);
+						sfree( &jsonLine );
+						fullstat=MPCOMM_CONFIG;
+					}
+					else {
+						addMessage( 0, "Could not turn config into JSON" );
+						len=serviceUnavailable( commdata );
+					}
+					break;
+
 			case 7: /* get current build version */
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
 						(int)strlen(VERSION), VERSION );
@@ -460,6 +473,7 @@ addMessage(1,"Cool.");
 				running&=~1;
 				break;
 				/* todo: attachment or inline? */
+
 			case 8: /* send mp3 */
 				pthread_mutex_lock(&_sendlock);
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: audio/mpeg;\015\012"
@@ -503,6 +517,7 @@ addMessage(1,"Cool.");
 				else {
 					if( fullstat & MPCOMM_RESULT ) {
 						config->found->state=mpsearch_idle;
+						unlockClient(sock);
 					}
 					if( fullstat & MPCOMM_LISTS ) {
 						config->listDirty=0;

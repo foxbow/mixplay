@@ -684,11 +684,11 @@ void freeConfig( ) {
 /**
  * adds a message to the message buffer if verbosity is >= v
  *
- * If the application is not in UI mode, the message will just be printed to make sure messages
- * are displayed on the correct media.
+ * If the application is not in UI mode, the message will just be printed to
+ * make sure messages are displayed on the correct media.
  *
- * If debug > v the message is printed on the console (to avoid verbosity 0 messages to
- * always appear in the debug stream.
+ * If debug > v the message is printed on the console (to avoid verbosity
+ * 0 messages to always appear in the debug stream.
  */
 void addMessage( int v, const char *msg, ... ) {
 	va_list args;
@@ -902,10 +902,10 @@ void progressMsg( const char *msg ) {
 
 /**
  * register a progress function.
- * Not used yet, may replace setCurrentClient()
+ * Not used yet, may replace setCurClient()
  */
-void addProgressHook( void (*func)( void * ) ){
-	addHook( func, NULL, &_pfunc );
+void addProgressHook( void (*func)( void * ), void *id ){
+	addHook( func, id, &_pfunc );
 }
 
 /**
