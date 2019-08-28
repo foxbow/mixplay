@@ -517,7 +517,6 @@ static void *clientHandler(void *args ) {
 				else {
 					if( fullstat & MPCOMM_RESULT ) {
 						config->found->state=mpsearch_idle;
-						unlockClient(sock);
 					}
 					if( fullstat & MPCOMM_LISTS ) {
 						config->listDirty=0;
