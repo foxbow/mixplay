@@ -34,11 +34,15 @@ static int _curclient=-1;
 int setCurClient( int client ) {
 	if( pthread_mutex_trylock( &_clientlock ) == EBUSY ) {
 		if( _curclient == client ) {
-			addMessage( 1, "Client %i is already locked!", client );
+			addMessage( 2, "Client %i is already locked!", client );
 			return client;
+		}
+		else {
+			addMessage( 2, "Client %i is blocked by %i!", client, _curclient );
 		}
 		return -1;
 	}
+	addMessage( 1, "Locking %i!", client );
 	_curclient=client;
 	return client;
 }
@@ -56,13 +60,12 @@ int isCurClient( int client ) {
 void unlockClient( int client ) {
 	if( client == _curclient ) {
 		_curclient=-1;
+		addMessage(1,"Unlocking %i", client );
 		pthread_mutex_unlock( &_clientlock );
 		return;
 	}
-	else {
-		if( _curclient != -1 ) {
-			addMessage(0,"Client %i is not %i", client, _curclient );
-		}
+	else if( _curclient != -1 ) {
+		addMessage(0,"Client %i is not %i", client, _curclient );
 	}
 }
 

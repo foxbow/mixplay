@@ -584,21 +584,21 @@ function searchUpdate (data) {
     if (data.mpedit) {
       items[0] = document.createElement('a')
       items[0].href = '/cmd/0114?0'
-      items[0].innerHTML = 'Fav all'
+      items[0].innerHTML = '-- Fav all --'
     } else {
-      items[0] = popselect(0x0809, 'Insert',
+      items[0] = popselect(0x080c, 'Insert',
         0x0814, 'Append',
-        0, 'Play all')
+        0, '-- Play all --')
     }
     for (i = 0; i < data.titles.length; i++) {
       if (data.mpedit) {
-        items[i + 1] = popselect(0x0809, 'Insert',
-          0x0814, 'Insert',
+        items[i + 1] = clickline(0x0809, data.titles[i].key,
+          '&#x2665; ' + data.titles[i].artist + ' - ' + data.titles[i].title)
+      } else {
+        items[i + 1] = popselect(0x080c, 'Insert',
+          0x0814, 'Append',
           data.titles[i].key,
           data.titles[i].artist + ' - ' + data.titles[i].title)
-      } else {
-        items[i + 1] = clickline(0x080c, data.titles[i].key,
-          '&#x25B6; ' + data.titles[i].artist + ' - ' + data.titles[i].title)
       }
     }
   } else {

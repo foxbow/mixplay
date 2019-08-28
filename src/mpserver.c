@@ -238,17 +238,16 @@ static void *clientHandler(void *args ) {
 							state = 2;
 							/* search is synchronous */
 							if( MPC_CMD(cmd) == mpc_search ) {
-								if( setCurClient(sock) == -1 ) {
-									if ( getConfig()->found->state == mpsearch_idle ) {
-										getConfig()->found->state=mpsearch_busy;
-										setCommand(cmd);
-										state=1;
-									}
-									else {
-										progressMsg("Active search!");
-									}
+								if( setCurClient(sock) != -1 ) {
+									/* this client cannot already search! */
+									assert( getConfig()->found->state == mpsearch_idle );
+									getConfig()->found->state=mpsearch_busy;
+									setCommand(cmd);
+									state=1;
 								} else {
-									state=9;
+									/* No progressEnd() as it never started */
+									unlockClient(sock);
+									state=4;
 								}
 							}
 						}
@@ -517,6 +516,7 @@ static void *clientHandler(void *args ) {
 				else {
 					if( fullstat & MPCOMM_RESULT ) {
 						config->found->state=mpsearch_idle;
+						progressEnd();
 					}
 					if( fullstat & MPCOMM_LISTS ) {
 						config->listDirty=0;
