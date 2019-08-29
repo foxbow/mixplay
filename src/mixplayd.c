@@ -49,9 +49,6 @@ static void sigint(int signo){
 void fail( const int error, const char* msg, ... ) {
 	va_list args;
 	va_start( args, msg );
-	getConfig()->command=mpc_quit;
-	getConfig()->status=mpc_quit;
-
 	if( getConfig()->isDaemon ) {
 		vsyslog( LOG_ERR, msg, args );
 	}
@@ -71,6 +68,12 @@ void fail( const int error, const char* msg, ... ) {
 #ifdef EPAPER
 	epExit();
 #endif
+	getConfig()->command=mpc_quit;
+	getConfig()->status=mpc_quit;
+
+	pthread_join( getConfig()->stid, NULL );
+	pthread_join( getConfig()->rtid, NULL );
+
 	exit( error );
 }
 
