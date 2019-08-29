@@ -100,10 +100,6 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplayli
 		jsonAddStr( val, "title", getCurrentActivity() );
 		jsonAddInt( val, "flags", 0 );
 		jsonAddStr( val, "genre", "-" );
-		if( getDebug() ) {
-			jsonAddInt( val, "playcount", title->playcount );
-			jsonAddInt( val, "skipcount", title->skipcount );
-		}
 	}
 
 	return jsonAddObj(jo, key, val);

@@ -795,13 +795,18 @@ void activity( const char *msg, ... ) {
 	}
 	_curact[MP_ACTLEN-1]=0;
 
-	if( getDebug() ) {
-		_ftrpos=( _ftrpos+1 )%( 400/getDebug() );
-		if ( _ftrpos%( 100/getDebug() ) == 0 ) {
-			pos=( _ftrpos/( 100/getDebug() ) )%4;
-			printf( "%c %s\r", roller[pos], _curact );
-			fflush( stdout );
+	_ftrpos=( _ftrpos+1 )%( 400/getDebug() );
+	if ( _ftrpos%( 100/getDebug() ) == 0 ) {
+		pos=( _ftrpos/( 100/getDebug() ) )%4;
+		/* update the UI to follow activity if nothing is playing */
+		if( _cconfig->status == mpc_idle ) {
+			notifyChange();
 		}
+	}
+
+	if( getDebug() ) {
+		printf( "%c %s\r", roller[pos], _curact );
+		fflush( stdout );
 	}
 }
 
