@@ -243,6 +243,7 @@ function wipeLog () {
   for (i = 0; i < 15; i++) {
     msglines[i] = ''
   }
+  msgpos = 0
   e.innerHTML = ''
 }
 
