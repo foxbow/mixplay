@@ -784,8 +784,12 @@ static char _curact[MP_ACTLEN]="";
 void activity( const char *msg, ... ) {
 	char roller[5]="|/-\\";
 	int pos;
+	int step=getDebug();
 	va_list args;
 
+	if ( step == 0 ) {
+		step=1;
+	}
 	va_start( args, msg );
 	vsnprintf( _curact, MP_ACTLEN, msg, args );
 	va_end( args );
@@ -795,9 +799,10 @@ void activity( const char *msg, ... ) {
 	}
 	_curact[MP_ACTLEN-1]=0;
 
-	_ftrpos=( _ftrpos+1 )%( 400/getDebug() );
-	if ( _ftrpos%( 100/getDebug() ) == 0 ) {
-		pos=( _ftrpos/( 100/getDebug() ) )%4;
+	/* this will mess up with debug=3 */
+	_ftrpos=( ( _ftrpos+step )%400 );
+	if ( ( _ftrpos%100 ) == 0 ) {
+		pos=( _ftrpos/100 )%4;
 		/* update the UI to follow activity if nothing is playing */
 		if( _cconfig->status == mpc_idle ) {
 			notifyChange();

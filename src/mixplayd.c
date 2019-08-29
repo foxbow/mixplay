@@ -48,13 +48,14 @@ static void sigint(int signo){
  */
 void fail( const int error, const char* msg, ... ) {
 	va_list args;
+	fprintf( stdout, "\n" );
+	printf("mixplayd: ");
 	va_start( args, msg );
+	vfprintf( stdout, msg, args );
 	if( getConfig()->isDaemon ) {
 		vsyslog( LOG_ERR, msg, args );
 	}
-	fprintf( stdout, "\n" );
-	printf("mixplayd: ");
-	vfprintf( stdout, msg, args );
+	va_end( args );
 	fprintf( stdout, "\n" );
 	if( error > 0 ) {
 		fprintf( stdout, "ERROR: %i - %s\n", abs( error ), strerror( abs( error ) ) );
@@ -62,7 +63,6 @@ void fail( const int error, const char* msg, ... ) {
 			syslog( LOG_ERR, "ERROR: %i - %s\n", abs( error ), strerror( abs( error ) ) );
 		}
 	}
-	va_end( args );
 
 	unlink(getConfig()->pidpath);
 #ifdef EPAPER
@@ -179,7 +179,7 @@ int main( int argc, char **argv ) {
 
 	/* daemonization must happen before childs are created otherwise the pipes are cut */
 	if( getDebug() == 0 ) {
-		if( daemon( 0, 1 ) != 0 ) {
+		if( daemon( 1, 1 ) != 0 ) {
 			fail( errno, "Could not demonize!" );
 		}
 		openlog ("mixplayd", LOG_PID, LOG_DAEMON);
