@@ -699,7 +699,7 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 							 If it's added during a favplay session it should blend into the
 							 titles but not repeated until playcount matches */
 						if( ( minpc > 0 ) && ( runner->playcount < minpc ) ) {
-							runner->playcount=minpc;
+							runner->playcount=minpc+1;
 						}
 					}
 					else if( !(runner->flags & MP_DNP ) ) {

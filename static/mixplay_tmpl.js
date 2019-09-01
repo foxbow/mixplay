@@ -430,11 +430,22 @@ function clickable (text, cmd, arg, popname) {
   reply.setAttribute('data-cmd', cmd)
   reply.onclick = function () {
     var popup = document.getElementById(popname)
-    popup.classList.toggle('show')
-    sendCMD(this.getAttribute('data-cmd'), this.getAttribute('data-arg'))
+    if (popup) {
+      popup.classList.toggle('show')
+      sendCMD(this.getAttribute('data-cmd'), this.getAttribute('data-arg'))
+    } else {
+      console.log(popname + 'does no longer exist')
+    }
   }
   reply.innerHTML = text
   return reply
+}
+
+/* turns the range part of cmd and arg into a (hopefully) unique identifier
+   for a popup */
+function getpopupid (cmd, arg) {
+  var key = (cmd & 0xFF00) >> 16
+  return 'popup' + key + arg
 }
 
 /* returns a <div> with text that when clicked presents the two choices */
@@ -442,21 +453,25 @@ function popselect (choice1, cmd1, choice2, cmd2, arg, text) {
   var reply = document.createElement('p')
   reply.innerText = '> ' + text
   reply.className = 'popselect'
+  const popid = getpopupid(cmd1, arg)
   reply.onclick = function () {
-    var popup = document.getElementById('popup' + arg)
-    popup.classList.toggle('show')
+    var popup = document.getElementById(popid)
+    if (popup !== null) {
+      popup.classList.toggle('show')
+    }
   }
   var popspan = document.createElement('span')
   popspan.className = 'popup'
-  if (document.getElementById('popup' + arg)) {
-    document.alert('popup' + arg + ' already exists!')
+  if (document.getElementById(popid)) {
+    console.log(popid + ' already exists!')
+  } else {
+    popspan.id = popid
+    var select = clickable(choice1 + '&nbsp;/', cmd1, arg, popspan.id)
+    popspan.appendChild(select)
+    select = clickable('&nbsp;' + choice2, cmd2, arg, popspan.id)
+    popspan.appendChild(select)
+    reply.appendChild(popspan)
   }
-  popspan.id = 'popup' + arg
-  var select = clickable(choice1 + '&nbsp;/', cmd1, arg, popspan.id)
-  popspan.appendChild(select)
-  select = clickable('&nbsp;' + choice2, cmd2, arg, popspan.id)
-  popspan.appendChild(select)
-  reply.appendChild(popspan)
   return reply
 }
 
@@ -587,8 +602,8 @@ function searchUpdate (data) {
       items[0].href = '/cmd/0114?0'
       items[0].innerHTML = '-- Fav all --'
     } else {
-      items[0] = popselect(0x080c, 'Insert',
-        0x0814, 'Append',
+      items[0] = popselect('Insert', 0x080c,
+        'Append', 0x0814,
         0, '-- Play all --')
     }
     for (i = 0; i < data.titles.length; i++) {
@@ -596,8 +611,8 @@ function searchUpdate (data) {
         items[i + 1] = clickline(0x0809, data.titles[i].key,
           '&#x2665; ' + data.titles[i].artist + ' - ' + data.titles[i].title)
       } else {
-        items[i + 1] = popselect(0x080c, 'Insert',
-          0x0814, 'Append',
+        items[i + 1] = popselect('Insert', 0x080c,
+          'Append', 0x0814,
           data.titles[i].key,
           data.titles[i].artist + ' - ' + data.titles[i].title)
       }
@@ -817,14 +832,13 @@ function updateUI () {
     } else {
       xmlhttp.open('GET', '/cmd/' + cmdtosend, true)
     }
-    xmlhttp.send()
     cmdtosend = ''
     argtosend = ''
   } else {
     /* normal status update */
     xmlhttp.open('GET', '/status', true)
-    xmlhttp.send()
   }
+  xmlhttp.send()
 }
 
 /*
