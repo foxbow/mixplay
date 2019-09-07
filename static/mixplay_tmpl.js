@@ -444,8 +444,7 @@ function clickable (text, cmd, arg, popname) {
 /* turns the range part of cmd and arg into a (hopefully) unique identifier
    for a popup */
 function getpopupid (cmd, arg) {
-  var key = (cmd & 0xFF00) >> 16
-  return 'popup' + key + arg
+  return 'popup' + cmd + arg
 }
 
 /* returns a <div> with text that when clicked presents the two choices */
