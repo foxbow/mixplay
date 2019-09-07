@@ -418,12 +418,13 @@ static int scanprofiles( char *input, profile_t ***target ) {
 				if (line[i][0]=='1') {
 					(*target)[i]->favplay=1;
 				}
-
 			}
 			else {
 				(*target)[i]=createProfile( line[i], 0 );
 			}
+			free(line[i]);
 		}
+		free(line);
 	}
 	return num;
 }
@@ -783,7 +784,8 @@ static char _curact[MP_ACTLEN]="";
  */
 void activity( const char *msg, ... ) {
 	char roller[5]="|/-\\";
-	int pos;
+	int pos=0;
+	int i;
 	int step=getDebug();
 	va_list args;
 
@@ -794,8 +796,8 @@ void activity( const char *msg, ... ) {
 	vsnprintf( _curact, MP_ACTLEN, msg, args );
 	va_end( args );
 
-	for( pos=strlen(_curact); pos < (MP_ACTLEN-1); pos++ ){
-		_curact[pos]=' ';
+	for( i=strlen(_curact); i < (MP_ACTLEN-1); i++ ){
+		_curact[i]=' ';
 	}
 	_curact[MP_ACTLEN-1]=0;
 
