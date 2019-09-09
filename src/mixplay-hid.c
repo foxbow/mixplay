@@ -6,7 +6,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <ncurses.h>
+#include <errno.h>
 
 #include "json.h"
 #include "config.h"
@@ -39,81 +39,56 @@ static void drawAll() {
 	if( getCurrentTitle( title, 79 ) < 0 ) {
 		fail(errno, "Command failed.");
 	}
-	mvprintw( 1, 2, "Mixplay HID demo");
-	mvprintw( 3, 2, "                                                                            ");
-	mvprintw( 3, 2, "%s", title );
-	refresh();
+	printf( "%s\r", title );
+	fflush(stdout);
 }
 
 int main( ){
 	int fd;
 	char c=0;
 	mpcmd_t cmd=mpc_idle;
-	fd_set fds;
-	struct timeval to;
 
 	if( readConfig() == NULL ) {
 		fail( F_FAIL, "No mixplayd configuration found!");
 	}
 
-	initscr();
-	curs_set( 0 );
-	/* disable buffering */
-	cbreak();
-	/* turn on ctrl-key shortcuts */
-	keypad( stdscr, TRUE );
-	noecho();
-
 	fd=getConnection();
-	while ( fd != -1 ) {
-		FD_ZERO( &fds );
-		FD_SET( fileno( stdin ), &fds );
 
-		to.tv_sec=1;
-		to.tv_usec=0;
-		select( FD_SETSIZE, &fds, NULL, NULL, &to );
-		/* Interpret key */
-		if( FD_ISSET( fileno( stdin ), &fds ) ) {
-			c=getch();
-			switch(c) {
-				case ' ':
-					cmd=mpc_play;
-					break;
-				case 'n':
-				case 's':
-					cmd=mpc_next;
-					break;
-				case 'p':
-					cmd=mpc_prev;
-					break;
-				case 'd':
-					cmd=mpc_dnp;
-					break;
-				case 'f':
-					cmd=mpc_fav;
-					break;
-				case 'q':
-					close(fd);
-					cmd=mpc_idle;
-					fd=-1;
-					break;
-				default:
-					cmd=mpc_idle;
-			}
-			if( sendCMD( fd, cmd ) < 0 ) {
-				fail(errno, "Command %s failed.", mpcString(cmd) );
-			}
-			if( cmd != mpc_idle ) {
-				mvprintw( 5, 2, "Sent %s", mpcString(cmd) );
-			}
-			else {
-				mvprintw( 5, 2, "                      " );
-			}
+	printf( "Mixplay HID demo\n");
+
+	while ( fd != -1 ) {
+		c=getch(1000);
+		switch(c) {
+			case ' ':
+				cmd=mpc_play;
+				break;
+			case 'n':
+			case 's':
+				cmd=mpc_next;
+				break;
+			case 'p':
+				cmd=mpc_prev;
+				break;
+			case 'd':
+				cmd=mpc_dnp;
+				break;
+			case 'f':
+				cmd=mpc_fav;
+				break;
+			case 'q':
+				close(fd);
+				cmd=mpc_idle;
+				fd=-1;
+				break;
+			default:
+				cmd=mpc_idle;
 		}
-		else {
-			mvprintw( 5, 2, "                      " );
+		if( sendCMD( fd, cmd ) < 0 ) {
+			fail(errno, "Command %s failed.", mpcString(cmd) );
+		}
+		if( cmd != mpc_idle ) {
+			printf( "\nSent %s\n", mpcString(cmd) );
 		}
 		drawAll();
 	}
-	endwin();
 }

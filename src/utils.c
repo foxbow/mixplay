@@ -6,12 +6,15 @@
 #include <ctype.h>
 #include <stdarg.h>
 #include <unistd.h>
-#include <ncurses.h>
 #include <sys/stat.h>
 #include <signal.h>
 #include <pthread.h>
+#include <termios.h>
+#include <assert.h>
+#include <string.h>
 
 #include "utils.h"
+
 /*
  * block all signals that would interrupt the execution flow
  * Yes, this is bad practice, yes this will become a signal handler thread
@@ -370,4 +373,38 @@ int fileBackup( const char *name ) {
 	}
 
 	return 0;
+}
+
+/* waits for a keypress
+   timeout - timeout in ms
+	 returns character code of keypress or -1 on timeout */
+int getch( long timeout ) {
+	int c=0;
+	struct termios org_opts, new_opts;
+	fd_set fds;
+	struct timeval to;
+
+	/* get current settings if this fails the terminal is not fully featured */
+	assert( tcgetattr(STDIN_FILENO, &org_opts) == 0 );
+
+	memcpy(&new_opts, &org_opts, sizeof(new_opts));
+	new_opts.c_lflag &= ~(ICANON | ECHO | ECHOE | ECHOK | ECHONL | ECHOPRT | ECHOKE | ICRNL);
+	tcsetattr(STDIN_FILENO, TCSANOW, &new_opts);
+
+	FD_ZERO( &fds );
+	FD_SET( fileno( stdin ), &fds );
+
+	to.tv_sec=(timeout/1000);
+	to.tv_usec=(timeout-(to.tv_sec * 1000))*1000;
+	select( FD_SETSIZE, &fds, NULL, NULL, &to );
+
+	if( FD_ISSET( fileno( stdin ), &fds ) ) {
+		c=getchar();
+	}
+	else {
+		c=-1;
+	}
+
+	assert( tcsetattr(STDIN_FILENO, TCSANOW, &org_opts) == 0 );
+	return(c);
 }

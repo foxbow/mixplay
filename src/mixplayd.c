@@ -22,6 +22,7 @@
 #ifdef EPAPER
 #include "mpepa.h"
 #endif
+#include "mphid.h"
 
 static unsigned long _curmsg=0;
 
@@ -205,6 +206,9 @@ int main( int argc, char **argv ) {
 		addUpdateHook( &epUpdateHook );
 	}
 	#endif
+	if( getDebug() ) {
+		runHID();
+	}
 	pthread_join( control->stid, NULL );
 	pthread_join( control->rtid, NULL );
 	control->inUI=0;

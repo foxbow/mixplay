@@ -10,7 +10,7 @@ CCFLAGS+=-std=gnu99 -Wall -Wextra -pedantic -Werror -I . -g
 #CCFLAGS+=-std=gnu99 -Wall -Wextra -Werror -pedantic -I . -O2
 
 OBJS=$(addprefix $(OBJDIR)/,mpserver.o utils.o musicmgr.o database.o \
-  mpgutils.o player.o config.o mpcomm.o json.o msgbuf.o mpinit.o)
+  mpgutils.o player.o config.o mpcomm.o json.o msgbuf.o mpinit.o mphid.o)
 
 CLOBJS=$(addprefix $(OBJDIR)/,utils.o msgbuf.o config.o json.o mpclient.o)
 
@@ -66,7 +66,7 @@ mixplayd: $(OBJDIR)/mixplayd.o $(OBJS)
 	$(CC) $^ -o $@ $(LIBS)
 
 mixplay-hid: $(OBJDIR)/mixplay-hid.o $(CLOBJS)
-	$(CC) $^ -o $@ $(LIBS) -lncurses
+	$(CC) $^ -o $@ $(LIBS)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CCFLAGS) -c -o $@ $<

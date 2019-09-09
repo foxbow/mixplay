@@ -49,6 +49,6 @@ char *toLower( char *text );
 int hexval( const char c );
 int dowrite( const int fd, const char *buf, const size_t buflen );
 int fileBackup( const char *name );
-
+int getch( long timeout );
 void blockSigint();
 #endif
