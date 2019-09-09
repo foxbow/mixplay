@@ -71,7 +71,6 @@ mpplaylist_t *addToPL( mptitle_t *title, mpplaylist_t *target, const int mark );
 void playNext( mptitle_t *title );
 mpplaylist_t *remFromPLByKey( mpplaylist_t *root, const unsigned key );
 void moveEntry( mpplaylist_t *entry, mpplaylist_t *pos );
-mpplaylist_t *wipePlaylist( mpplaylist_t *pl );
 mpplaylist_t *addPLDummy( mpplaylist_t *pl, const char *name );
 void plCheck( int del );
 int writePlaylist( mpplaylist_t *pl, const char *name );
@@ -80,9 +79,7 @@ mptitle_t *recurse( char *curdir, mptitle_t *files );
 mptitle_t *rewindTitles( mptitle_t *base );
 mptitle_t *loadPlaylist( const char *path );
 mptitle_t *insertTitle( mptitle_t *base, const char *path );
-mptitle_t *wipeTitles( mptitle_t *root );
 int search( const char *pat, const mpcmd_t range );
-int playResults( mpcmd_t range, const char *arg, const int insert );
 
 void markSkip( mptitle_t *title );
 int DNPSkip( void );
@@ -91,7 +88,6 @@ int searchPlay( const char *pat, unsigned num, const int global );
 int handleRangeCmd( mptitle_t *title, mpcmd_t cmd );
 int addRangePrefix( char *line, mpcmd_t cmd );
 
-marklist_t *wipeList( marklist_t *root );
 marklist_t *loadList( const mpcmd_t cmd );
 int delFromList( const mpcmd_t cmp, const char *line );
 int writeList( const mpcmd_t cmd );

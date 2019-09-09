@@ -22,9 +22,6 @@
 /* return immutable configuration */
 #define MPCOMM_CONFIG -1
 
-/* default mixplay HTTP port */
-#define MP_PORT 2347
-
 char *serializeStatus( unsigned long *count, int clientid, int fullstat );
 char *serializeConfig( void );
 int setCurClient( int client );

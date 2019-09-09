@@ -11,7 +11,7 @@
 #include <pthread.h>
 #include <sys/types.h>
 #include <inttypes.h>
-#include "utils.h"
+#include "msgbuf.h"
 
 #define MP_MSGLEN 512
 
@@ -181,9 +181,10 @@ void removeNotifyHook( void (*)( void *), void *arg );
 
 const char *mpcString( mpcmd_t rawcmd );
 mpcmd_t mpcCommand( const char *val );
-int  setArgument( const char *arg );
-int getArgs( int argc, char ** argv );
-int initAll( void );
 char *fullpath( const char *file );
+
+mpplaylist_t *wipePlaylist( mpplaylist_t *pl );
+mptitle_t *wipeTitles( mptitle_t *root );
+marklist_t *wipeList( marklist_t *root );
 
 #endif /* _CONFIG_H_ */

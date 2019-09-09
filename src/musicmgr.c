@@ -112,45 +112,6 @@ static int getListPath( char path[MAXPATHLEN], mpcmd_t cmd ) {
 }
 
 /**
- * discards a list of titles and frees the memory
- * returns NULL for intuitive calling
- */
-mptitle_t *wipeTitles( mptitle_t *root ) {
-	mptitle_t *runner=root;
-
-	if( NULL != root ) {
-		root->prev->next=NULL;
-
-		while( runner != NULL ) {
-			activity("Cleaning");
-			root=runner->next;
-			free( runner );
-			runner=root;
-		}
-	}
-
-	return NULL;
-}
-
-/**
- * discards a list of markterms and frees the memory
- * returns NULL for intuitive calling
- */
-marklist_t *wipeList( marklist_t *root ) {
-	marklist_t *runner=root;
-
-	if( NULL != root ) {
-		while( runner != NULL ) {
-			root=runner->next;
-			free( runner );
-			runner=root;
-		}
-	}
-
-	return NULL;
-}
-
-/**
  * add a line to a file
  */
 static int addToList( const char *line, mpcmd_t cmd ) {
@@ -171,32 +132,6 @@ static int addToList( const char *line, mpcmd_t cmd ) {
 
 	getConfig()->listDirty=1;
 	return 1;
-}
-
-/**
- * deletes the current playlist
- */
-mpplaylist_t *wipePlaylist( mpplaylist_t *pl ) {
-	mpplaylist_t *next=NULL;
-
-	if( pl == NULL ) {
-		return NULL;
-	}
-
-	while( pl->prev != NULL ) {
-		pl=pl->prev;
-	}
-
-	while( pl != NULL ){
-		next=pl->next;
-		if( getConfig()->root == NULL ) {
-			free( pl->title );
-		}
-		free(pl);
-		pl=next;
-	}
-
-	return NULL;
 }
 
 mpplaylist_t *addPLDummy( mpplaylist_t *pl, const char *name ){
@@ -1829,75 +1764,4 @@ int handleRangeCmd( mptitle_t *title, mpcmd_t cmd ) {
 	}
 
 	return cnt;
-}
-
-/**
- * adds searchresults to the playlist
- * range - title-display/artist/album
- * arg - either a title key or a string
- * insert - play next or append to the end of the playlist
- */
-int playResults( mpcmd_t range, const char *arg, const int insert ) {
-	mpconfig_t   *config=getConfig();
-	mpplaylist_t *pos=config->current;
-	mpplaylist_t *res=config->found->titles;
-	mptitle_t *title=NULL;
-	int key=atoi(arg);
-
-	/* insert results at current pos or at the end? */
-	if( (pos != NULL ) && ( insert == 0 ) ) {
-		while( pos->next != NULL ) {
-			pos=pos->next;
-		}
-	}
-
-	if( ( range == mpc_title ) || ( range == mpc_display ) ) {
-		/* Play the current resultlist */
-		if( key == 0 ) {
-			/* should not happen but better safe than sorry! */
-			if( config->found->tnum == 0 ) {
-				addMessage( 0, "No results to be added!" );
-				return 0;
-			}
-			if( config->found->titles == NULL ) {
-				addMessage( 0, "%i titles found but none in list!",
-						config->found->tnum );
-				return 0;
-			}
-
-			while( res!=NULL ) {
-				pos=addToPL( res->title, pos, 0 );
-				if( config->current == NULL ) {
-					config->current=pos;
-				}
-				res=res->next;
-			}
-
-			notifyChange();
-			return config->found->tnum;
-		}
-
-		/* play only one */
-		title=getTitleByIndex(key);
-		if( title == NULL ) {
-			addMessage( 0, "No title with key %i!", key );
-			return 0;
-		}
-		/*
-		 * Do not touch marking, we searched the title so it's playing out of
-		 * order. It has been played before? Don't care, we want it now and it
-		 * won't come back! It's not been played before? Then play it now and
-		 * whenever it's time comes.
-		 */
-		pos=addToPL( title, pos, 0 );
-		if( config->current == NULL ) {
-			config->current=pos;
-		}
-
-		notifyChange();
-		return 1;
-	}
-
-	addMessage( 0, "Range not supported!" );
-	return 0;
 }

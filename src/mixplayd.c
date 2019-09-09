@@ -18,6 +18,7 @@
 
 #include "utils.h"
 #include "player.h"
+#include "mpinit.h"
 #ifdef EPAPER
 #include "mpepa.h"
 #endif
