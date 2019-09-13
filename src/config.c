@@ -475,7 +475,7 @@ void addMessage( int v, const char *msg, ... ) {
 		if( v <= getVerbosity() ) {
 			if( _cconfig->inUI ) {
 				if( v < getDebug() ) {
-					fprintf( stderr, "d%i %s\n", v, line );
+					fprintf( stderr, "\rd%i %s\n", v, line );
 				}
 				/* not just a message but something important */
 				if( v == -1 ) {
@@ -486,11 +486,11 @@ void addMessage( int v, const char *msg, ... ) {
 				msgBuffAdd( _cconfig->msg, line );
 			}
 			else {
-				printf( "V %s\n", line );
+				printf( "\rV %s\n", line );
 			}
 		}
 		else if( v < getDebug() ) {
-			fprintf( stderr, "D%i %s\n", v, line );
+			fprintf( stderr, "\rD%i %s\n", v, line );
 		}
 	}
 

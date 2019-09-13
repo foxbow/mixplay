@@ -208,6 +208,7 @@ void setStream( const char* stream, const char *name ) {
 /**
  * sends a command to the player
  * also makes sure that commands are queued
+ * TODO: consider setting an argument here too
  */
 void setCommand( mpcmd_t cmd ) {
 	if( cmd == mpc_idle ) {

@@ -206,7 +206,8 @@ int main( int argc, char **argv ) {
 		addUpdateHook( &epUpdateHook );
 	}
 	#endif
-	if( getDebug() ) {
+	if( getDebug() > 0 ) {
+		addUpdateHook( &hidUpdateHook );
 		runHID();
 	}
 	pthread_join( control->stid, NULL );
