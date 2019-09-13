@@ -210,17 +210,22 @@ void setStream( const char* stream, const char *name ) {
  * also makes sure that commands are queued
  * TODO: consider setting an argument here too
  */
-void setCommand( mpcmd_t cmd ) {
+void setCommand( mpcmd_t cmd, char *arg ) {
 	if( cmd == mpc_idle ) {
-		return;
-	}
-	/* do not try to change quit! */
-	if( getConfig()->status == mpc_quit ) {
 		return;
 	}
 
 	pthread_mutex_lock( &_pcmdlock );
-	getConfig()->command=cmd;
+	/* mixplay is stopping, unlock and return */
+	if( getConfig()->status == mpc_quit ) {
+		pthread_mutex_unlock( &_pcmdlock );
+	}
+	else {
+		getConfig()->command=cmd;
+		/* someone did not clean up! */
+		assert( getConfig()->argument == NULL );
+		getConfig()->argument=arg;
+	}
 }
 
 /**

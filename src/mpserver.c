@@ -128,7 +128,7 @@ static void *clientHandler(void *args ) {
 	mpconfig_t *config;
 	unsigned long clmsg;
 	int state=0;
-	char *pos, *end, *arg;
+	char *pos, *end, *arg, *argument;
 	mpcmd_t cmd=mpc_idle;
 	static const char *mtype;
 	char line[MAXPATHLEN]="";
@@ -222,17 +222,12 @@ static void *clientHandler(void *args ) {
 							}
 							if( arg != NULL ) {
 								pos=arg;
-								if( config->argument != NULL ) {
-									addMessage( 1, "Argument %s becomes %s!", config->argument, pos );
-									if( strlen(config->argument) <= strlen(pos) ) {
-										config->argument=(char*)frealloc( config->argument, strlen(pos)+1 );
-									}
-								}
-								else {
-									config->argument=(char*)falloc( strlen( pos )+2, sizeof( char ) );
-								}
-								strdec( config->argument, pos );
-								addMessage( 1, "Decoded arg: %s", config->argument );
+								argument=(char*)falloc( strlen( pos )+2, sizeof( char ) );
+								strdec( argument, pos );
+								addMessage( 1, "Decoded arg: %s", argument );
+							}
+							else {
+								argument = NULL;
 							}
 
 							state = 2;
@@ -242,7 +237,7 @@ static void *clientHandler(void *args ) {
 									/* this client cannot already search! */
 									assert( getConfig()->found->state == mpsearch_idle );
 									getConfig()->found->state=mpsearch_busy;
-									setCommand(cmd);
+									setCommand(cmd, argument);
 									state=1;
 								} else {
 									/* No progressEnd() as it never started */
@@ -401,7 +396,7 @@ static void *clientHandler(void *args ) {
 						}
 						clmsg=config->msg->count;
 					}
-					setCommand(cmd);
+					setCommand(cmd,argument);
 					if( okreply ) {
 						sprintf( commdata, "HTTP/1.1 204 No Content\015\012\015\012" );
 						len=strlen( commdata );

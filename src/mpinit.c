@@ -238,7 +238,7 @@ int initAll( ) {
 	else {
 		control->active=0;
 		control->dbname[0]=0;
-		setCommand( mpc_play );
+		setCommand( mpc_play, NULL );
 	}
 
 	return 0;

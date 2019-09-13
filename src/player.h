@@ -12,7 +12,7 @@
 /* percentage of volume change for mpc_ivol and mpc_dvol */
 #define VOLSTEP 2
 
-void setCommand( mpcmd_t cmd );
+void setCommand( mpcmd_t cmd, char *arg );
 void *reader( );
 void *setProfile( );
 void setStream( const char* stream, const char *name );

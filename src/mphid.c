@@ -71,27 +71,23 @@ void runHID(void) {
 		c=getch(750);
 		switch(c){
 			case 'p':
-				setCommand( mpc_prev );
+				setCommand( mpc_prev, NULL );
 				break;
 			case 'n':
-				setCommand( mpc_next );
+				setCommand( mpc_next, NULL );
 				break;
 			case ' ':
-				setCommand( mpc_play );
+				setCommand( mpc_play, NULL );
 				break;
 			case 'f':
-				setCommand( mpc_fav );
+				setCommand( mpc_fav, NULL );
 				break;
 			case 'd':
-				setCommand( mpc_dnp );
+				setCommand( mpc_dnp, NULL );
 				break;
 			case 'Q':
 				printline("[QUIT]");
-				/* quit is tricky as the mpc_quit commmand needs a password, so we
-				   emulate a CTRL-C while we should probably take the secure route
-					 instead to make sure we don't disturb some async command */
-				config->command=mpc_quit;
-				config->status=mpc_quit;
+				setCommand( mpc_quit, "mixplay" );
 				break;
 			case -1:
 				/* timeout - ignore */
