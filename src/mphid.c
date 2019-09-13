@@ -60,6 +60,9 @@ void hidUpdateHook() {
 void runHID(void) {
 	int c;
 	mpconfig_t *config=getConfig();
+	char *pass;
+	pass=falloc(8,1);
+	strcpy(pass,"mixplay");
 
 	/* wait for the initialization to be done */
 	while( ( config->status != mpc_play ) &&
@@ -87,7 +90,7 @@ void runHID(void) {
 				break;
 			case 'Q':
 				printline("[QUIT]");
-				setCommand( mpc_quit, "mixplay" );
+				setCommand( mpc_quit, pass );
 				break;
 			case -1:
 				/* timeout - ignore */

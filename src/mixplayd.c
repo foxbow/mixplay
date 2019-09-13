@@ -30,6 +30,10 @@ static unsigned long _curmsg=0;
  * TODO: create a dedicated signal handler thread.
  **/
 static void sigint(int signo){
+	char *pass;
+	pass=falloc(8,1);
+	strcpy(pass,"mixplay");
+
 	addMessage(0, "External quit on signal %i!", signo );
 	if( getConfig()->command == mpc_quit ) {
 		addMessage( 0, "Forced exit!!" );
@@ -37,7 +41,7 @@ static void sigint(int signo){
 		exit(1);
 	}
 	/* try nicely first */
-	setCommand( mpc_quit, "mixplay" );
+	setCommand( mpc_quit, pass );
 }
 
 /*
