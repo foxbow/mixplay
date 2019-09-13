@@ -11,7 +11,7 @@ static mpcmd_t _last=mpc_start;
 
 static void printline( const char* text, ... ){
 	va_list args;
-	printf( "\n" );
+	printf( "\r" );
 	va_start( args, text );
 	vprintf( text, args );
 	va_end( args );

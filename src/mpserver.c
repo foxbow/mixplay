@@ -20,6 +20,7 @@
 #include "build/mprc_html.h"
 #include "build/mixplayd_js.h"
 #include "build/mixplayd_css.h"
+#include "build/mixplayd_svg.h"
 
 #include <arpa/inet.h>
 #include <ctype.h>
@@ -276,6 +277,14 @@ static void *clientHandler(void *args ) {
 							fdata=static_mixplay_js;
 							flen=static_mixplay_js_len;
 							mtype="application/javascript; charset=utf-8";
+							state=5;
+						}
+						else if( strstr( pos, "/mixplay.svg " ) == pos ) {
+							pthread_mutex_lock(&_sendlock);
+							fname="static/mixplay.svg";
+							fdata=static_mixplay_svg;
+							flen=static_mixplay_svg_len;
+							mtype="image/svg+xml";
 							state=5;
 						}
 						else if( strstr( pos, "/mpplayer.html " ) == pos ) {

@@ -36,9 +36,8 @@ static void sigint(int signo){
 		unlink(getConfig()->pidpath);
 		exit(1);
 	}
-	/* brute force to avoid lockups */
-	getConfig()->command=mpc_quit;
-	getConfig()->status=mpc_quit;
+	/* try nicely first */
+	setCommand( mpc_quit, "mixplay" );
 }
 
 /*
