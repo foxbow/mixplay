@@ -104,7 +104,7 @@ function setScrolls () {
 function initScroll (index, id) {
   if (scrolls[index] === undefined) {
     var element = document.getElementById(id)
-    var scroll = { 'id': id, 'element': element, 'offset': '0px' }
+    var scroll = { id: id, element: element, offset: '0px' }
     scrolls[index] = scroll
     if (index + 1 > numscrolls) {
       numscrolls = index + 1
@@ -431,7 +431,6 @@ function clickable (text, cmd, arg, popname) {
   reply.onclick = function () {
     var popup = document.getElementById(popname)
     if (popup) {
-      popup.classList.toggle('show')
       sendCMD(this.getAttribute('data-cmd'), this.getAttribute('data-arg'))
     } else {
       console.log(popname + 'does no longer exist')
@@ -465,9 +464,9 @@ function popselect (choice1, cmd1, choice2, cmd2, arg, text) {
     console.log(popid + ' already exists!')
   } else {
     popspan.id = popid
-    var select = clickable(choice1 + '&nbsp;/', cmd1, arg, popspan.id)
+    var select = clickable(choice1 + '&nbsp;/', cmd1, arg, popid)
     popspan.appendChild(select)
-    select = clickable('&nbsp;' + choice2, cmd2, arg, popspan.id)
+    select = clickable('&nbsp;' + choice2, cmd2, arg, popid)
     popspan.appendChild(select)
     reply.appendChild(popspan)
   }
