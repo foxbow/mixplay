@@ -53,10 +53,10 @@ static void *_update( ) {
 
 	blockSigint();
 
-	while( getConfig()->command != mpc_quit ) {
+	while( getConfig()->status != mpc_quit ) {
 		pthread_mutex_lock( &_updatelock );
 		/* don't update on exit! */
-		if( getConfig()->command == mpc_quit ) {
+		if( getConfig()->status == mpc_quit ) {
 			break;
 		}
 		current=getConfig()->current;

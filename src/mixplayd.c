@@ -209,7 +209,7 @@ int main( int argc, char **argv ) {
 		addUpdateHook( &epUpdateHook );
 	}
 	#endif
-	if( getDebug() > 0 ) {
+	if( getDebug() == 1 ) {
 		addUpdateHook( &hidUpdateHook );
 		runHID();
 	}

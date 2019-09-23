@@ -300,7 +300,7 @@ void epsSetPixel( epsmap_t map, unsigned x, unsigned y ) {
 
 	/* clipping */
 	if( ( x > X_MAX ) || ( y > Y_MAX ) ) {
-		addMessage( 2, "EPS: setpixel %u, %u is out of range!", x, y );
+		addMessage( 3, "EPS: setpixel %u, %u is out of range!", x, y );
 		return;
 	}
 	/* transform to actual layout.. */
@@ -708,7 +708,7 @@ int epsGetState() {
  */
 void epsPoweroff(void) {
 	if(  _state == 1 ) {
-		/* epsLock(); this may be a bad idea tho.. */
+		epsLock(); /* this may be a bad idea tho.. */
 		epsSend( VCOM_AND_DATA_INTERVAL_SETTING, 0 );
 		epsSend( 0xf7, 1 );
 		epsSend( POWER_OFF, 0 );
