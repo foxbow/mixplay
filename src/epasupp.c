@@ -117,7 +117,7 @@ static void epsSend( unsigned char cmd, int datamode ) {
 /*
  * unlock the display functions
  */
-static void epsUnidle(){
+static void epsUnlock(){
 	addMessage( 2, "EPS: idle unlocked!");
 	pthread_mutex_unlock( &_idlelock );
 }
@@ -126,9 +126,10 @@ static void epsUnidle(){
  * wait for ePaper
  * This should probably become epsLock()
  */
-static void epsIdle(int unlock) {
-	addMessage( 2, "EPS: idle locked!" );
+static void epsLock( ) {
+	addMessage( 2, "EPS: try idle lock.." );
 	pthread_mutex_lock( &_idlelock );
+	addMessage( 2, "EPS: idle locked!" );
 	if(  _state == -2 ) {
 		addMessage( 1, "EPS: Idling on unitialized Screen!" );
 	}
@@ -149,9 +150,7 @@ static void epsIdle(int unlock) {
 		}
 		addMessage( 2, "EPS: ready" );
 	}
-	if( unlock != 0 ) {
-		epsUnidle();
-	}
+
 	addMessage(2,"EPS: exit idle..");
 }
 
@@ -192,7 +191,7 @@ void epsDisplay( void ) {
 		}
 	}
 
-	epsIdle(0);
+	epsLock();
 
 	epsSend( DATA_START_TRANSMISSION_1, 0 );
 	for( i=0; i<EPDBYTES; i++ ) {
@@ -207,7 +206,7 @@ void epsDisplay( void ) {
 	epsSend( DATA_STOP, 0 );
 
 	epsSend( DISPLAY_REFRESH, 0 );
-	epsUnidle();
+	epsUnlock();
 }
 
 /* send coordinates in partial update format */
@@ -270,7 +269,7 @@ void epsPartialDisplay( unsigned x, unsigned y, unsigned w, unsigned h ) {
 
 	addMessage( 2, "BM(%u,%u)/(%u/%u)", bmx, bmy, bmw, bmh );
 
-	epsIdle(0);
+	epsLock();
 
 	epsSend( PARTIAL_DATA_START_TRANSMISSION_1, 0 );
 	epsSendCoords( bmx, bmy, bmw, bmh );
@@ -293,7 +292,7 @@ void epsPartialDisplay( unsigned x, unsigned y, unsigned w, unsigned h ) {
 	epsSend( PARTIAL_DISPLAY_REFRESH, 0 );
 	epsSendCoords( bmx, bmy, bmw, bmh );
 
-	epsUnidle();
+	epsUnlock();
 }
 
 void epsSetPixel( epsmap_t map, unsigned x, unsigned y ) {
@@ -559,11 +558,11 @@ void epsBox( epsmap_t map, unsigned x0, unsigned y0, unsigned x1, unsigned y1, i
  * link one of the display buttons to a callback
  */
 void epsButton( unsigned key, void(*func)(void) ){
-	epsIdle(1);
+	epsLock();
 	pinMode( key, INPUT );
 	pullUpDnControl( key, PUD_UP ) ;
 	wiringPiISR ( key, INT_EDGE_FALLING, func );
-	epsUnidle();
+	epsUnlock();
 }
 
 /*
@@ -709,13 +708,13 @@ int epsGetState() {
  */
 void epsPoweroff(void) {
 	if(  _state == 1 ) {
-		epsIdle(0); /* this may be a bad idea tho.. */
+		/* epsLock(); this may be a bad idea tho.. */
 		epsSend( VCOM_AND_DATA_INTERVAL_SETTING, 0 );
 		epsSend( 0xf7, 1 );
 		epsSend( POWER_OFF, 0 );
 		epsSend( DEEP_SLEEP, 0 );
 		epsSend( 0xA5, 1 );
-		epsUnidle();
+		epsUnlock();
 		addMessage( 2, "EPS: ePaper turned off");
 		_state=0;
 	}
