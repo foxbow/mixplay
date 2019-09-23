@@ -229,7 +229,7 @@ static void debounceCmd( mpcmd_t cmd ) {
 
 	if( ( diff.tv_sec > 0 ) || ( diff.tv_usec > 200000 ) ) {
 		addMessage( 2,"EP: cmd %s", mpcString( cmd ) );
-		setCommand( cmd );
+		setCommand( cmd, NULL );
 	}
 	else {
 		addMessage( 2,"EP: debounce %s", mpcString( cmd ) );
