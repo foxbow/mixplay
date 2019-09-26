@@ -423,27 +423,23 @@ function getPattern (cmd, line) {
 }
 
 /* creates a selection in a popselect popup */
-function clickable (text, cmd, arg, popname) {
+function clickable (text, cmd, arg, ident) {
   var reply = document.createElement('em')
   reply.className = 'cmd'
   reply.setAttribute('data-arg', arg)
   reply.setAttribute('data-cmd', cmd)
   reply.onclick = function () {
-    var popup = document.getElementById(popname)
+    const popup = document.getElementById('popup' + ident)
     if (popup) {
       sendCMD(this.getAttribute('data-cmd'), this.getAttribute('data-arg'))
+      const line = document.getElementById('line' + ident)
+      line.style.display = 'none'
     } else {
-      console.log(popname + 'does no longer exist')
+      console.log('popup' + ident + 'does no longer exist')
     }
   }
   reply.innerHTML = text
   return reply
-}
-
-/* turns the range part of cmd and arg into a (hopefully) unique identifier
-   for a popup */
-function getpopupid (cmd, arg) {
-  return 'popup' + cmd + arg
 }
 
 /* returns a <div> with text that when clicked presents the two choices */
@@ -451,22 +447,23 @@ function popselect (choice1, cmd1, choice2, cmd2, arg, text) {
   var reply = document.createElement('p')
   reply.innerText = '> ' + text
   reply.className = 'popselect'
-  const popid = getpopupid(cmd1, arg)
+  const ident = cmd1 + arg
+  reply.id = 'line' + ident
   reply.onclick = function () {
-    var popup = document.getElementById(popid)
+    var popup = document.getElementById('popup' + ident)
     if (popup !== null) {
       popup.classList.toggle('show')
     }
   }
   var popspan = document.createElement('span')
   popspan.className = 'popup'
-  if (document.getElementById(popid)) {
-    console.log(popid + ' already exists!')
+  if (document.getElementById('popup' + ident)) {
+    console.log('popup' + ident + ' already exists!')
   } else {
-    popspan.id = popid
-    var select = clickable(choice1 + '&nbsp;/', cmd1, arg, popid)
+    popspan.id = 'popup' + ident
+    var select = clickable(choice1 + '&nbsp;/', cmd1, arg, ident)
     popspan.appendChild(select)
-    select = clickable('&nbsp;' + choice2, cmd2, arg, popid)
+    select = clickable('&nbsp;' + choice2, cmd2, arg, ident)
     popspan.appendChild(select)
     reply.appendChild(popspan)
   }
