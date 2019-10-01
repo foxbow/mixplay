@@ -1,110 +1,123 @@
+/*
+ * HID control for mixplayd.
+ * this takes a kbd input device and interprets the events coming from there
+ * additionally this holds the debug keyboard interface that uses the
+ * common stdin channel.
+ *
+ * The HID configuration consists of a device name and
+ * an event mapping that needs to be created with the mphidtrain utility first.
+ */
 #include <stdarg.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <stropts.h>
+#include <linux/input.h>
+#include <errno.h>
+#include <string.h>
+
 #include "mphid.h"
 #include "utils.h"
 #include "config.h"
 #include "player.h"
 
-static char _lasttitle[MAXPATHLEN+1];
-static mpcmd_t _last=mpc_start;
+const mpcmd_t _mprccmds[MPRC_NUM]={
+	mpc_play,
+	mpc_prev,
+	mpc_next,
+	mpc_fav,
+	mpc_dnp,
+	mpc_mute,
+	mpc_ivol,
+	mpc_dvol,
+	mpc_fskip,
+	mpc_bskip
+};
 
-static void printline( const char* text, ... ){
-	va_list args;
-	printf( "\r" );
-	va_start( args, text );
-	vprintf( text, args );
-	va_end( args );
-	printf( "\nMP> " );
-	fflush( stdout );
+/*
+ * check for a HID device and try to reserve it.
+ */
+int initHID() {
+	int fd=-1;
+	char device[MAXPATHLEN];
+
+	if( getConfig()->rcdev == NULL ) {
+		printf("No input device set!\n");
+	}
+	else {
+		snprintf( device, MAXPATHLEN, "/dev/input/by-id/%s", getConfig()->rcdev );
+		/* check for proper HID entry */
+		fd=open( device, O_RDWR|O_NONBLOCK, S_IRUSR|S_IWUSR );
+		// fd=open( "/dev/input/by-id/usb-flirc.tv_flirc-if01-event-kbd", O_RDWR|O_NONBLOCK, S_IRUSR|S_IWUSR );
+		//	fd=open( "/dev/input/by-id/usb-_USB_Keyboard-event-kbd", O_RDWR|O_NONBLOCK, S_IRUSR|S_IWUSR );
+		if( fd != -1 ) {
+			/* try to grab all events */
+			if( ioctl( fd, EVIOCGRAB, 1 ) != 0 ) {
+				addMessage(0, "Could not grab HID events! (%s)", strerror(errno));
+				close(fd);
+				return -1;
+			}
+			return fd;
+		}
+		else {
+			if( errno == EACCES ) {
+				addMessage(0, "Could not access device, user needs to be in the 'input' group!" );
+			}
+			else {
+				addMessage(0, "No HID device %s (%s)", getConfig()->rcdev, strerror(errno));
+			}
+		}
+	}
+
+	return -1;
 }
 
 /*
- * print title and play changes
+ * handles key events from the reserved HID device
  */
-void hidUpdateHook() {
-	char *title=NULL;
-
-	if( ( getConfig()->current!=NULL ) &&
-	( getConfig()->current->title != NULL ) ) {
-		title=getConfig()->current->title->display;
-	}
-
-	/* has the title changed? */
-	if ( ( title != NULL ) && ( strcmp( title, _lasttitle ) != 0 ) ) {
-		strtcpy( _lasttitle, title, MAXPATHLEN );
-		printline("Now playing: %s",title);
-	}
-
-	/* has the status changed? */
-	if( getConfig()->status != _last ) {
-		_last=getConfig()->status;
-		switch(_last) {
-			case mpc_idle:
-				printline("[PAUSE]");
-				break;
-			case mpc_play:
-				printline("[PLAY]");
-				break;
-			default:
-				/* ignored */
-				break;
-		}
-	}
-}
-
-/* the most simple HID implementation
-   The hard coded keypresses should be configurable so that an existing
-	 flirc setting can just be learned, or that mixplay can learn about
-	 an existing remote. */
-void runHID(void) {
-	int c;
-	mpconfig_t *config=getConfig();
-	char *pass;
-	pass=falloc(8,1);
-	strcpy(pass,"mixplay");
+static void *_mpHID( void *arg ) {
+	int code, i;
+	int fd = (int)(long)arg;
+	mpcmd_t cmd;
 
 	/* wait for the initialization to be done */
-	while( ( config->status != mpc_play ) &&
-	       ( config->status != mpc_quit ) ){
+	while( ( getConfig()->status != mpc_play ) &&
+	       ( getConfig()->status != mpc_quit ) ){
 		sleep(1);
 	}
 
-	while( config->status != mpc_quit ) {
-		c=getch(750);
-		switch(c){
-			case 'p':
-				setCommand( mpc_prev, NULL );
-				break;
-			case 'n':
-				setCommand( mpc_next, NULL );
-				break;
-			case ' ':
-				setCommand( mpc_play, NULL );
-				break;
-			case 'f':
-				setCommand( mpc_fav, NULL );
-				break;
-			case 'd':
-				setCommand( mpc_dnp, NULL );
-				break;
-			case 'Q':
-				printline("[QUIT]");
-				setCommand( mpc_quit, pass );
-				break;
-			case -1:
-				/* timeout - ignore */
-				break;
-			default:
-				printf("\rCommands:\n");
-				printf(" [space] - play/pause\n");
-				printf("    p    - previous\n");
-				printf("    n    - next\n");
-				printf("    f    - favourite\n");
-				printf("    d    - do not play\n");
-				printf("    Q    - quit\n");
-				printline("");
-				break;
+	while( getConfig()->status != mpc_quit ) {
+		code=getEventCode(fd,750,1);
+		if( code > 0 ) {
+			for( i=0; i<MPRC_NUM; i++ ) {
+				if( code == getConfig()->rccodes[i] ) {
+					cmd=_mprccmds[i];
+				}
+			}
+		}
+		/* special case for repeat keys */
+		if( code < 0 ) {
+			for( i=MPRC_SINGLE; i<MPRC_NUM; i++ ) {
+				if( -code == getConfig()->rccodes[i] ) {
+					cmd=_mprccmds[i];
+				}
+			}
+		}
+
+		if( cmd != 0 ) {
+			addMessage(1, "HID: %s\n", mpcString(cmd) );
+			setCommand( cmd, NULL );
 		}
 	}
+	return NULL;
+}
+
+pthread_t startHID( int fd ) {
+	pthread_t tid;
+	if( pthread_create( &tid, NULL, _mpHID, (void *)(long)fd ) != 0 ) {
+		printf( "Could not create mpHID thread!" );
+		return -1;
+	}
+	return tid;
 }

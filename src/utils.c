@@ -12,6 +12,7 @@
 #include <termios.h>
 #include <assert.h>
 #include <string.h>
+#include <linux/input.h>
 
 #include "utils.h"
 
@@ -406,5 +407,38 @@ int getch( long timeout ) {
 	}
 
 	assert( tcsetattr(STDIN_FILENO, TCSANOW, &org_opts) == 0 );
-	return(c);
+	return c;
+}
+
+int getEventCode( int fd, unsigned timeout, int repeat ) {
+	fd_set fds;
+	struct timeval to;
+	struct input_event ie;
+
+	FD_ZERO( &fds );
+	FD_SET( fd, &fds );
+	to.tv_sec=(timeout/1000);
+	to.tv_usec=(timeout-(to.tv_sec * 1000))*1000;
+
+	select( FD_SETSIZE, &fds, NULL, NULL, &to );
+	/* timeout */
+	if( !FD_ISSET( fd, &fds ) ) {
+		return 0;
+	}
+	/* truncated event */
+	if( read( fd, &ie, sizeof(ie) ) != sizeof(ie) ){
+		return 0;
+	}
+	/* proper event */
+	if( ie.type == EV_KEY ) {
+		if ( ie.value == 1 ) {
+			printf("Key press: %i\n", ie.code );
+			return ie.code;
+		}
+		if( repeat && ( ie.value == 2 ) ) {
+			printf("Key hold: %i\n", ie.code );
+			return -ie.code;
+		}
+	}
+	return 0;
 }

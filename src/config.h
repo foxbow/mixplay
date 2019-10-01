@@ -63,6 +63,16 @@ typedef enum {
 
 #include "musicmgr.h"
 
+/* commands that can be used on a remote control */
+/* just use the key down event */
+#define MPRC_SINGLE 6
+/* use repoeated events */
+#define MPRC_REPEAT 4
+#define MPRC_NUM MPRC_SINGLE+MPRC_REPEAT
+
+extern const mpcmd_t _mprccmds[MPRC_NUM];
+
+
 /*
  * qualifiers for mpc_dnp, mpc_fav and mpc_(long)search
  * 000F RRRR CCCC CCCC
@@ -142,11 +152,14 @@ typedef struct {
 	unsigned inUI:1;					/* flag to show if the UI is active */
 	unsigned changed:1;
 	unsigned listDirty:1;
+	char *rcdev;							/* device by-id of the remote control */
+	int rccodes[MPRC_NUM];		/* command codes for the remote */
 } mpconfig_t;
 
 void writeConfig( const char *musicpath );
 mpconfig_t *readConfig( void );
 mpconfig_t *getConfig( void );
+mpconfig_t *createConfig( void );
 void freeConfig( void );
 void freeConfigContents( void );
 profile_t *getProfile();

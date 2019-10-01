@@ -95,38 +95,105 @@ static void s_updateHook( ) {
 	}
 }
 
+/*
+ * keyboard support for -d
+ */
+static char _lasttitle[MAXPATHLEN+1];
+static mpcmd_t _last=mpc_start;
+
+static void debugHidPrintline( const char* text, ... ){
+	va_list args;
+	printf( "\r" );
+	va_start( args, text );
+	vprintf( text, args );
+	va_end( args );
+	printf( "\nMP> " );
+	fflush( stdout );
+}
+
+/*
+ * print title and play changes
+ */
+static void _debugHidUpdateHook() {
+	char *title=NULL;
+
+	if( ( getConfig()->current!=NULL ) &&
+	( getConfig()->current->title != NULL ) ) {
+		title=getConfig()->current->title->display;
+	}
+
+	/* has the title changed? */
+	if ( ( title != NULL ) && ( strcmp( title, _lasttitle ) != 0 ) ) {
+		strtcpy( _lasttitle, title, MAXPATHLEN );
+		debugHidPrintline("Now playing: %s",title);
+	}
+
+	/* has the status changed? */
+	if( getConfig()->status != _last ) {
+		_last=getConfig()->status;
+		switch(_last) {
+			case mpc_idle:
+				debugHidPrintline("[PAUSE]");
+				break;
+			case mpc_play:
+				debugHidPrintline("[PLAY]");
+				break;
+			default:
+				/* ignored */
+				break;
+		}
+	}
+}
+
+static int hidCMD( char c ) {
+	const char keys[MPRC_NUM]=" pnfd-.,><";
+	int i;
+
+	if( c == -1 ) {
+		return 0;
+	}
+
+	for( i=0; i<MPRC_NUM; i++ ) {
+		if( c == keys[i] ) {
+			setCommand( _mprccmds[i], NULL );
+			return 0;
+		}
+	}
+
+	if ( c == 'Q' ) {
+		debugHidPrintline("[QUIT]");
+		setCommand( mpc_quit, strdup("mixplay") );
+		return 0;
+	}
+
+	return -1;
+}
+
+/* the most simple HID implementation for -d */
+static void debugHID( ) {
+	int c;
+	mpconfig_t *config=getConfig();
+
+	/* wait for the initialization to be done */
+	while( ( config->status != mpc_play ) &&
+	       ( config->status != mpc_quit ) ){
+		sleep(1);
+	}
+
+	while( config->status != mpc_quit ) {
+		c=getch( 750 );
+		hidCMD(c);
+	}
+}
+
 int main( int argc, char **argv ) {
 	mpconfig_t	*control;
-	char *path;
 	FILE *pidlog=NULL;
 	struct timeval tv;
 
 	control=readConfig( );
 	if( control == NULL ) {
-		printf( "music directory needs to be set.\n" );
-		printf( "It will be set up now\n" );
-		path=(char *)falloc( MAXPATHLEN+1, 1 );
-		while( 1 ) {
-			printf( "Default music directory:" );
-			fflush( stdout );
-			memset( path, 0, MAXPATHLEN );
-			if( fgets(path, MAXPATHLEN, stdin ) == NULL ) {
-				continue;
-			};
-			path[strlen( path )-1]=0; /* cut off CR */
-			abspath( path, getenv( "HOME" ), MAXPATHLEN );
-
-			if( isDir( path ) ) {
-				break;
-			}
-			else {
-				printf( "%s is not a directory!\n", path );
-			}
-		}
-
-		writeConfig( path );
-		free( path );
-		control=readConfig();
+		control=createConfig();
 		if( control == NULL ) {
 			printf( "Could not create config file!\n" );
 			return 1;
@@ -210,8 +277,8 @@ int main( int argc, char **argv ) {
 	}
 	#endif
 	if( getDebug() == 1 ) {
-		addUpdateHook( &hidUpdateHook );
-		runHID();
+		addUpdateHook( &_debugHidUpdateHook );
+		debugHID();
 	}
 	pthread_join( control->stid, NULL );
 	pthread_join( control->rtid, NULL );

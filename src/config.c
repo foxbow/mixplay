@@ -191,6 +191,25 @@ static int scanprofiles( char *input, profile_t ***target ) {
 	return num;
 }
 
+static int scancodes( char *input, int *codes ) {
+	char **line;
+	int i, num;
+
+	num=scanparts( input, &line );
+	if( num > 0 ) {
+		if( num == MPRC_NUM ) {
+			for( i=0; i < MPRC_NUM; i++ ) {
+				codes[i]=atoi(line[i]);
+			}
+		}
+		for( i=0; i < num; i++ ) {
+			free(line[i]);
+		}
+		free(line);
+	}
+	return num;
+}
+
 /**
  * reads the configuration file at $HOME/.mixplay/mixplay.conf and stores the settings
  * in the given control structure.
@@ -236,6 +255,7 @@ mpconfig_t *readConfig( void ) {
 	_cconfig->changed=0;
 	_cconfig->isDaemon=0;
 	_cconfig->streamURL=NULL;
+	_cconfig->rcdev=NULL;
 
 	snprintf( _cconfig->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", home );
 
@@ -293,6 +313,16 @@ mpconfig_t *readConfig( void ) {
 			}
 			if( strstr( line, "port=" ) == line ) {
 				_cconfig->port=atoi(pos);
+			}
+			if( strstr( line, "rcdev=" ) == line ) {
+				_cconfig->rcdev=(char*)falloc( strlen(pos)+1, 1 );
+				strip( _cconfig->rcdev, pos, strlen(pos) );
+			}
+			if( strstr( line, "rccodes=") == line ) {
+				if( scancodes( pos, _cconfig->rccodes ) != MPRC_NUM ) {
+					fclose(fp);
+					fail( F_FAIL, "Wrong number of RC codes!");
+				}
 			}
 		}
 		while( !feof( fp ) );
@@ -379,6 +409,13 @@ void writeConfig( const char *musicpath ) {
 		if( _cconfig->port != MP_PORT ) {
 			fprintf( fp, "\nport=%i", _cconfig->port );
 		}
+		if( _cconfig->rcdev != NULL ) {
+			fprintf( fp, "\nrcdev=%s", _cconfig->rcdev );
+			fprintf( fp, "\nrccodes=");
+			for( i=0; i<MPRC_NUM; i++ ) {
+				fprintf( fp, "%i;", _cconfig->rccodes[i] );
+			}
+		}
 		fprintf( fp, "\n" );
 		fclose( fp );
 		_cconfig->changed=0;
@@ -386,6 +423,32 @@ void writeConfig( const char *musicpath ) {
 	else {
 		fail( errno, "Could not open %s", conffile );
 	}
+}
+
+mpconfig_t *createConfig() {
+	char path[MAXPATHLEN];
+	
+	printf( "music directory needs to be set.\n" );
+	printf( "It will be set up now\n" );
+	while( 1 ) {
+		printf( "Default music directory:" );
+		fflush( stdout );
+		memset( path, 0, MAXPATHLEN );
+		if( fgets(path, MAXPATHLEN, stdin ) == NULL ) {
+			continue;
+		};
+		path[strlen( path )-1]=0; /* cut off CR */
+		abspath( path, getenv( "HOME" ), MAXPATHLEN );
+
+		if( isDir( path ) ) {
+			break;
+		}
+		else {
+			printf( "%s is not a directory!\n", path );
+		}
+	}
+	writeConfig( path );
+	return readConfig();
 }
 
 /**
