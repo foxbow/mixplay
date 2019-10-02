@@ -145,7 +145,7 @@ static void _debugHidUpdateHook() {
 	}
 }
 
-static int hidCMD( char c ) {
+static int hidCMD( int c ) {
 	const char keys[MPRC_NUM]=" pnfd-.,";
 	int i;
 
