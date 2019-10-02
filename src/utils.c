@@ -410,35 +410,56 @@ int getch( long timeout ) {
 	return c;
 }
 
-int getEventCode( int fd, unsigned timeout, int repeat ) {
+/*
+ * waits for a keyboard event
+ * returns:
+ * -1 - timeout
+ *  0 - no key
+ *  1 - key
+ *
+ * code will be set to the scancode of the key on release and to the
+ * negative scancode on repeat.
+ */
+int getEventCode( int *code, int fd, unsigned timeout, int repeat ) {
 	fd_set fds;
 	struct timeval to;
 	struct input_event ie;
+	int emergency=0;
+	*code = 0;
 
-	FD_ZERO( &fds );
-	FD_SET( fd, &fds );
-	to.tv_sec=(timeout/1000);
-	to.tv_usec=(timeout-(to.tv_sec * 1000))*1000;
+	/* just return timeouts and proper events.
+	   Claim timeout after 1000 non-kbd events in a row */
+	while( emergency < 1000 ) {
+		FD_ZERO( &fds );
+		FD_SET( fd, &fds );
+		to.tv_sec=(timeout/1000);
+		to.tv_usec=(timeout-(to.tv_sec * 1000))*1000;
 
-	select( FD_SETSIZE, &fds, NULL, NULL, &to );
-	/* timeout */
-	if( !FD_ISSET( fd, &fds ) ) {
-		return 0;
-	}
-	/* truncated event */
-	if( read( fd, &ie, sizeof(ie) ) != sizeof(ie) ){
-		return 0;
-	}
-	/* proper event */
-	if( ie.type == EV_KEY ) {
-		if ( ie.value == 1 ) {
-			printf("Key press: %i\n", ie.code );
-			return ie.code;
+		select( FD_SETSIZE, &fds, NULL, NULL, &to );
+		/* timeout */
+		if( !FD_ISSET( fd, &fds ) ) {
+			return -1;
 		}
-		if( repeat && ( ie.value == 2 ) ) {
-			printf("Key hold: %i\n", ie.code );
-			return -ie.code;
+		/* truncated event, this should never happen */
+		if( read( fd, &ie, sizeof(ie) ) != sizeof(ie) ){
+			addMessage(0, "HID: Truncated HID event!" );
+			return -2;
 		}
+		/* proper event */
+		if( ie.type == EV_KEY ) {
+			addMessage(2, "HID: key val: %i, code: %i", ie.value, ie.code );
+			/* keypress */
+			if ( ie.value == 1 ) {
+				*code = ie.code;
+				return 1;
+			}
+			/* repeat */
+			if( repeat && ( ie.value == 2 ) ) {
+				*code = -ie.code;
+				return 1;
+			}
+		}
+		emergency++;
 	}
-	return 0;
+	return -1;
 }

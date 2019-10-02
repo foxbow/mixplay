@@ -30,9 +30,18 @@ const mpcmd_t _mprccmds[MPRC_NUM]={
 	mpc_dnp,
 	mpc_mute,
 	mpc_ivol,
-	mpc_dvol,
-	mpc_fskip,
-	mpc_bskip
+	mpc_dvol
+};
+
+const char *_mprccmdstrings[MPRC_NUM]={
+	"Play/pause",
+	"Previous title",
+	"Next title",
+	"Mark as favourite",
+	"Mark as Do Not Play",
+	"Mute volume",
+	"Increase volume",
+	"Decrease volume"
 };
 
 /*
@@ -43,14 +52,12 @@ int initHID() {
 	char device[MAXPATHLEN];
 
 	if( getConfig()->rcdev == NULL ) {
-		printf("No input device set!\n");
+		addMessage( 1, "No input device set!\n" );
 	}
 	else {
 		snprintf( device, MAXPATHLEN, "/dev/input/by-id/%s", getConfig()->rcdev );
 		/* check for proper HID entry */
 		fd=open( device, O_RDWR|O_NONBLOCK, S_IRUSR|S_IWUSR );
-		// fd=open( "/dev/input/by-id/usb-flirc.tv_flirc-if01-event-kbd", O_RDWR|O_NONBLOCK, S_IRUSR|S_IWUSR );
-		//	fd=open( "/dev/input/by-id/usb-_USB_Keyboard-event-kbd", O_RDWR|O_NONBLOCK, S_IRUSR|S_IWUSR );
 		if( fd != -1 ) {
 			/* try to grab all events */
 			if( ioctl( fd, EVIOCGRAB, 1 ) != 0 ) {
@@ -58,7 +65,6 @@ int initHID() {
 				close(fd);
 				return -1;
 			}
-			return fd;
 		}
 		else {
 			if( errno == EACCES ) {
@@ -70,7 +76,7 @@ int initHID() {
 		}
 	}
 
-	return -1;
+	return fd;
 }
 
 /*
@@ -79,7 +85,7 @@ int initHID() {
 static void *_mpHID( void *arg ) {
 	int code, i;
 	int fd = (int)(long)arg;
-	mpcmd_t cmd;
+	mpcmd_t cmd=mpc_idle;
 
 	/* wait for the initialization to be done */
 	while( ( getConfig()->status != mpc_play ) &&
@@ -88,7 +94,7 @@ static void *_mpHID( void *arg ) {
 	}
 
 	while( getConfig()->status != mpc_quit ) {
-		code=getEventCode(fd,750,1);
+		while( getEventCode( &code, fd, 250, 1 ) != 1);
 		if( code > 0 ) {
 			for( i=0; i<MPRC_NUM; i++ ) {
 				if( code == getConfig()->rccodes[i] ) {
@@ -105,9 +111,10 @@ static void *_mpHID( void *arg ) {
 			}
 		}
 
-		if( cmd != 0 ) {
-			addMessage(1, "HID: %s\n", mpcString(cmd) );
+		if( cmd != mpc_idle ) {
+			addMessage(2, "HID: %s", mpcString(cmd) );
 			setCommand( cmd, NULL );
+			cmd=mpc_idle;
 		}
 	}
 	return NULL;
@@ -116,7 +123,7 @@ static void *_mpHID( void *arg ) {
 pthread_t startHID( int fd ) {
 	pthread_t tid;
 	if( pthread_create( &tid, NULL, _mpHID, (void *)(long)fd ) != 0 ) {
-		printf( "Could not create mpHID thread!" );
+		addMessage( 0, "Could not create mpHID thread!" );
 		return -1;
 	}
 	return tid;

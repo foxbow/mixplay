@@ -67,11 +67,11 @@ typedef enum {
 /* just use the key down event */
 #define MPRC_SINGLE 6
 /* use repoeated events */
-#define MPRC_REPEAT 4
+#define MPRC_REPEAT 2
 #define MPRC_NUM MPRC_SINGLE+MPRC_REPEAT
 
 extern const mpcmd_t _mprccmds[MPRC_NUM];
-
+const char *_mprccmdstrings[MPRC_NUM];
 
 /*
  * qualifiers for mpc_dnp, mpc_fav and mpc_(long)search

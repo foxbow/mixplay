@@ -50,6 +50,6 @@ int hexval( const char c );
 int dowrite( const int fd, const char *buf, const size_t buflen );
 int fileBackup( const char *name );
 int getch( long timeout );
-int getEventCode( int fd, unsigned timeout, int repeat );
+int getEventCode( int *code, int fd, unsigned timeout, int repeat );
 void blockSigint();
 #endif

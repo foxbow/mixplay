@@ -146,7 +146,7 @@ static void _debugHidUpdateHook() {
 }
 
 static int hidCMD( char c ) {
-	const char keys[MPRC_NUM]=" pnfd-.,><";
+	const char keys[MPRC_NUM]=" pnfd-.,";
 	int i;
 
 	if( c == -1 ) {
@@ -190,14 +190,13 @@ int main( int argc, char **argv ) {
 	mpconfig_t	*control;
 	FILE *pidlog=NULL;
 	struct timeval tv;
+	int hidfd=-1;
 
 	control=readConfig( );
 	if( control == NULL ) {
-		control=createConfig();
-		if( control == NULL ) {
-			printf( "Could not create config file!\n" );
-			return 1;
-		}
+		printf("Cannot find configuration!\n");
+		printf("Run 'mprcinit' first\n");
+		return 1;
 	}
 	muteVerbosity();
 
@@ -276,6 +275,11 @@ int main( int argc, char **argv ) {
 		addUpdateHook( &epUpdateHook );
 	}
 	#endif
+	hidfd=initHID();
+ 	if( hidfd != -1 ) {
+		startHID( hidfd );
+	}
+
 	if( getDebug() == 1 ) {
 		addUpdateHook( &_debugHidUpdateHook );
 		debugHID();

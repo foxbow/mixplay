@@ -427,7 +427,7 @@ void writeConfig( const char *musicpath ) {
 
 mpconfig_t *createConfig() {
 	char path[MAXPATHLEN];
-	
+
 	printf( "music directory needs to be set.\n" );
 	printf( "It will be set up now\n" );
 	while( 1 ) {

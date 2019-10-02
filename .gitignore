@@ -18,6 +18,7 @@ build/*
 # Binaries
 mixplayd
 mixplay-hid
+mprcinit
 core
 
 # Object files

@@ -44,10 +44,13 @@ endif
 LIBS+=$(shell pkg-config --libs $(REFS))
 CCFLAGS+=$(shell pkg-config --cflags $(REFS))
 
-all: $(OBJDIR)/dep.d mixplayd
+all: $(OBJDIR)/dep.d mixplayd mprcinit
 
 clean:
 	rm -f $(OBJDIR)/*
+	rm -f mixplayd
+	rm -f mixplay-hid
+	rm -f mprcinit
 	touch $(OBJDIR)/KEEPDIR
 
 distclean: clean
@@ -66,6 +69,9 @@ mixplayd: $(OBJDIR)/mixplayd.o $(OBJS)
 	$(CC) $^ -o $@ $(LIBS)
 
 mixplay-hid: $(OBJDIR)/mixplay-hid.o $(CLOBJS)
+	$(CC) $^ -o $@ $(LIBS)
+
+mprcinit: $(OBJDIR)/mprcinit.o $(OBJS)
 	$(CC) $^ -o $@ $(LIBS)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
