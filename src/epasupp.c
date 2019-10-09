@@ -8,10 +8,12 @@
 #include <stdio.h>
 #include <wiringPiSPI.h>
 #include <errno.h>
+#include <pthread.h>
 
 #include "utils.h"
 #include "epasupp.h"
 #include "bmfont.h"
+#include "config.h"
 
 static unsigned char _bm_red[EPDBYTES];
 static unsigned char _bm_black[EPDBYTES];
