@@ -5,9 +5,6 @@
  *	  Author: bweber
  */
 
-#include "mpcomm.h"
-#include "utils.h"
-#include "json.h"
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -15,6 +12,10 @@
 #include <ctype.h>
 #include <errno.h>
 #include <unistd.h>
+
+#include "mpcomm.h"
+#include "utils.h"
+#include "json.h"
 
 #ifndef MPCOMM_VER
 #define MPCOMM_VER -1

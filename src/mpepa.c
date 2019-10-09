@@ -4,10 +4,12 @@
 #include <stdio.h>
 #include <sys/time.h>
 #include <assert.h>
+
 #include "mpepa.h"
 #include "config.h"
 #include "player.h"
 #include "utils.h"
+
 #define TOSLEEP 25
 
 /* enable partial updates */

@@ -16,13 +16,13 @@
 #define MIN(x,y) ((x)<(y)?(x):(y))
 #endif
 
-#include "config.h"
+#define MAXPATHLEN 256
 
 /*
  * string helper functions that avoid target buffer overflows
  */
-size_t strtcpy( char *t,const  char *s, size_t l );
-size_t strtcat( char *t,const  char *s, size_t l );
+size_t strtcpy( char *t, const char *s, size_t l );
+size_t strtcat( char *t, const char *s, size_t l );
 
 /*
  * These functions need to be implemented in the UI
@@ -51,5 +51,4 @@ int dowrite( const int fd, const char *buf, const size_t buflen );
 int fileBackup( const char *name );
 int getch( long timeout );
 int getEventCode( int *code, int fd, unsigned timeout, int repeat );
-void blockSigint();
 #endif

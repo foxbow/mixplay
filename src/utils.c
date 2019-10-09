@@ -7,7 +7,6 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include <signal.h>
 #include <pthread.h>
 #include <termios.h>
 #include <assert.h>
@@ -15,20 +14,6 @@
 #include <linux/input.h>
 
 #include "utils.h"
-
-/*
- * block all signals that would interrupt the execution flow
- * Yes, this is bad practice, yes this will become a signal handler thread
- */
-void blockSigint() {
-	sigset_t set;
-	sigemptyset(&set);
-	sigaddset(&set, SIGINT);
-	sigaddset(&set, SIGTERM);
-	if( pthread_sigmask(SIG_BLOCK, &set, NULL) != 0 ) {
-		addMessage( 0, "Could not block SIGINT" );
-	}
-}
 
 /*
  * like strncpy but len is the max len of the target string, not the number of bytes to copy.
@@ -262,7 +247,6 @@ void *falloc( size_t num, size_t size ) {
 	result=calloc( num, size );
 
 	if( NULL == result ) {
-		addMessage( 0,"Sorry, can't falloc (%i)!", errno );
 		abort();
 	}
 
@@ -276,7 +260,6 @@ void *frealloc( void *old, size_t size ) {
 	void *newval=NULL;
 	newval=realloc( old, size );
 	if( newval == NULL ) {
-		addMessage( 0, "Sorry, can't realloc (%i)!", errno );
 		abort();
 	}
 	return newval;
@@ -350,7 +333,6 @@ int dowrite( const int fd, const char *buf, const size_t buflen ) {
 	while( sent < buflen ) {
 		ret=write( fd, pos+sent, buflen-sent );
 		if( ret == -1 ) {
-			addMessage( 0, "Unable to write %s %s!", buf, strerror(errno) );
 			return -1;
 		}
 		sent=sent+ret;
@@ -363,13 +345,11 @@ int dowrite( const int fd, const char *buf, const size_t buflen ) {
  */
 int fileBackup( const char *name ) {
 	char backupname[MAXPATHLEN]="";
-	addMessage( 1, "Backing up %s", name );
 
 	strtcpy( backupname, name, MAXPATHLEN );
 	strtcat( backupname, ".bak", MAXPATHLEN );
 
 	if( rename( name, backupname ) ) {
-		addMessage(0, "Could not rename %s", name );
 		return errno;
 	}
 
@@ -442,12 +422,10 @@ int getEventCode( int *code, int fd, unsigned timeout, int repeat ) {
 		}
 		/* truncated event, this should never happen */
 		if( read( fd, &ie, sizeof(ie) ) != sizeof(ie) ){
-			addMessage(0, "HID: Truncated HID event!" );
 			return -2;
 		}
 		/* proper event */
 		if( ie.type == EV_KEY ) {
-			addMessage(2, "HID: key val: %i, code: %i", ie.value, ie.code );
 			/* keypress */
 			if ( ie.value == 1 ) {
 				*code = ie.code;

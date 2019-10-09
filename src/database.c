@@ -1,10 +1,6 @@
 /**
  * interface between titles and the database
  */
-
-#include "database.h"
-#include "utils.h"
-#include "mpgutils.h"
 #include <stdio.h>
 #include <fcntl.h>
 #include <string.h>
@@ -12,6 +8,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "database.h"
+#include "utils.h"
+#include "mpgutils.h"
 
 /**
  * closes the database file

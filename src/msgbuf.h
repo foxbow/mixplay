@@ -19,11 +19,11 @@ typedef struct {
  * helperfunction to implement message ringbuffer
  */
 msgbuf_t *msgBuffInit();
-unsigned long  msgBuffAdd( msgbuf_t *msgbuf, char *line );
+unsigned long msgBuffAdd( msgbuf_t *msgbuf, char *line );
 char *msgBuffGet( msgbuf_t *msgbuf );
 const char *msgBuffPeek( msgbuf_t *msgbuf, unsigned long msgno );
 char *msgBuffAll(  msgbuf_t *msgbuf );
 void  msgBuffClear( msgbuf_t *msgbuf );
-void msgBuffDiscard( msgbuf_t *msgbuf );
+void  msgBuffDiscard( msgbuf_t *msgbuf );
 
 #endif

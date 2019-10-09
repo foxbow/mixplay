@@ -1,11 +1,6 @@
 /**
  * collection of functions to manage a list of titles
  */
-
-#include "musicmgr.h"
-#include "mpgutils.h"
-#include "utils.h"
-
 #include <unistd.h>
 #include <sys/types.h>
 #include <ctype.h>
@@ -21,6 +16,9 @@
 #include <limits.h>
 
 #include "database.h"
+#include "musicmgr.h"
+#include "mpgutils.h"
+#include "utils.h"
 
 static pthread_mutex_t _pllock=PTHREAD_MUTEX_INITIALIZER;
 

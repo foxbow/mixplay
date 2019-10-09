@@ -3,10 +3,11 @@
 
 #include <dirent.h>
 
+/* for MAXPATHLEN */
+#include "utils.h"
 /* Directory access */
 
 #define NAMELEN 64
-#define MAXPATHLEN 256
 #define MAXSEARCH 100
 
 #define MP_FAV  1	/* Favourite */

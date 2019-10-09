@@ -8,7 +8,6 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include "json.h"
 #include "config.h"
 #include "mpclient.h"
 #include "utils.h"

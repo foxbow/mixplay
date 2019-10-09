@@ -4,14 +4,14 @@
  *  Created on: 08.12.2017
  *	  Author: bweber
  */
-#include "json.h"
-
 #include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+
+#include "json.h"
 
 static char _jsonError[512];
 static int jsonFail( const char *msg, ... ) __attribute__((__format__(__printf__, 1, 2)));

@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <stdarg.h>
+#include <unistd.h>
+
 #include "config.h"
 #include "mphid.h"
 #include "utils.h"
-
-#include <unistd.h>
 
 /**
  * helperfunction for scandir()

@@ -6,16 +6,15 @@
  *  Created on: 04.10.2016
  *	  Author: bweber
  */
-#include "mpgutils.h"
-
 #include <assert.h>
-
-#include "utils.h"
 #include <stdlib.h>
 #include <mpg123.h>
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
+
+#include "utils.h"
+#include "mpgutils.h"
 
 /* default genres by number */
 static const char* const genres[192] = {

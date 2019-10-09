@@ -6,6 +6,17 @@
  *  Created on: 01.05.2018
  *      Author: B.Weber
  */
+#include <arpa/inet.h>
+#include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/sendfile.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <pthread.h>
 
 #include "mpserver.h"
 #include "mpcomm.h"
@@ -21,18 +32,6 @@
 #include "build/mixplayd_js.h"
 #include "build/mixplayd_css.h"
 #include "build/mixplayd_svg.h"
-
-#include <arpa/inet.h>
-#include <ctype.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/sendfile.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <pthread.h>
 
 static pthread_mutex_t _sendlock=PTHREAD_MUTEX_INITIALIZER;
 

@@ -16,6 +16,7 @@
 #include <sys/time.h>
 #include <errno.h>
 
+#include "config.h"
 #include "utils.h"
 #include "player.h"
 #include "mpinit.h"

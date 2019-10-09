@@ -9,6 +9,8 @@ echo ""
 echo "Certain remotes send weird codes so each action will be checked twice"
 echo "Ignore alternating 'button already exists' messages!"
 echo ""
+echo "Skip buttons with CTRL-C"
+echo ""
 
 if [ "$1" != "" ]; then
   FLIRCUTIL=$1;

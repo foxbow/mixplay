@@ -4,14 +4,14 @@
  * This uses a 'paper' format, so 0/0 is the lower left corner, not the upper
  * left as usually in a display. This may change though...
  */
-
-#include "utils.h"
-#include "epasupp.h"
-#include "bmfont.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <wiringPiSPI.h>
 #include <errno.h>
+
+#include "utils.h"
+#include "epasupp.h"
+#include "bmfont.h"
 
 static unsigned char _bm_red[EPDBYTES];
 static unsigned char _bm_black[EPDBYTES];

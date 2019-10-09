@@ -200,4 +200,6 @@ mpplaylist_t *wipePlaylist( mpplaylist_t *pl );
 mptitle_t *wipeTitles( mptitle_t *root );
 marklist_t *wipeList( marklist_t *root );
 
+void blockSigint();
+
 #endif /* _CONFIG_H_ */

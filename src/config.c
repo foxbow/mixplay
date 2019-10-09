@@ -19,6 +19,7 @@
 #include <getopt.h>
 #include <unistd.h>
 #include <syslog.h>
+#include <signal.h>
 
 #include "utils.h"
 #include "config.h"
@@ -883,4 +884,18 @@ mptitle_t *wipeTitles( mptitle_t *root ) {
 	}
 
 	return NULL;
+}
+
+/*
+ * block all signals that would interrupt the execution flow
+ * Yes, this is bad practice, yes this will become a signal handler thread
+ */
+void blockSigint() {
+	sigset_t set;
+	sigemptyset(&set);
+	sigaddset(&set, SIGINT);
+	sigaddset(&set, SIGTERM);
+	if( pthread_sigmask(SIG_BLOCK, &set, NULL) != 0 ) {
+		addMessage( 0, "Could not block SIGINT" );
+	}
 }
