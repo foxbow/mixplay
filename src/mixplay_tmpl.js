@@ -445,7 +445,7 @@ function clickable (text, cmd, arg, ident) {
 /* returns a <div> with text that when clicked presents the two choices */
 function popselect (choice1, cmd1, choice2, cmd2, arg, text) {
   var reply = document.createElement('p')
-  reply.innerText = '> ' + text
+  reply.innerText = text
   reply.className = 'popselect'
   const ident = cmd1 + arg
   reply.id = 'line' + ident

@@ -36,7 +36,7 @@ SHAREDIR=$(HOME)/.local/share
 endif
 
 ifneq ("$(shell cat $(OBJDIR)/CURVER)","$(MPCOMM_VER)")
-$(shell touch static/mixplay_tmpl.js)
+$(shell touch src/mixplay_tmpl.js)
 $(shell touch src/mpcomm.c)
 $(shell echo ${MPCOMM_VER} > $(OBJDIR)/CURVER)
 endif
@@ -107,8 +107,8 @@ $(OBJDIR)/mixplayd_js.h: static/mixplay.js
 $(OBJDIR)/mixplayd_svg.h: static/mixplay.js
 	xxd -i static/mixplay.svg > $(OBJDIR)/mixplayd_svg.h
 
-static/mixplay.js: static/mixplay_tmpl.js
-	sed -e 's/~~MPCOMM_VER~~/'${MPCOMM_VER}'/g' -e 's/~~MIXPLAY_VER~~/'${VERSION}'/g' static/mixplay_tmpl.js > static/mixplay.js
+static/mixplay.js: src/mixplay_tmpl.js
+	sed -e 's/~~MPCOMM_VER~~/'${MPCOMM_VER}'/g' -e 's/~~MIXPLAY_VER~~/'${VERSION}'/g' src/mixplay_tmpl.js > static/mixplay.js
 
 prepare:
 	apt-get install mpg123 libmpg123-dev libasound-dev
