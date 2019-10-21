@@ -253,6 +253,9 @@ function wipeLog () {
 function sendCMD (cmd, arg = '') {
   var xmlhttp = new XMLHttpRequest()
   var code = Number(cmd).toString(16)
+  var e
+  var text
+
   while (code.length < 4) {
     code = '0' + code
   }
@@ -265,12 +268,21 @@ function sendCMD (cmd, arg = '') {
      (code === '0007') ||
      (code === '0012')) toggleVisibility(4)
 
+  /* clear title results after add all */
+  if ((arg === 0) &&
+     ((cmd === 0x080c) || (cmd === 0x0814))) {
+    e = document.getElementById('search0')
+    text = document.createElement('em')
+    text.innerHTML = '.. done ..'
+    replaceChild(e, text)
+  }
+
   if ((cmd & 0x00ff) === 0x0013) {
     if (cmdtosend === '') {
       cmdtosend = code
       argtosend = arg
-      var e = document.getElementById('search0')
-      var text = document.createElement('em')
+      e = document.getElementById('search0')
+      text = document.createElement('em')
       text.innerHTML = '.. searching ..'
       replaceChild(e, text)
       e = document.getElementById('search1')

@@ -25,9 +25,6 @@
 #include "config.h"
 #include "musicmgr.h"
 
-/* default mixplay HTTP port */
-#define MP_PORT 2347
-
 static pthread_mutex_t _addmsglock=PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t _cblock=PTHREAD_MUTEX_INITIALIZER;
 static mpconfig_t *_cconfig=NULL;

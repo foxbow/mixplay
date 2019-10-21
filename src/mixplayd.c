@@ -38,7 +38,7 @@ static void sigint(int signo){
 	addMessage(0, "External quit on signal %i!", signo );
 	if( getConfig()->command == mpc_quit ) {
 		addMessage( 0, "Forced exit!!" );
-		unlink(getConfig()->pidpath);
+		unlink(PIDPATH);
 		exit(1);
 	}
 	/* try nicely first */
@@ -70,7 +70,7 @@ void fail( const int error, const char* msg, ... ) {
 		}
 	}
 
-	unlink(getConfig()->pidpath);
+	unlink(PIDPATH);
 #ifdef EPAPER
 	epExit();
 #endif
@@ -238,8 +238,7 @@ int main( int argc, char **argv ) {
 		return -1;
 	}
 
-	snprintf( control->pidpath, MAXPATHLEN, "%s/.mixplay/mixplayd.pid", getenv("HOME") );
-	if( access( control->pidpath, F_OK ) == 0 ) {
+	if( access( PIDPATH, F_OK ) == 0 ) {
 		addMessage( 0, "Mixplayd is already running!" );
 		freeConfig();
 		return -1;
@@ -256,9 +255,10 @@ int main( int argc, char **argv ) {
 		}
 		openlog ("mixplayd", LOG_PID, LOG_DAEMON);
 		control->isDaemon=1;
-		pidlog=fopen( control->pidpath, "w");
+		pidlog=fopen( PIDPATH, "w");
 		if( pidlog == NULL ) {
-			addMessage( 0, "Cannot open %s!", control->pidpath );
+			addMessage( 0, "Cannot open %s!", PIDPATH );
+			addError(errno);
 			return -1;
 		}
 		fprintf( pidlog, "%i", getpid() );
@@ -294,7 +294,7 @@ int main( int argc, char **argv ) {
 	if( control->changed ) {
 		writeConfig( NULL );
 	}
-	unlink(control->pidpath);
+	unlink(PIDPATH);
 	addMessage( 0, "Player terminated" );
 	freeConfig( );
 

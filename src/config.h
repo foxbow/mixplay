@@ -63,6 +63,10 @@ typedef enum {
 
 #include "musicmgr.h"
 
+/* default mixplay HTTP port */
+#define MP_PORT 2347
+#define PIDPATH "/tmp/mixplayd.pid"
+
 /* commands that can be used on a remote control */
 /* just use the key down event */
 #define MPRC_SINGLE 6
@@ -111,7 +115,6 @@ typedef struct {
  */
 typedef struct {
 	char *musicdir;				/* path to the music */
-	char pidpath[MAXPATHLEN];	/* path to the pidfile in demon mode */
 	int active;					/* active >0 = profile / 0=none / <0 = stream */
 	int profiles;				/* number of profiles */
 	profile_t **profile;	/* profiles */
