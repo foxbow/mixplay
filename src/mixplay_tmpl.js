@@ -142,7 +142,7 @@ function setProf () {
   var id = e.value
   if (id !== 0) {
     /* pull main to front */
-    toggleVisibility(0)
+    switchView(0)
     sendCMD(0x06, id)
   } else {
     e.value = active
@@ -150,22 +150,26 @@ function setProf () {
 }
 
 /*
- * toggle named tab, usually called by toggleTab() but also used
+ * toggle named tab, usually called by switchTab() but also used
  * to set active tab explicitly
  */
-function toggleTabByRef (element, num) {
+function switchTabByRef (element, num) {
   var i = 0
   var b
   var e = document.getElementById(element + i)
 
   while (e !== null) {
     b = document.getElementById('c' + element + i)
-    if (i === num) {
-      b.style.backgroundColor = '#ddd'
-      e.style.display = 'block'
-    } else if (b !== null) {
-      b.style.backgroundColor = '#fff'
-      e.style.display = 'none'
+    if (b !== null) {
+      if (i === num) {
+        b.className = 'active'
+        e.className = 'active'
+      } else if (b.className !== 'hide') {
+        b.className = 'inactive'
+        e.className = 'inactive'
+      }
+    } else {
+      console.log('No button c' + element + i + '!')
     }
     i++
     e = document.getElementById(element + i)
@@ -175,24 +179,23 @@ function toggleTabByRef (element, num) {
 /**
  * toggle tabified result tabs
  */
-function toggleTab (ref) {
+function switchTab (ref) {
   var name = ref.id.substring(1, ref.id.length - 1)
   var num = parseInt(ref.id.substring(ref.id.length - 1))
-  toggleTabByRef(name, num)
+  switchTabByRef(name, num)
 }
 
 /*
  * toggle main UI tabs
- * TODO: use toggleTab() and call setScrolls() on changeVisibility hook
+ * TODO: use switchTab() and call setScrolls() on changeVisibility hook
  */
-function toggleVisibility (element) {
+function switchView (element) {
   var e
   if (element === 4) {
     e = document.getElementById('cextra4')
     e.value = '\u2713'
-    e.style.display = 'inline'
   }
-  toggleTabByRef('extra', element)
+  switchTabByRef('extra', element)
   if (element === 0) {
     setScrolls()
   }
@@ -216,7 +219,7 @@ function addText (text) {
   var numlines = 15
   var e = document.getElementById('extra4')
   if (e.style.display === 'none') {
-    enableButton('cextra4', 1)
+    enableElement('cextra4', 1)
     document.getElementById('cextra4').value = '\u26A0'
   }
 
@@ -239,7 +242,7 @@ function addText (text) {
 function wipeLog () {
   var i
   var e = document.getElementById('extra4')
-  enableButton('cextra4', 0)
+  enableElement('cextra4', 0)
   for (i = 0; i < 15; i++) {
     msglines[i] = ''
   }
@@ -261,16 +264,16 @@ function sendCMD (cmd, arg = '') {
   }
 
   /* these commands should pull main to front */
-  if (code === '001e') toggleVisibility(0)
+  if (code === '001e') switchView(0)
 
   /* These command should pull the messages to front */
   if ((code === '0008') ||
      (code === '0007') ||
-     (code === '0012')) toggleVisibility(4)
+     (code === '0012')) switchView(4)
 
   /* clear title results after add all */
-  if ((arg === 0) &&
-     ((cmd === 0x080c) || (cmd === 0x0814))) {
+  if ((arg === '0') &&
+     ((code === '080c') || (code === '0814'))) {
     e = document.getElementById('search0')
     text = document.createElement('em')
     text.innerHTML = '.. done ..'
@@ -343,30 +346,31 @@ function setElement (e, val) {
 }
 
 /*
- * show/hide a <div>
+ * show/hide an element
+ * if an element is defined with class='hide' and the display class should not
+ * be empty, then data-class must be set to the desired class name!
  */
-function enableDiv (e, i) {
-  if (i) {
-    document.getElementById(e).style.display = 'block'
+function enableElement (e, i) {
+  const el = document.getElementById(e)
+  if (el !== null) {
+    if (i) {
+      if (el.className === 'hide') {
+        el.className = el.getAttribute('data-class')
+      }
+    } else {
+      if (el.className !== 'hide') {
+        el.setAttribute('data-class', el.className)
+        el.className = 'hide'
+      }
+    }
   } else {
-    document.getElementById(e).style.display = 'none'
-  }
-}
-
-/*
- * show/hide an inline element
- */
-function enableButton (e, i) {
-  if (i) {
-    document.getElementById(e).style.display = 'inline'
-  } else {
-    document.getElementById(e).style.display = 'none'
+    console.log('Element ' + e + ' does not exist!')
   }
 }
 
 function cmdline (cmd, arg, text) {
   var reply = document.createElement('p')
-  reply.className = 'cmd'
+  reply.className = 'clickline'
   reply.setAttribute('data-arg', arg)
   reply.setAttribute('data-cmd', cmd)
   reply.onclick = function () {
@@ -382,11 +386,11 @@ function cmdline (cmd, arg, text) {
  */
 function clickline (cmd, arg, text) {
   var reply = document.createElement('p')
-  reply.className = 'cmd'
+  reply.className = 'clickline'
   reply.setAttribute('data-arg', arg)
   reply.setAttribute('data-cmd', cmd)
   reply.onclick = function () {
-    this.style.display = 'none'
+    this.className = 'hide'
     sendCMD(this.getAttribute('data-cmd'), this.getAttribute('data-arg'))
   }
   reply.innerHTML = text
@@ -437,7 +441,7 @@ function getPattern (cmd, line) {
 /* creates a selection in a popselect popup */
 function clickable (text, cmd, arg, ident) {
   var reply = document.createElement('em')
-  reply.className = 'cmd'
+  reply.className = 'clickline'
   reply.setAttribute('data-arg', arg)
   reply.setAttribute('data-cmd', cmd)
   reply.onclick = function () {
@@ -445,7 +449,7 @@ function clickable (text, cmd, arg, ident) {
     if (popup) {
       sendCMD(this.getAttribute('data-cmd'), this.getAttribute('data-arg'))
       const line = document.getElementById('line' + ident)
-      line.style.display = 'none'
+      line.className = 'hide'
     } else {
       console.log('popup' + ident + 'does no longer exist')
     }
@@ -500,9 +504,9 @@ function tabify (parent, name, list) {
     for (var i = 0; i <= tabs; i++) {
       var tabswitch = document.createElement('input')
       tabswitch.id = 'c' + name + i
-      tabswitch.className = 'cmd'
+      tabswitch.className = 'inactive'
       tabswitch.type = 'button'
-      tabswitch.onclick = function () { toggleTab(this) }
+      tabswitch.onclick = function () { switchTab(this) }
       tabswitch.value = '[' + i + ']'
       if (i === 0) {
         tabswitch.style.backgroundColor = '#ddd'
@@ -514,9 +518,9 @@ function tabify (parent, name, list) {
         var tabdiv = document.createElement('div')
         tabdiv.id = name + i
         if (i === 0) {
-          tabdiv.style.display = 'block'
+          tabdiv.className = 'active'
         } else {
-          tabdiv.style.display = 'none'
+          tabdiv.className = 'inactive'
         }
         tabdiv.width = '100%'
         parent.appendChild(tabdiv)
@@ -599,7 +603,7 @@ function fullUpdate (data) {
 }
 
 function searchUpdate (data) {
-  toggleTabByRef('search', 0)
+  switchTabByRef('search', 0)
   var e = document.getElementById('search0')
   var items = []
   var i
@@ -714,13 +718,13 @@ function playerUpdate (data) {
   }
   isstream = (data.mpmode === 1) /* PM_STREAM */
 
-  enableButton('fav', !favplay)
-  enableButton('range', !favplay)
-  enableButton('setfavplay', !isstream)
-  enableDiv('ctrl', !isstream)
-  enableDiv('playstr', isstream)
-  enableDiv('playpack', !isstream)
-  enableButton('cextra1', !isstream)
+  enableElement('fav', !favplay)
+  enableElement('range', !favplay)
+  enableElement('setfavplay', !isstream)
+  enableElement('ctrl', !isstream)
+  enableElement('playstr', isstream)
+  enableElement('playpack', !isstream)
+  enableElement('cextra1', !isstream)
 
   /* switching between stream and normal play */
   if (isstream) {
@@ -948,7 +952,7 @@ function createLoad () {
       }
     }
     /* pull main to front */
-    toggleVisibility(0)
+    switchView(0)
   }
 }
 

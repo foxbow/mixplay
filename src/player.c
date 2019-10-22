@@ -221,10 +221,15 @@ void setCommand( mpcmd_t cmd, char *arg ) {
 		pthread_mutex_unlock( &_pcmdlock );
 	}
 	else {
-		getConfig()->command=cmd;
 		/* someone did not clean up! */
-		assert( getConfig()->argument == NULL );
-		getConfig()->argument=arg;
+		if( getConfig()->argument != NULL ) {
+			addMessage(0,"Leftover %s - ignoring %s!",
+					getConfig()->argument, mpcString(cmd) );
+		}
+		else {
+			getConfig()->command=cmd;
+			getConfig()->argument=arg;
+		}
 	}
 }
 
@@ -1093,8 +1098,8 @@ void *reader( ) {
 			break;
 
 		case mpc_quit:
-			/* The player does not know about the main App so anything setting mcp_quit
-			 * MUST make sure that the main app terminates as well ! */
+			/* The player does not know about the main App so anything setting
+			 * mcp_quit MUST make sure that the main app terminates as well ! */
 			if( asyncTest() ) {
 				if( control->argument != NULL ) {
 					if( strcmp( "mixplay", control->argument ) == 0 ) {

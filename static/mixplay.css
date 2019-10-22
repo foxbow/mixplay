@@ -1,8 +1,10 @@
+/* ID */
 #body {
 	text-align: center;
 	font-size: 20px;
 }
 
+/* Scroller */
 .scroll {
 	position: relative;
 	height: 38px;
@@ -20,6 +22,14 @@
 	text-align: left;
 }
 
+#ascroll, #lscroll {
+	height: 30px;
+}
+
+#tscroll {
+	height: 34px;
+}
+
 #prev, #next {
 	font-size : 24px;
 }
@@ -33,7 +43,7 @@
 	font-weight: bold;
 }
 
-#current,#playpack {
+#current, #playpack {
 	background-color: #ddd;
 	padding-top: 5px;
 	padding-bottom: 5px;
@@ -62,6 +72,10 @@
 	float: right;
 }
 
+#speaker {
+	display: inline;
+}
+
 a.download {
 	text-decoration: none;
 	color: #000;
@@ -73,13 +87,39 @@ a.download {
 	position: absolute;
 }
 
-.cmd {
+/* Tabs to select current view */
+input.active, input.inactive, input.hide {
 	margin-top: 4px;
 	margin-bottom: 4px;
 	border: none;
 	background: none;
 }
 
+input.active {
+	background-color: #ddd;
+	display: inline;
+}
+
+input.inactive {
+	background: none;
+	display: inline;
+}
+
+input.hide {
+	background: none;
+	display: none;
+}
+
+/* views */
+div.active {
+	display: block;
+}
+
+div.inactive, div.hide {
+	display: none;
+}
+
+/* popup line */
 .popselect {
 	position: relative;
 	display: block;
@@ -106,6 +146,13 @@ a.download {
 .popselect .show {
   visibility: visible;
   animation: fadeIn 1s
+}
+
+.clickline {
+	margin-top: 4px;
+	margin-bottom: 4px;
+	border: none;
+	background: none;
 }
 
 @keyframes fadeIn {

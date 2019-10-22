@@ -10,22 +10,25 @@
     <title>Mixplay</title>
   </head>
   <body onload='initScrolls()' onresize='setScrolls()'>
-    <input id='cextra0' style='background-color: #ddd;' class='cmd' type='button' onclick='toggleVisibility(0)' value='&#x25B6;' >
-    <input id='cextra1' class='cmd' type='button' onclick='toggleVisibility(1)' value='&#x1F50E;' >
-    <input id='cextra2' class='cmd' type='button' onclick='toggleVisibility(2)' value='&#x2692;' >
-    <input id='cextra3' class='cmd' type='button' onclick='toggleVisibility(3)' value='&#x2630;' >
-    <input id='cextra4' style='display:none;' class='cmd' type='button' onclick='toggleVisibility(4)' value='&#x26A0;' >
+    <input id='cextra0' class='active'   type='button' onclick='switchView(0)' value='&#x25B6;' >
+    <input id='cextra1' class='inactive' type='button' onclick='switchView(1)' value='&#x1F50E;' >
+    <input id='cextra2' class='inactive' type='button' onclick='switchView(2)' value='&#x2692;' >
+    <input id='cextra3' class='inactive' type='button' onclick='switchView(3)' value='&#x2630;' >
+    <input id='cextra4' class='hide'     type='button' onclick='switchView(4)' value='&#x26A0;' >
+
     <!-- main -->
-    <div id='extra0' onselectstart='return false' onwheel='volWheel(event)'>
+    <div id='extra0' class='active' onselectstart='return false' onwheel='volWheel(event)'>
       <div class='scroll' onclick='sendCMD(0x02)'><p id='prev'>prev</p></div>
       <div id='current' onclick='sendCMD(0x00)'>
-        <div class='scroll' style='height: 30px;' ><p id='artist'>artist</p></div>
-        <div class='scroll' style='height: 34px;'><p id='title'>title</p></div>
-        <div id='lscroll' class='scroll' style='height: 30px;'><p id='album'>album</p></div>
+        <div id='ascroll' class='scroll'><p id='artist'>artist</p></div>
+        <div id='tscroll' class='scroll'><p id='title'>title</p></div>
+        <div id='lscroll' class='scroll'><p id='album'>album</p></div>
         <div id='genre' >genre</div>
       </div>
       <div id='playpack' onclick='sendCMD(0x05)'>
-        <div id='playtime'>00:00</div> <progress id='progress' value='0' max='100'></progress><div id='remtime'>00:00</div>
+        <div id='playtime'>00:00</div>
+        <progress id='progress' value='0' max='100'></progress>
+        <div id='remtime'>00:00</div>
       </div>
       <div class='scroll' onclick='sendCMD(0x03)'><p id='next'>next</p></div>
       <div id='playstr'>
@@ -45,11 +48,15 @@
        <br>
       </div>
       <div id='volpack'>
-        <div id='speaker' style='display: inline;' onclick='sendCMD(0x1d)'>&#x1F50A;</div> <input id='vol' type='range' min='0' max='100' step='1' value='0' oninput='sendCMD( 0x15, this.value )' onwheel='return false'>
+        <div id='speaker' onclick='sendCMD(0x1d)'>
+          &#x1F50A;
+        </div>
+        <input id='vol' type='range' min='0' max='100' step='1' value='0'
+            oninput='sendCMD( 0x15, this.value )' onwheel='return false'>
       </div>
     </div> <!-- main -->
     <!-- Search view -->
-    <div id='extra1' style='display: none; width:100%;' >
+    <div id='extra1' class='inactive' >
       <em>Search Mode:</em>
       <input id='searchmode' type='button' onclick='toggleSearch()' value='Play' ><br/>
       <select label='Range' id='srange'>
@@ -60,15 +67,16 @@
       <input id='search' type='button' onclick='sendArg(0x13)' value='Search' >
       <input id='search' type='button' onclick='sendArg(0x2013)' value='Fuzzy' >
       <br/>
-      <input id='csearch0' class='cmd' style='background-color: #ddd;'  type='button' onclick='toggleTab(this)' value='&#x2630; Titles' >
-      <input id='csearch1' class='cmd' type='button' onclick='toggleTab(this)' value='&#x2630; Artists' >
-      <input id='csearch2' class='cmd' type='button' onclick='toggleTab(this)' value='&#x2630; Albums' >
-      <div id='search0' style='display: block; width:100%;'><em>No titles found!</em></div>
-      <div id='search1' style='display: none; width:100%;'><em>No artists found!</em></div>
-      <div id='search2' style='display: none; width:100%;'><em>No albums found!</em></div>
+      <input id='csearch0' class='active' type='button' onclick='switchTab(this)' value='&#x2630; Titles' >
+      <input id='csearch1' class='inactive' type='button' onclick='switchTab(this)' value='&#x2630; Artists' >
+      <input id='csearch2' class='inactive' type='button' onclick='switchTab(this)'
+          value='&#x2630; Albums' >
+      <div id='search0' class='active'><em>No titles found!</em></div>
+      <div id='search1' class='inactive'><em>No artists found!</em></div>
+      <div id='search2' class='inactive'><em>No albums found!</em></div>
     </div>
     <!-- Tools view -->
-    <div id='extra2' style='display: none; width:100%;' >
+    <div id='extra2' class='inactive' >
       <p><em>Player</em><br>
         <input id='setfavplay' type='button' onclick='sendCMD(0x1e)' value='Enable Favplay'>
         <input id='version' type='button' onclick='showInfo()' value='Player Info' >
@@ -91,16 +99,16 @@
       </p>
     </div>
     <!-- Playlist view -->
-    <div id='extra3' style='display: none; width: 100%;' >
-      <input id='cdnpfav0' class='cmd' style='background-color: #ddd;' type='button' onclick='toggleTab(this)' value='&#x2630; Playlist' >
-      <input id='cdnpfav1' class='cmd' type='button' onclick='toggleTab(this)' value='&#x2630; DNP' >
-      <input id='cdnpfav2' class='cmd' type='button' onclick='toggleTab(this)' value='&#x2630; FAV' >
-      <div id='dnpfav0' style='display: block; width:100%;'><em>No Playlist</em></div>
-      <div id='dnpfav1' style='display: none; width:100%;'><em>No DNPs</em></div>
-      <div id='dnpfav2' style='display: none; width:100%;'><em>No Favourites</em></div>
+    <div id='extra3' class='inactive' >
+      <input id='cdnpfav0' class='active' type='button' onclick='switchTab(this)' value='&#x2630; Playlist' >
+      <input id='cdnpfav1' class='inactive' type='button' onclick='switchTab(this)' value='&#x2630; DNP' >
+      <input id='cdnpfav2' class='inactive' type='button' onclick='switchTab(this)' value='&#x2630; FAV' >
+      <div id='dnpfav0' class='active'><em>No Playlist</em></div>
+      <div id='dnpfav1' class='inactive'><em>No DNPs</em></div>
+      <div id='dnpfav2' class='inactive'><em>No Favourites</em></div>
     </div>
     <!-- Message view -->
-    <div id='extra4' style='display: none; width: 100%;' >
+    <div id='extra4' class='inactive' >
       <em>No messages.</em><br>
     </div>
   </body>
