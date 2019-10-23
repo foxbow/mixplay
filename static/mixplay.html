@@ -18,7 +18,7 @@
 
     <!-- main -->
     <div id='extra0' class='active' onselectstart='return false' onwheel='volWheel(event)'>
-      <div class='scroll' onclick='sendCMD(0x02)'><p id='prev'>prev</p></div>
+      <div id='pscroll' class='scroll' onclick='sendCMD(0x02)'><p id='prev'>prev</p></div>
       <div id='current' onclick='sendCMD(0x00)'>
         <div id='ascroll' class='scroll'><p id='artist'>artist</p></div>
         <div id='tscroll' class='scroll'><p id='title'>title</p></div>
@@ -27,10 +27,10 @@
       </div>
       <div id='playpack' onclick='sendCMD(0x05)'>
         <div id='playtime'>00:00</div>
-        <progress id='progress' value='0' max='100'></progress>
+        <div class='progress'><div id='progressbar'></div></div>
         <div id='remtime'>00:00</div>
       </div>
-      <div class='scroll' onclick='sendCMD(0x03)'><p id='next'>next</p></div>
+      <div id='nscroll' class='scroll' onclick='sendCMD(0x03)'><p id='next'>next</p></div>
       <div id='playstr'>
         <div id='splaytime'>00:00</div>
       </div>
@@ -42,10 +42,10 @@
          <option value='0x1000'>Genre</option>
          <option value='0x0800' selected>Display</option>
        </select>
-       <br>
-       <input id='dnp' type='button' onclick='sendRange(0x0a)' value='DNP' >
-       <input id='fav' type='button' onclick='sendRange(0x09)' value='FAV' >
-       <br>
+       <div id='maindnpfav'>
+         <input id='dnp' type='button' onclick='sendRange(0x0a)' value='DNP' >
+         <input id='fav' type='button' onclick='sendRange(0x09)' value='FAV' >
+       </div>
       </div>
       <div id='volpack'>
         <div id='speaker' onclick='sendCMD(0x1d)'>
@@ -54,7 +54,7 @@
         <input id='vol' type='range' min='0' max='100' step='1' value='0'
             oninput='sendCMD( 0x15, this.value )' onwheel='return false'>
       </div>
-    </div> <!-- main -->
+    </div>
     <!-- Search view -->
     <div id='extra1' class='inactive' >
       <em>Search Mode:</em>

@@ -1,59 +1,50 @@
-/* ID */
-#body {
-	text-align: center;
-	font-size: 20px;
-}
-
-/* Scroller */
-.scroll {
-	position: relative;
-	height: 38px;
-	width: 100%;
-	overflow: hidden;
-}
-
-.scroll p {
-	position: absolute;
-	font-size: 20px;
-	white-space: nowrap;
-	padding-top: 5px;
-	padding-bottom: 5px;
-	margin: 0px;
-	text-align: left;
-}
-
-#ascroll, #lscroll {
-	height: 30px;
-}
-
-#tscroll {
-	height: 34px;
-}
-
-#prev, #next {
-	font-size : 24px;
-}
-
-#title {
-	font-size : 24px;
-	font-weight: bold;
-}
-
-#artist {
-	font-weight: bold;
-}
-
-#current, #playpack {
-	background-color: #ddd;
-	padding-top: 5px;
-	padding-bottom: 5px;
-	border:black;
+/* layout of the default view */
+body.disconnect {
+	background-color: #f88;
+	color: #f88;
 }
 
 #extra0 {
 	text-align: center;
 	background-color: #eee;
 	padding: 5px;
+}
+
+/* previous title, next title */
+#pscroll, #nscroll {
+	font-size : 24px;
+	height: 38px;
+}
+
+/* artist */
+#ascroll {
+	font-weight: bold;
+	font-size: 20px;
+	height: 30px;
+}
+
+/* album */
+#lscroll {
+	font-size: 20px;
+	height: 30px;
+}
+
+/* title */
+#tscroll {
+	font-size : 24px;
+	font-weight: bold;
+	height: 34px;
+}
+
+/* combo for current title */
+#current, #playpack {
+	padding-top: 5px;
+	padding-bottom: 5px;
+	border:black;
+}
+
+#playpack {
+	background-color: #ddd;
 }
 
 #dnp, #fav {
@@ -76,6 +67,15 @@
 	display: inline;
 }
 
+#current.play {
+	background-color: #ddd;
+}
+
+#current.pause {
+	background-color: #daa;
+}
+
+/* make download link look like a button */
 a.download {
 	text-decoration: none;
 	color: #000;
@@ -95,28 +95,48 @@ input.active, input.inactive, input.hide {
 	background: none;
 }
 
+/* selected tab */
 input.active {
 	background-color: #ddd;
 	display: inline;
 }
 
+/* unselected tab */
 input.inactive {
 	background: none;
 	display: inline;
 }
 
+/* hidden tab */
 input.hide {
 	background: none;
 	display: none;
 }
 
-/* views */
+/* view controls */
 div.active {
 	display: block;
 }
 
 div.inactive, div.hide {
 	display: none;
+}
+
+/* basic functions that should not need to be touched when re-skinning the UI */
+.scroll {
+	position: relative;
+	width: 100%;
+	overflow: hidden;
+}
+
+/* display attributes should be set in t/a/l/p/nscroll */
+.scroll p {
+	position: absolute;
+	white-space: nowrap;
+	padding-top: 5px;
+	padding-bottom: 5px;
+	margin: 0px;
+	text-align: left;
 }
 
 /* popup line */
@@ -148,14 +168,14 @@ div.inactive, div.hide {
   animation: fadeIn 1s
 }
 
+@keyframes fadeIn {
+  from {opacity: 0;}
+  to {opacity:1 ;}
+}
+
 .clickline {
 	margin-top: 4px;
 	margin-bottom: 4px;
 	border: none;
 	background: none;
-}
-
-@keyframes fadeIn {
-  from {opacity: 0;}
-  to {opacity:1 ;}
 }

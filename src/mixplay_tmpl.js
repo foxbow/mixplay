@@ -504,13 +504,14 @@ function tabify (parent, name, list) {
     for (var i = 0; i <= tabs; i++) {
       var tabswitch = document.createElement('input')
       tabswitch.id = 'c' + name + i
-      tabswitch.className = 'inactive'
+      if (i === 0) {
+        tabswitch.className = 'active'
+      } else {
+        tabswitch.className = 'inactive'
+      }
       tabswitch.type = 'button'
       tabswitch.onclick = function () { switchTab(this) }
       tabswitch.value = '[' + i + ']'
-      if (i === 0) {
-        tabswitch.style.backgroundColor = '#ddd'
-      }
       parent.appendChild(tabswitch)
     }
     for (i = 0; i <= tabs; i++) {
@@ -570,8 +571,7 @@ function fullUpdate (data) {
     titleline += '[' + data.current.playcount + '/' + data.current.skipcount + '] '
   }
   cline = cmdline(0x0000, '',
-    '<em>' + titleline + data.current.artist + ' - ' + data.current.title + '</em>')
-  cline.style.backgroundColor = '#ddd'
+    '&#x25B6; <em>' + titleline + data.current.artist + ' - ' + data.current.title + '</em>')
   e.appendChild(cline)
   if (data.next.length > 0) {
     if (data.next[0].artist === '') {
@@ -594,11 +594,8 @@ function fullUpdate (data) {
   } else {
     setElement('next', '- - -')
   }
-  if (data.current.flags & 1) {
-    document.getElementById('fav').disabled = true
-  } else {
-    document.getElementById('fav').disabled = false
-  }
+
+  enableElement('fav', !(data.current.flags & 1))
   setScrolls()
 }
 
@@ -718,23 +715,21 @@ function playerUpdate (data) {
   }
   isstream = (data.mpmode === 1) /* PM_STREAM */
 
-  enableElement('fav', !favplay)
   enableElement('range', !favplay)
   enableElement('setfavplay', !isstream)
   enableElement('ctrl', !isstream)
   enableElement('playstr', isstream)
   enableElement('playpack', !isstream)
   enableElement('cextra1', !isstream)
+  enableElement('lscroll', !isstream)
 
   /* switching between stream and normal play */
   if (isstream) {
     setElement('splaytime', data.playtime)
-    document.getElementById('lscroll').style.height = '0px'
   } else {
     setElement('playtime', data.playtime)
     setElement('remtime', data.remtime)
-    document.getElementById('progress').value = data.percent
-    document.getElementById('lscroll').style.height = '30px'
+    document.getElementById('progressbar').style.width = data.percent + '%'
   }
 
   if ((isstream !== wasstream) && (window.innerHeight !== window.outerHeight)) {
@@ -751,9 +746,9 @@ function playerUpdate (data) {
     setActive(active)
   }
   if (data.status === 0) {
-    document.getElementById('current').style.backgroundColor = '#ddd'
+    document.getElementById('current').className = 'play'
   } else {
-    document.getElementById('current').style.backgroundColor = '#daa'
+    document.getElementById('current').className = 'pause'
   }
 
   if (data.volume === -2) {
@@ -825,8 +820,7 @@ function updateUI () {
       if (doUpdate !== 0) {
         setTimeout(function () { updateUI() }, 750)
       } else {
-        document.body.style.backgroundColor = '#daa'
-        document.getElementById('current').style.backgroundColor = '#daa'
+        document.body.className = 'disconnect'
       }
     }
   }
