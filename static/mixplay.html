@@ -9,12 +9,18 @@
     <link rel="icon" href="/mixplay.svg" type="image/svg-xml">
     <title>Mixplay</title>
   </head>
-  <body onload='initScrolls()' onresize='setScrolls()'>
-    <input id='cextra0' class='active'   type='button' onclick='switchView(0)' value='&#x25B6;' >
-    <input id='cextra1' class='inactive' type='button' onclick='switchView(1)' value='&#x1F50E;' >
-    <input id='cextra2' class='inactive' type='button' onclick='switchView(2)' value='&#x2692;' >
-    <input id='cextra3' class='inactive' type='button' onclick='switchView(3)' value='&#x2630;' >
-    <input id='cextra4' class='hide'     type='button' onclick='switchView(4)' value='&#x26A0;' >
+  <body onload='initScrolls();setsmallUI()' onresize='setScrolls()'>
+    <div id='viewtabs'>
+      <input id='cextra0' class='active'   type='button' onclick='switchView(0)' value='&#x25B6;' >
+      <input id='cextra1' class='inactive' type='button' onclick='switchView(1)' value='&#x1F50E;' >
+      <input id='cextra2' class='inactive' type='button' onclick='switchView(2)' value='&#x2692;' >
+      <input id='cextra3' class='inactive' type='button' onclick='switchView(3)' value='&#x2630;' >
+      <input id='cextra4' class='hide'     type='button' onclick='switchView(4)' value='&#x26A0;' >
+
+      <input id='uiextra' class='inactive' type='button' onclick='switchUI()'    value='&#x26F6;' >
+      <input id='dnp' class='inactive' type='button' onclick='sendRange(0x0a)' value='&#x2620;' >
+      <input id='fav' class='inactive' type='button' onclick='sendRange(0x09)' value='&#x2665;' >
+    </div>
 
     <!-- main -->
     <div id='extra0' class='active' onselectstart='return false' onwheel='volWheel(event)'>
@@ -25,9 +31,12 @@
         <div id='lscroll' class='scroll'><p id='album'>album</p></div>
         <div id='genre' >genre</div>
       </div>
-      <div id='playpack' onclick='sendCMD(0x05)'>
+      <div id='playpack'>
+        <input id='goprev' type='button' onclick='sendCMD(0x02)' value='&#x23ee;' >
+        <input id='play'   type='button' onclick='sendCMD(0x00)' value='&#x23f8;' >
+        <input id='gonext' type='button' onclick='sendCMD(0x03)' value='&#x23ed;' >
         <div id='playtime'>00:00</div>
-        <div class='progress'><div id='progressbar'></div></div>
+        <div class='progress' onclick='sendCMD(0x05)'><div id='progressbar'></div></div>
         <div id='remtime'>00:00</div>
       </div>
       <div id='nscroll' class='scroll' onclick='sendCMD(0x03)'><p id='next'>next</p></div>
@@ -42,10 +51,6 @@
          <option value='0x1000'>Genre</option>
          <option value='0x0800' selected>Display</option>
        </select>
-       <div id='maindnpfav'>
-         <input id='dnp' type='button' onclick='sendRange(0x0a)' value='DNP' >
-         <input id='fav' type='button' onclick='sendRange(0x09)' value='FAV' >
-       </div>
       </div>
       <div id='volpack'>
         <div id='speaker' onclick='sendCMD(0x1d)'>
@@ -65,7 +70,7 @@
       </select>
       <input id='text' type='text' onkeydown='isEnter(event,0x13)'><br>
       <input id='search' type='button' onclick='sendArg(0x13)' value='Search' >
-      <input id='search' type='button' onclick='sendArg(0x2013)' value='Fuzzy' >
+      <input id='fuzzy' type='button' onclick='sendArg(0x2013)' value='Fuzzy' >
       <br/>
       <input id='csearch0' class='active' type='button' onclick='switchTab(this)' value='&#x2630; Titles' >
       <input id='csearch1' class='inactive' type='button' onclick='switchTab(this)' value='&#x2630; Artists' >

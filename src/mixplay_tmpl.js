@@ -13,6 +13,15 @@ var wasstream = -1
 var favplay = 0
 var cmdtosend = ''
 var argtosend = ''
+var smallUI = getsmallUI()
+
+function getsmallUI () {
+  if (document.cookie) {
+    if (document.cookie.indexOf('MPsmallUI') !== -1) {
+      return true
+    }
+  }
+}
 
 function replaceChild (e, c) {
   while (e.hasChildNodes()) {
@@ -515,17 +524,15 @@ function tabify (parent, name, list) {
       parent.appendChild(tabswitch)
     }
     for (i = 0; i <= tabs; i++) {
-      if (tabs > 0) {
-        var tabdiv = document.createElement('div')
-        tabdiv.id = name + i
-        if (i === 0) {
-          tabdiv.className = 'active'
-        } else {
-          tabdiv.className = 'inactive'
-        }
-        tabdiv.width = '100%'
-        parent.appendChild(tabdiv)
+      var tabdiv = document.createElement('div')
+      tabdiv.id = name + i
+      if (i === 0) {
+        tabdiv.className = 'active'
+      } else {
+        tabdiv.className = 'inactive'
       }
+      tabdiv.width = '100%'
+      parent.appendChild(tabdiv)
       for (var j = 0; (j < 20) && (20 * i + j < num); j++) {
         tabdiv.appendChild(list[20 * i + j])
       }
@@ -631,24 +638,6 @@ function searchUpdate (data) {
   }
   tabify(e, 'tres', items)
 
-  e = document.getElementById('search1')
-  items = []
-  if (data.artists.length > 0) {
-    for (i = 0; i < data.artists.length; i++) {
-      if (data.mpedit) {
-        items[i] = popselect('Search', 0x0213,
-          'Favourite', 0x0209,
-          data.artists[i], data.artists[i])
-      } else {
-        items[i] = clickline(0x0213, data.artists[i], '&#x1F50E; ' + data.artists[i])
-      }
-    }
-  } else {
-    items[0] = document.createElement('em')
-    items[0].innerHTML = 'No artists found!'
-  }
-  tabify(e, 'ares', items)
-
   e = document.getElementById('search2')
   items = []
   if (data.albums.length > 0) {
@@ -668,9 +657,23 @@ function searchUpdate (data) {
   }
   tabify(e, 'lres', items)
 
-  if (data.titles.lenght === 0) {
-    window.alert('Search found ' + data.artists.length + ' artists and ' + data.albums.length + ' albums')
+  e = document.getElementById('search1')
+  items = []
+  if (data.artists.length > 0) {
+    for (i = 0; i < data.artists.length; i++) {
+      if (data.mpedit) {
+        items[i] = popselect('Search', 0x0213,
+          'Favourite', 0x0209,
+          data.artists[i], data.artists[i])
+      } else {
+        items[i] = clickline(0x0213, data.artists[i], '&#x1F50E; ' + data.artists[i])
+      }
+    }
+  } else {
+    items[0] = document.createElement('em')
+    items[0].innerHTML = 'Found ' + data.artists.length + ' artists and ' + data.albums.length + ' albums'
   }
+  tabify(e, 'ares', items)
 }
 
 function dnpfavUpdate (data) {
@@ -717,7 +720,9 @@ function playerUpdate (data) {
 
   enableElement('range', !favplay)
   enableElement('setfavplay', !isstream)
-  enableElement('ctrl', !isstream)
+  if (!smallUI) {
+    enableElement('ctrl', !isstream)
+  }
   enableElement('playstr', isstream)
   enableElement('playpack', !isstream)
   enableElement('cextra1', !isstream)
@@ -746,7 +751,11 @@ function playerUpdate (data) {
     setActive(active)
   }
   if (data.status === 0) {
-    document.getElementById('current').className = 'play'
+    if (smallUI) {
+      document.getElementById('current').className = 'hide'
+    } else {
+      document.getElementById('current').className = 'play'
+    }
   } else {
     document.getElementById('current').className = 'pause'
   }
@@ -981,6 +990,26 @@ function isEnter (event, cmd) {
     sendArg(cmd)
     return false
   }
+}
+
+function setsmallUI () {
+  enableElement('pscroll', !smallUI)
+  enableElement('nscroll', !smallUI)
+  enableElement('ctrl', !smallUI)
+  enableElement('volpack', !smallUI)
+  enableElement('current', !smallUI)
+}
+
+function switchUI () {
+  smallUI = !smallUI
+  if (smallUI) {
+    var d = new Date()
+    d.setTime(d.getTime() + (10 * 356 * 24 * 60 * 60 * 1000))
+    document.cookie = 'MPsmallUI=1; expires=' + d.toUTCString() + '; path=/'
+  } else {
+    document.cookie = 'MPsmallUI=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
+  }
+  setsmallUI()
 }
 
 /*

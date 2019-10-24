@@ -21,6 +21,12 @@ body.disconnect {
 	color: #f88;
 }
 
+div#viewtabs {
+	top: 0;
+	position: fixed;
+	width: 100%;
+}
+
 /* hide until the slider looks better */
 div#volpack, select#range {
 	display: none;
@@ -32,7 +38,6 @@ div#volpack, select#range {
 
 #extra0 {
 	text-align: center;
-	padding: 5px;
 }
 
 /* previous title, next title */
@@ -64,8 +69,11 @@ div#volpack, select#range {
 /* combo for current title */
 #current, #playpack {
 	padding-top: 5px;
-	padding-bottom: 5px;
 	border:black;
+}
+
+#current {
+	padding-bottom: 5px;
 }
 
 #current.play {
@@ -76,18 +84,24 @@ div#volpack, select#range {
 	background-color: rgba(150,100,100,.5);
 }
 
-div#playpack, div#maindnpfav {
+#current.hide {
+	background-color: transparent;
+	display: block;
+}
+
+div#playpack {
 	display: flex;
 	width: 100%
 }
 
-div#ctrl {
-	margin-top: 5px;
+#playpack input {
+	background-color: transparent;
+	background-image: radial-gradient( circle at 50% 50%, darkblue, black 100%);
+
 }
 
-input#dnp, input#fav {
-	flex: 1;
-	padding: 5px;
+div#ctrl {
+	margin-top: 5px;
 }
 
 input#dnp {
@@ -98,7 +112,7 @@ input#fav {
 	background-color: rgba(100,200,100,.25);
 }
 
-div#playtime, div#remtime {
+div#playtime, div#remtime, input#dnp, input#fav {
 	padding-left: 5px;
 	padding-right: 5px;
 }
@@ -150,6 +164,10 @@ input.inactive {
 	display: inline;
 }
 
+input#uiextra, input#dnp, input#fav {
+	float:right;
+}
+
 /* hidden tab */
 input.hide {
 	background: none;
@@ -159,6 +177,7 @@ input.hide {
 /* view controls */
 div.active {
 	display: block;
+	padding-top: 25px;
 }
 
 div.inactive, div.hide {
