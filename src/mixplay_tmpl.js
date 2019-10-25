@@ -712,17 +712,12 @@ function playerUpdate (data) {
   favplay = data.mpfavplay
   if (favplay) {
     document.getElementById('setfavplay').value = 'Disable Favplay'
-    document.getElementById('range').selectedIndex = 0
   } else {
     document.getElementById('setfavplay').value = 'Enable Favplay'
   }
   isstream = (data.mpmode === 1) /* PM_STREAM */
 
-  enableElement('range', !favplay)
   enableElement('setfavplay', !isstream)
-  if (!smallUI) {
-    enableElement('ctrl', !isstream)
-  }
   enableElement('playstr', isstream)
   enableElement('playpack', !isstream)
   enableElement('cextra1', !isstream)
@@ -750,21 +745,16 @@ function playerUpdate (data) {
     active = data.active
     setActive(active)
   }
-  if (data.status === 0) {
-    if (smallUI) {
-      document.getElementById('current').className = 'hide'
-    } else {
-      document.getElementById('current').className = 'play'
-    }
-  } else {
-    document.getElementById('current').className = 'pause'
-  }
 
-  if (data.volume === -2) {
-    document.getElementById('speaker').innerHTML = '&#x1F507;'
+  enableElement('current', !data.status)
+
+  if (data.volume > 0) {
+    document.getElementById('volumebar').style.width = data.volume + '%'
+    document.getElementById('volumebar').className = ''
+  } else if (data.volume === -1) {
+    document.getElementById('volume').innerHTML = '&nbsp;'
   } else {
-    document.getElementById('speaker').innerHTML = '&#x1F50A;'
-    document.getElementById('vol').value = data.volume
+    document.getElementById('volumebar').className = 'mute'
   }
 
   if (data.msg !== '') {
@@ -906,27 +896,16 @@ function getConfig () {
 }
 
 /*
- * send command with range info(FAV/DNP)
- */
-function sendRange (cmd, term = '') {
-  var e = document.getElementById('range')
-  if (term !== '') {
-    e = document.getElementById('srange')
-  }
-  var range = e.options[e.selectedIndex].value
-  if (isstream) return
-  cmd |= range
-  sendCMD(cmd, term)
-}
-
-/*
  * send command with argument set in the 'text' element(Search)
  */
 function sendArg (cmd) {
   if (isstream) return
   var term = document.getElementById('text').value
   if (term.length > 1) {
-    sendRange(cmd, term, 1)
+    var e = document.getElementById('srange')
+    var range = e.options[e.selectedIndex].value
+    cmd |= range
+    sendCMD(cmd, term)
   } else {
     window.alert('Need at least two letters!')
   }
@@ -995,9 +974,7 @@ function isEnter (event, cmd) {
 function setsmallUI () {
   enableElement('pscroll', !smallUI)
   enableElement('nscroll', !smallUI)
-  enableElement('ctrl', !smallUI)
   enableElement('volpack', !smallUI)
-  enableElement('current', !smallUI)
 }
 
 function switchUI () {

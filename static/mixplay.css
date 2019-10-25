@@ -21,19 +21,8 @@ body.disconnect {
 	color: #f88;
 }
 
-div#viewtabs {
-	top: 0;
-	position: fixed;
-	width: 100%;
-}
-
-/* hide until the slider looks better */
-div#volpack, select#range {
-	display: none;
-}
-
-#speaker {
-	display: inline;
+div#volume {
+	margin-top: 9px;
 }
 
 #extra0 {
@@ -44,6 +33,11 @@ div#volpack, select#range {
 #pscroll, #nscroll {
 	font-size : 24px;
 	height: 38px;
+	background-color: rgba(100,100,100,.25);
+}
+
+div#volumebar.mute {
+	background-color: rgba(200,100,000,.5);
 }
 
 /* artist */
@@ -76,32 +70,19 @@ div#volpack, select#range {
 	padding-bottom: 5px;
 }
 
-#current.play {
-	background-color: rgba(100,100,100,.5);
-}
-
-#current.pause {
-	background-color: rgba(150,100,100,.5);
-}
-
 #current.hide {
-	background-color: transparent;
+	background-image: radial-gradient(darkred, transparent);
 	display: block;
 }
 
-div#playpack {
+div#playpack, div#viewtabs {
 	display: flex;
 	width: 100%
 }
 
 #playpack input {
 	background-color: transparent;
-	background-image: radial-gradient( circle at 50% 50%, darkblue, black 100%);
-
-}
-
-div#ctrl {
-	margin-top: 5px;
+	background-image: radial-gradient(darkblue, black 100%);
 }
 
 input#dnp {
@@ -164,10 +145,6 @@ input.inactive {
 	display: inline;
 }
 
-input#uiextra, input#dnp, input#fav {
-	float:right;
-}
-
 /* hidden tab */
 input.hide {
 	background: none;
@@ -177,7 +154,6 @@ input.hide {
 /* view controls */
 div.active {
 	display: block;
-	padding-top: 25px;
 }
 
 div.inactive, div.hide {

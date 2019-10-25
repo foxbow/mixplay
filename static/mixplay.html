@@ -15,11 +15,13 @@
       <input id='cextra1' class='inactive' type='button' onclick='switchView(1)' value='&#x1F50E;' >
       <input id='cextra2' class='inactive' type='button' onclick='switchView(2)' value='&#x2692;' >
       <input id='cextra3' class='inactive' type='button' onclick='switchView(3)' value='&#x2630;' >
+      <input id='dvol' class='inactive' type='button' onclick='sendCMD(0x0d)' value='&#x1f509;' >
+      <div id='volume' class='progress' onclick='sendCMD(0x1d)'><div class='mute' id='volumebar'></div></div>
+      <input id='ivol' class='inactive' type='button' onclick='sendCMD(0x0d)' value='&#x1f50a;' >
+      <input id='fav' class='inactive' type='button' onclick='sendCMD(0x0809)' value='&#x2665;' >
+      <input id='dnp' class='inactive' type='button' onclick='sendCMD(0x080a)' value='&#x2620;' >
       <input id='cextra4' class='hide'     type='button' onclick='switchView(4)' value='&#x26A0;' >
-
       <input id='uiextra' class='inactive' type='button' onclick='switchUI()'    value='&#x26F6;' >
-      <input id='dnp' class='inactive' type='button' onclick='sendRange(0x0a)' value='&#x2620;' >
-      <input id='fav' class='inactive' type='button' onclick='sendRange(0x09)' value='&#x2665;' >
     </div>
 
     <!-- main -->
@@ -31,6 +33,7 @@
         <div id='lscroll' class='scroll'><p id='album'>album</p></div>
         <div id='genre' >genre</div>
       </div>
+      <div id='nscroll' class='scroll' onclick='sendCMD(0x03)'><p id='next'>next</p></div>
       <div id='playpack'>
         <input id='goprev' type='button' onclick='sendCMD(0x02)' value='&#x23ee;' >
         <input id='play'   type='button' onclick='sendCMD(0x00)' value='&#x23f8;' >
@@ -39,25 +42,8 @@
         <div class='progress' onclick='sendCMD(0x05)'><div id='progressbar'></div></div>
         <div id='remtime'>00:00</div>
       </div>
-      <div id='nscroll' class='scroll' onclick='sendCMD(0x03)'><p id='next'>next</p></div>
       <div id='playstr'>
         <div id='splaytime'>00:00</div>
-      </div>
-      <div id='ctrl'>
-       <select label='Range' id='range'>
-         <option value='0x0100'>Title</option>
-         <option value='0x0200'>Artist</option>
-         <option value='0x0400'>Album</option>
-         <option value='0x1000'>Genre</option>
-         <option value='0x0800' selected>Display</option>
-       </select>
-      </div>
-      <div id='volpack'>
-        <div id='speaker' onclick='sendCMD(0x1d)'>
-          &#x1F50A;
-        </div>
-        <input id='vol' type='range' min='0' max='100' step='1' value='0'
-            oninput='sendCMD( 0x15, this.value )' onwheel='return false'>
       </div>
     </div>
     <!-- Search view -->
