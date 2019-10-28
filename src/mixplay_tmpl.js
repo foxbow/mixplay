@@ -83,6 +83,18 @@ function scrollToggle () {
  * and centers shorter texts
  */
 function setScrolls () {
+  /* set magnification max aspect ratio is 8/5 */
+  var w
+  if (smallUI) {
+    w = ((window.innerWidth * 5) / 8)
+  } else {
+    w = ((window.innerWidth * 4) / 5)
+  }
+  var size = Math.min(window.innerHeight, w)
+
+  var fact = (size * 100) / (smallUI ? 182 : 277)
+  document.body.style.fontSize = fact + '%'
+
   /* only do this if the main view is visible! */
   if (document.getElementById('extra0').style.display === 'none') {
     return
@@ -467,6 +479,13 @@ function clickable (text, cmd, arg, ident) {
   return reply
 }
 
+function togglePopup (ident) {
+  var popup = document.getElementById('popup' + ident)
+  if (popup !== null) {
+    popup.classList.toggle('show')
+  }
+}
+
 /* returns a <div> with text that when clicked presents the two choices */
 function popselect (choice1, cmd1, choice2, cmd2, arg, text) {
   var reply = document.createElement('p')
@@ -474,12 +493,7 @@ function popselect (choice1, cmd1, choice2, cmd2, arg, text) {
   reply.className = 'popselect'
   const ident = cmd1 + arg
   reply.id = 'line' + ident
-  reply.onclick = function () {
-    var popup = document.getElementById('popup' + ident)
-    if (popup !== null) {
-      popup.classList.toggle('show')
-    }
-  }
+  reply.onclick = function () { togglePopup(ident) }
   var popspan = document.createElement('span')
   popspan.className = 'popup'
   if (document.getElementById('popup' + ident)) {
@@ -974,7 +988,7 @@ function isEnter (event, cmd) {
 function setsmallUI () {
   enableElement('pscroll', !smallUI)
   enableElement('nscroll', !smallUI)
-  enableElement('volpack', !smallUI)
+  enableElement('genre', !smallUI)
 }
 
 function switchUI () {
@@ -987,8 +1001,44 @@ function switchUI () {
     document.cookie = 'MPsmallUI=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
   }
   setsmallUI()
+  setScrolls()
 }
 
+function handleKey (event) {
+  /* only do this if the main view is visible! */
+  if (document.getElementById('extra0').style.display === 'none') {
+    return
+  }
+
+  switch (event.key) {
+    case ' ':
+      sendCMD(0x0)
+      break
+    case 'p':
+      sendCMD(0x02)
+      break
+    case 'n':
+      sendCMD(0x03)
+      break
+    case 'f':
+      sendCMD(0x0809)
+      break
+    case 'D':
+      sendCMD(0x080a)
+      break
+    case '-':
+      sendCMD(0x1d)
+      break
+    case '.':
+      sendCMD(0x0d)
+      break
+    case ',':
+      sendCMD(0x0e)
+      break
+    default:
+      console.log('Pressed: ' + event.key)
+  }
+}
 /*
  * start the UI update thread loops
  */

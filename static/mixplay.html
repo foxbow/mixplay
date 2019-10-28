@@ -9,7 +9,7 @@
     <link rel="icon" href="/mixplay.svg" type="image/svg-xml">
     <title>Mixplay</title>
   </head>
-  <body onload='initScrolls();setsmallUI()' onresize='setScrolls()'>
+  <body onload='initScrolls();setsmallUI()' onresize='setScrolls()' onkeypress='handleKey(event)'>
     <div id='viewtabs'>
       <input id='cextra0' class='active'   type='button' onclick='switchView(0)' value='&#x25B6;' >
       <input id='cextra1' class='inactive' type='button' onclick='switchView(1)' value='&#x1F50E;' >
@@ -26,20 +26,38 @@
 
     <!-- main -->
     <div id='extra0' class='active' onselectstart='return false' onwheel='volWheel(event)'>
-      <div id='pscroll' class='scroll' onclick='sendCMD(0x02)'><p id='prev'>prev</p></div>
-      <div id='current' onclick='sendCMD(0x00)'>
-        <div id='ascroll' class='scroll'><p id='artist'>artist</p></div>
-        <div id='tscroll' class='scroll'><p id='title'>title</p></div>
-        <div id='lscroll' class='scroll'><p id='album'>album</p></div>
+      <div id='pscroll' class='scroll' onclick='sendCMD(0x02)'>
+        <p id='prev'>prev</p>
+      </div>
+      <div id='current'>
+        <div id='ascroll' class='scroll' onclick='togglePopup("DFartist")'>
+          <p id='artist'>artist</p>
+          <span class='popup' id='popupDFartist'>
+            <em class='clickline' data-arg='0' data-cmd='0x020a'>DNP&nbsp;/</em>
+            <em class='clickline' data-arg='0' data-cmd='0x0209'>&nbsp;FAV</em>
+          </span>
+        </div>
+        <div id='tscroll' class='scroll' onclick='sendCMD(0x00)'>
+          <p id='title'>title</p>
+        </div>
+        <div id='lscroll' class='scroll' onclick='togglePopup("DFtitle")'>
+          <p id='album'>album</p>
+          <span class='popup' id='popupDFtitle'>
+            <em class='clickline' data-arg='0' data-cmd='0x040a'>DNP&nbsp;/</em>
+            <em class='clickline' data-arg='0' data-cmd='0x0409'>&nbsp;FAV</em>
+          </span>
+        </div>
         <div id='genre' >genre</div>
       </div>
-      <div id='nscroll' class='scroll' onclick='sendCMD(0x03)'><p id='next'>next</p></div>
+      <div id='nscroll' class='scroll' onclick='sendCMD(0x03)'>
+        <p id='next'>next</p>
+      </div>
       <div id='playpack'>
-        <input id='goprev' type='button' onclick='sendCMD(0x02)' value='&#x23ee;' >
-        <input id='play'   type='button' onclick='sendCMD(0x00)' value='&#x23f8;' >
-        <input id='gonext' type='button' onclick='sendCMD(0x03)' value='&#x23ed;' >
+        <input id='goprev' class='inactive' type='button' onclick='sendCMD(0x02)' value='&#x23ee;' >
+        <input id='play'   class='inactive' type='button' onclick='sendCMD(0x00)' value='&#x23f8;' >
+        <input id='gonext' class='inactive' type='button' onclick='sendCMD(0x03)' value='&#x23ed;' >
         <div id='playtime'>00:00</div>
-        <div class='progress' onclick='sendCMD(0x05)'><div id='progressbar'></div></div>
+        <div id='progress' class='progress' onclick='sendCMD(0x05)'><div id='progressbar'></div></div>
         <div id='remtime'>00:00</div>
       </div>
       <div id='playstr'>
