@@ -15,12 +15,12 @@
       <input id='cextra1' class='inactive' type='button' onclick='switchView(1)' value='&#x1F50E;' >
       <input id='cextra2' class='inactive' type='button' onclick='switchView(2)' value='&#x2692;' >
       <input id='cextra3' class='inactive' type='button' onclick='switchView(3)' value='&#x2630;' >
+      <input id='cextra4' class='hide'     type='button' onclick='switchView(4)' value='&#x26A0;' >
       <input id='dvol' class='inactive' type='button' onclick='sendCMD(0x0d)' value='&#x1f509;' >
       <div id='volume' class='progress' onclick='sendCMD(0x1d)'><div class='mute' id='volumebar'></div></div>
       <input id='ivol' class='inactive' type='button' onclick='sendCMD(0x0d)' value='&#x1f50a;' >
       <input id='fav' class='inactive' type='button' onclick='sendCMD(0x0809)' value='&#x2665;' >
       <input id='dnp' class='inactive' type='button' onclick='sendCMD(0x080a)' value='&#x2620;' >
-      <input id='cextra4' class='hide'     type='button' onclick='switchView(4)' value='&#x26A0;' >
       <input id='uiextra' class='inactive' type='button' onclick='switchUI()'    value='&#x26F6;' >
     </div>
 
@@ -33,6 +33,7 @@
         <div id='ascroll' class='scroll' onclick='togglePopup("DFartist")'>
           <p id='artist'>artist</p>
           <span class='popup' id='popupDFartist'>
+            Mark artist
             <em class='clickline' data-arg='0' data-cmd='0x020a'>DNP&nbsp;/</em>
             <em class='clickline' data-arg='0' data-cmd='0x0209'>&nbsp;FAV</em>
           </span>
@@ -40,9 +41,10 @@
         <div id='tscroll' class='scroll' onclick='sendCMD(0x00)'>
           <p id='title'>title</p>
         </div>
-        <div id='lscroll' class='scroll' onclick='togglePopup("DFtitle")'>
+        <div id='lscroll' class='scroll' onclick='togglePopup("DFalbum")'>
           <p id='album'>album</p>
-          <span class='popup' id='popupDFtitle'>
+          <span class='popup' id='popupDFalbum'>
+            Mark album
             <em class='clickline' data-arg='0' data-cmd='0x040a'>DNP&nbsp;/</em>
             <em class='clickline' data-arg='0' data-cmd='0x0409'>&nbsp;FAV</em>
           </span>
@@ -89,9 +91,7 @@
       <p><em>Player</em><br>
         <input id='setfavplay' type='button' onclick='sendCMD(0x1e)' value='Enable Favplay'>
         <input id='version' type='button' onclick='showInfo()' value='Player Info' >
-        <input id='stop' type='button' onclick='killServer()' value='STOP' ><br>
         <input id='download' type='button' onclick='download(0)' value='Download Title' >
-        <input id='wipelog' type='button' onclick='wipeLog()' value='Clear Messages' >
       </p>
       <p><em>Profiles</em><br>
       <select label='Profile' id='profiles'>
@@ -118,7 +118,10 @@
     </div>
     <!-- Message view -->
     <div id='extra4' class='inactive' >
-      <em>No messages.</em><br>
+      <input id='wipelog' type='button' onclick='wipeLog()' value='Clear Messages' >
+      <div id='messages'>
+        <em>No messages.</em><br>
+      </div>
     </div>
   </body>
 </html>

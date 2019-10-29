@@ -83,17 +83,20 @@ function scrollToggle () {
  * and centers shorter texts
  */
 function setScrolls () {
-  /* set magnification max aspect ratio is 8/5 */
   var w
+  var dh
   if (smallUI) {
     w = ((window.innerWidth * 5) / 8)
+    dh = 230
   } else {
     w = ((window.innerWidth * 4) / 5)
+    dh = 327
   }
   var size = Math.min(window.innerHeight, w)
 
-  var fact = (size * 100) / (smallUI ? 182 : 277)
-  document.body.style.fontSize = fact + '%'
+  var fact = (size * 20) / dh
+
+  document.body.style.fontSize = fact + 'px'
 
   /* only do this if the main view is visible! */
   if (document.getElementById('extra0').style.display === 'none') {
@@ -238,8 +241,8 @@ function killServer () {
 function addText (text) {
   var line = ''
   var numlines = 15
-  var e = document.getElementById('extra4')
-  if (e.style.display === 'none') {
+  var tab = document.getElementById('extra4')
+  if (tab.style.display === 'none') {
     enableElement('cextra4', 1)
     document.getElementById('cextra4').value = '\u26A0'
   }
@@ -257,18 +260,20 @@ function addText (text) {
   for (i = 0; i < numlines; i++) {
     line += msglines[i] + '<br>\n'
   }
+  var e = document.getElementById('messages')
   e.innerHTML = line
 }
 
 function wipeLog () {
   var i
-  var e = document.getElementById('extra4')
-  enableElement('cextra4', 0)
+  var e = document.getElementById('messages')
   for (i = 0; i < 15; i++) {
     msglines[i] = ''
   }
   msgpos = 0
   e.innerHTML = ''
+  switchView(0)
+  enableElement('cextra4', 0)
 }
 
 /*
