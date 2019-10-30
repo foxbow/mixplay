@@ -214,11 +214,6 @@ function switchTab (ref) {
  * TODO: use switchTab() and call setScrolls() on changeVisibility hook
  */
 function switchView (element) {
-  var e
-  if (element === 4) {
-    e = document.getElementById('cextra4')
-    e.value = '\u2713'
-  }
   switchTabByRef('extra', element)
   if (element === 0) {
     setScrolls()
@@ -241,11 +236,7 @@ function killServer () {
 function addText (text) {
   var line = ''
   var numlines = 15
-  var tab = document.getElementById('extra4')
-  if (tab.style.display === 'none') {
-    enableElement('cextra4', 1)
-    document.getElementById('cextra4').value = '\u26A0'
-  }
+  var e = document.getElementById('messages')
 
   if (msgpos < numlines) {
     msglines[msgpos] = text
@@ -260,7 +251,6 @@ function addText (text) {
   for (i = 0; i < numlines; i++) {
     line += msglines[i] + '<br>\n'
   }
-  var e = document.getElementById('messages')
   e.innerHTML = line
 }
 
@@ -271,9 +261,7 @@ function wipeLog () {
     msglines[i] = ''
   }
   msgpos = 0
-  e.innerHTML = ''
-  switchView(0)
-  enableElement('cextra4', 0)
+  e.innerHTML = '<em>No messages.</em>'
 }
 
 /*
@@ -291,11 +279,6 @@ function sendCMD (cmd, arg = '') {
 
   /* these commands should pull main to front */
   if (code === '001e') switchView(0)
-
-  /* These command should pull the messages to front */
-  if ((code === '0008') ||
-     (code === '0007') ||
-     (code === '0012')) switchView(4)
 
   /* clear title results after add all */
   if ((arg === '0') &&
@@ -508,6 +491,9 @@ function popselect (choice1, cmd1, choice2, cmd2, arg, text) {
     var select = clickable(choice1 + '&nbsp;/', cmd1, arg, ident)
     popspan.appendChild(select)
     select = clickable('&nbsp;' + choice2, cmd2, arg, ident)
+    popspan.appendChild(select)
+    select = document.createElement('b')
+    select.innerText = ' [x]'
     popspan.appendChild(select)
     reply.appendChild(popspan)
   }
@@ -1009,6 +995,15 @@ function switchUI () {
   setScrolls()
 }
 
+function blockSpace (event) {
+  if (document.getElementById('extra0').style.display === 'none') {
+    return
+  }
+  if (event.key === ' ') {
+    event.stopPropagation()
+  }
+}
+
 function handleKey (event) {
   /* only do this if the main view is visible! */
   if (document.getElementById('extra0').style.display === 'none') {
@@ -1039,6 +1034,18 @@ function handleKey (event) {
       break
     case ',':
       sendCMD(0x0e)
+      break
+    case '1':
+      switchView(0)
+      break
+    case '2':
+      switchView(1)
+      break
+    case '3':
+      switchView(2)
+      break
+    case '4':
+      switchView(3)
       break
     default:
       console.log('Pressed: ' + event.key)

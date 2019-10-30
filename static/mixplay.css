@@ -30,11 +30,51 @@ div#volume {
 	text-align: center;
 }
 
+
+input[type="button"]:focus {
+	outline:0;
+}
+
+input[type="button"]:hover {
+	cursor: pointer;
+}
+
+#playtime:hover, #remtime:hover, #splaytime:hover, #genre:hover {
+	cursor: default;
+}
+
+#uiextra:hover {
+	cursor: row-resize;
+}
+#tscroll:hover {
+	cursor: pointer;
+}
+
+.popup:hover {
+
+}
+
+#volume:hover, .clickline {
+	cursor: pointer;
+}
+
+#progress:hover {
+	cursor: w-resize;
+}
+
 /* previous title, next title */
 #pscroll, #nscroll {
 	font-size : 1.2em;
 	height: 1.5em;
 	background-color: rgba(100,100,100,.3);
+}
+
+#pscroll:hover {
+	cursor: n-resize;
+}
+
+#nscroll:hover {
+	cursor: s-resize;
 }
 
 div#volumebar.mute {
@@ -96,6 +136,10 @@ div#progress {
 
 input#dnp {
 	background-color: rgba(200,100,100,.25);
+}
+
+input#dnp:hover, input#fav:hover, #ascroll:hover, #lscroll:hover {
+	cursor: copy;
 }
 
 input#fav {
@@ -191,7 +235,7 @@ div.inactive, div.hide {
 .popselect {
 	position: relative;
 	display: block;
-	cursor: pointer;
+	cursor: copy;
 	margin-top: 0.2em;
 	margin-bottom: 0.2em;
 	border: none;

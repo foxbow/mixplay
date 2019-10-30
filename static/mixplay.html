@@ -9,13 +9,12 @@
     <link rel="icon" href="/mixplay.svg" type="image/svg-xml">
     <title>Mixplay</title>
   </head>
-  <body onload='initScrolls();setsmallUI()' onresize='setScrolls()' onkeypress='handleKey(event)'>
+  <body onload='initScrolls();setsmallUI()' onresize='setScrolls()' onkeypress='handleKey(event)' onkeyup='blockSpace(event)'>
     <div id='viewtabs'>
       <input id='cextra0' class='active'   type='button' onclick='switchView(0)' value='&#x25B6;' >
       <input id='cextra1' class='inactive' type='button' onclick='switchView(1)' value='&#x1F50E;' >
       <input id='cextra2' class='inactive' type='button' onclick='switchView(2)' value='&#x2692;' >
       <input id='cextra3' class='inactive' type='button' onclick='switchView(3)' value='&#x2630;' >
-      <input id='cextra4' class='hide'     type='button' onclick='switchView(4)' value='&#x26A0;' >
       <input id='dvol' class='inactive' type='button' onclick='sendCMD(0x0d)' value='&#x1f509;' >
       <div id='volume' class='progress' onclick='sendCMD(0x1d)'><div class='mute' id='volumebar'></div></div>
       <input id='ivol' class='inactive' type='button' onclick='sendCMD(0x0d)' value='&#x1f50a;' >
@@ -33,9 +32,9 @@
         <div id='ascroll' class='scroll' onclick='togglePopup("DFartist")'>
           <p id='artist'>artist</p>
           <span class='popup' id='popupDFartist'>
-            Mark artist
-            <em class='clickline' data-arg='0' data-cmd='0x020a'>DNP&nbsp;/</em>
-            <em class='clickline' data-arg='0' data-cmd='0x0209'>&nbsp;FAV</em>
+            <em class='clickline' onclick='sendCMD(0x020a,0)'>DNP&nbsp;/</em>
+            <em class='clickline' onclick='sendCMD(0x0209,0)'>&nbsp;FAV</em>
+            &nbsp;Artist
           </span>
         </div>
         <div id='tscroll' class='scroll' onclick='sendCMD(0x00)'>
@@ -44,12 +43,19 @@
         <div id='lscroll' class='scroll' onclick='togglePopup("DFalbum")'>
           <p id='album'>album</p>
           <span class='popup' id='popupDFalbum'>
-            Mark album
-            <em class='clickline' data-arg='0' data-cmd='0x040a'>DNP&nbsp;/</em>
-            <em class='clickline' data-arg='0' data-cmd='0x0409'>&nbsp;FAV</em>
+            <em class='clickline' onclick='sendCMD(0x040a,0)'>DNP&nbsp;/</em>
+            <em class='clickline' onclick='sendCMD(0x0409,0)'>&nbsp;FAV</em>
+            &nbsp;Album
           </span>
         </div>
-        <div id='genre' >genre</div>
+        <div id='genre' onclick='togglePopup("DFgenre")'>
+          genre
+          <span class='popup' id='popupDFgenre'>
+            <em class='clickline' onclick='sendCMD(0x100a,0)'>DNP&nbsp;/</em>
+            <em class='clickline' onclick='sendCMD(0x1009,0)'>&nbsp;FAV</em>
+            &nbsp;Genre
+          </span>
+        </div>
       </div>
       <div id='nscroll' class='scroll' onclick='sendCMD(0x03)'>
         <p id='next'>next</p>
@@ -106,6 +112,11 @@
         <input id='rescan' type='button' onclick='sendCMD(0x08)' value='ReScan' >
         <input id='dbinfo' type='button' onclick='sendCMD(0x12)' value='DBInfo' >
       </p>
+      <p><em><input id='wipelog' type='button' onclick='wipeLog()' value='Clear'> Messages</em><br>
+        <div id='messages'>
+          <em>No messages.</em>
+        </div>        
+      </p>
     </div>
     <!-- Playlist view -->
     <div id='extra3' class='inactive' >
@@ -115,13 +126,6 @@
       <div id='dnpfav0' class='active'><em>No Playlist</em></div>
       <div id='dnpfav1' class='inactive'><em>No DNPs</em></div>
       <div id='dnpfav2' class='inactive'><em>No Favourites</em></div>
-    </div>
-    <!-- Message view -->
-    <div id='extra4' class='inactive' >
-      <input id='wipelog' type='button' onclick='wipeLog()' value='Clear Messages' >
-      <div id='messages'>
-        <em>No messages.</em><br>
-      </div>
     </div>
   </body>
 </html>
