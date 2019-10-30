@@ -188,8 +188,10 @@ function switchTabByRef (element, num) {
       if (i === num) {
         b.className = 'active'
         e.className = 'active'
-      } else if (b.className !== 'hide') {
-        b.className = 'inactive'
+      } else {
+        if (b.className !== 'alert') {
+          b.className = 'inactive'
+        }
         e.className = 'inactive'
       }
     } else {
@@ -236,6 +238,11 @@ function killServer () {
 function addText (text) {
   var line = ''
   var numlines = 15
+  var b = document.getElementById('cextra2')
+  if (b.className === 'inactive') {
+    b.className = 'alert'
+  }
+
   var e = document.getElementById('messages')
 
   if (msgpos < numlines) {

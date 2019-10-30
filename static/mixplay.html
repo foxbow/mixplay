@@ -32,8 +32,8 @@
         <div id='ascroll' class='scroll' onclick='togglePopup("DFartist")'>
           <p id='artist'>artist</p>
           <span class='popup' id='popupDFartist'>
-            <em class='clickline' onclick='sendCMD(0x020a,0)'>DNP&nbsp;/</em>
-            <em class='clickline' onclick='sendCMD(0x0209,0)'>&nbsp;FAV</em>
+            <em class='clickline' onclick='sendCMD(0x020a)'>DNP&nbsp;/</em>
+            <em class='clickline' onclick='sendCMD(0x0209)'>&nbsp;FAV</em>
             &nbsp;Artist
           </span>
         </div>
@@ -43,16 +43,16 @@
         <div id='lscroll' class='scroll' onclick='togglePopup("DFalbum")'>
           <p id='album'>album</p>
           <span class='popup' id='popupDFalbum'>
-            <em class='clickline' onclick='sendCMD(0x040a,0)'>DNP&nbsp;/</em>
-            <em class='clickline' onclick='sendCMD(0x0409,0)'>&nbsp;FAV</em>
+            <em class='clickline' onclick='sendCMD(0x040a)'>DNP&nbsp;/</em>
+            <em class='clickline' onclick='sendCMD(0x0409)'>&nbsp;FAV</em>
             &nbsp;Album
           </span>
         </div>
         <div id='genre' onclick='togglePopup("DFgenre")'>
           genre
           <span class='popup' id='popupDFgenre'>
-            <em class='clickline' onclick='sendCMD(0x100a,0)'>DNP&nbsp;/</em>
-            <em class='clickline' onclick='sendCMD(0x1009,0)'>&nbsp;FAV</em>
+            <em class='clickline' onclick='sendCMD(0x100a)'>DNP&nbsp;/</em>
+            <em class='clickline' onclick='sendCMD(0x1009)'>&nbsp;FAV</em>
             &nbsp;Genre
           </span>
         </div>
@@ -115,7 +115,7 @@
       <p><em><input id='wipelog' type='button' onclick='wipeLog()' value='Clear'> Messages</em><br>
         <div id='messages'>
           <em>No messages.</em>
-        </div>        
+        </div>
       </p>
     </div>
     <!-- Playlist view -->

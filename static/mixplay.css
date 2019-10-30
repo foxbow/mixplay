@@ -205,6 +205,11 @@ input.hide {
 	display: none;
 }
 
+input.alert {
+	background: none;
+	color: #e88;
+}
+
 /* view controls */
 div.active {
 	display: block;
