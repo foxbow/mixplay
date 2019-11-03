@@ -199,8 +199,8 @@ input.inactive {
 	display: inline;
 }
 
-/* hidden tab */
-input.hide {
+/* hidden element */
+.hide {
 	background: none;
 	display: none;
 }

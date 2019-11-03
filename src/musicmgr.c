@@ -657,6 +657,10 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 		runner=runner->next;
 	} while ( runner != root );
 
+
+	if( cnt > 0 ) {
+		dbWrite();
+	}
 	addMessage( 1, "Marked %i favourites", cnt );
 
 	return cnt;

@@ -396,27 +396,10 @@ function cmdline (cmd, arg, text) {
   return reply
 }
 
-/*
- * creates a string containing a line that disappers
- * on click and calls cmd with arg
- */
-function clickline (cmd, arg, text) {
-  var reply = document.createElement('p')
-  reply.className = 'clickline'
-  reply.setAttribute('data-arg', arg)
-  reply.setAttribute('data-cmd', cmd)
-  reply.onclick = function () {
-    this.className = 'hide'
-    sendCMD(this.getAttribute('data-cmd'), this.getAttribute('data-arg'))
-  }
-  reply.innerHTML = text
-  return reply
-}
-
 /**
  * wrapper to call clickline with a FAV/DNP line
  */
-function getPattern (cmd, line) {
+function getPattern (choice, cmd, line) {
   var text = ''
   switch (line.charAt(0)) {
     case 't':
@@ -451,7 +434,7 @@ function getPattern (cmd, line) {
       break
   }
   text += line.substring(2)
-  return clickline(cmd, line, text)
+  return clickline(choice, cmd, line, text)
 }
 
 /* creates a selection in a popselect popup */
@@ -463,9 +446,12 @@ function clickable (text, cmd, arg, ident) {
   reply.onclick = function () {
     const popup = document.getElementById('popup' + ident)
     if (popup) {
-      sendCMD(this.getAttribute('data-cmd'), this.getAttribute('data-arg'))
-      const line = document.getElementById('line' + ident)
-      line.className = 'hide'
+      const dcmd = this.getAttribute('data-cmd')
+      if (dcmd !== -1) {
+        sendCMD(dcmd, this.getAttribute('data-arg'))
+        const line = document.getElementById('line' + ident)
+        line.className = 'hide'
+      }
     } else {
       console.log('popup' + ident + 'does no longer exist')
     }
@@ -495,9 +481,9 @@ function popselect (choice1, cmd1, choice2, cmd2, arg, text) {
     console.log('popup' + ident + ' already exists!')
   } else {
     popspan.id = 'popup' + ident
-    var select = clickable(choice1 + '&nbsp;/', cmd1, arg, ident)
+    var select = clickable(choice1 + '&nbsp;&mdash;&nbsp;', cmd1, arg, ident)
     popspan.appendChild(select)
-    select = clickable('&nbsp;' + choice2, cmd2, arg, ident)
+    select = clickable(choice2, cmd2, arg, ident)
     popspan.appendChild(select)
     select = document.createElement('b')
     select.innerText = ' [x]'
@@ -505,6 +491,10 @@ function popselect (choice1, cmd1, choice2, cmd2, arg, text) {
     reply.appendChild(popspan)
   }
   return reply
+}
+
+function clickline (choice, cmd, arg, text) {
+  return popselect(choice, cmd, '', -1, arg, text)
 }
 
 /*
@@ -635,7 +625,7 @@ function searchUpdate (data) {
     }
     for (i = 0; i < data.titles.length; i++) {
       if (data.mpedit) {
-        items[i + 1] = clickline(0x0809, data.titles[i].key,
+        items[i + 1] = clickline('Fav', 0x0809, data.titles[i].key,
           '&#x2665; ' + data.titles[i].artist + ' - ' + data.titles[i].title)
       } else {
         items[i + 1] = popselect('Insert', 0x080c,
@@ -659,7 +649,7 @@ function searchUpdate (data) {
           'Favourite', 0x0409, data.albums[i],
           data.albart[i] + ' - ' + data.albums[i])
       } else {
-        items[i] = clickline(0x0413, data.albums[i],
+        items[i] = clickline('search', 0x0413, data.albums[i],
           '&#x1F50E; ' + data.albart[i] + ' - ' + data.albums[i])
       }
     }
@@ -678,7 +668,7 @@ function searchUpdate (data) {
           'Favourite', 0x0209,
           data.artists[i], data.artists[i])
       } else {
-        items[i] = clickline(0x0213, data.artists[i], '&#x1F50E; ' + data.artists[i])
+        items[i] = clickline('Search', 0x0213, data.artists[i], '&#x1F50E; ' + data.artists[i])
       }
     }
   } else {
@@ -697,7 +687,7 @@ function dnpfavUpdate (data) {
     items[0].innerHTML = 'No DNPs yet'
   } else {
     for (i = 0; i < data.dnplist.length; i++) {
-      items[i] = getPattern(0x001a, data.dnplist[i])
+      items[i] = getPattern('Remove', 0x001a, data.dnplist[i])
     }
   }
   tabify(e, 'dlist', items)
@@ -709,7 +699,7 @@ function dnpfavUpdate (data) {
     items[0].innerHTML = 'No favourites yet'
   } else {
     for (i = 0; i < data.favlist.length; i++) {
-      items[i] = getPattern(0x001b, data.favlist[i])
+      items[i] = getPattern('Remove', 0x001b, data.favlist[i])
     }
   }
   tabify(e, 'flist', items)
@@ -1013,7 +1003,7 @@ function blockSpace (event) {
 
 function handleKey (event) {
   /* only do this if the main view is visible! */
-  if (document.getElementById('extra0').style.display === 'none') {
+  if (document.getElementById('extra0').className !== 'active') {
     return
   }
 
@@ -1041,18 +1031,6 @@ function handleKey (event) {
       break
     case ',':
       sendCMD(0x0e)
-      break
-    case '1':
-      switchView(0)
-      break
-    case '2':
-      switchView(1)
-      break
-    case '3':
-      switchView(2)
-      break
-    case '4':
-      switchView(3)
       break
     default:
       console.log('Pressed: ' + event.key)
