@@ -633,6 +633,7 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 							 titles but not repeated until playcount matches */
 						if( ( minpc > 0 ) && ( runner->playcount < minpc ) ) {
 							runner->playcount=minpc+1;
+							dbMarkDirty();
 						}
 					}
 					else if( !(runner->flags & MP_DNP ) ) {
@@ -642,6 +643,7 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 							 until it fits in */
 						if(runner->playcount < (2*minpc) ) {
 							runner->playcount=2*minpc;
+							dbMarkDirty();
 						}
 						runner->flags|=MP_FAV;
 					}
@@ -657,10 +659,6 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 		runner=runner->next;
 	} while ( runner != root );
 
-
-	if( cnt > 0 ) {
-		dbWrite();
-	}
 	addMessage( 1, "Marked %i favourites", cnt );
 
 	return cnt;

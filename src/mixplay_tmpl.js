@@ -24,9 +24,7 @@ function getsmallUI () {
 }
 
 function replaceChild (e, c) {
-  while (e.hasChildNodes()) {
-    e.removeChild(e.firstChild)
-  }
+  wipeElements(e)
   e.appendChild(c)
 }
 
@@ -384,18 +382,6 @@ function enableElement (e, i) {
   }
 }
 
-function cmdline (cmd, arg, text) {
-  var reply = document.createElement('p')
-  reply.className = 'clickline'
-  reply.setAttribute('data-arg', arg)
-  reply.setAttribute('data-cmd', cmd)
-  reply.onclick = function () {
-    sendCMD(this.getAttribute('data-cmd'), this.getAttribute('data-arg'))
-  }
-  reply.innerHTML = text
-  return reply
-}
-
 /**
  * wrapper to call clickline with a FAV/DNP line
  */
@@ -508,9 +494,6 @@ function tabify (parent, name, list) {
   if ((tabs % 20) === 0) {
     tabs--
   }
-  while (parent.hasChildNodes()) {
-    parent.removeChild(parent.firstChild)
-  }
   if (tabs > 0) {
     for (var i = 0; i <= tabs; i++) {
       var tabswitch = document.createElement('input')
@@ -548,9 +531,7 @@ function tabify (parent, name, list) {
 
 function fullUpdate (data) {
   var e = document.getElementById('dnpfav0')
-  while (e.hasChildNodes()) {
-    e.removeChild(e.firstChild)
-  }
+  wipeElements(e)
   document.title = data.current.artist + ' - ' + data.current.title
   if (data.prev.length > 0) {
     if (data.mpmode === 1) {
@@ -564,7 +545,7 @@ function fullUpdate (data) {
       if (data.prev[i].playcount >= 0) {
         titleline += '[' + data.prev[i].playcount + '/' + data.prev[i].skipcount + '] '
       }
-      var cline = cmdline(0x11, data.prev[i].key,
+      var cline = clickline('DNP', 0x080a, data.prev[i].key,
         titleline + data.prev[i].artist + ' - ' + data.prev[i].title)
       e.appendChild(cline)
     }
@@ -579,8 +560,8 @@ function fullUpdate (data) {
   if (data.current.playcount >= 0) {
     titleline += '[' + data.current.playcount + '/' + data.current.skipcount + '] '
   }
-  cline = cmdline(0x0000, '',
-    '&#x25B6; <em>' + titleline + data.current.artist + ' - ' + data.current.title + '</em>')
+  cline = document.createElement('em')
+  cline.innerHTML = '&#x25B6; ' + titleline + data.current.artist + ' - ' + data.current.title
   e.appendChild(cline)
   if (data.next.length > 0) {
     if (data.next[0].artist === '') {
@@ -595,7 +576,7 @@ function fullUpdate (data) {
         titleline = '[' + data.next[i].playcount + '/' + data.next[i].skipcount + '] '
       }
       titleline += data.next[i].artist + ' - ' + data.next[i].title
-      cline = popselect('Play next', 0x11,
+      cline = popselect('DNP', 0x080a,
         'Remove', 0x1c,
         data.next[i].key, titleline)
       e.appendChild(cline)
@@ -608,11 +589,58 @@ function fullUpdate (data) {
   setScrolls()
 }
 
+function wipeElements (e) {
+  while (e.hasChildNodes()) {
+    wipeElements(e.firstChild)
+    e.removeChild(e.firstChild)
+  }
+}
+
 function searchUpdate (data) {
   switchTabByRef('search', 0)
-  var e = document.getElementById('search0')
+  var e = document.getElementById('search2')
+  wipeElements(e)
   var items = []
   var i
+  if (data.albums.length > 0) {
+    for (i = 0; i < data.albums.length; i++) {
+      if (data.mpedit) {
+        items[i] = popselect('Search', 0x0413,
+          'Favourite', 0x0409, data.albums[i],
+          data.albart[i] + ' - ' + data.albums[i])
+      } else {
+        items[i] = clickline('search', 0x0413, data.albums[i],
+          '&#x1F50E; ' + data.albart[i] + ' - ' + data.albums[i])
+      }
+    }
+  } else {
+    items[0] = document.createElement('em')
+    items[0].innerHTML = 'No albums found!'
+  }
+  tabify(e, 'lres', items)
+
+  e = document.getElementById('search1')
+  wipeElements(e)
+  items = []
+  if (data.artists.length > 0) {
+    for (i = 0; i < data.artists.length; i++) {
+      if (data.mpedit) {
+        items[i] = popselect('Search', 0x0213,
+          'Favourite', 0x0209,
+          data.artists[i], data.artists[i])
+      } else {
+        items[i] = clickline('Search', 0x0213, data.artists[i], '&#x1F50E; ' + data.artists[i])
+      }
+    }
+  } else {
+    items[0] = document.createElement('em')
+    items[0].innerHTML = 'No artists found!'
+  }
+  tabify(e, 'ares', items)
+
+  e = document.getElementById('search0')
+  items = []
+  wipeElements(e)
   if (data.titles.length > 0) {
     if (data.mpedit) {
       items[0] = document.createElement('a')
@@ -636,50 +664,14 @@ function searchUpdate (data) {
     }
   } else {
     items[0] = document.createElement('em')
-    items[0].innerHTML = 'No titles found!'
-  }
-  tabify(e, 'tres', items)
-
-  e = document.getElementById('search2')
-  items = []
-  if (data.albums.length > 0) {
-    for (i = 0; i < data.albums.length; i++) {
-      if (data.mpedit) {
-        items[i] = popselect('Search', 0x0413,
-          'Favourite', 0x0409, data.albums[i],
-          data.albart[i] + ' - ' + data.albums[i])
-      } else {
-        items[i] = clickline('search', 0x0413, data.albums[i],
-          '&#x1F50E; ' + data.albart[i] + ' - ' + data.albums[i])
-      }
-    }
-  } else {
-    items[0] = document.createElement('em')
-    items[0].innerHTML = 'No albums found!'
-  }
-  tabify(e, 'lres', items)
-
-  e = document.getElementById('search1')
-  items = []
-  if (data.artists.length > 0) {
-    for (i = 0; i < data.artists.length; i++) {
-      if (data.mpedit) {
-        items[i] = popselect('Search', 0x0213,
-          'Favourite', 0x0209,
-          data.artists[i], data.artists[i])
-      } else {
-        items[i] = clickline('Search', 0x0213, data.artists[i], '&#x1F50E; ' + data.artists[i])
-      }
-    }
-  } else {
-    items[0] = document.createElement('em')
     items[0].innerHTML = 'Found ' + data.artists.length + ' artists and ' + data.albums.length + ' albums'
   }
-  tabify(e, 'ares', items)
+  tabify(e, 'tres', items)
 }
 
 function dnpfavUpdate (data) {
   var e = document.getElementById('dnpfav1')
+  wipeElements(e)
   var items = []
   var i
   if (data.dnplist.length === 0) {
@@ -693,6 +685,7 @@ function dnpfavUpdate (data) {
   tabify(e, 'dlist', items)
 
   e = document.getElementById('dnpfav2')
+  wipeElements(e)
   items = []
   if (data.favlist.length === 0) {
     items[0] = document.createElement('em')
@@ -1031,6 +1024,9 @@ function handleKey (event) {
       break
     case ',':
       sendCMD(0x0e)
+      break
+    case 'Q':
+      killServer()
       break
     default:
       console.log('Pressed: ' + event.key)

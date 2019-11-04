@@ -281,7 +281,7 @@ int main( int argc, char **argv ) {
 		startHID( hidfd );
 	}
 
-	if( getDebug() == 1 ) {
+	if( getDebug() ) {
 		addUpdateHook( &_debugHidUpdateHook );
 		debugHID();
 	}
