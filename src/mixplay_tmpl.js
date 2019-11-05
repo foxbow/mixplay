@@ -81,6 +81,12 @@ function scrollToggle () {
  * and centers shorter texts
  */
 function setScrolls () {
+  /* only do this if the main view is visible! */
+  if (document.getElementById('extra0').className === 'inactive') {
+    document.body.style.fontSize = 'initial'
+    return
+  }
+
   var w
   var dh
   if (smallUI) {
@@ -90,16 +96,11 @@ function setScrolls () {
     w = ((window.innerWidth * 4) / 5)
     dh = 327
   }
-  var size = Math.min(window.innerHeight, w)
+  const size = Math.min(window.innerHeight, w)
 
-  var fact = (size * 20) / dh
+  const fact = (size * 20) / dh
 
   document.body.style.fontSize = fact + 'px'
-
-  /* only do this if the main view is visible! */
-  if (document.getElementById('extra0').style.display === 'none') {
-    return
-  }
 
   for (var i = 0; i < numscrolls; i++) {
     var scroll = scrolls[i]
@@ -211,13 +212,10 @@ function switchTab (ref) {
 
 /*
  * toggle main UI tabs
- * TODO: use switchTab() and call setScrolls() on changeVisibility hook
  */
 function switchView (element) {
   switchTabByRef('extra', element)
-  if (element === 0) {
-    setScrolls()
-  }
+  setScrolls()
 }
 
 /*
@@ -254,7 +252,9 @@ function addText (text) {
   }
 
   for (i = 0; i < numlines; i++) {
-    line += msglines[i] + '<br>\n'
+    if (msglines[i] !== '') {
+      line += msglines[i] + '<br>\n'
+    }
   }
   e.innerHTML = line
 }
@@ -345,6 +345,7 @@ function sendCMD (cmd, arg = '') {
  * use scrollwheel to control volume
  */
 function volWheel (e) {
+  e.preventDefault()
   if (e.deltaY < 0) {
     sendCMD(0x0d)
   } else if (e.deltaY > 0) {
@@ -1035,5 +1036,14 @@ function handleKey (event) {
 /*
  * start the UI update thread loops
  */
-updateUI()
-scrollToggle()
+function initializeUI () {
+  /* todo: attach event listeners here and not in HTML */
+  if (window.innerWidth < window.innerHeight * 1.2) {
+    switchView(3)
+  }
+
+  initScrolls()
+  setsmallUI()
+  updateUI()
+  scrollToggle()
+}

@@ -9,14 +9,14 @@
     <link rel="icon" href="/mixplay.svg" type="image/svg-xml">
     <title>Mixplay</title>
   </head>
-  <body onload='initScrolls();setsmallUI()' onresize='setScrolls()' onkeypress='handleKey(event)' onkeyup='blockSpace(event)'>
+  <body onload='initializeUI()' onresize='setScrolls()' onkeypress='handleKey(event)' onkeyup='blockSpace(event)'>
     <div id='viewtabs'>
       <input id='cextra0' class='active'   type='button' onclick='switchView(0)' accesskey='1' value='&#x25B6;' >
       <input id='cextra1' class='inactive' type='button' onclick='switchView(1)' accesskey='2' value='&#x1F50E;' >
       <input id='cextra2' class='inactive' type='button' onclick='switchView(2)' accesskey='3' value='&#x2692;' >
       <input id='cextra3' class='inactive' type='button' onclick='switchView(3)' accesskey='4' value='&#x2630;' >
       <input id='dvol' class='inactive' type='button' onclick='sendCMD(0x0e)' value='&#x1f509;' >
-      <div id='volume' class='progress' onclick='sendCMD(0x1d)'><div class='mute' id='volumebar'></div></div>
+      <div id='volume' class='progress' onclick='sendCMD(0x1d)' onwheel='volWheel(event)'><div class='mute' id='volumebar'></div></div>
       <input id='ivol' class='inactive' type='button' onclick='sendCMD(0x0d)' value='&#x1f50a;' >
       <input id='fav' class='inactive' type='button' onclick='sendCMD(0x0809)' value='&#x2665;' >
       <input id='dnp' class='inactive' type='button' onclick='sendCMD(0x080a)' value='&#x2620;' >
@@ -59,17 +59,6 @@
       </div>
       <div id='nscroll' class='scroll' onclick='sendCMD(0x03)'>
         <p id='next'>next</p>
-      </div>
-      <div id='playpack'>
-        <input id='goprev' class='inactive' type='button' onclick='sendCMD(0x02)' value='&#x23ee;' >
-        <input id='play'   class='inactive' type='button' onclick='sendCMD(0x00)' value='&#x23f8;' >
-        <input id='gonext' class='inactive' type='button' onclick='sendCMD(0x03)' value='&#x23ed;' >
-        <div id='playtime'>00:00</div>
-        <div id='progress' class='progress' onclick='sendCMD(0x05)'><div id='progressbar'></div></div>
-        <div id='remtime'>00:00</div>
-      </div>
-      <div id='playstr'>
-        <div id='splaytime'>00:00</div>
       </div>
     </div>
     <!-- Search view -->
@@ -126,6 +115,19 @@
       <div id='dnpfav0' class='active'><em>No Playlist</em></div>
       <div id='dnpfav1' class='inactive'><em>No DNPs</em></div>
       <div id='dnpfav2' class='inactive'><em>No Favourites</em></div>
+    </div>
+    <!-- control elements -->
+    <div id='playpack'>
+      <input id='goprev' class='inactive' type='button' onclick='sendCMD(0x02)' value='&#x23ee;' >
+      <input id='play'   class='inactive' type='button' onclick='sendCMD(0x00)' value='&#x23f8;' >
+      <input id='gonext' class='inactive' type='button' onclick='sendCMD(0x03)' value='&#x23ed;' >
+      <div id='playtime'>00:00</div>
+      <div id='progress' class='progress' onclick='sendCMD(0x05)'><div id='progressbar'></div></div>
+      <div id='remtime'>00:00</div>
+    </div>
+    <div id='playstr'>
+      <input id='play'   class='inactive' type='button' onclick='sendCMD(0x00)' value='&#x23f8;' >
+      <div id='splaytime'>00:00</div>
     </div>
   </body>
 </html>
