@@ -82,23 +82,28 @@ function scrollToggle () {
  */
 function setScrolls () {
   /* only do this if the main view is visible! */
+  var h = window.innerHeight
+  var w = window.innerWidth
   if (document.getElementById('extra0').className === 'inactive') {
-    document.body.style.fontSize = 'initial'
+    if (w * 1.2 < h) {
+      h = h / 37
+    } else {
+      h = h / 30
+    }
+    document.body.style.fontSize = Math.max(h, 15) + 'px'
     return
   }
 
-  var w
   var dh
   if (smallUI) {
-    w = ((window.innerWidth * 5) / 8)
+    w = (w * 5) / 8
     dh = 230
   } else {
-    w = ((window.innerWidth * 4) / 5)
+    w = (w * 4) / 5
     dh = 327
   }
-  const size = Math.min(window.innerHeight, w)
 
-  const fact = (size * 20) / dh
+  const fact = (Math.min(h, w) * 20) / dh
 
   document.body.style.fontSize = fact + 'px'
 
