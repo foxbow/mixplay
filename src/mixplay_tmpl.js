@@ -468,10 +468,15 @@ function popselect (choice1, cmd1, choice2, cmd2, arg, text) {
     console.log('popup' + ident + ' already exists!')
   } else {
     popspan.id = 'popup' + ident
-    var select = clickable(choice1 + '&nbsp;&mdash;&nbsp;', cmd1, arg, ident)
+    var select = clickable(choice1, cmd1, arg, ident)
     popspan.appendChild(select)
-    select = clickable(choice2, cmd2, arg, ident)
-    popspan.appendChild(select)
+    if (cmd2 !== -1) {
+      select = document.createElement('b')
+      select.innerText = ' | '
+      popspan.appendChild(select)
+      select = clickable(choice2, cmd2, arg, ident)
+      popspan.appendChild(select)
+    }
     select = document.createElement('b')
     select.innerText = ' [x]'
     popspan.appendChild(select)
