@@ -584,6 +584,7 @@ static int playResults( mpcmd_t range, const char *arg, const int insert ) {
 void *reader( ) {
 	mpconfig_t  *control=getConfig();
 	mptitle_t *title=NULL;
+	mptitle_t *tbuf=NULL;
 	fd_set		fds;
 	struct timeval	to;
 	struct timespec ts;
@@ -1078,9 +1079,12 @@ void *reader( ) {
 
 		case mpc_dnp:
 			if( (title != NULL ) && asyncTest() ) {
+				tbuf = control->current->title;
 				handleRangeCmd( title, control->command );
-				order=0;
-				dowrite( p_command[fdset][1], "STOP\n", 6 );
+				if( tbuf != control->current->title ) {
+					order=0;
+					dowrite( p_command[fdset][1], "STOP\n", 6 );
+				}
 			}
 			break;
 

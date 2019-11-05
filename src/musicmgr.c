@@ -573,6 +573,12 @@ static int applyDNPlist( marklist_t *list ) {
 	}
 	while( pos != base );
 
+	if( pl != NULL ) {
+		while( pl->prev != NULL ) {
+			pl=pl->prev;
+		}
+	}
+
 	while( pl != NULL ) {
 		if( pl->title->flags & MP_DNP ) {
 			if( pl == getConfig()->current ) {
