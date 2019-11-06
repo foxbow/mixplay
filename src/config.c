@@ -690,9 +690,6 @@ static void removeHook( void (*func)( void* ), void *arg, _mpfunc **list ) {
 				free( pos );
 				break;
 			}
-			else {
-				pos=pos->next;
-			}
 		}
 	}
 

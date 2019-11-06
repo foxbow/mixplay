@@ -476,13 +476,13 @@ function popselect (choice1, cmd1, choice2, cmd2, arg, text) {
     popspan.appendChild(select)
     if (cmd2 !== -1) {
       select = document.createElement('b')
-      select.innerText = ' | '
+      select.innerText = '\u2000/\u2000 '
       popspan.appendChild(select)
       select = clickable(choice2, cmd2, arg, ident)
       popspan.appendChild(select)
     }
     select = document.createElement('b')
-    select.innerText = ' [x]'
+    select.innerText = '\u2000\u274E'
     popspan.appendChild(select)
     reply.appendChild(popspan)
   }
