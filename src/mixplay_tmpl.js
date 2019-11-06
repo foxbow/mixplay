@@ -746,7 +746,7 @@ function playerUpdate (data) {
   if (data.status) {
     document.getElementById('play').value = '\u25B6'
   } else {
-    document.getElementById('play').value = '\u23f8;'
+    document.getElementById('play').value = '\u23f8'
   }
   if (data.volume > 0) {
     document.getElementById('volumebar').style.width = data.volume + '%'
