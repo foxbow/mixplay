@@ -9,7 +9,6 @@ var msgpos = 0
 var active = 0
 var scrolls = []
 var numscrolls = 0
-var wasstream = -1
 var favplay = 0
 var cmdtosend = ''
 var argtosend = ''
@@ -723,29 +722,20 @@ function playerUpdate (data) {
   }
   isstream = (data.mpmode === 1) /* PM_STREAM */
 
+  enableElement('goprev', !isstream)
+  enableElement('gonext', !isstream)
+  enableElement('progress', !isstream)
+  enableElement('remtime', !isstream)
   enableElement('setfavplay', !isstream)
-  enableElement('playstr', isstream)
-  enableElement('playpack', !isstream)
   enableElement('cextra1', !isstream)
   enableElement('lscroll', !isstream)
 
   /* switching between stream and normal play */
-  if (isstream) {
-    setElement('splaytime', data.playtime)
-  } else {
-    setElement('playtime', data.playtime)
+  setElement('playtime', data.playtime)
+  if (!isstream) {
     setElement('remtime', data.remtime)
     document.getElementById('progressbar').style.width = data.percent + '%'
   }
-
-  if ((isstream !== wasstream) && (window.innerHeight !== window.outerHeight)) {
-    if (isstream) {
-      window.resizeTo(300, 250)
-    } else {
-      window.resizeTo(300, 380)
-    }
-  }
-  wasstream = isstream
 
   if (active !== data.active) {
     active = data.active
@@ -753,12 +743,16 @@ function playerUpdate (data) {
   }
 
   enableElement('current', !data.status)
-
+  if (data.status) {
+    document.getElementById('play').value = '\u25B6'
+  } else {
+    document.getElementById('play').value = '\u23f8;'
+  }
   if (data.volume > 0) {
     document.getElementById('volumebar').style.width = data.volume + '%'
     document.getElementById('volumebar').className = ''
   } else if (data.volume === -1) {
-    document.getElementById('volume').innerHTML = '&nbsp;'
+    enableElement('volume', 0)
   } else {
     document.getElementById('volumebar').className = 'mute'
   }
