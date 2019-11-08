@@ -398,16 +398,15 @@ static void *plCheckDoublets( void *arg ) {
 	pthread_mutex_t *lock=(pthread_mutex_t *) arg;
 	int i;
 
-	progressStart( "Filesystem Cleanup" );
-
+	progressStart( "Checking for doublets.." );
 	/* update database with current playcount etc */
 	if( control->dbDirty > 0 ) {
 		dbWrite( );
 	}
-	addMessage( 0, "Checking for doublets.." );
+
 	i=dbNameCheck( );
 	if( i > 0 ) {
-		addMessage( 0, "Deleted %i doublets", i );
+		addMessage( 0, "Marked %i doublets", i );
 		plCheck( 1 );
 	}
 	else {

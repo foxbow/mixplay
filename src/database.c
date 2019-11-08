@@ -444,7 +444,9 @@ static int checkPath( mptitle_t *entry, int range ) {
 	return( strstr( path, check ) != NULL );
 }
 
-
+/**
+ * This should probably move to musicmgr..
+ */
 int dbNameCheck( void ) {
 	mptitle_t *root;
 	mptitle_t *currentEntry;
@@ -461,7 +463,8 @@ int dbNameCheck( void ) {
 
 	fp=fopen( "rmlist.sh", "w" );
 	if( NULL == fp ) {
-		fail( errno, "Could not open rmlist.sh for writing " );
+		addMessage( -1, "Could not open rmlist.sh for writing!" );
+		return -1;
 	}
 
 	fprintf( fp, "#!/bin/bash\n" );
@@ -494,8 +497,8 @@ int dbNameCheck( void ) {
 						case  3: /* 0011 */
 						case  7: /* 0111 */
 						case 11: /* 1011 */
-							unlink( currentEntry->path );
-							addMessage( 1, "removed %s", currentEntry->path );
+							handleRangeCmd(currentEntry, mpc_dnp|mpc_path);
+							addMessage( 1, "Marked %s", currentEntry->path );
 							runner->flags |= MP_MARK;
 							count++;
 							break;
@@ -504,8 +507,8 @@ int dbNameCheck( void ) {
 						case 12: /* 1100 */
 						case 13: /* 1101 */
 						case 14: /* 1110 */
-							unlink( runner->path );
-							addMessage( 1, "removed %s", runner->path );
+							handleRangeCmd(runner, mpc_dnp|mpc_path);
+							addMessage( 1, "Marked %s", runner->path );
 							currentEntry->flags |= MP_MARK;
 							count++;
 							break;
