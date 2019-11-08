@@ -1360,42 +1360,44 @@ void plCheck( int del ) {
 			return;
 		}
 
-		/* truncate playlist title history to 10 titles */
-		while( ( pl->prev != NULL ) && ( cnt < 10 ) ) {
-			pl=pl->prev;
-			cnt++;
-		}
-
-		buf=pl->prev;
-		pl->prev=NULL;
-
-		while( buf != NULL ) {
-			pl=buf->prev;
-			/* unmark title as it leaves the playlist */
-			buf->title->flags&=~MP_MARK;
-			free( buf );
-			buf=pl;
-		}
-
 		cnt=0;
 		pl=getConfig()->current;
 		/* this should always be != NULL */
-		if( pl == NULL ) {
-			addMessage( 0, "There should not be no playlist!" );
+		if ( pl == NULL ) {
+			addMessage( -1, "No titles at all!" );
 		}
 		else {
 			/* make sure the playlist is not marked DNP right now */
 			pthread_mutex_lock( &_pllock );
-			/* go to the end of the playlist */
+
+			/* rewind to the start of the list */
+			while( pl->prev != NULL ) {
+				pl=pl->prev;
+			}
+
+			/* go to the end of the playlist and clean up underway */
 			while( pl->next != NULL ) {
 				/* clean up on the way to remove DNP marked or deleted files? */
-				if( ( del != 0 ) && ( pl != getConfig()->current ) ) {
+				if( del != 0 ) {
+
 					if ( ( pl->title->flags | MP_DNP ) || ( !mp3Exists( pl->title ) ) ){
 						buf=pl->next;
 						if( pl->prev != NULL ) {
 							pl->prev->next=pl->next;
 						}
 						pl->next->prev=pl->prev;
+						/* the current title has become invalid, erk.. */
+						if( pl == getConfig()->current ) {
+							/* fake being at the previous title so the next title is not
+							   skipped */
+							if( buf->prev != NULL ) {
+								getConfig()->current=buf->prev;
+							}
+							else {
+								/* no previous title! Do the next best thing then */
+								getConfig()->current=buf;
+							}
+						}
 						free(pl);
 						pl=buf;
 					}
@@ -1407,6 +1409,23 @@ void plCheck( int del ) {
 			}
 			pthread_mutex_unlock( &_pllock );
 		}
+	}
+
+	/* truncate playlist title history to 10 titles */
+	while( ( pl->prev != NULL ) && ( cnt < 10 ) ) {
+		pl=pl->prev;
+		cnt++;
+	}
+
+	buf=pl->prev;
+	pl->prev=NULL;
+
+	while( buf != NULL ) {
+		pl=buf->prev;
+		/* unmark title as it leaves the playlist */
+		buf->title->flags&=~MP_MARK;
+		free( buf );
+		buf=pl;
 	}
 
 	/* fill up the playlist with new titles */
