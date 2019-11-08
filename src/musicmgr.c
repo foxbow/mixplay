@@ -475,7 +475,7 @@ int search( const char *pat, const mpcmd_t range ) {
 	}
 
 	do {
-		activity("searching");
+		activity( 1, "searching" );
 		found=0;
 		/* dnp XNOR MP_DNP */
 		if( ( runner->flags & MP_DNP ) == dnp ) {
@@ -627,7 +627,7 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 	}
 
 	do {
-		activity( "Favourites " );
+		activity( 1, "Favourites " );
 		ptr=favourites;
 
 		while( ptr ) {
@@ -932,7 +932,7 @@ mptitle_t *loadPlaylist( const char *path ) {
 
 	buff=(char*)falloc( MAXPATHLEN, 1 );
 	while( !feof( fp ) ) {
-		activity( "Loading" );
+		activity( 1, "Loading" );
 		if( ( fgets( buff, MAXPATHLEN, fp ) != NULL ) &&
 				( strlen( buff ) > 1 ) && ( buff[0] != '#' ) ) {
 			/* turn relative paths into absolute ones */
@@ -1061,7 +1061,7 @@ unsigned long countTitles( const unsigned int inc, const unsigned int exc ) {
 	}
 
 	do {
-		activity( "Counting" );
+		activity( 1, "Counting" );
 
 		if( ( ( inc == MP_ALL ) || ( runner->flags & inc ) ) &&
 				!( runner->flags & exc ) ) {
@@ -1149,7 +1149,7 @@ int DNPSkip( void ) {
 
 /* Sort out skipped titles */
 	do {
-		activity( "DNPSkipping" );
+		activity( 1, "DNPSkipping" );
 
 		if( runner->skipcount > level ) {
 			runner->flags |= MP_DNP;
@@ -1252,7 +1252,7 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 
 			while( checkSim( runner->artist, lastpat ) ) {
 				addMessage( 3, "%s = %s", runner->artist, lastpat );
-				activity( "Nameskipping" );
+				activity( 1, "Nameskipping" );
 				/* If we put pcount check here, we could simplify everything.. */
 				runner=skipOver( runner->next, 1 );
 
@@ -1290,7 +1290,7 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 			}
 
 			if( ( valid & 2 ) != 2 ) {
-				activity( "Playcountskipping" );
+				activity( 1, "Playcountskipping" );
 				/* simply pick a new title at random to avoid edge cases */
 				/* runner=skipTitles( runner, rand()%num ); */
 				/* revert to old handling */
@@ -1340,6 +1340,7 @@ void plCheck( int del ) {
 		return;
 	}
 
+	/* there is a playlist to care for first */
 	if( pl != NULL ) {
 		/* truncate stream title history to 20 titles */
 		if( getConfig()->mpmode == PM_STREAM ) {
@@ -1409,27 +1410,37 @@ void plCheck( int del ) {
 			}
 			pthread_mutex_unlock( &_pllock );
 		}
-	}
+		/* Done cleaning, now start pruning */
 
-	/* truncate playlist title history to 10 titles */
-	while( ( pl->prev != NULL ) && ( cnt < 10 ) ) {
-		pl=pl->prev;
-		cnt++;
-	}
+		/* truncate playlist title history to 10 titles */
+		cnt=0;
+		pl=getConfig()->current;
+		while( ( pl->prev != NULL ) && ( cnt < 10 ) ) {
+			pl=pl->prev;
+			cnt++;
+		}
 
-	buf=pl->prev;
-	pl->prev=NULL;
+		buf=pl->prev;
+		pl->prev=NULL;
 
-	while( buf != NULL ) {
-		pl=buf->prev;
-		/* unmark title as it leaves the playlist */
-		buf->title->flags&=~MP_MARK;
-		free( buf );
-		buf=pl;
+		while( buf != NULL ) {
+			pl=buf->prev;
+			/* unmark title as it leaves the playlist */
+			buf->title->flags&=~MP_MARK;
+			free( buf );
+			buf=pl;
+		}
+
+		/* Count titles to come */
+		cnt=0;
+		pl=getConfig()->current;
+		while( pl->next != NULL ) {
+			pl=pl->next;
+			cnt++;
+		}
 	}
 
 	/* fill up the playlist with new titles */
-
 	while( cnt < 10 ) {
 		if( getConfig()->current == NULL ) {
 			getConfig()->current=addNewTitle( NULL, getConfig()->root );
@@ -1442,8 +1453,6 @@ void plCheck( int del ) {
 	notifyChange();
 }
 
-unsigned dirnum=0;
-
 /*
  * Steps recursively through a directory and collects all music files in a list
  * curdir: current directory path
@@ -1454,10 +1463,6 @@ mptitle_t *recurse( char *curdir, mptitle_t *files ) {
 	char dirbuff[2*MAXPATHLEN];
 	struct dirent **entry;
 	int num, i;
-
-	if( ++dirnum % 100 == 0 ) {
-		addMessage( 0, "Scanned %u directories", dirnum);
-	}
 
 	if( '/' == curdir[strlen( curdir )-1] ) {
 		curdir[strlen( curdir )-1]=0;
@@ -1474,7 +1479,8 @@ mptitle_t *recurse( char *curdir, mptitle_t *files ) {
 	}
 
 	for( i=0; i<num; i++ ) {
-		activity( "Scanning %s", curdir );
+		activity( 0, "Scanning %s",
+				strrchr(curdir, '/') ? strrchr(curdir, '/') : curdir );
 		sprintf( dirbuff, "%s/%s", curdir, entry[i]->d_name );
 		files=insertTitle( files, dirbuff );
 		free( entry[i] );
@@ -1674,7 +1680,7 @@ int fillstick( mptitle_t *root, const char *target ) {
 	current=root;
 
 	do {
-		activity( "Copy title #%03i", index );
+		activity( 0, "Copy title #%03i", index );
 		if( current->flags & MP_FAV ) {
 			if( copyTitle( current, target, index++ ) == -1 ) {
 				break;

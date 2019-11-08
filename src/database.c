@@ -270,7 +270,7 @@ int dbCheckExist( void ) {
 	addMessage( 1, "Cleaning database..." );
 
 	do {
-		activity( "Cleaning" );
+		activity( 1, "Cleaning" );
 
 		if( !mp3Exists( runner ) ) {
 			if( root == runner ) {
@@ -367,7 +367,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 
 	db=dbOpen( dbname );
 	while( NULL != fsroot ) {
-		activity( "Adding" );
+		activity( 1, "Adding" );
 		dbrunner = findTitle( dbroot, fsroot->path );
 
 		if( NULL == dbrunner ) {
@@ -477,7 +477,7 @@ int dbNameCheck( void ) {
 
 	currentEntry=root;
 	while( currentEntry->next != root ) {
-		activity("Namechecking - %i", count );
+		activity( 1, "Namechecking - %i", count );
 		if( !(currentEntry->flags & MP_MARK) ) {
 			runner=currentEntry->next;
 			do {

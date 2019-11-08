@@ -517,6 +517,7 @@ void freeConfig( ) {
 void addMessage( int v, const char *msg, ... ) {
 	va_list args;
 	char *line;
+	unsigned	showdbg=1;
 
 	pthread_mutex_lock( &_addmsglock );
 	line = (char*)falloc( MP_MSGLEN+1, 1 );
@@ -529,13 +530,19 @@ void addMessage( int v, const char *msg, ... ) {
 		line[strlen(line)] = 0;
 	}
 
+	/* This should only go to the client */
+	if ( v == -2 ) {
+		v=0;
+		showdbg=0;
+	}
+
 	if( _cconfig == NULL ) {
 		fprintf( stderr, "* %s\n", line );
 	}
 	else {
 		if( v <= getVerbosity() ) {
 			if( _cconfig->inUI ) {
-				if( v < getDebug() ) {
+				if( showdbg && ( v < getDebug() ) ) {
 					fprintf( stderr, "\rd%i %s\n", v, line );
 				}
 				/* not just a message but something important */
@@ -605,16 +612,12 @@ static char _curact[MP_ACTLEN]="";
  * show activity roller on console
  * this will only show if debug mode is enabled
  */
-void activity( const char *msg, ... ) {
+void activity( int v, const char *msg, ... ) {
 	char roller[5]="|/-\\";
 	int pos=0;
 	int i;
-	int step=getDebug();
 	va_list args;
 
-	if ( step == 0 ) {
-		step=1;
-	}
 	va_start( args, msg );
 	vsnprintf( _curact, MP_ACTLEN, msg, args );
 	va_end( args );
@@ -623,20 +626,28 @@ void activity( const char *msg, ... ) {
 		_curact[i]=' ';
 	}
 	_curact[MP_ACTLEN-1]=0;
+	++_ftrpos;
 
-	/* this will mess up with debug=3 */
-	_ftrpos=( ( _ftrpos+step )%400 );
-	if ( ( _ftrpos%100 ) == 0 ) {
-		pos=( _ftrpos/100 )%4;
+	if ( _ftrpos % 500 == 0 ) {
 		/* update the UI to follow activity if nothing is playing */
 		if( _cconfig->status == mpc_idle ) {
 			notifyChange();
 		}
 	}
 
-	if( getDebug() ) {
+	if ( _ftrpos % 1000 == 0 ) {
+		if ( v <= getVerbosity() ) {
+			if( _cconfig->status != mpc_idle ) {
+				addMessage( -2, "%s", _curact );
+			}
+		}
+		_ftrpos=0;
+	}
+
+	if ( ( v < getDebug() ) && ( _ftrpos % 100 == 0 ) ){
 		printf( "%c %s\r", roller[pos], _curact );
 		fflush( stdout );
+		pos=(pos+1)%4;
 	}
 }
 
@@ -861,7 +872,7 @@ mptitle_t *wipeTitles( mptitle_t *root ) {
 		root->prev->next=NULL;
 
 		while( runner != NULL ) {
-			activity("Cleaning");
+			activity( 1, "Cleaning" );
 			root=runner->next;
 			free( runner );
 			runner=root;

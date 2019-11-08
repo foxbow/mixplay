@@ -181,7 +181,7 @@ void addMessage( int v, const char *msg, ... ) __attribute__((__format__(__print
 char *getMessage( void );
 
 char *getCurrentActivity( void );
-void activity( const char *msg, ... ) __attribute__((__format__(__printf__, 1, 2)));
+void activity( int v, const char *msg, ... ) __attribute__((__format__(__printf__, 2, 3)));
 
 void progressStart( const char *msg, ... ) __attribute__((__format__(__printf__, 1, 2)));
 void progressEnd( void );
