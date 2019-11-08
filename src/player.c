@@ -409,6 +409,7 @@ static void *plCheckDoublets( void *arg ) {
 	i=dbNameCheck( );
 	if( i > 0 ) {
 		addMessage( 0, "Marked %i doublets", i );
+		applyLists( 0 );
 		plCheck( 1 );
 	}
 	else {

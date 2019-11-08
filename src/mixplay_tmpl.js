@@ -616,11 +616,14 @@ function searchUpdate (data) {
     for (i = 0; i < data.albums.length; i++) {
       if (data.mpedit) {
         items[i] = popselect('Search', 0x0413,
-          'Favourite', 0x0409, data.albums[i],
+          'Favourite', 0x0409,
+          data.albums[i],
           data.albart[i] + ' - ' + data.albums[i])
       } else {
-        items[i] = clickline('search', 0x0413, data.albums[i],
-          '&#x1F50E; ' + data.albart[i] + ' - ' + data.albums[i])
+        items[i] = popselect('Search', 0x0413,
+          'DNP', 0x040a,
+          data.albums[i],
+          data.albart[i] + ' - ' + data.albums[i])
       }
     }
   } else {
@@ -637,9 +640,13 @@ function searchUpdate (data) {
       if (data.mpedit) {
         items[i] = popselect('Search', 0x0213,
           'Favourite', 0x0209,
-          data.artists[i], data.artists[i])
+          data.artists[i],
+          data.artists[i])
       } else {
-        items[i] = clickline('Search', 0x0213, data.artists[i], '&#x1F50E; ' + data.artists[i])
+        items[i] = popselect('Search', 0x0213,
+          'DNP', 0x020a,
+          data.artists[i],
+          data.artists[i])
       }
     }
   } else {
@@ -663,8 +670,10 @@ function searchUpdate (data) {
     }
     for (i = 0; i < data.titles.length; i++) {
       if (data.mpedit) {
-        items[i + 1] = clickline('Fav', 0x0809, data.titles[i].key,
-          '&#x2665; ' + data.titles[i].artist + ' - ' + data.titles[i].title)
+        items[i + 1] = popselect('Fav', 0x0809,
+          'DNP', 0x080a,
+          data.titles[i].key,
+          data.titles[i].artist + ' - ' + data.titles[i].title)
       } else {
         items[i + 1] = popselect('Insert', 0x080c,
           'Append', 0x0814,
@@ -712,7 +721,7 @@ function playerUpdate (data) {
   if (data.mpedit) {
     document.getElementById('searchmode').value = 'Fav'
   } else {
-    document.getElementById('searchmode').value = 'Play'
+    document.getElementById('searchmode').value = 'DNP'
   }
   favplay = data.mpfavplay
   if (favplay) {
@@ -759,8 +768,11 @@ function playerUpdate (data) {
 
   if (data.msg !== '') {
     if (data.msg.startsWith('ALERT:')) {
-      window.alert(data.msg.substring(6))
-      addText(data.msg.substring(6))
+      if (data.msg.startsWith('ALERT:Done.')) {
+        addText(data.msg.substring(6))
+      } else {
+        window.alert(data.msg.substring(6))
+      }
     } else {
       addText(data.msg)
     }
@@ -1019,7 +1031,7 @@ function handleKey (event) {
     case 'f':
       sendCMD(0x0809)
       break
-    case 'D':
+    case 'd':
       sendCMD(0x080a)
       break
     case '-':
@@ -1033,6 +1045,9 @@ function handleKey (event) {
       break
     case 'Q':
       pwSendCMD('Really stop the server?', 0x07)
+      break
+    case 'D':
+      pwSendCMD('Mark doublets?', 0x0b)
       break
     default:
       console.log('Pressed: ' + event.key)

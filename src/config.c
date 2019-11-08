@@ -730,7 +730,7 @@ void progressStart( const char* msg, ... ) {
  * end a progress display
  */
 void progressEnd( void ) {
-	addMessage( -1, "Done." );
+	addMessage( -2, "Done." );
 	invokeHooks(_pfunc);
 }
 

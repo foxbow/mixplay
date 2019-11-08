@@ -684,8 +684,8 @@ void applyLists( int clean ) {
 			title=title->next;
 		} while( title != control->root );
 	}
-	applyDNPlist( control->dbllist );
 	applyFAVlist( control->favlist, getProfile()->favplay );
+	applyDNPlist( control->dbllist );
 	applyDNPlist( control->dnplist );
 	pthread_mutex_unlock( &_pllock );
 
@@ -1340,7 +1340,7 @@ void plCheck( int del ) {
 		return;
 	}
 
-	/* there is a playlist to care for first */
+	/* there is a playlist cleanup */
 	if( pl != NULL ) {
 		/* truncate stream title history to 20 titles */
 		if( getConfig()->mpmode == PM_STREAM ) {
@@ -1361,6 +1361,7 @@ void plCheck( int del ) {
 			return;
 		}
 
+		/* standard mixplaylist */
 		cnt=0;
 		pl=getConfig()->current;
 		/* this should always be != NULL */
@@ -1372,21 +1373,25 @@ void plCheck( int del ) {
 			pthread_mutex_lock( &_pllock );
 
 			/* rewind to the start of the list */
-			while( pl->prev != NULL ) {
-				pl=pl->prev;
+			if ( del != 0 ) {
+				while( pl->prev != NULL ) {
+					pl=pl->prev;
+				}
 			}
 
-			/* go to the end of the playlist and clean up underway */
+			/* go through end of the playlist and clean up underway */
 			while( pl->next != NULL ) {
 				/* clean up on the way to remove DNP marked or deleted files? */
 				if( del != 0 ) {
-
 					if ( ( pl->title->flags | MP_DNP ) || ( !mp3Exists( pl->title ) ) ){
+						/* title leaves the playlist so it must be unmarked */
+						pl->title->flags &= ~MP_MARK;
 						buf=pl->next;
 						if( pl->prev != NULL ) {
 							pl->prev->next=pl->next;
 						}
 						pl->next->prev=pl->prev;
+
 						/* the current title has become invalid, erk.. */
 						if( pl == getConfig()->current ) {
 							/* fake being at the previous title so the next title is not
@@ -1406,7 +1411,6 @@ void plCheck( int del ) {
 				else {
 					pl=pl->next;
 				}
-				cnt++;
 			}
 			pthread_mutex_unlock( &_pllock );
 		}
@@ -1420,9 +1424,11 @@ void plCheck( int del ) {
 			cnt++;
 		}
 
+		/* cut off playlist */
 		buf=pl->prev;
 		pl->prev=NULL;
 
+		/* clean up loose ends */
 		while( buf != NULL ) {
 			pl=buf->prev;
 			/* unmark title as it leaves the playlist */
@@ -1450,6 +1456,7 @@ void plCheck( int del ) {
 		}
 		cnt++;
 	}
+
 	notifyChange();
 }
 
@@ -1799,6 +1806,7 @@ int handleRangeCmd( mptitle_t *title, mpcmd_t cmd ) {
 		}
 		else if( MPC_CMD(cmd) == mpc_dnp ) {
 			cnt=applyDNPlist( buff );
+			plCheck( 1 );
 		}
 	}
 

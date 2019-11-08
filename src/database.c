@@ -457,6 +457,7 @@ int dbNameCheck( void ) {
 	int				match;
 	char			rmpath[MAXPATHLEN];
 
+	/* not using the live database as we need the marker */
 	root=dbGetMusic( );
 	if( root == NULL ) {
 		addMessage( -1, "No music in database!");
@@ -552,6 +553,7 @@ int dbNameCheck( void ) {
 		}
 		currentEntry=currentEntry->next;
 	}
+
 	if( qcnt > 0 ) {
 		fprintf( fp, "echo \"Remember to clean the database!\"\n" );
 		addMessage( 0, "Found %i questionable titles", qcnt );

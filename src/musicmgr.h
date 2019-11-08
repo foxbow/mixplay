@@ -8,7 +8,7 @@
 /* Directory access */
 
 #define NAMELEN 64
-#define MAXSEARCH 100
+#define MAXSEARCH 256
 
 #define MP_FAV  1	/* Favourite */
 #define MP_DNP  2	/* do not play */
