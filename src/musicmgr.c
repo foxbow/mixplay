@@ -98,13 +98,18 @@ static int getListPath( char path[MAXPATHLEN], mpcmd_t cmd ) {
 	if( getConfig()->active < 1 ) {
 		return -1;
 	}
-	snprintf( path, MAXPATHLEN, "%s/.mixplay/%s.", getenv("HOME"),
-			getConfig()->profile[getConfig()->active-1]->name );
-	if( MPC_CMD(cmd) == mpc_fav ) {
-		strtcat( path, "fav", MAXPATHLEN );
+	if( MPC_CMD(cmd) == mpc_doublets ) {
+		snprintf( path, MAXPATHLEN, "%s/.mixplay/mixplay.dbl", getenv("HOME") );
 	}
-	else{
-		strtcat( path, "dnp", MAXPATHLEN );
+	else {
+		snprintf( path, MAXPATHLEN, "%s/.mixplay/%s.", getenv("HOME"),
+				getConfig()->profile[getConfig()->active-1]->name );
+		if( MPC_CMD(cmd) == mpc_fav ) {
+			strtcat( path, "fav", MAXPATHLEN );
+		}
+		else{
+			strtcat( path, "dnp", MAXPATHLEN );
+		}
 	}
 	return 0;
 }
@@ -398,8 +403,6 @@ static int matchTitle( mptitle_t *title, const char* pat ) {
 
 		default:
 			addMessage( 0, "Unknown range %c in %s!", pat[0], pat );
-			addMessage( 0, "Using display instead" );
-			strltcpy( loname, title->display, 1024 );
 			break;
 		}
 	}
@@ -467,7 +470,7 @@ int search( const char *pat, const mpcmd_t range ) {
 	/* if player is in favplay mode and the search in in fav mode
 	   then search for DNP titles. */
 	if ( getConfig()->mpedit && getProfile()->favplay ) {
-		addMessage(1,"DNP search");
+		addMessage( 1, "DNP search");
 		dnp=MP_DNP;
 	}
 
@@ -514,7 +517,7 @@ int search( const char *pat, const mpcmd_t range ) {
 				}
 				else if( !strcmp( res->albart[i], ARTIST_SAMPLER ) &&
 						strcmp( res->albart[i], runner->artist ) ){
-					addMessage(1, "%s is considered a sampler (%s <> %s).",
+					addMessage( 1, "%s is considered a sampler (%s <> %s).",
 							runner->album, runner->artist, res->albart[i] );
 					res->albart[i]=ARTIST_SAMPLER;
 				}
@@ -681,6 +684,7 @@ void applyLists( int clean ) {
 			title=title->next;
 		} while( title != control->root );
 	}
+	applyDNPlist( control->dbllist );
 	applyFAVlist( control->favlist, getProfile()->favplay );
 	applyDNPlist( control->dnplist );
 	pthread_mutex_unlock( &_pllock );
@@ -703,14 +707,12 @@ marklist_t *loadList( const mpcmd_t cmd ) {
 	int cnt=0;
 
 	if( getListPath(path, cmd) == -1 ) {
-		addMessage(0,"Trying top get %s list for stream!",cmd==mpc_fav?"FAV":"DNP");
-		/* No active profile */
 		return NULL;
 	}
 
 	file=fopen( path, "r" );
 	if( !file ) {
-		addMessage( 0, "Could not open %s", path );
+		addMessage( 1, "Could not open %s", path );
 		return NULL;
 	}
 
@@ -809,7 +811,7 @@ int delFromList( const mpcmd_t cmd, const char *line ) {
 	}
 
 	if( list == NULL ) {
-		addMessage(0,"No list to remove %s from!", line);
+		addMessage( 0, "No list to remove %s from!", line);
 		return -1;
 	}
 
@@ -844,7 +846,7 @@ int delFromList( const mpcmd_t cmd, const char *line ) {
 		}
 	}
 
-	addMessage(1,"Removed %i entries",cnt);
+	addMessage( 1, "Removed %i entries",cnt);
 
 	if( cnt > 0 ) {
 		writeList( cmd );
@@ -923,7 +925,7 @@ mptitle_t *loadPlaylist( const char *path ) {
 			return NULL;
 		}
 		else {
-			addMessage(1,"Using %s",titlePath);
+			addMessage( 1, "Using %s",titlePath);
 			strtcpy( mdir, getConfig()->musicdir, MAXPATHLEN );
 		}
 	}
@@ -1054,7 +1056,7 @@ unsigned long countTitles( const unsigned int inc, const unsigned int exc ) {
 	mptitle_t *runner=base;
 
 	if( NULL == base ) {
-		addMessage(1,"Counting without Database!");
+		addMessage( 1, "Counting without Database!");
 		return 0;
 	}
 
@@ -1331,9 +1333,9 @@ void plCheck( int del ) {
 	mpplaylist_t *buf=pl;
 
 	if( ( getConfig()->mpmode == PM_PLAYLIST ) && !getConfig()->mpmix ) {
-		addMessage(1,"plCheck: Sorted playlist");
+		addMessage( 1, "plCheck: Sorted playlist");
 		if( getConfig()->current == NULL ) {
-			addMessage(0,"No playlist available!");
+			addMessage( 0, "No playlist available!");
 		}
 		return;
 	}
@@ -1421,6 +1423,8 @@ void plCheck( int del ) {
 	notifyChange();
 }
 
+unsigned dirnum=0;
+
 /*
  * Steps recursively through a directory and collects all music files in a list
  * curdir: current directory path
@@ -1431,6 +1435,10 @@ mptitle_t *recurse( char *curdir, mptitle_t *files ) {
 	char dirbuff[2*MAXPATHLEN];
 	struct dirent **entry;
 	int num, i;
+
+	if( ++dirnum % 100 == 0 ) {
+		addMessage( 0, "Scanned %u directories", dirnum);
+	}
 
 	if( '/' == curdir[strlen( curdir )-1] ) {
 		curdir[strlen( curdir )-1]=0;
@@ -1735,7 +1743,7 @@ int handleRangeCmd( mptitle_t *title, mpcmd_t cmd ) {
 		buff=list;
 		while( buff != NULL ) {
 			if( strcmp( line, buff->dir ) == 0 ) {
-				addMessage(0,"%s already in list!",line);
+				addMessage( 1, "%s already in list!",line);
 				return -1;
 			}
 			buff=buff->next;
@@ -1770,4 +1778,42 @@ int handleRangeCmd( mptitle_t *title, mpcmd_t cmd ) {
 	}
 
 	return cnt;
+}
+
+/**
+ * Adds a title to the global doublet list
+ */
+int handleDBL( mptitle_t *title ) {
+	char line[MAXPATHLEN]="p=";
+	marklist_t *buff;
+	mpconfig_t *config=getConfig();
+	marklist_t *list=config->dbllist;
+
+	strltcat( line, title->path, MAXPATHLEN );
+
+	buff=list;
+	while( buff != NULL ) {
+		if( strcmp( line, buff->dir ) == 0 ) {
+			addMessage( 1, "%s already in list!", line);
+			return -1;
+		}
+		buff=buff->next;
+	}
+
+	buff=falloc( 1, sizeof( marklist_t ) );
+	strcpy( buff->dir, line );
+	buff->next=NULL;
+
+	if( list == NULL ) {
+		config->dbllist=buff;
+	}
+	else {
+		while( list->next != NULL ) {
+			list=list->next;
+		}
+		list->next=buff;
+	}
+
+	addToList( buff->dir, mpc_doublets );
+	return applyDNPlist( buff );
 }

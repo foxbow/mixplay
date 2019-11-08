@@ -57,7 +57,7 @@ mptitle_t *getTitleForRange( const mpcmd_t range, const char *name ) {
 	}
 
 	if( !MPC_EQALBUM(range) && !MPC_EQARTIST(range) ){
-		addMessage(0, "Can only search represantatives for Artists and Albums!");
+		addMessage( 0, "Can only search represantatives for Artists and Albums!");
 		return NULL;
 	}
 
@@ -325,7 +325,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 
 	dbroot=getConfig()->root;
 	if( dbroot == NULL ) {
-		addMessage(0, "No database loaded!" );
+		addMessage( 0, "No database loaded!" );
 	}
 	else {
 		dbrunner=dbroot;
@@ -379,7 +379,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 
 			fsroot->playcount=mean;
 			fsroot->key=index++;
-			addMessage(1, "Adding %s", fsroot->display );
+			addMessage( 1, "Adding %s", fsroot->display );
 			dbAddTitle( db, fsroot );
 
 			/* unlink title from fsroot */
@@ -412,7 +412,7 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 	dbClose( db );
 
 	if( getConfig()->root == NULL ) {
-		addMessage(0, "Setting new active database" );
+		addMessage( 0, "Setting new active database" );
 		getConfig()->root=dbroot;
 	}
 
@@ -452,8 +452,10 @@ int dbNameCheck( void ) {
 	mptitle_t *currentEntry;
 	mptitle_t *runner;
 	int				count=0;
+	int				qcnt=0;
 	FILE 			*fp;
 	int				match;
+	char			rmpath[MAXPATHLEN];
 
 	root=dbGetMusic( );
 	if( root == NULL ) {
@@ -461,11 +463,15 @@ int dbNameCheck( void ) {
 		return -1;
 	}
 
-	fp=fopen( "rmlist.sh", "w" );
+	snprintf( rmpath, MAXPATHLEN, "%s/.mixplay/rmlist.sh", getenv("HOME"));
+	fp=fopen( rmpath, "w" );
 	if( NULL == fp ) {
-		addMessage( -1, "Could not open rmlist.sh for writing!" );
+		addMessage( -1, "Could not open %s for writing!", rmpath );
 		return -1;
 	}
+
+	/* start with a clean list, old doublets may have been deleted by now */
+	getConfig()->dbllist=wipeList(getConfig()->dbllist);
 
 	fprintf( fp, "#!/bin/bash\n" );
 
@@ -497,8 +503,10 @@ int dbNameCheck( void ) {
 						case  3: /* 0011 */
 						case  7: /* 0111 */
 						case 11: /* 1011 */
-							handleRangeCmd(currentEntry, mpc_dnp|mpc_path);
+							handleDBL(currentEntry);
 							addMessage( 1, "Marked %s", currentEntry->path );
+							fprintf( fp, "## Original at %s\n", runner->path );
+							fprintf( fp, "rm \"%s\"\n\n", currentEntry->path );
 							runner->flags |= MP_MARK;
 							count++;
 							break;
@@ -507,8 +515,10 @@ int dbNameCheck( void ) {
 						case 12: /* 1100 */
 						case 13: /* 1101 */
 						case 14: /* 1110 */
-							handleRangeCmd(runner, mpc_dnp|mpc_path);
+							handleDBL(runner);
 							addMessage( 1, "Marked %s", runner->path );
+							fprintf( fp, "## Original at %s\n", currentEntry->path );
+							fprintf( fp, "rm \"%s\"\n\n", runner->path );
 							currentEntry->flags |= MP_MARK;
 							count++;
 							break;
@@ -521,12 +531,13 @@ int dbNameCheck( void ) {
 							fprintf( fp, "#rm \"%s\"\n", currentEntry->path );
 							fprintf( fp, "#rm \"%s\"\n\n", runner->path );
 							runner->flags |= MP_MARK; /* make sure only one of the doublets is used for future checkings */
+							qcnt++;
 							break;
 						case 15: /* 1111 */
 							/* both titles are fine! */
 							break;
 						default:
-							fail( F_FAIL, "Incorrect match: %i\n", match );
+							addMessage( 0, "Incorrect match: %i", match );
 							break;
 						}
 					}
@@ -541,8 +552,11 @@ int dbNameCheck( void ) {
 		}
 		currentEntry=currentEntry->next;
 	}
-	fprintf( fp, "\necho Remember to clean the database!\n\n" );
-
+	if( qcnt > 0 ) {
+		fprintf( fp, "echo \"Remember to clean the database!\"\n" );
+		addMessage( 0, "Found %i questionable titles", qcnt );
+		addMessage( 0, "Check rmlist.sh in config dir" );
+	}
 	fclose( fp );
 
 	return count;
@@ -559,9 +573,7 @@ void dbWrite( void ) {
 	mptitle_t *root=getConfig()->root;
 	mptitle_t *runner=root;
 
-	if( NULL == root ) {
-		fail( F_FAIL, "Not dumping an empty database!" );
-	}
+	assert( root != NULL );
 
 	fileBackup( dbname );
 	db=dbOpen( dbname );

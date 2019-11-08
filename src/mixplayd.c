@@ -33,9 +33,9 @@ static unsigned long _curmsg=0;
 static void sigint(int signo){
 	char *pass;
 	pass=falloc(8,1);
-	strcpy(pass,"mixplay");
+	strcpy(pass, "mixplay");
 
-	addMessage(0, "External quit on signal %i!", signo );
+	addMessage( 0, "External quit on signal %i!", signo );
 	if( getConfig()->command == mpc_quit ) {
 		addMessage( 0, "Forced exit!!" );
 		unlink(PIDPATH);

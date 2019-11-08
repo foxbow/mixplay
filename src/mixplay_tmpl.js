@@ -225,10 +225,10 @@ function switchView (element) {
 /*
  * stop the server
  */
-function killServer () {
-  var reply = window.prompt('Really stop?')
+function pwSendCMD (msg, cmd) {
+  var reply = window.prompt(msg)
   if ((reply !== null) && (reply !== '')) {
-    sendCMD(0x07, reply)
+    sendCMD(cmd, reply)
   }
 }
 
@@ -237,7 +237,7 @@ function killServer () {
  */
 function addText (text) {
   var line = ''
-  var numlines = 15
+  var numlines = 10
   var b = document.getElementById('cextra2')
   if (b.className === 'inactive') {
     b.className = 'alert'
@@ -760,7 +760,8 @@ function playerUpdate (data) {
   if (data.msg !== '') {
     if (data.msg.startsWith('ALERT:')) {
       window.alert(data.msg.substring(6))
-    } else if (data.msg !== 'Done.') {
+      addText(data.msg.substring(6))
+    } else {
       addText(data.msg)
     }
   }
@@ -1031,7 +1032,7 @@ function handleKey (event) {
       sendCMD(0x0e)
       break
     case 'Q':
-      killServer()
+      pwSendCMD('Really stop the server?', 0x07)
       break
     default:
       console.log('Pressed: ' + event.key)

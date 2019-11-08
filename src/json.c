@@ -1030,6 +1030,7 @@ static char *jsonWriteKeyVal( jsonObject *jo, char *json, size_t *len ) {
 
 		if( jo->next != NULL ) {
 			strcat( json, "," );
+			strcat( json, ", " );
 		}
 		jo=jo->next;
 	}

@@ -61,17 +61,17 @@ int initHID() {
 		if( fd != -1 ) {
 			/* try to grab all events */
 			if( ioctl( fd, EVIOCGRAB, 1 ) != 0 ) {
-				addMessage(0, "Could not grab HID events! (%s)", strerror(errno));
+				addMessage( 0, "Could not grab HID events! (%s)", strerror(errno));
 				close(fd);
 				return -1;
 			}
 		}
 		else {
 			if( errno == EACCES ) {
-				addMessage(0, "Could not access device, user needs to be in the 'input' group!" );
+				addMessage( 0, "Could not access device, user needs to be in the 'input' group!" );
 			}
 			else {
-				addMessage(0, "No HID device %s (%s)", getConfig()->rcdev, strerror(errno));
+				addMessage( 0, "No HID device %s (%s)", getConfig()->rcdev, strerror(errno));
 			}
 		}
 	}
@@ -112,7 +112,7 @@ static void *_mpHID( void *arg ) {
 		}
 
 		if( cmd != mpc_idle ) {
-			addMessage(2, "HID: %s", mpcString(cmd) );
+			addMessage( 2, "HID: %s", mpcString(cmd) );
 			setCommand( cmd, NULL );
 			cmd=mpc_idle;
 		}

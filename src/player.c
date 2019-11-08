@@ -223,7 +223,7 @@ void setCommand( mpcmd_t cmd, char *arg ) {
 	else {
 		/* someone did not clean up! */
 		if( getConfig()->argument != NULL ) {
-			addMessage(0,"Leftover %s - ignoring %s!",
+			addMessage( 0, "Leftover %s - ignoring %s!",
 					getConfig()->argument, mpcString(cmd) );
 		}
 		else {
@@ -310,8 +310,10 @@ void *setProfile( ) {
 
 		control->dnplist=wipeList( control->dnplist );
 		control->favlist=wipeList( control->favlist );
+		control->dbllist=wipeList( control->dbllist );
 		control->dnplist=loadList( mpc_dnp );
 		control->favlist=loadList( mpc_fav );
+		control->dbllist=loadList( mpc_doublets );
 
 		control->current=wipePlaylist( control->current );
 
@@ -857,20 +859,20 @@ void *reader( ) {
 
 					switch ( cmd ) {
 					case 0: /* STOP */
-						addMessage(2,"Player %i stopped", fdset );
+						addMessage( 2, "Player %i stopped", fdset );
 						/* player was not yet fully initialized, start again */
 						if( control->status == mpc_start ) {
-							addMessage(2,"Restart player %i..", fdset );
+							addMessage( 2, "Restart player %i..", fdset );
 							sendplay( p_command[fdset][1] );
 						}
 						/* stream stopped playing (PAUSE) */
 						else if( control->mpmode == PM_STREAM ) {
-							addMessage(2,"Stream stopped");
+							addMessage( 2, "Stream stopped");
 							control->status=mpc_idle;
 						}
 						/* we're playing a playlist */
 						else if( control->current != NULL ){
-							addMessage(2,"Title change on player %i", fdset );
+							addMessage( 2, "Title change on player %i", fdset );
 							if( ( order == 1 ) && ( control->fade == 0 ) ) {
 								playCount( control->current->title );
 							}
@@ -1053,7 +1055,7 @@ void *reader( ) {
 				if( ( control->current->title->key != 0 ) &&
 					  ( control->current->title->flags & MP_MARK ) ) {
 					markSkip(control->current->title);
-					addMessage(1,"Skipped");
+					addMessage( 1, "Skipped");
 					/* updateCurrent( control ); - done in STOP handling */
 				}
 
@@ -1062,7 +1064,17 @@ void *reader( ) {
 			break;
 
 		case mpc_doublets:
-			asyncRun( plCheckDoublets );
+			if( asyncTest() ) {
+				if( control->argument != NULL ) {
+					if( strcmp( "mixplay", control->argument ) == 0 ) {
+						asyncRun( plCheckDoublets );
+					}
+					else {
+						addMessage( -1, "Wrong password!" );
+					}
+					sfree( &(control->argument) );
+				}
+			}
 			break;
 
 		case mpc_dbclean:
@@ -1109,7 +1121,7 @@ void *reader( ) {
 						control->status=mpc_quit;
 					}
 					else {
-						progressMsg( "Wrong password!" );
+						addMessage( -1, "Wrong password!" );
 					}
 					sfree( &(control->argument) );
 				}
@@ -1119,7 +1131,7 @@ void *reader( ) {
 		case mpc_profile:
 			if( asyncTest() ) {
 				if( control->argument == NULL ) {
-					progressMsg( "No profile given!" );
+					addMessage( -1, "No profile given!" );
 				}
 				else {
 					profile=atoi( control->argument );
@@ -1142,7 +1154,7 @@ void *reader( ) {
 		case mpc_newprof:
 			if ( ( control->current != NULL ) && asyncTest() ) {
 				if( control->argument == NULL ) {
-					progressMsg( "No profile given!" );
+					addMessage( -1, "No profile given!" );
 				}
 				else if(control->mpmode == PM_STREAM){
 					control->streams++;
@@ -1178,16 +1190,16 @@ void *reader( ) {
 		case mpc_remprof:
 			if( asyncTest() ) {
 				if( control->argument == NULL ) {
-					progressMsg( "No profile given!" );
+					addMessage( -1, "No profile given!" );
 				}
 				else {
 					profile=atoi( control->argument );
 					if( profile == 0 ) {
-						progressMsg( "Cannot remove empty profile!" );
+						addMessage( -1, "Cannot remove empty profile!" );
 					}
 					if( profile > 0 ) {
 						if( profile == control->active ) {
-							progressMsg( "Cannot remove active profile!" );
+							addMessage( -1, "Cannot remove active profile!" );
 						}
 						else if( profile > control->profiles ) {
 							progressStart( "Profile #%i does not exist!", profile );
@@ -1238,7 +1250,7 @@ void *reader( ) {
 		case mpc_path:
 			if( ( control->current != NULL ) && asyncTest() ) {
 				if( control->argument == NULL ) {
-					progressMsg( "No path given!" );
+					addMessage( -1, "No path given!" );
 				}
 				else {
 					control->mpmix=MPC_ISSHUFFLE(control->command);
@@ -1290,23 +1302,23 @@ void *reader( ) {
 				/* if we mix two searches we're in trouble! */
 				assert( control->found->state != mpsearch_idle );
 				if( control->argument == NULL ) {
-					progressMsg( "Nothing to search for!" );
+					addMessage( -1, "Nothing to search for!" );
 				}
 				else {
 					if ( search( control->argument, MPC_RANGE(control->command) ) == -1 ) {
-						progressMsg( "Too many titles found!" );
+						addMessage( -1, "Too many titles found!" );
 					}
 					/* todo: a signal/unblock would be nicer here */
-					addMessage(1,"Waiting for results..");
+					addMessage( 1, "Waiting for results..");
 					while( control->found->state != mpsearch_idle ) {
 						nanosleep( &ts, NULL );
 					}
-					addMessage(1,"Results sent!");
+					addMessage( 1, "Results sent!");
 					sfree( &(control->argument) );
 				}
 			}
 			else {
-				addMessage(1,"search async locked!");
+				addMessage( 1, "search async locked!");
 			}
 			break;
 

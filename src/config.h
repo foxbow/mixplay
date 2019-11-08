@@ -127,6 +127,7 @@ typedef struct {
 	char *dbname;				/* path to the database */
 	marklist_t *favlist;	/* favourites */
 	marklist_t *dnplist;	/* DNPlist */
+	marklist_t *dbllist;	/* doublets */
 	char playtime[20];			/* string containing time into song 00:00 */
 	char remtime[20];			/* string containing remaining playtime 00:00 */
 	int percent;				/* how many percent of the song have been played */
@@ -184,7 +185,6 @@ void activity( const char *msg, ... ) __attribute__((__format__(__printf__, 1, 2
 
 void progressStart( const char *msg, ... ) __attribute__((__format__(__printf__, 1, 2)));
 void progressEnd( void );
-void progressMsg( const char *msg );
 void updateUI( void );
 
 void notifyChange();

@@ -299,7 +299,7 @@ mpconfig_t *readConfig( void ) {
 			if( strstr( line, "active=" ) == line ) {
 				_cconfig->active=atoi(pos);
 				if( _cconfig->active == 0 ) {
-					addMessage(0,"Setting default profile!");
+					addMessage( 0, "Setting default profile!");
 					_cconfig->active=1;
 				}
 			}
@@ -671,7 +671,7 @@ static void removeHook( void (*func)( void* ), void *arg, _mpfunc **list ) {
 	pthread_mutex_lock(&_cblock);
 
 	if( pos == NULL ) {
-		addMessage( 0 ,"Empty callback list!" );
+		addMessage( 0 , "Empty callback list!" );
 		return;
 	}
 
@@ -719,17 +719,8 @@ void progressStart( const char* msg, ... ) {
  * end a progress display
  */
 void progressEnd( void ) {
-	addMessage( 0, "Done." );
+	addMessage( -1, "Done." );
 	invokeHooks(_pfunc);
-}
-
-/*
- * a single line that is sent to the current client
- * this should handled as an alert (e.g.: PopUp) on the client
- */
-void progressMsg( const char *msg ) {
-	progressStart( "ALERT:%s", msg );
-	progressEnd();
 }
 
 /**
@@ -790,7 +781,7 @@ char *fullpath( const char *file ) {
 
 profile_t *getProfile() {
 	if( getConfig()->active < 1 ) {
-		addMessage(0,"%i is not a valid profile!", getConfig()->active );
+		addMessage( 0, "%i is not a valid profile!", getConfig()->active );
 		return NULL;
 	}
 	return getConfig()->profile[getConfig()->active-1];

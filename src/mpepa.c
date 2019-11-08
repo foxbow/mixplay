@@ -230,12 +230,12 @@ static void debounceCmd( mpcmd_t cmd ) {
 	_lastevent.tv_usec=now.tv_usec;
 
 	if( ( diff.tv_sec > 0 ) || ( diff.tv_usec > 200000 ) ) {
-		addMessage( 2,"EP: cmd %s", mpcString( cmd ) );
+		addMessage( 2, "EP: cmd %s", mpcString( cmd ) );
 		setCommand( cmd, NULL );
 	}
 	else {
-		addMessage( 2,"EP: debounce %s", mpcString( cmd ) );
-		addMessage( 1,"EP: tv %u - %u", (unsigned)diff.tv_sec, (unsigned)diff.tv_usec );
+		addMessage( 2, "EP: debounce %s", mpcString( cmd ) );
+		addMessage( 1, "EP: tv %u - %u", (unsigned)diff.tv_sec, (unsigned)diff.tv_usec );
 	}
 	pthread_mutex_unlock( &_debouncelock );
 }

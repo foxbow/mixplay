@@ -153,7 +153,7 @@ static void epsLock( ) {
 		addMessage( 2, "EPS: ready" );
 	}
 
-	addMessage(2,"EPS: exit idle..");
+	addMessage( 2, "EPS: exit idle..");
 }
 
 /*
@@ -630,7 +630,7 @@ int epsPoweron( void ) {
 			epsSend( 0x87, 1 );        /* define by OTP */
 
 			/* set lookup tabels */
-			addMessage(2, "EPS setting lookup tables" );
+			addMessage( 2, "EPS setting lookup tables" );
 			epsSend( LUT_FOR_VCOM, 0 );                            /* vcom */
 			for(count = 0; count < 44; count++) {
 					epsSend(lut_vcom_dc[count],1);

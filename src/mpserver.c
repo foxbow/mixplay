@@ -45,7 +45,7 @@ static int filePost( int sock, const char *fname ) {
 		errno=0;
 		while( sendfile( sock, fd, NULL, 4096 ) == 4096 );
 		if( errno != 0 ) {
-			addMessage(0, "Error %s sending %s!", strerror(errno), fname );
+			addMessage( 0, "Error %s sending %s!", strerror(errno), fname );
 		}
 		close(fd);
 	}
@@ -531,7 +531,7 @@ static void *clientHandler(void *args ) {
 	}
 	if( running & 2 ) {
 		removeNotifyHook( &mps_notify, &nextstat );
-		addMessage(1, "Update Handler (%p) terminates", (void *)&nextstat );
+		addMessage( 1, "Update Handler (%p) terminates", (void *)&nextstat );
 	}
 
 	addMessage( 2, "Client handler exited" );
@@ -607,7 +607,7 @@ void *mpserver( ) {
 			pthread_t pid;
 			client_sock = accept(mainsocket, (struct sockaddr *)&client, (socklen_t*)&alen);
 			if (client_sock < 0) {
-				addMessage(0, "accept() failed!" );
+				addMessage( 0, "accept() failed!" );
 				continue;
 			}
 			addMessage( 2, "Connection accepted" );

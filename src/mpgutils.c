@@ -239,11 +239,11 @@ static size_t txtlen( const char *line ) {
  */
 static int tagCopy( char *target, mpg123_string *tag ) {
 	if( NULL == tag ){
-		addMessage(3,"Empty Tag!");
+		addMessage(3, "Empty Tag!");
 		return 0;
 	}
 	if ( txtlen( tag->p ) == 0 ) {
-		addMessage(3,">%s< is only spaces!", tag->p );
+		addMessage(3, ">%s< is only spaces!", tag->p );
 		return 0;
 	}
 
@@ -321,7 +321,7 @@ static void fillInfo( mpg123_handle *mh, mptitle_t *title ) {
 	/* Set some default values as tag info may be incomplete */
 	genPathName( title );
 
-	addMessage(2, "< %s:\n%s -%s\n%s", title->path, title->artist, title->title, title->album );
+	addMessage( 2, "< %s:\n%s -%s\n%s", title->path, title->artist, title->title, title->album );
 
 	strtcpy( path, fullpath(title->path), MAXPATHLEN-1 );
 
@@ -333,7 +333,7 @@ static void fillInfo( mpg123_handle *mh, mptitle_t *title ) {
 	while( mpg123_framebyframe_next( mh ) == MPG123_OK ) {
 		meta = mpg123_meta_check( mh );
 		if( meta & MPG123_ID3 ) {
-			addMessage(3,"Found ID3 tag");
+			addMessage(3, "Found ID3 tag");
 			break;
 		}
 	}

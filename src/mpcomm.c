@@ -61,12 +61,12 @@ int isCurClient( int client ) {
 void unlockClient( int client ) {
 	if( client == _curclient ) {
 		_curclient=-1;
-		addMessage(1,"Unlocking %i", client );
+		addMessage( 1, "Unlocking %i", client );
 		pthread_mutex_unlock( &_clientlock );
 		return;
 	}
 	else if( _curclient != -1 ) {
-		addMessage(0,"Client %i is not %i", client, _curclient );
+		addMessage( 0, "Client %i is not %i", client, _curclient );
 	}
 }
 
@@ -210,7 +210,10 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 	/* direct send */
 	else if( clientid == _curclient ) {
 		if( *count < data->msg->count ) {
-			if( strcmp( "Done.", msgBuffPeek( data->msg, *count ) ) == 0 ) {
+			/* alerts are disruptive */
+			if( strcmp( "ALERT:", msgBuffPeek( data->msg, *count ) ) == 0 ) {
+				/* todo: the client should be unlocked AFTER this data has been
+				   has been sent not while it is still generated! */
 				unlockClient( clientid );
 			}
 			jsonAddStr( jo, "msg", msgBuffPeek( data->msg, *count ) );
