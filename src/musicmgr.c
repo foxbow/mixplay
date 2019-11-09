@@ -1340,9 +1340,9 @@ void plCheck( int del ) {
 		return;
 	}
 
-	/* there is a playlist cleanup */
+	/* there is a playlist, so clean up */
 	if( pl != NULL ) {
-		/* truncate stream title history to 20 titles */
+		/* It's a stream, so truncate stream title history to 20 titles */
 		if( getConfig()->mpmode == PM_STREAM ) {
 			while( ( pl->next != NULL ) && ( cnt < 20 ) ) {
 				pl=pl->next;
@@ -1361,61 +1361,55 @@ void plCheck( int del ) {
 			return;
 		}
 
-		/* standard mixplaylist */
+		/* No stream but standard mixplaylist */
 		cnt=0;
 		pl=getConfig()->current;
-		/* this should always be != NULL */
-		if ( pl == NULL ) {
-			addMessage( -1, "No titles at all!" );
-		}
-		else {
-			/* make sure the playlist is not marked DNP right now */
-			pthread_mutex_lock( &_pllock );
+		/* make sure the playlist is not modifid elsewhere right now */
+		pthread_mutex_lock( &_pllock );
 
-			/* rewind to the start of the list */
-			if ( del != 0 ) {
-				while( pl->prev != NULL ) {
-					pl=pl->prev;
-				}
+		/* rewind to the start of the list */
+		if ( del != 0 ) {
+			while( pl->prev != NULL ) {
+				pl=pl->prev;
 			}
+		}
 
-			/* go through end of the playlist and clean up underway */
-			while( pl->next != NULL ) {
-				/* clean up on the way to remove DNP marked or deleted files? */
-				if( del != 0 ) {
-					if ( ( pl->title->flags | MP_DNP ) || ( !mp3Exists( pl->title ) ) ){
-						/* title leaves the playlist so it must be unmarked */
-						pl->title->flags &= ~MP_MARK;
-						buf=pl->next;
-						if( pl->prev != NULL ) {
-							pl->prev->next=pl->next;
-						}
-						pl->next->prev=pl->prev;
-
-						/* the current title has become invalid, erk.. */
-						if( pl == getConfig()->current ) {
-							/* fake being at the previous title so the next title is not
-							   skipped */
-							if( buf->prev != NULL ) {
-								getConfig()->current=buf->prev;
-							}
-							else {
-								/* no previous title! Do the next best thing then */
-								getConfig()->current=buf;
-							}
-						}
-						free(pl);
-						pl=buf;
+		/* go through end of the playlist and clean up underway */
+		while( pl->next != NULL ) {
+			/* clean up on the way to remove DNP marked or deleted files? */
+			if( del != 0 ) {
+				if ( ( pl->title->flags & MP_DNP ) || ( !mp3Exists( pl->title ) ) ){
+					/* title leaves the playlist so it must be unmarked */
+					pl->title->flags &= ~MP_MARK;
+					buf=pl->next;
+					if( pl->prev != NULL ) {
+						pl->prev->next=pl->next;
 					}
-				}
-				else {
-					pl=pl->next;
+					pl->next->prev=pl->prev;
+
+					/* the current title has become invalid, erk.. */
+					if( pl == getConfig()->current ) {
+						/* fake being at the previous title so the next title is not
+						   skipped */
+						if( buf->prev != NULL ) {
+							getConfig()->current=buf->prev;
+						}
+						else {
+							/* no previous title! Do the next best thing then */
+							getConfig()->current=buf;
+						}
+					}
+					free(pl);
+					pl=buf;
 				}
 			}
-			pthread_mutex_unlock( &_pllock );
+			else {
+				pl=pl->next;
+			}
 		}
-		/* Done cleaning, now start pruning */
+		pthread_mutex_unlock( &_pllock );
 
+		/* Done cleaning, now start pruning */
 		/* truncate playlist title history to 10 titles */
 		cnt=0;
 		pl=getConfig()->current;
