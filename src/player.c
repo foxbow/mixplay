@@ -1093,6 +1093,7 @@ void *reader( ) {
 			if( (title != NULL ) && asyncTest() ) {
 				tbuf = control->current->title;
 				handleRangeCmd( title, control->command );
+				plCheck(1);
 				if( tbuf != control->current->title ) {
 					order=0;
 					dowrite( p_command[fdset][1], "STOP\n", 6 );

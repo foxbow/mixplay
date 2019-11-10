@@ -203,7 +203,7 @@ int main( int argc, char **argv ) {
 
 	/* improve 'randomization' */
 	gettimeofday( &tv,NULL );
-	srand( (getpid()*tv.tv_usec)%RAND_MAX );
+	srandom( (getpid()*tv.tv_usec)%RAND_MAX );
 
 	switch( getArgs( argc, argv ) ) {
 	case 0: /* no arguments given */

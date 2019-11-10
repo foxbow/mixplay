@@ -684,7 +684,7 @@ void applyLists( int clean ) {
 	pthread_mutex_lock( &_pllock );
 	if( clean ) {
 		do {
-			title->flags=0;
+			title->flags&=~(MP_FAV|MP_DNP);
 			title=title->next;
 		} while( title != control->root );
 	}
@@ -805,12 +805,15 @@ int writeList( const mpcmd_t cmd ) {
 int delFromList( const mpcmd_t cmd, const char *line ) {
 	marklist_t *list;
 	marklist_t *buff=NULL;
+	mpcmd_t mode;
 	int cnt=0;
 
-	if( MPC_CMD(cmd) == mpc_dnp ) {
+	if( MPC_CMD(cmd) == mpc_deldnp ) {
+		mode=mpc_dnp;
 		list=getConfig()->dnplist;
 	}
-	else {
+	else if ( MPC_CMD(cmd) == mpc_delfav ){
+		mode=mpc_fav;
 		list=getConfig()->favlist;
 	}
 
@@ -829,7 +832,7 @@ int delFromList( const mpcmd_t cmd, const char *line ) {
 
 	/* did we remove the first entry? */
 	if( cnt > 0 ) {
-		if( MPC_CMD(cmd) == mpc_dnp ) {
+		if( mode == mpc_dnp ) {
 			getConfig()->dnplist=list;
 		}
 		else {
@@ -853,8 +856,8 @@ int delFromList( const mpcmd_t cmd, const char *line ) {
 	addMessage( 1, "Removed %i entries",cnt);
 
 	if( cnt > 0 ) {
-		writeList( cmd );
-		applyLists(0);
+		writeList( mode );
+		applyLists(1);
 		getConfig()->listDirty=1;
 	}
 
@@ -879,11 +882,16 @@ void moveEntry( mpplaylist_t *entry, mpplaylist_t *pos ) {
 
 /*
  * play the given title next
- * if it's in the playlist it gets moved forward
- * otherwise it gets inserted
+ * if it's in the playlist it gets moved
+ * otherwise it gets inserted as a new entry
  */
 void playNext( mptitle_t *title ) {
 	mpplaylist_t *runner = getConfig()->current;
+	assert(runner != NULL);
+
+	while( runner->prev != NULL ) {
+		runner=runner->prev;
+	}
 	while( runner->next != NULL ) {
 		runner=runner->next;
 		if( runner->title == title ) {
@@ -958,65 +966,6 @@ mptitle_t *loadPlaylist( const char *path ) {
 	addMessage( 2, "Playlist %s with %i entries.", path, cnt );
 
 	return ( current == NULL )?NULL:current->next;
-}
-
-/**
- * Marks an entry as DNP and removes it and additional matching titles
- * from the playlist. Matching is done based on range
- *
- * returns the next item in the list. If the next item is NULL, the previous
- * item will be returned. If entry was the last item in the list NULL will be
- * returned.
- */
-mpplaylist_t *removeByPattern( mpplaylist_t *plentry, const char *pat ) {
-	char pattern[NAMELEN+2];
-	mptitle_t *entry=plentry->title;
-	mptitle_t *runner=entry;
-
-	strncpy( pattern, pat, 2 );
-
-	switch( pattern[0] ){
-
-	case 'l':
-		strltcpy( &pattern[2], entry->album, NAMELEN );
-		break;
-
-	case 'a':
-		strltcpy( &pattern[2], entry->artist, NAMELEN );
-		break;
-
-	case 'g':
-		strltcpy( &pattern[2], entry->genre, NAMELEN );
-		break;
-
-	case 't':
-		strltcpy( &pattern[2], entry->title, NAMELEN );
-		break;
-
-	case 'p':
-		strltcpy( &pattern[2], entry->path, NAMELEN );
-		break;
-
-	case 'd':
-		strltcpy( &pattern[2], entry->display, NAMELEN );
-		break;
-
-	default:
-		addMessage( 0, "Unknown pattern %s!", pat );
-		addMessage( 0, "Using display instead" );
-		strltcpy( &pattern[2], entry->display, NAMELEN );
-		break;
-	}
-
-	addMessage( 1, "Rule: %s", pattern );
-	do {
-		if( !(runner->flags & MP_DNP ) && matchTitle( runner, pattern ) ) {
-			runner->flags |= MP_DNP;
-		}
-		runner=runner->next;
-	} while( runner != entry );
-
-	return remFromPL(plentry);
 }
 
 /**
@@ -1204,7 +1153,7 @@ static mptitle_t *skipTitles( mptitle_t *current, long num ) {
  * - does not play the same artist twice in a row
  * - prefers titles with lower playcount
  *
- * returns the head of the (new/current) playlist or NULL on error
+ * returns the head/current of the (new/current) playlist or NULL on error
  */
 mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 	mptitle_t *runner=NULL;
@@ -1240,7 +1189,7 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 		addMessage(-1, "No titles to be played!" );
 		return NULL;
 	}
-	runner=skipTitles( runner, rand()%num );
+	runner=skipTitles( runner, random()%num );
 
 	if( runner==NULL ) {
 		addMessage( -1, "No titles in the database!?" );
@@ -1405,6 +1354,9 @@ void plCheck( int del ) {
 					}
 					free(pl);
 					pl=buf;
+				}
+				else {
+					pl=pl->next;
 				}
 			}
 			else {
@@ -1804,9 +1756,6 @@ int handleRangeCmd( mptitle_t *title, mpcmd_t cmd ) {
 		}
 		else if( MPC_CMD(cmd) == mpc_dnp ) {
 			cnt=applyDNPlist( buff );
-			if( cnt > 0 ) {
-				plCheck( 1 );
-			}
 		}
 	}
 

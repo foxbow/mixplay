@@ -155,8 +155,8 @@ function initScrolls () {
  */
 function fail (msg) {
   if (doUpdate !== 0) {
-    if (!window.alert(msg + '\nRetry?')) {
-      doUpdate = 0
+    if (!window.confirm(msg + '\nRetry?')) {
+      location.reload()
     }
   }
 }
