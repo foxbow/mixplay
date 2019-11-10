@@ -364,6 +364,9 @@ static int getDirs( const char *cd, struct dirent ***dirlist ) {
  * search term. The first character gives the range (taLgd(p))
  * the second character notes if the search should be
  * exact or fuzzy (=*)
+ *
+ * todo: consider adding a exact substring match or deprecate
+ *       fuzzy matching for fav/dnp
  */
 static int matchTitle( mptitle_t *title, const char* pat ) {
 	int fuzzy=0;
@@ -416,7 +419,7 @@ static int matchTitle( mptitle_t *title, const char* pat ) {
 	else {
 		lopat=(char*)falloc( strlen( pat+1 ), 1 );
 		strltcpy( lopat, pat+2, strlen( pat+1 ) );
-		res=( strstr( loname, lopat ) != NULL );
+		res=( strcmp( loname, lopat ) == 0 );
 		free( lopat );
 	}
 
@@ -424,7 +427,8 @@ static int matchTitle( mptitle_t *title, const char* pat ) {
 }
 
 /*
- * matches term with pattern in search
+ * matches term with pattern in search, this does a substring match
+ * as opposed to fav/dnp handling
  */
 static int isMatch( const char *term, const char *pat, const int fuzzy ) {
 	char loterm[MAXPATHLEN];
@@ -1800,7 +1804,9 @@ int handleRangeCmd( mptitle_t *title, mpcmd_t cmd ) {
 		}
 		else if( MPC_CMD(cmd) == mpc_dnp ) {
 			cnt=applyDNPlist( buff );
-			plCheck( 1 );
+			if( cnt > 0 ) {
+				plCheck( 1 );
+			}
 		}
 	}
 

@@ -155,9 +155,9 @@ function initScrolls () {
  */
 function fail (msg) {
   if (doUpdate !== 0) {
-    doUpdate = 0
-    /* pull main to front */
-    window.alert(msg)
+    if (!window.alert(msg + '\nRetry?')) {
+      doUpdate = 0
+    }
   }
 }
 
@@ -768,9 +768,7 @@ function playerUpdate (data) {
 
   if (data.msg !== '') {
     if (data.msg.startsWith('ALERT:')) {
-      if (data.msg.startsWith('ALERT:Done.')) {
-        addText(data.msg.substring(6))
-      } else {
+      if (!data.msg.startsWith('ALERT:Done.')) {
         window.alert(data.msg.substring(6))
       }
     } else {

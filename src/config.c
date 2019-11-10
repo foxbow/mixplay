@@ -532,7 +532,7 @@ void addMessage( int v, const char *msg, ... ) {
 
 	/* This should only go to the client */
 	if ( v == -2 ) {
-		v=0;
+		v=-1;
 		showdbg=0;
 	}
 

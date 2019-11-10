@@ -30,6 +30,9 @@ div#volume {
 	text-align: center;
 }
 
+#viewtabs input, #playpack input {
+	width:1.75em;
+}
 
 input[type="button"]:focus {
 	outline:0;
@@ -189,6 +192,7 @@ input.active, input.inactive, input.hide {
 
 /* selected tab */
 input.active {
+	background-image: linear-gradient( lightblue, darkblue 20%, darkblue 80%, black );
 	background-color: rgba( 150, 150, 150, .5 );
 	display: inline;
 }
