@@ -183,15 +183,15 @@ int getArgs( int argc, char ** argv ){
 
 		case '?':
 			switch( optopt )  {
-			case 'h':
-			case 'p':
-				fprintf (stderr, "Option -%c requires an argument!\n", optopt);
+				case 'h':
+				case 'p':
+					fprintf (stderr, "Option -%c requires an argument!\n", optopt);
 				break;
-			default:
-				printf( "Unknown option -%c\n", optopt );
+				default:
+					printf( "Unknown option -%c\n", optopt );
 				break;
 			}
-			/* no break */
+			/* fallthrough */
 
 		default:
 			printUsage( argv[0] );

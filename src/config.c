@@ -548,7 +548,7 @@ void addMessage( int v, const char *msg, ... ) {
 				/* not just a message but something important */
 				if( v == -1 ) {
 					memmove( line+6, line, MP_MSGLEN-6 );
-					strncpy( line, "ALERT:", 6 );
+					memcpy( line, "ALERT:", 6 );
 					line[MP_MSGLEN]=0;
 				}
 				msgBuffAdd( _cconfig->msg, line );
@@ -745,7 +745,7 @@ void addProgressHook( void (*func)( void * ), void *id ){
 /**
  * register an update function, called on minor updates like playtime
  */
- void addUpdateHook( void (*func)( void * ) ){
+ void addUpdateHook( void (*func)( ) ){
  	addHook( func, NULL, &_ufunc );
  }
 

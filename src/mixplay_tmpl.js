@@ -1011,8 +1011,9 @@ function blockSpace (event) {
 }
 
 function handleKey (event) {
-  /* only do this if the main view is visible! */
-  if (document.getElementById('extra0').className !== 'active') {
+  /* only do this if the main or playlist view is visible! */
+  if ((document.getElementById('extra0').className !== 'active') &&
+      (document.getElementById('extra3').className !== 'active')) {
     return
   }
 

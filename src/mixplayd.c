@@ -32,7 +32,7 @@ static unsigned long _curmsg=0;
  **/
 static void sigint(int signo){
 	char *pass;
-	pass=falloc(8,1);
+	pass=(char*)falloc(8,1);
 	strcpy(pass, "mixplay");
 
 	addMessage( 0, "External quit on signal %i!", signo );
@@ -147,7 +147,7 @@ static void _debugHidUpdateHook() {
 }
 
 static int hidCMD( int c ) {
-	const char keys[MPRC_NUM]=" pnfd-.,";
+	const char keys[MPRC_NUM+1]=" pnfd-.,";
 	int i;
 
 	if( c == -1 ) {
@@ -220,7 +220,7 @@ int main( int argc, char **argv ) {
 		if( control->musicdir == NULL ) {
 			incDebug();
 			addMessage( 0, "Setting default configuration values and initializing..." );
-			setProfile( control );
+			setProfile( );
 			if( control->root == NULL ) {
 				addMessage( -1, "No music found at %s!", control->musicdir );
 				return -1;

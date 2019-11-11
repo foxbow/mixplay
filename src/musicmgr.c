@@ -816,6 +816,10 @@ int delFromList( const mpcmd_t cmd, const char *line ) {
 		mode=mpc_fav;
 		list=getConfig()->favlist;
 	}
+	else {
+		addMessage( 0, "Illegal listselection %s!", mpcString(cmd));
+		return -1;
+	}
 
 	if( list == NULL ) {
 		addMessage( 0, "No list to remove %s from!", line);
@@ -949,7 +953,8 @@ mptitle_t *loadPlaylist( const char *path ) {
 				( strlen( buff ) > 1 ) && ( buff[0] != '#' ) ) {
 			/* turn relative paths into absolute ones */
 			if( buff[0] != '/' ) {
-				snprintf( titlePath, MAXPATHLEN, "%s%s", mdir, buff );
+				strcpy( titlePath, mdir );
+				strtcat( titlePath, buff, MAXPATHLEN );
 				strtcpy( buff, titlePath, MAXPATHLEN );
 			}
 			 /* remove control chars like CR/LF */

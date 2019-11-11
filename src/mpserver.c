@@ -361,6 +361,8 @@ static void *clientHandler(void *args ) {
 				if( running == 1 ) {
 					addMessage( 1, "Update Handler (%p) initialized", (void *)&nextstat );
 					addNotifyHook( &mps_notify, &nextstat );
+					fullstat |= MPCOMM_LISTS;
+					fullstat |= MPCOMM_FULLSTAT;
 					running|=2;
 				}
 				if( config->listDirty ) {

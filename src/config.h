@@ -191,7 +191,7 @@ void notifyChange();
 
 void addNotifyHook( void (*)( void *), void *arg );
 void addProgressHook( void (*)( void * ), void *id );
-void addUpdateHook( void (*)( void * ) );
+void addUpdateHook( void (*)( ) );
 
 void removeNotifyHook( void (*)( void *), void *arg );
 
