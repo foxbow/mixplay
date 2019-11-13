@@ -155,7 +155,8 @@ function initScrolls () {
  */
 function fail (msg) {
   if (doUpdate !== 0) {
-    if (!window.confirm(msg + '\nRetry?')) {
+    doUpdate = 0
+    if (window.confirm(msg + '\nRetry?')) {
       location.reload()
     }
   }
@@ -388,7 +389,7 @@ function enableElement (e, i) {
 }
 
 /**
- * wrapper to call clickline with a FAV/DNP line
+ * wrapper to create a popup with a FAV/DNP line
  */
 function getPattern (choice, cmd, line) {
   var text = ''
@@ -425,7 +426,7 @@ function getPattern (choice, cmd, line) {
       break
   }
   text += line.substring(2)
-  return clickline(choice, cmd, line, text)
+  return popselect(choice, cmd, '', -1, line, text)
 }
 
 /* creates a selection in a popselect popup */
@@ -442,6 +443,7 @@ function clickable (text, cmd, arg, ident) {
         sendCMD(dcmd, this.getAttribute('data-arg'))
         const line = document.getElementById('line' + ident)
         line.className = 'hide'
+        wipeElements(line)
       }
     } else {
       console.log('popup' + ident + 'does no longer exist')
@@ -487,10 +489,6 @@ function popselect (choice1, cmd1, choice2, cmd2, arg, text) {
     reply.appendChild(popspan)
   }
   return reply
-}
-
-function clickline (choice, cmd, arg, text) {
-  return popselect(choice, cmd, '', -1, arg, text)
 }
 
 /*
@@ -555,7 +553,9 @@ function fullUpdate (data) {
       if (data.prev[i].playcount >= 0) {
         titleline += '[' + data.prev[i].playcount + '/' + data.prev[i].skipcount + '] '
       }
-      var cline = clickline('DNP', 0x080a, data.prev[i].key,
+      var cline = popselect('DNP', 0x080a,
+        'Replay', 0x0011,
+        data.prev[i].key,
         titleline + data.prev[i].artist + ' - ' + data.prev[i].title)
       e.appendChild(cline)
     }
@@ -1050,7 +1050,9 @@ function handleKey (event) {
       break
     default:
       console.log('Pressed: ' + event.key)
+      return
   }
+  event.preventDefault()
 }
 /*
  * start the UI update thread loops

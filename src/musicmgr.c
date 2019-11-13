@@ -291,7 +291,7 @@ mpplaylist_t *addToPL( mptitle_t *title, mpplaylist_t *target, const int mark ) 
 	if( mark ) {
 		title->flags |= MP_MARK;
 	}
-	/* do not notify here as the playlist may be a serach result! */
+	/* do not notify here as the playlist may be a search result */
 	return target;
 }
 
@@ -871,17 +871,29 @@ int delFromList( const mpcmd_t cmd, const char *line ) {
 /**
  * moves an entry in the playlist
  */
-void moveEntry( mpplaylist_t *entry, mpplaylist_t *pos ) {
-	if( pos->next == entry ) {
+static void moveEntry( mpplaylist_t *entry, mpplaylist_t *pos ) {
+	if( (pos == entry) || ( pos->next == entry ) ) {
 		return;
 	}
 
-	if( pos == entry ) {
-		return;
+	/* remove entry from old position */
+	if( entry->prev != NULL ) {
+		entry->prev->next=entry->next;
+	}
+	if( entry->next != NULL ) {
+		entry->next->prev=entry->prev;
 	}
 
-	addToPL( entry->title, pos, 0 );
-	remFromPL( entry );
+	/* Insert entry into new position */
+	entry->prev=pos;
+	entry->next=pos->next;
+	if( pos->next != NULL ) {
+		pos->next->prev=entry;
+	}
+	pos->next=entry;
+
+	/* we tinkered the playlist, an update would be nice */
+	notifyChange();
 }
 
 /*
@@ -893,16 +905,29 @@ void playNext( mptitle_t *title ) {
 	mpplaylist_t *runner = getConfig()->current;
 	assert(runner != NULL);
 
-	while( runner->prev != NULL ) {
+	/* check played titles */
+	runner=runner->prev;
+	while( runner != NULL ) {
+		if( runner->title == title ) {
+			/* treat like searchresult */
+			title->flags&=~MP_MARK;
+			moveEntry( runner, getConfig()->current );
+			return;
+		}
 		runner=runner->prev;
 	}
-	while( runner->next != NULL ) {
-		runner=runner->next;
+
+	/* check following titles */
+	runner = getConfig()->current->next;
+	while( runner != NULL ) {
 		if( runner->title == title ) {
 			moveEntry( runner, getConfig()->current );
 			return;
 		}
+		runner=runner->next;
 	}
+
+	/* add title as new one - should not happen */
 	addToPL( title, getConfig()->current, 0 );
 }
 

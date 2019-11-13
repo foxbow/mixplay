@@ -58,15 +58,15 @@ cmd = 00MR RRRR CCCC CCCC
 * 0x09 - mark as favourite according to upper bytes
 * 0x0a - mark as do not play according to upper bytes
 * 0x0b - find double titles*
-* 0x0c - insert title into playlist <key>
+* 0x0c - insert searchresults into playlist
 * 0x0d - increase volume
 * 0x0e - decrease volume
 * 0x0f - fast forward
 * 0x10 - reverse rewind
-* 0x11 - play title next
+* 0x11 - move title in playlist to next
 * 0x12 - send database information
 * 0x13 - search title +arg <string>
-* 0x14 - append title to playlist <key>
+* 0x14 - append searchresults to playlist
 * 0x15 - set volume +arg <0..100>
 * 0x16 - create new profile +arg <string>
 * 0x17 - play path/url <string>

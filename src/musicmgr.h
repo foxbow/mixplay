@@ -71,7 +71,6 @@ mpplaylist_t *appendToPL( mptitle_t *title, mpplaylist_t *pl, const int mark );
 mpplaylist_t *addToPL( mptitle_t *title, mpplaylist_t *target, const int mark );
 void playNext( mptitle_t *title );
 mpplaylist_t *remFromPLByKey( mpplaylist_t *root, const unsigned key );
-void moveEntry( mpplaylist_t *entry, mpplaylist_t *pos );
 mpplaylist_t *addPLDummy( mpplaylist_t *pl, const char *name );
 void plCheck( int del );
 int writePlaylist( mpplaylist_t *pl, const char *name );
