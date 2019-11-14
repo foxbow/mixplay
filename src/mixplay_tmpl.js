@@ -84,12 +84,8 @@ function setScrolls () {
   var h = window.innerHeight
   var w = window.innerWidth
   if (document.getElementById('extra0').className === 'inactive') {
-    if (w * 1.2 < h) {
-      h = h / 37
-    } else {
-      h = h / 30
-    }
-    document.body.style.fontSize = Math.max(h, 15) + 'px'
+    h = h / 32.5
+    document.body.style.fontSize = Math.max(h, 12) + 'px'
     return
   }
 
@@ -189,13 +185,11 @@ function switchTabByRef (element, num) {
   while (e !== null) {
     b = document.getElementById('c' + element + i)
     if (b !== null) {
-      if (i === num) {
+      if (i === parseInt(num)) {
         b.className = 'active'
         e.className = 'active'
       } else {
-        if (b.className !== 'alert') {
-          b.className = 'inactive'
-        }
+        b.className = 'inactive'
         e.className = 'inactive'
       }
     } else {
@@ -220,7 +214,12 @@ function switchTab (ref) {
  */
 function switchView (element) {
   switchTabByRef('extra', element)
-  setScrolls()
+  if (element === 0) {
+    setScrolls()
+    enableElement('uiextra', 1)
+  } else {
+    enableElement('uiextra', 0)
+  }
 }
 
 /*
@@ -500,8 +499,11 @@ function popselect (choice1, cmd1, choice2, cmd2, arg, text, drag = 0) {
   /* elemant is drop target */
   if (drag & 2) {
     reply.ondrop = function (e) {
-      sendCMD(0x11, e.dataTransfer.getData('title') + '/' + arg)
-      enableElement(e.dataTransfer.getData('element'), 0)
+      const source = parseInt(e.dataTransfer.getData('title'))
+      if (source !== arg) {
+        sendCMD(0x11, source + '/' + arg)
+        enableElement(e.dataTransfer.getData('element'), 0)
+      }
     }
     reply.ondragover = function (e) {
       e.preventDefault()
@@ -515,12 +517,10 @@ function popselect (choice1, cmd1, choice2, cmd2, arg, text, drag = 0) {
  * name: unique name for tab control
  * list: array of DOM elements to tabify
  */
-function tabify (parent, name, list) {
+function tabify (parent, name, list, maxlines = 14) {
   var num = list.length
-  var tabs = parseInt(num / 20)
-  if ((tabs % 20) === 0) {
-    tabs--
-  }
+  var tabs = parseInt(num / maxlines)
+
   if (tabs > 0) {
     for (var i = 0; i <= tabs; i++) {
       var tabswitch = document.createElement('input')
@@ -531,7 +531,8 @@ function tabify (parent, name, list) {
         tabswitch.className = 'inactive'
       }
       tabswitch.type = 'button'
-      tabswitch.onclick = function () { switchTab(this) }
+      tabswitch.setAttribute('data-num', i)
+      tabswitch.onclick = function () { switchTabByRef(name, this.getAttribute('data-num')) }
       tabswitch.value = '[' + i + ']'
       parent.appendChild(tabswitch)
     }
@@ -545,8 +546,9 @@ function tabify (parent, name, list) {
       }
       tabdiv.width = '100%'
       parent.appendChild(tabdiv)
-      for (var j = 0; (j < 20) && (20 * i + j < num); j++) {
-        tabdiv.appendChild(list[20 * i + j])
+      for (var j = 0; (j < maxlines) &&
+          ((maxlines * i) + j < num); j++) {
+        tabdiv.appendChild(list[(maxlines * i) + j])
       }
     }
   } else {
@@ -590,7 +592,11 @@ function fullUpdate (data) {
     titleline += '[' + data.current.playcount + '/' + data.current.skipcount + '] '
   }
   cline = document.createElement('p')
+  cline.id = 'ctitle'
   cline.innerHTML = '&#x25B6; ' + titleline + data.current.artist + ' - ' + data.current.title
+  cline.onclick = function () {
+    sendCMD(0x00)
+  }
   cline.ondrop = function (e) {
     sendCMD(0x11, e.dataTransfer.getData('title'))
     enableElement(e.dataTransfer.getData('element'), 0)
@@ -728,7 +734,7 @@ function dnpfavUpdate (data) {
       items[i] = getPattern('Remove', 0x001a, data.dnplist[i])
     }
   }
-  tabify(e, 'dlist', items)
+  tabify(e, 'dlist', items, 16)
 
   e = document.getElementById('dnpfav2')
   wipeElements(e)
@@ -741,7 +747,7 @@ function dnpfavUpdate (data) {
       items[i] = getPattern('Remove', 0x001b, data.favlist[i])
     }
   }
-  tabify(e, 'flist', items)
+  tabify(e, 'flist', items, 16)
 }
 
 function playerUpdate (data) {
