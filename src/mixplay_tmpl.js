@@ -84,10 +84,12 @@ function setScrolls () {
   var h = window.innerHeight
   var w = window.innerWidth
   if (document.getElementById('extra0').className === 'inactive') {
+    enableElement('uiextra', 0)
     h = h / 32.5
     document.body.style.fontSize = Math.max(h, 12) + 'px'
     return
   }
+  enableElement('uiextra', 1)
 
   var dh
   if (smallUI) {
@@ -214,12 +216,7 @@ function switchTab (ref) {
  */
 function switchView (element) {
   switchTabByRef('extra', element)
-  if (element === 0) {
-    setScrolls()
-    enableElement('uiextra', 1)
-  } else {
-    enableElement('uiextra', 0)
-  }
+  setScrolls()
 }
 
 /*
