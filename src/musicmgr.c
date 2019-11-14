@@ -871,8 +871,10 @@ int delFromList( const mpcmd_t cmd, const char *line ) {
 /**
  * moves an entry in the playlist
  */
-static void moveEntry( mpplaylist_t *entry, mpplaylist_t *pos ) {
-	if( (pos == entry) || ( pos->next == entry ) ) {
+static void movePLEntry( mpplaylist_t *entry, mpplaylist_t *pos ) {
+
+	if( ( entry == NULL ) || ( pos == NULL ) ||
+			(pos == entry) || ( pos->next == entry ) ) {
 		return;
 	}
 
@@ -897,38 +899,142 @@ static void moveEntry( mpplaylist_t *entry, mpplaylist_t *pos ) {
 }
 
 /*
+ * Searches for the given title in the playlist. Returns
+ * the playlist entry on success and NULL on failure.
+ * The search will ignore the current title!
+ *
+ * range 0 - return null
+ * range 1 - only return titles to be played
+ * range 2 - only return titles that have been played
+ * range 3 - return any title
+ */
+static mpplaylist_t *getPLEntry( mptitle_t *title, int range ) {
+	mpplaylist_t *runner=getConfig()->current;
+	assert( runner != NULL );
+
+	if( range & 2 ) {
+		while( runner->prev != NULL ) {
+			runner=runner->prev;
+		}
+	}
+
+	while( runner != NULL ) {
+		if( runner != getConfig()->current ) {
+			if( runner->title == title ) {
+				return runner;
+			}
+		}
+		else if ( !(range & 1) ) {
+			return NULL;
+		}
+		runner=runner->next;
+	}
+
+	return NULL;
+}
+
+/*
  * play the given title next
  * if it's in the playlist it gets moved
  * otherwise it gets inserted as a new entry
  */
 void playNext( mptitle_t *title ) {
-	mpplaylist_t *runner = getConfig()->current;
-	assert(runner != NULL);
+	mpplaylist_t *source;
+	assert(title != NULL);
 
 	/* check played titles */
-	runner=runner->prev;
-	while( runner != NULL ) {
-		if( runner->title == title ) {
-			/* treat like searchresult */
-			title->flags&=~MP_MARK;
-			moveEntry( runner, getConfig()->current );
-			return;
-		}
-		runner=runner->prev;
+	source=getPLEntry( title, 2 );
+	if( source != NULL ) {
+		title->flags&=~MP_MARK;
+	}
+	else {
+		/* check following titles */
+		source=getPLEntry( title, 1 );
 	}
 
-	/* check following titles */
-	runner = getConfig()->current->next;
-	while( runner != NULL ) {
-		if( runner->title == title ) {
-			moveEntry( runner, getConfig()->current );
-			return;
-		}
-		runner=runner->next;
+	if( source != NULL ) {
+		movePLEntry( source, getConfig()->current );
+	}
+	else {
+		/* add title as new one - should not happen */
+		addMessage(1, "Inserting %s as new!", title->display);
+		addToPL( title, getConfig()->current, 0 );
+	}
+}
+
+/*
+ * moves a title in the playlist.
+ * if after is NULL the current title is chosen as title to
+ * insert after.
+ */
+void moveTitle( mptitle_t *from, mptitle_t *after ) {
+	mpplaylist_t *frompos=NULL;
+	mpplaylist_t *topos=NULL;
+
+	if ( ( from == NULL ) || ( from == after ) ) {
+		return;
 	}
 
-	/* add title as new one - should not happen */
-	addToPL( title, getConfig()->current, 0 );
+	/* check played titles */
+	frompos=getPLEntry( from, 2 );
+	if( frompos != NULL ) {
+		from->flags&=~MP_MARK;
+	}
+	else {
+		/* check following titles */
+		frompos=getPLEntry( from, 1 );
+	}
+
+	if( after == NULL ) {
+		topos=getConfig()->current;
+	}
+	else {
+		topos=getPLEntry( after, 3 );
+	}
+
+	if( topos == NULL ) {
+		addMessage(0, "Nowhere to insert");
+		return;
+	}
+
+	if( frompos == NULL ) {
+		/* add title as new one - should not happen */
+		addMessage(1, "Inserting %s as new!", from->display);
+		addToPL( from, topos, 0 );
+	}
+	else {
+		movePLEntry( frompos, topos );
+	}
+}
+
+/*
+ * moves a title within the playlist.
+ * title and target are given as indices, like they would return
+ * from the client.
+ */
+void moveTitleByIndex( unsigned from, unsigned after ) {
+	mptitle_t *frompos=NULL;
+	mptitle_t *topos=NULL;
+
+	if ( ( from == 0 ) || ( from == after ) ) {
+		return;
+	}
+
+	frompos = getTitleByIndex( from );
+	if ( frompos == NULL ) {
+		addMessage(0, "No title with index %u", from);
+		return;
+	}
+
+	if( after != 0 ) {
+		topos = getTitleByIndex( after );
+		if ( topos == NULL ) {
+			addMessage(0, "No target with index %u", from);
+			return;
+		}
+	}
+
+	moveTitle( frompos, topos );
 }
 
 /**

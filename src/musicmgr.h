@@ -81,6 +81,8 @@ mptitle_t *loadPlaylist( const char *path );
 mptitle_t *insertTitle( mptitle_t *base, const char *path );
 int search( const char *pat, const mpcmd_t range );
 
+void moveTitleByIndex( unsigned from, unsigned after );
+
 void markSkip( mptitle_t *title );
 int DNPSkip( void );
 void applyLists( int clean );

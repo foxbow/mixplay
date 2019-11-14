@@ -30,6 +30,14 @@ div#volume {
 	text-align: center;
 }
 
+#extra3 {
+	overflow: hidden;
+}
+
+#extra3 p {
+	inline-size: max-content;
+}
+
 #viewtabs input, #playpack input {
 	width:1.75em;
 }

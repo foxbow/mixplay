@@ -1400,11 +1400,17 @@ void *reader( ) {
 
 		case mpc_move:
 			if( control->argument != NULL ) {
-				title=getTitleByIndex(atoi( control->argument ) );
-				if( title != NULL ) {
-					playNext(title);
-					notifyChange();
+				t = strchr( control->argument, '/' );
+				if( t != NULL ) {
+					*t=0;
+					t++;
+					moveTitleByIndex( atoi(control->argument), atoi(t) );
 				}
+				else {
+					moveTitleByIndex( atoi( control->argument ), 0 );
+				}
+				notifyChange();
+				
 				sfree( &(control->argument) );
 			}
 			break;
