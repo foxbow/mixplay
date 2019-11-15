@@ -599,7 +599,7 @@ function fullUpdate (data) {
   cline = document.createElement('p')
   cline.id = 'ctitle'
   cline.innerHTML = '&#x25B6; ' + titleline + data.current.artist + ' - ' + data.current.title
-  if (isstream) {
+  if (!isstream) {
     cline.onclick = function () {
       sendCMD(0x00)
     }
