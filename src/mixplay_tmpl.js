@@ -484,26 +484,30 @@ function popselect (choice1, cmd1, choice2, cmd2, arg, text, drag = 0) {
     popspan.appendChild(select)
     reply.appendChild(popspan)
   }
-  /* element is draggable */
-  if (drag & 1) {
-    reply.draggable = 'true'
-    reply.ondragstart = function (e) {
-      e.dataTransfer.setData('title', arg)
-      e.dataTransfer.setData('element', reply.id)
-      e.dataTransfer.dropEffect = 'move'
-    }
-  }
-  /* elemant is drop target */
-  if (drag & 2) {
-    reply.ondrop = function (e) {
-      const source = parseInt(e.dataTransfer.getData('title'))
-      if (source !== arg) {
-        sendCMD(0x11, source + '/' + arg)
-        enableElement(e.dataTransfer.getData('element'), 0)
+
+  /* playlist ordering does not make sense in streams */
+  if (!isstream) {
+    /* element is draggable */
+    if (drag & 1) {
+      reply.draggable = 'true'
+      reply.ondragstart = function (e) {
+        e.dataTransfer.setData('title', arg)
+        e.dataTransfer.setData('element', reply.id)
+        e.dataTransfer.dropEffect = 'move'
       }
     }
-    reply.ondragover = function (e) {
-      e.preventDefault()
+    /* elemant is drop target */
+    if (drag & 2) {
+      reply.ondrop = function (e) {
+        const source = parseInt(e.dataTransfer.getData('title'))
+        if (source !== arg) {
+          sendCMD(0x11, source + '/' + arg)
+          enableElement(e.dataTransfer.getData('element'), 0)
+        }
+      }
+      reply.ondragover = function (e) {
+        e.preventDefault()
+      }
     }
   }
   return reply
@@ -516,7 +520,11 @@ function popselect (choice1, cmd1, choice2, cmd2, arg, text, drag = 0) {
  */
 function tabify (parent, name, list, maxlines = 14) {
   var num = list.length
-  var tabs = parseInt(num / maxlines)
+  var tabs
+
+  if (num > 0) {
+    tabs = (num - 1) / maxlines
+  }
 
   if (tabs > 0) {
     for (var i = 0; i <= tabs; i++) {
@@ -560,7 +568,7 @@ function fullUpdate (data) {
   wipeElements(e)
   document.title = data.current.artist + ' - ' + data.current.title
   if (data.prev.length > 0) {
-    if (data.mpmode === 1) {
+    if (isstream) {
     /* only the stream title */
       setElement('prev', data.prev[0].title)
     } else {
@@ -591,17 +599,18 @@ function fullUpdate (data) {
   cline = document.createElement('p')
   cline.id = 'ctitle'
   cline.innerHTML = '&#x25B6; ' + titleline + data.current.artist + ' - ' + data.current.title
-  cline.onclick = function () {
-    sendCMD(0x00)
+  if (isstream) {
+    cline.onclick = function () {
+      sendCMD(0x00)
+    }
+    cline.ondrop = function (e) {
+      sendCMD(0x11, e.dataTransfer.getData('title'))
+      enableElement(e.dataTransfer.getData('element'), 0)
+    }
+    cline.ondragover = function (e) {
+      e.preventDefault()
+    }
   }
-  cline.ondrop = function (e) {
-    sendCMD(0x11, e.dataTransfer.getData('title'))
-    enableElement(e.dataTransfer.getData('element'), 0)
-  }
-  cline.ondragover = function (e) {
-    e.preventDefault()
-  }
-
   e.appendChild(cline)
   if (data.next.length > 0) {
     if (data.next[0].artist === '') {
@@ -616,9 +625,15 @@ function fullUpdate (data) {
         titleline = '[' + data.next[i].playcount + '/' + data.next[i].skipcount + '] '
       }
       titleline += data.next[i].artist + ' - ' + data.next[i].title
-      cline = popselect('DNP', 0x080a,
-        'Remove', 0x1c,
-        data.next[i].key, titleline, 3)
+      if (isstream) {
+        cline = document.createElement('p')
+        cline.className = 'popselect'
+        cline.innerHTML = titleline
+      } else {
+        cline = popselect('DNP', 0x080a,
+          'Remove', 0x1c,
+          data.next[i].key, titleline, 3)
+      }
       e.appendChild(cline)
     }
   } else {
@@ -759,7 +774,6 @@ function playerUpdate (data) {
   } else {
     document.getElementById('setfavplay').value = 'Enable Favplay'
   }
-  isstream = (data.mpmode === 1) /* PM_STREAM */
 
   enableElement('goprev', !isstream)
   enableElement('gonext', !isstream)
@@ -814,6 +828,8 @@ function parseReply (reply) {
       fail('Version clash, expected ' + mpver + ' and got ' + data.version)
       return
     }
+    isstream = (data.mpmode === 1) /* PM_STREAM */
+
     /* full update */
     if (data.type & 1) {
       fullUpdate(data)
@@ -822,7 +838,6 @@ function parseReply (reply) {
     if (data.type & 2) {
       searchUpdate(data)
     }
-
     /* dnp/fav lists */
     if (data.type & 4) {
       dnpfavUpdate(data)
