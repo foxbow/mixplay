@@ -524,7 +524,7 @@ function tabify (parent, name, list, maxlines = 14) {
   var tabs
 
   if (num > 0) {
-    tabs = (num - 1) / maxlines
+    tabs = parseInt((num - 1) / maxlines)
   }
 
   if (tabs > 0) {
