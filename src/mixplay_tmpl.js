@@ -76,33 +76,34 @@ function scrollToggle () {
 }
 
 /*
- * enables scrolling on texts that are longer than the parent container
- * and centers shorter texts
+ * Scales the font to fit into current window, enables scrolling
+ * on texts that are longer than the parent containerand centers
+ * shorter texts
  */
-function setScrolls () {
-  /* only do this if the main view is visible! */
+function adaptUI () {
+  /* Number of lines in sub-tabs */
+  var lines = 32.5
   var h = window.innerHeight
-  var w = window.innerWidth
-  if (document.getElementById('extra0').className === 'inactive') {
-    enableElement('uiextra', 0)
-    h = h / 32.5
-    document.body.style.fontSize = Math.max(h, 12) + 'px'
+  const maintab = document.getElementById('extra0').className === 'active'
+
+  enableElement('uiextra', maintab)
+  /* mantab scales to width too and has less lines to display */
+  if (maintab) {
+    if (smallUI) {
+      h = Math.min((window.innerWidth * 5) / 8, h)
+      lines = 11
+    } else {
+      h = Math.min((window.innerWidth * 4) / 5, h)
+      lines = 16.25
+    }
+  }
+
+  /* font shall never get snmaller than 12px */
+  document.body.style.fontSize = Math.max(h / lines, 12) + 'px'
+
+  if (!maintab) {
     return
   }
-  enableElement('uiextra', 1)
-
-  var dh
-  if (smallUI) {
-    w = (w * 5) / 8
-    dh = 230
-  } else {
-    w = (w * 4) / 5
-    dh = 327
-  }
-
-  const fact = (Math.min(h, w) * 20) / dh
-
-  document.body.style.fontSize = fact + 'px'
 
   for (var i = 0; i < numscrolls; i++) {
     var scroll = scrolls[i]
@@ -216,7 +217,7 @@ function switchTab (ref) {
  */
 function switchView (element) {
   switchTabByRef('extra', element)
-  setScrolls()
+  adaptUI()
 }
 
 /*
@@ -641,7 +642,7 @@ function fullUpdate (data) {
   }
 
   enableElement('fav', !(data.current.flags & 1))
-  setScrolls()
+  adaptUI()
 }
 
 function wipeElements (e) {
@@ -1043,7 +1044,7 @@ function switchUI () {
     document.cookie = 'MPsmallUI=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
   }
   setsmallUI()
-  setScrolls()
+  adaptUI()
 }
 
 function blockSpace (event) {
