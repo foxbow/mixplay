@@ -12,6 +12,7 @@ var numscrolls = 0
 var favplay = 0
 var cmdtosend = ''
 var argtosend = ''
+var activecmd = 0
 var smallUI = getsmallUI()
 
 function getsmallUI () {
@@ -91,7 +92,7 @@ function adaptUI () {
   if (maintab) {
     if (smallUI) {
       h = Math.min((window.innerWidth * 5) / 8, h)
-      lines = 11
+      lines = 11.25
     } else {
       h = Math.min((window.innerWidth * 4) / 5, h)
       lines = 16.25
@@ -280,6 +281,17 @@ function sendCMD (cmd, arg = '') {
   var e
   var text
 
+  /* ignore volume */
+  if ((cmd !== 0x0d) && (cmd !== 0x0e)) {
+    /* avoid stacking  */
+    if (activecmd) {
+      return
+    }
+    activecmd = cmd
+    /* give visual feedback that the command is being progressed */
+    document.body.className = 'busy'
+  }
+
   while (code.length < 4) {
     code = '0' + code
   }
@@ -315,6 +327,8 @@ function sendCMD (cmd, arg = '') {
     } else {
       window.alert('Wait for previous search to be sent')
     }
+    activecmd = 0
+    document.body.className = ''
     return
   }
 
@@ -325,12 +339,17 @@ function sendCMD (cmd, arg = '') {
           fail('CMD Error: connection lost!')
           break
         case 204:
+          activecmd = 0
           break
         case 503:
           window.alert('Sorry, we\'re busy!')
+          activecmd = 0
           break
         default:
           fail('Received Error ' + xmlhttp.status + ' after sending 0x' + code)
+      }
+      if (!activecmd) {
+        document.body.className = ''
       }
     }
   }
@@ -529,17 +548,16 @@ function tabify (parent, name, list, maxlines = 14) {
 
   if (tabs > 0) {
     for (var i = 0; i <= tabs; i++) {
-      var tabswitch = document.createElement('input')
+      var tabswitch = document.createElement('button')
       tabswitch.id = 'c' + name + i
       if (i === 0) {
         tabswitch.className = 'active'
       } else {
         tabswitch.className = 'inactive'
       }
-      tabswitch.type = 'button'
       tabswitch.setAttribute('data-num', i)
       tabswitch.onclick = function () { switchTabByRef(name, this.getAttribute('data-num')) }
-      tabswitch.value = '[' + i + ']'
+      tabswitch.innerHTML = '[' + i + ']'
       parent.appendChild(tabswitch)
     }
     for (i = 0; i <= tabs; i++) {
@@ -660,7 +678,7 @@ function searchUpdate (data) {
   var i
   if (data.albums.length > 0) {
     for (i = 0; i < data.albums.length; i++) {
-      if (data.mpedit) {
+      if (data.fpcurrent) {
         items[i] = popselect('Search', 0x0413,
           'Favourite', 0x0409,
           data.albums[i],
@@ -683,7 +701,7 @@ function searchUpdate (data) {
   items = []
   if (data.artists.length > 0) {
     for (i = 0; i < data.artists.length; i++) {
-      if (data.mpedit) {
+      if (data.fpcurrent) {
         items[i] = popselect('Search', 0x0213,
           'Favourite', 0x0209,
           data.artists[i],
@@ -705,7 +723,7 @@ function searchUpdate (data) {
   items = []
   wipeElements(e)
   if (data.titles.length > 0) {
-    if (data.mpedit) {
+    if (data.fpcurrent) {
       items[0] = document.createElement('a')
       items[0].href = '/cmd/0114?0'
       items[0].innerHTML = '-- Fav all --'
@@ -715,7 +733,7 @@ function searchUpdate (data) {
         0, '-- Play all --')
     }
     for (i = 0; i < data.titles.length; i++) {
-      if (data.mpedit) {
+      if (data.fpcurrent) {
         items[i + 1] = popselect('Fav', 0x0809,
           'DNP', 0x080a,
           data.titles[i].key,
@@ -764,16 +782,17 @@ function dnpfavUpdate (data) {
 }
 
 function playerUpdate (data) {
-  if (data.mpedit) {
-    document.getElementById('searchmode').value = 'Fav'
-  } else {
-    document.getElementById('searchmode').value = 'DNP'
-  }
   favplay = data.mpfavplay
+  enableElement('searchmode', favplay)
   if (favplay) {
-    document.getElementById('setfavplay').value = 'Disable Favplay'
+    if (data.fpcurrent) {
+      document.getElementById('searchmode').innerHTML = 'Current titles'
+    } else {
+      document.getElementById('searchmode').innerHTML = 'Database'
+    }
+    document.getElementById('setfavplay').innerHTML = 'Disable Favplay'
   } else {
-    document.getElementById('setfavplay').value = 'Enable Favplay'
+    document.getElementById('setfavplay').innerHTML = 'Enable Favplay'
   }
 
   enableElement('goprev', !isstream)
@@ -959,9 +978,6 @@ function sendArg (cmd) {
   if (isstream) return
   var term = document.getElementById('text').value
   if (term.length > 1) {
-    var e = document.getElementById('srange')
-    var range = e.options[e.selectedIndex].value
-    cmd |= range
     sendCMD(cmd, term)
   } else {
     window.alert('Need at least two letters!')

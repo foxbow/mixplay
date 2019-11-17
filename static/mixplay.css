@@ -14,7 +14,12 @@ body {
   background-repeat: no-repeat;
   background-attachment: fixed;
 	font-size: 100%;
-	overflow: hidden;
+	overflow-x: hidden;
+}
+
+body.busy {
+	background-color: #8f8;
+	background-image: radial-gradient( circle at 90% -30%, white, darkgreen 2%, black 100%);
 }
 
 body.disconnect {
@@ -39,15 +44,15 @@ div#volume {
 	inline-size: max-content;
 }
 
-#viewtabs input, #playpack input {
+#viewtabs button, #playpack button {
 	width:1.75em;
 }
 
-input[type="button"]:focus {
+button:focus {
 	outline:0;
 }
 
-input[type="button"]:hover {
+button:hover {
 	cursor: pointer;
 }
 
@@ -145,24 +150,24 @@ div#progress {
 	margin-bottom: 0.2em;
 }
 
-#playpack input {
+#playpack button {
 	background-color: transparent;
 	background-image: radial-gradient(darkblue, black 100%);
 }
 
-input#dnp {
-	background-color: rgba(200,100,100,.25);
+button#dnp {
+	background-image: radial-gradient(darkred, black);
 }
 
-input#dnp:hover, input#fav:hover, #ascroll:hover, #lscroll:hover {
+button#dnp:hover, button#fav:hover, #ascroll:hover, #lscroll:hover {
 	cursor: copy;
 }
 
-input#fav {
-	background-color: rgba(100,200,100,.25);
+button#fav {
+	background-color: radial-gradient(darkgreen, transparent);
 }
 
-div#playtime, div#remtime, input#dnp, input#fav {
+div#playtime, div#remtime, button#dnp, button#fav {
 	padding-left: 0.2em;
 	padding-right: 0.2em;
 }
@@ -188,7 +193,7 @@ a.download {
 	position: absolute;
 }
 
-input, select {
+button, input, select {
 	background: rgba(100,100,100,.5);
 	color: inherit;
 	font-size: 1em;
@@ -196,7 +201,7 @@ input, select {
 }
 
 /* Tabs to select current view */
-input.active, input.inactive, input.hide {
+button.active, button.inactive, button.hide {
 	margin-top: 0.2em;
 	margin-bottom: 0.2em;
 	border: none;
@@ -204,14 +209,14 @@ input.active, input.inactive, input.hide {
 }
 
 /* selected tab */
-input.active {
+button.active {
 	background-image: linear-gradient( lightblue, darkblue 20%, darkblue 80%, black );
 	background-color: rgba( 150, 150, 150, .5 );
 	display: inline;
 }
 
 /* unselected tab */
-input.inactive {
+button.inactive {
 	background: none;
 	display: inline;
 }
@@ -222,7 +227,7 @@ input.inactive {
 	display: none;
 }
 
-input.alert {
+button.alert {
 	background: none;
 	color: #e88;
 }

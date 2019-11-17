@@ -279,7 +279,7 @@ void *setProfile( ) {
 	}
 	cactive=control->active;
 
-	control->mpedit=0;
+	control->fpcurrent=1;
 
 	/* stream selected */
 	if( cactive < 0 ) {
@@ -1348,13 +1348,13 @@ void *reader( ) {
 			break;
 
 		case mpc_edit:
-			control->mpedit=~(control->mpedit);
+			control->fpcurrent=~(control->fpcurrent);
 			break;
 
 		case mpc_deldnp:
 		case mpc_delfav:
 			if( control->argument != NULL ) {
-				delFromList( (MPC_CMD(cmd)==mpc_deldnp)?mpc_dnp:mpc_fav , control->argument);
+				delFromList(cmd, control->argument);
 				sfree( &(control->argument) );
 			}
 			break;
@@ -1410,7 +1410,7 @@ void *reader( ) {
 					moveTitleByIndex( atoi( control->argument ), 0 );
 				}
 				notifyChange();
-				
+
 				sfree( &(control->argument) );
 			}
 			break;

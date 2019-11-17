@@ -453,9 +453,9 @@ int search( const char *pat, const mpcmd_t range ) {
 	mptitle_t *runner=root;
 	searchresults_t *res=getConfig()->found;
 	unsigned int i=0;
-	int found=0;
 	unsigned cnt=0;
 	unsigned dnp=0;
+	mpcmd_t found=0;
 
 	/* enter while the last result has not been sent yet! */
 	assert(res->state!=mpsearch_done);
@@ -473,36 +473,29 @@ int search( const char *pat, const mpcmd_t range ) {
 
 	/* if player is in favplay mode and the search in in fav mode
 	   then search for DNP titles. */
-	if ( getConfig()->mpedit && getProfile()->favplay ) {
+	if ( getConfig()->fpcurrent && getProfile()->favplay ) {
 		addMessage( 1, "DNP search");
 		dnp=MP_DNP;
 	}
 
 	do {
 		activity( 1, "searching" );
-		found=0;
 		/* dnp XNOR MP_DNP */
+		found = 0;
 		if( ( runner->flags & MP_DNP ) == dnp ) {
 			/* check for searchrange and pattern */
-			if( MPC_ISTITLE(range) &&
-					isMatch( runner->title, pat, MPC_ISFUZZY(range) ) ) {
-				found=mpc_title;
-			}
-			if( MPC_ISDISPLAY( range ) &&
-					isMatch( runner->display, pat, MPC_ISFUZZY(range) ) ) {
-				found=mpc_display;
+			if( ( ( MPC_ISTITLE(range) &&
+					isMatch( runner->title, pat, MPC_ISFUZZY(range) ) ) ||
+					( MPC_ISDISPLAY( range ) &&
+					isMatch( runner->display, pat, MPC_ISFUZZY(range) ) ) ) &&
+					( cnt++ < MAXSEARCH ) ) {
+				found = 1;
 			}
 			if( MPC_ISARTIST(range) &&
 					isMatch( runner->artist, pat, MPC_ISFUZZY(range) ) ) {
-				found=mpc_artist;
-			}
-			if( MPC_ISALBUM( range ) &&
-					isMatch( runner->album, pat, MPC_ISFUZZY(range) ) ) {
-				/* if a album title equals a title on the album we need both! */
-				found|=mpc_album;
-			}
-			/* todo: genre and path are missing here */
-			if( found ) {
+				if( MPC_EQARTIST(range) ) {
+					found = 1;
+				}
 				/* check for new artist */
 				for( i=0; (i<res->anum) && strcmp( res->artists[i], runner->artist ); i++ );
 				if( i == res->anum ) {
@@ -510,27 +503,30 @@ int search( const char *pat, const mpcmd_t range ) {
 					res->artists=(char**)frealloc( res->artists, res->anum*sizeof(char*) );
 					res->artists[i]=runner->artist;
 				}
+			}
+			if( MPC_ISALBUM( range ) &&
+					isMatch( runner->album, pat, MPC_ISFUZZY(range) ) ) {
+				if (MPC_EQALBUM(range)) {
+					found = 1;
+				}
 				/* check for new albums */
 				for( i=0; (i<res->lnum) && strcmp( res->albums[i], runner->album ); i++ );
 				if( i == res->lnum ) {
+					/* album not yet in list */
 					res->lnum++;
 					res->albums=(char**)frealloc( res->albums, res->lnum*sizeof(char*) );
 					res->albums[i]=runner->album;
 					res->albart=(char**)frealloc( res->albart, res->lnum*sizeof(char*) );
 					res->albart[i]=runner->artist;
 				}
-				else if( !strcmp( res->albart[i], ARTIST_SAMPLER ) &&
+				else if( strcmp( res->albart[i], ARTIST_SAMPLER ) &&
 						strcmp( res->albart[i], runner->artist ) ){
 					addMessage( 1, "%s is considered a sampler (%s <> %s).",
 							runner->album, runner->artist, res->albart[i] );
 					res->albart[i]=ARTIST_SAMPLER;
 				}
-
-				/* add titles too */
-				if( ( cnt++ < MAXSEARCH ) &&
-						(	MPC_ISARTIST( found ) || MPC_ISTITLE( found ) ||
-						  MPC_ISDISPLAY(found) ||
-						  MPC_EQALBUM( range ) || MPC_EQARTIST( range ) ) ) {
+				/* add title (too)? */
+				if (found) {
 					res->titles=appendToPL( runner, res->titles, 0 );
 					res->tnum++;
 				}

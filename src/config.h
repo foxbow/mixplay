@@ -148,7 +148,7 @@ typedef struct {
 	int mpmode;						/* playmode, see PM_* */
 	unsigned dbDirty;
 	/* flags for mpmode */
-	unsigned mpedit:1;
+	unsigned fpcurrent:1;
 	unsigned mpmix:1;
 	/* other flags */
 	unsigned fade:1;					/* controls fading between titles */
