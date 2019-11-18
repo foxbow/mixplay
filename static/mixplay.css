@@ -56,7 +56,7 @@ button:hover {
 	cursor: pointer;
 }
 
-#playtime:hover, #remtime:hover, #splaytime:hover, #genre:hover {
+#playtime:hover, #remtime:hover, #splaytime:hover {
 	cursor: default;
 }
 
@@ -159,12 +159,12 @@ button#dnp {
 	background-image: radial-gradient(darkred, black);
 }
 
-button#dnp:hover, button#fav:hover, #ascroll:hover, #lscroll:hover {
+button#dnp:hover, button#fav:hover, #ascroll:hover, #lscroll:hover, #genre:hover {
 	cursor: copy;
 }
 
 button#fav {
-	background-color: radial-gradient(darkgreen, transparent);
+	color: darkgreen;
 }
 
 div#playtime, div#remtime, button#dnp, button#fav {
@@ -277,7 +277,7 @@ div.inactive, div.hide {
 	padding: 0.4em;
 	position: absolute;
 	z-index: 1;
-	right: 1.6em;
+	left: 2em;
 	top: -0.4em;
 }
 

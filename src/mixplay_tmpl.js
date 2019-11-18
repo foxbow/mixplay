@@ -12,7 +12,7 @@ var numscrolls = 0
 var favplay = 0
 var cmdtosend = ''
 var argtosend = ''
-var activecmd = 0
+var activecmd = -1
 var smallUI = getsmallUI()
 
 function getsmallUI () {
@@ -95,7 +95,7 @@ function adaptUI () {
       lines = 11.25
     } else {
       h = Math.min((window.innerWidth * 4) / 5, h)
-      lines = 16.25
+      lines = 15.25
     }
   }
 
@@ -284,7 +284,7 @@ function sendCMD (cmd, arg = '') {
   /* ignore volume */
   if ((cmd !== 0x0d) && (cmd !== 0x0e)) {
     /* avoid stacking  */
-    if (activecmd) {
+    if (activecmd !== -1) {
       return
     }
     activecmd = cmd
@@ -327,7 +327,7 @@ function sendCMD (cmd, arg = '') {
     } else {
       window.alert('Wait for previous search to be sent')
     }
-    activecmd = 0
+    activecmd = -1
     document.body.className = ''
     return
   }
@@ -339,16 +339,16 @@ function sendCMD (cmd, arg = '') {
           fail('CMD Error: connection lost!')
           break
         case 204:
-          activecmd = 0
+          activecmd = -1
           break
         case 503:
           window.alert('Sorry, we\'re busy!')
-          activecmd = 0
+          activecmd = -1
           break
         default:
           fail('Received Error ' + xmlhttp.status + ' after sending 0x' + code)
       }
-      if (!activecmd) {
+      if (activecmd === -1) {
         document.body.className = ''
       }
     }
@@ -442,7 +442,7 @@ function getPattern (choice, cmd, line) {
       break
   }
   text += line.substring(2)
-  return popselect(choice, cmd, '', -1, line, text)
+  return xpopselect([choice], [cmd], line, text, 0)
 }
 
 /* creates a selection in a popselect popup */
@@ -477,11 +477,14 @@ function togglePopup (ident) {
 }
 
 /* returns a <div> with text that when clicked presents the two choices */
-function popselect (choice1, cmd1, choice2, cmd2, arg, text, drag = 0) {
+function xpopselect (choice, cmd, arg, text, drag = 0) {
+  const num = choice.length
+  var i
+  var select
   var reply = document.createElement('p')
   reply.innerText = text
   reply.className = 'popselect'
-  const ident = cmd1 + arg
+  const ident = cmd[0] + arg
   reply.id = 'line' + ident
   reply.onclick = function () { togglePopup(ident) }
   var popspan = document.createElement('span')
@@ -490,13 +493,13 @@ function popselect (choice1, cmd1, choice2, cmd2, arg, text, drag = 0) {
     console.log('popup' + ident + ' already exists!')
   } else {
     popspan.id = 'popup' + ident
-    var select = clickable(choice1, cmd1, arg, ident)
-    popspan.appendChild(select)
-    if (cmd2 !== -1) {
-      select = document.createElement('b')
-      select.innerText = '\u2000/\u2000 '
-      popspan.appendChild(select)
-      select = clickable(choice2, cmd2, arg, ident)
+    for (i = 0; i < num; i++) {
+      if (i !== 0) {
+        select = document.createElement('b')
+        select.innerText = '\u2000/\u2000 '
+        popspan.appendChild(select)
+      }
+      select = clickable(choice[i], cmd[i], arg, ident)
       popspan.appendChild(select)
     }
     select = document.createElement('b')
@@ -599,8 +602,8 @@ function fullUpdate (data) {
         titleline += '[' + data.prev[i].playcount + '/' + data.prev[i].skipcount + '] '
       }
       titleline += data.prev[i].artist + ' - ' + data.prev[i].title
-      var cline = popselect('DNP', 0x080a,
-        'Replay', 0x0011,
+      var cline = xpopselect(['DNP', 'FAV', 'Replay'],
+        [0x080a, 0x0809, 0x0011],
         data.prev[i].key, titleline, 1)
       e.appendChild(cline)
     }
@@ -610,7 +613,6 @@ function fullUpdate (data) {
   setElement('title', data.current.title)
   setElement('artist', data.current.artist)
   setElement('album', data.current.album)
-  setElement('genre', data.current.genre)
   titleline = ''
   if (data.current.playcount >= 0) {
     titleline += '[' + data.current.playcount + '/' + data.current.skipcount + '] '
@@ -649,8 +651,8 @@ function fullUpdate (data) {
         cline.className = 'popselect'
         cline.innerHTML = titleline
       } else {
-        cline = popselect('DNP', 0x080a,
-          'Remove', 0x1c,
+        cline = cline = xpopselect(['DNP', 'FAV', 'Remove'],
+          [0x080a, 0x0809, 0x001c],
           data.next[i].key, titleline, 3)
       }
       e.appendChild(cline)
@@ -675,20 +677,24 @@ function searchUpdate (data) {
   var e = document.getElementById('search2')
   wipeElements(e)
   var items = []
+  var choices = []
+  var cmds = []
   var i
   if (data.albums.length > 0) {
     for (i = 0; i < data.albums.length; i++) {
-      if (data.fpcurrent) {
-        items[i] = popselect('Search', 0x0413,
-          'Favourite', 0x0409,
-          data.albums[i],
-          data.albart[i] + ' - ' + data.albums[i])
-      } else {
-        items[i] = popselect('Search', 0x0413,
-          'DNP', 0x040a,
-          data.albums[i],
-          data.albart[i] + ' - ' + data.albums[i])
+      choices = ['Search']
+      cmds = [0x0413]
+      if ((!favplay) || (favplay && data.fpcurrent)) {
+        choices.push('FAV')
+        cmds.push(0x0409)
       }
+      if ((!favplay) || (favplay && !data.fpcurrent)) {
+        choices.push('DNP')
+        cmds.push(0x040a)
+      }
+      items[i] = xpopselect(choices, cmds,
+        data.albums[i],
+        data.albart[i] + ' - ' + data.albums[i])
     }
   } else {
     items[0] = document.createElement('em')
@@ -701,17 +707,19 @@ function searchUpdate (data) {
   items = []
   if (data.artists.length > 0) {
     for (i = 0; i < data.artists.length; i++) {
-      if (data.fpcurrent) {
-        items[i] = popselect('Search', 0x0213,
-          'Favourite', 0x0209,
-          data.artists[i],
-          data.artists[i])
-      } else {
-        items[i] = popselect('Search', 0x0213,
-          'DNP', 0x020a,
-          data.artists[i],
-          data.artists[i])
+      choices = ['Search']
+      cmds = [0x0213]
+      if ((!favplay) || (favplay && data.fpcurrent)) {
+        choices.push('FAV')
+        cmds.push(0x0209)
       }
+      if ((!favplay) || (favplay && !data.fpcurrent)) {
+        choices.push('DNP')
+        cmds.push(0x020a)
+      }
+      items[i] = xpopselect(choices, cmds,
+        data.artists[i],
+        data.artists[i])
     }
   } else {
     items[0] = document.createElement('em')
@@ -728,22 +736,21 @@ function searchUpdate (data) {
       items[0].href = '/cmd/0114?0'
       items[0].innerHTML = '-- Fav all --'
     } else {
-      items[0] = popselect('Insert', 0x080c,
-        'Append', 0x0814,
+      items[0] = xpopselect(['Insert', 'Append'],
+        [0x080c, 0x0814],
         0, '-- Play all --')
     }
     for (i = 0; i < data.titles.length; i++) {
-      if (data.fpcurrent) {
-        items[i + 1] = popselect('Fav', 0x0809,
-          'DNP', 0x080a,
-          data.titles[i].key,
-          data.titles[i].artist + ' - ' + data.titles[i].title)
+      if (favplay && data.fpcurrent) {
+        choices = ['FAV']
+        cmds = [0x0809]
       } else {
-        items[i + 1] = popselect('Insert', 0x080c,
-          'Append', 0x0814,
-          data.titles[i].key,
-          data.titles[i].artist + ' - ' + data.titles[i].title)
+        choices = ['Insert', 'Append']
+        cmds = [0x080c, 0x0814]
       }
+      items[i + 1] = xpopselect(choices, cmds,
+        data.titles[i].key,
+        data.titles[i].artist + ' - ' + data.titles[i].title)
     }
   } else {
     items[0] = document.createElement('em')
@@ -783,7 +790,6 @@ function dnpfavUpdate (data) {
 
 function playerUpdate (data) {
   favplay = data.mpfavplay
-  enableElement('searchmode', favplay)
   if (favplay) {
     if (data.fpcurrent) {
       document.getElementById('searchmode').innerHTML = 'Current titles'
@@ -795,6 +801,7 @@ function playerUpdate (data) {
     document.getElementById('setfavplay').innerHTML = 'Enable Favplay'
   }
 
+  enableElement('searchmode', favplay)
   enableElement('goprev', !isstream)
   enableElement('gonext', !isstream)
   enableElement('progress', !isstream)
@@ -1047,7 +1054,6 @@ function isEnter (event, cmd) {
 function setsmallUI () {
   enableElement('pscroll', !smallUI)
   enableElement('nscroll', !smallUI)
-  enableElement('genre', !smallUI)
 }
 
 function switchUI () {
@@ -1064,11 +1070,13 @@ function switchUI () {
 }
 
 function blockSpace (event) {
-  if (document.getElementById('extra0').style.display === 'none') {
+  /* only do this if the main or playlist view is visible! */
+  if ((document.getElementById('extra0').className !== 'active') &&
+      (document.getElementById('extra3').className !== 'active')) {
     return
   }
   if (event.key === ' ') {
-    event.stopPropagation()
+    event.preventDefault()
   }
 }
 
