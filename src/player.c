@@ -251,7 +251,7 @@ static void sendplay( int fdset ) {
 	assert( control->current != NULL );
 
 
-	if( control->mpmode == PM_STREAM ) {
+	if( (control->mpmode & 3) == PM_STREAM ) {
 		if(control->list) {
 			strcpy( line, "ll 1 ");
 		}
@@ -261,6 +261,8 @@ static void sendplay( int fdset ) {
 		strtcat( line, fullpath(control->current->title->path), MAXPATHLEN+6 );
 	}
 	strtcat( line, "\n", MAXPATHLEN+6 );
+	/* remove MP_SWITCH flag so replies will be handled correctly */
+	control->mpmode &= 3;
 
 	if ( dowrite( fdset, line, MAXPATHLEN+6 ) == -1 ) {
 		fail( errno, "Could not write\n%s", line );
@@ -297,7 +299,7 @@ void *setProfile( ) {
 	/* stream selected */
 	if( cactive < 0 ) {
 		active = -(cactive+1);
-		control->mpmode=PM_STREAM;
+		control->mpmode=PM_STREAM|PM_SWITCH;
 
 		if( active >= control->streams ) {
 			addMessage( 0, "Stream #%"PRId64" does no exist!", active );
@@ -334,7 +336,7 @@ void *setProfile( ) {
 		if( control->mpmode != PM_DATABASE ) {
 			control->root=wipeTitles( control->root );
 			control->root=dbGetMusic( );
-			control->mpmode=PM_DATABASE;
+			control->mpmode=PM_DATABASE|PM_SWITCH;
 		}
 
 		if( NULL == control->root ) {
@@ -744,7 +746,8 @@ void *reader( ) {
 
 		/* Interpret mpg123 output and ignore invalid lines */
 		if( FD_ISSET( p_status[fdset][0], &fds ) &&
-				( 3 < readline( line, MAXPATHLEN, p_status[fdset][0] ) ) ) {
+				( 3 < readline( line, MAXPATHLEN, p_status[fdset][0] ) ) &&
+				(control->mpmode & PM_SWITCH) ) {
 			if( '@' == line[0] ) {
 				/* Don't print volume, progress and MP3Tag messages */
 				if( ( 'F' != line[1] ) && ( 'V' != line[1] ) && ( 'I' != line[1] ) ) {
@@ -844,6 +847,18 @@ void *reader( ) {
 					if( control->mpmode != PM_STREAM ) {
 						control->percent=( 100*intime )/( rem+intime );
 						sprintf( control->remtime, "%02i:%02i", (int)rem/60, (int)rem%60 );
+
+						/* we should just be switching from playlist to database */
+						if( control->current == NULL ) {
+							addMessage(0, "No current playlist PM_SWITCH is %s!", (control->mpmode&PM_SWITCH)?"set":"unset");
+							break;
+						}
+
+						/* this is bad! */
+						if( control->current->title == NULL ) {
+							addMessage(0, "No current title!");
+							break;
+						}
 
 						if( ( control->fade ) && ( rem <= fade ) ){
 							/* should the playcount be increased? */
@@ -1022,7 +1037,7 @@ void *reader( ) {
 			/* has the player been properly initialized yet? */
 			if( control->status != mpc_start ) {
 				/* streamplay cannot be properly paused for longer */
-				if( control->mpmode == PM_STREAM ) {
+				if( (control->mpmode&3) == PM_STREAM ) {
 					if( control->status == mpc_play ) {
 						dowrite( p_command[fdset][1], "STOP\n", 6 );
 					}

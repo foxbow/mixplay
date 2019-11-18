@@ -1417,7 +1417,7 @@ void plCheck( int del ) {
 	mpplaylist_t *pl=getConfig()->current;
 	mpplaylist_t *buf=pl;
 
-	if( ( getConfig()->mpmode == PM_PLAYLIST ) && !getConfig()->mpmix ) {
+	if( ( (getConfig()->mpmode&3) == PM_PLAYLIST ) && !getConfig()->mpmix ) {
 		addMessage( 1, "plCheck: Sorted playlist");
 		if( getConfig()->current == NULL ) {
 			addMessage( 0, "No playlist available!");
@@ -1428,7 +1428,7 @@ void plCheck( int del ) {
 	/* there is a playlist, so clean up */
 	if( pl != NULL ) {
 		/* It's a stream, so truncate stream title history to 20 titles */
-		if( getConfig()->mpmode == PM_STREAM ) {
+		if( (getConfig()->mpmode&3) == PM_STREAM ) {
 			while( ( pl->next != NULL ) && ( cnt < 20 ) ) {
 				pl=pl->next;
 				cnt++;

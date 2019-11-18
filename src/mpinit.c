@@ -65,14 +65,14 @@ int setArgument( const char *arg ) {
 		else {
 			strtcpy( line, arg, MAXPATHLEN );
 		}
-		control->mpmode=PM_STREAM;
+		control->mpmode=PM_STREAM|PM_SWITCH;
 		setStream( line, "Waiting for stream info..." );
 		return 1;
 	}
 	else if( endsWith( arg, ".mp3" ) ) {
 		addMessage( 1, "Single file: %s", arg );
 		/* play single song... */
-		control->mpmode=PM_PLAYLIST;
+		control->mpmode=PM_PLAYLIST|PM_SWITCH;
 		title=insertTitle( NULL, arg );
 		if( title != NULL ) {
 			control->root=wipeTitles( control->root );
@@ -90,7 +90,7 @@ int setArgument( const char *arg ) {
 		strncpy( line, arg, MAXPATHLEN );
 		title=recurse( line, NULL );
 		if( title != NULL ) {
-			control->mpmode=PM_PLAYLIST;
+			control->mpmode=PM_PLAYLIST|PM_SWITCH;
 			control->root=wipeTitles( control->root );
 			if( control->mpmix ) {
 				control->root=title;
@@ -105,7 +105,7 @@ int setArgument( const char *arg ) {
 	else if ( endsWith( arg, ".m3u" ) ||
 			  endsWith( arg, ".pls" ) ) {
 		addMessage( 1, "Playlist: %s", arg );
-		control->mpmode=PM_PLAYLIST;
+		control->mpmode=PM_PLAYLIST|PM_SWITCH;
 		title=loadPlaylist( arg );
 		if( title != NULL ) {
 			if( control->mpmix ) {
