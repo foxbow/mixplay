@@ -473,7 +473,7 @@ int search( const char *pat, const mpcmd_t range ) {
 
 	/* if player is in favplay mode and the search in in fav mode
 	   then search for DNP titles. */
-	if ( getConfig()->fpcurrent && getProfile()->favplay ) {
+	if ( getConfig()->fpcurrent && getFavplay() ) {
 		addMessage( 1, "DNP search");
 		dnp=MP_DNP;
 	}
@@ -633,7 +633,7 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 		while( ptr ) {
 			if( matchTitle( runner, ptr->dir ) ) {
 				if( !( runner->flags & MP_FAV ) ) {
-					if( excl || getProfile()->favplay ) {
+					if( excl || getFavplay() ) {
 						addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
 						runner->flags=MP_FAV;
 						/* title joins favplay if it's the initial favlist application
@@ -684,7 +684,7 @@ void applyLists( int clean ) {
 			title=title->next;
 		} while( title != control->root );
 	}
-	applyFAVlist( control->favlist, getProfile()->favplay );
+	applyFAVlist( control->favlist, getFavplay() );
 	applyDNPlist( control->dbllist );
 	applyDNPlist( control->dnplist );
 	pthread_mutex_unlock( &_pllock );
@@ -1363,7 +1363,7 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 		/* title did not pass playcountcheck and we are not in stuffing mode */
 		while( (valid & 2 ) != 2 ) {
 			/* ignore favourites rule on favplay */
-			if( ( runner->flags & MP_FAV ) && (!getProfile()->favplay )) {
+			if( ( runner->flags & MP_FAV ) && !getFavplay() ) {
 				if ( runner-> playcount <= 2*pcount ) {
 					valid|=2;
 				}

@@ -790,12 +790,21 @@ char *fullpath( const char *file ) {
 	return pbuff;
 }
 
-profile_t *getProfile() {
-	if( getConfig()->active < 1 ) {
-		addMessage( 0, "%i is not a valid profile!", getConfig()->active );
-		return NULL;
+int getFavplay() {
+	if( getConfig()->active > 0 ) {
+		return getConfig()->profile[getConfig()->active-1]->favplay;
 	}
-	return getConfig()->profile[getConfig()->active-1];
+	return 0;
+}
+
+int toggleFavplay() {
+	profile_t *profile;
+	if( getConfig()->active > 0 ) {
+		profile=getConfig()->profile[getConfig()->active-1];
+		profile->favplay=!profile->favplay;
+		return profile->favplay;
+	}
+	return 0;
 }
 
 profile_t *createProfile( const char *name, const unsigned favplay ) {

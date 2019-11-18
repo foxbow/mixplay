@@ -156,6 +156,7 @@ typedef struct {
 	unsigned inUI:1;					/* flag to show if the UI is active */
 	unsigned changed:1;
 	unsigned listDirty:1;
+	unsigned list:1;					/* remote playlist */
 	char *rcdev;							/* device by-id of the remote control */
 	int rccodes[MPRC_NUM];		/* command codes for the remote */
 } mpconfig_t;
@@ -166,7 +167,8 @@ mpconfig_t *getConfig( void );
 mpconfig_t *createConfig( void );
 void freeConfig( void );
 void freeConfigContents( void );
-profile_t *getProfile();
+int getFavplay();
+int toggleFavplay();
 profile_t *createProfile( const char *name, const unsigned favplay );
 void freeProfile( profile_t *profile );
 

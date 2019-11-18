@@ -200,6 +200,10 @@ button, input, select {
 	border: 0;
 }
 
+option {
+	color: darkblue;
+}
+
 /* Tabs to select current view */
 button.active, button.inactive, button.hide {
 	margin-top: 0.2em;

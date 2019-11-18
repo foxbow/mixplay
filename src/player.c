@@ -200,6 +200,15 @@ void setStream( const char* stream, const char *name ) {
 	control->current=addPLDummy( control->current, "Playing stream" );
 	control->current=addPLDummy( control->current, name );
 	control->current=control->current->next;
+	if( endsWith( stream, ".m3u" ) ||
+			endsWith( stream, ".pls" ) ) {
+		addMessage( 0, "Remote playlist will probably not work.." );
+		control->list=1;
+	}
+	else {
+		control->list=0;
+	}
+
 	control->streamURL=(char *)frealloc( control->streamURL, strlen(stream)+1 );
 	strcpy( control->streamURL, stream );
 	addMessage( 1, "Play Stream %s (%s)", name, stream );
@@ -241,7 +250,11 @@ static void sendplay( int fdset ) {
 	mpconfig_t *control=getConfig();
 	assert( control->current != NULL );
 
-	if( getConfig()->mpmode == PM_STREAM ) {
+
+	if( control->mpmode == PM_STREAM ) {
+		if(control->list) {
+			strcpy( line, "ll 1 ");
+		}
 		strtcat( line, control->streamURL, MAXPATHLEN+6 );
 	}
 	else {
@@ -1382,9 +1395,7 @@ void *reader( ) {
 						order=0;
 						dowrite( p_command[fdset][1], "STOP\n", 6 );
 					}
-					/* toggle favplay */
-					getProfile()->favplay=!getProfile()->favplay;
-					addMessage( 1, "%s Favplay", getProfile()->favplay?"Enabling":"Disabling");
+					addMessage( 1, "%s Favplay", toggleFavplay()?"Enabling":"Disabling");
 					control->changed=1;
 					applyLists( 1 );
 

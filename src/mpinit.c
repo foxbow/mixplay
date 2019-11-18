@@ -57,12 +57,6 @@ int setArgument( const char *arg ) {
 		addMessage( 1, "URL: %s", arg );
 		line[0]=0;
 
-		if( endsWith( arg, ".m3u" ) ||
-				endsWith( arg, ".pls" ) ) {
-			addMessage( 0, "Remote playlist will probably not work.." );
-			strcpy( line, "@" );
-		}
-
 		if( strstr( arg, "https" ) == arg ) {
 			addMessage( 0, "No HTTPS support, trying plain HTTP." );
 			strtcat( line, "http", MAXPATHLEN );
@@ -108,7 +102,6 @@ int setArgument( const char *arg ) {
 		}
 		return 3;
 	}
-	/* todo: support database playlists */
 	else if ( endsWith( arg, ".m3u" ) ||
 			  endsWith( arg, ".pls" ) ) {
 		addMessage( 1, "Playlist: %s", arg );

@@ -92,10 +92,13 @@ function adaptUI () {
   if (maintab) {
     if (smallUI) {
       h = Math.min((window.innerWidth * 5) / 8, h)
-      lines = 11.25
+      lines = 11.5
     } else {
       h = Math.min((window.innerWidth * 4) / 5, h)
       lines = 15.25
+    }
+    if (isstream) {
+      lines = lines - 2
     }
   }
 
@@ -598,13 +601,20 @@ function fullUpdate (data) {
     }
     for (var i = Math.min(4, data.prev.length - 1); i >= 0; i--) {
       var titleline = ''
+      var cline
       if (data.prev[i].playcount >= 0) {
         titleline += '[' + data.prev[i].playcount + '/' + data.prev[i].skipcount + '] '
       }
       titleline += data.prev[i].artist + ' - ' + data.prev[i].title
-      var cline = xpopselect(['DNP', 'FAV', 'Replay'],
-        [0x080a, 0x0809, 0x0011],
-        data.prev[i].key, titleline, 1)
+      if (isstream) {
+        cline = document.createElement('p')
+        cline.className = 'popselect'
+        cline.innerHTML = titleline
+      } else {
+        cline = xpopselect(['DNP', 'FAV', 'Replay'],
+          [0x080a, 0x0809, 0x0011],
+          data.prev[i].key, titleline, 1)
+      }
       e.appendChild(cline)
     }
   } else {
@@ -661,7 +671,9 @@ function fullUpdate (data) {
     setElement('next', '- - -')
   }
 
-  enableElement('fav', !(data.current.flags & 1))
+  if (!isstream) {
+    enableElement('fav', !(data.current.flags & 1))
+  }
   adaptUI()
 }
 
@@ -809,12 +821,18 @@ function playerUpdate (data) {
   enableElement('setfavplay', !isstream)
   enableElement('cextra1', !isstream)
   enableElement('lscroll', !isstream)
+  enableElement('cdnpfav0', !isstream)
+  enableElement('cdnpfav1', !isstream)
+  enableElement('cdnpfav2', !isstream)
+  enableElement('dnp', !isstream)
 
   /* switching between stream and normal play */
   setElement('playtime', data.playtime)
   if (!isstream) {
     setElement('remtime', data.remtime)
     document.getElementById('progressbar').style.width = data.percent + '%'
+  } else {
+    enableElement('fav', 0)
   }
 
   if (active !== data.active) {
@@ -957,9 +975,11 @@ function getConfig () {
             for (var i = 0; i < data.config.profiles; i++) {
               s.options[s.options.length] = new Option(data.config.profile[i], i + 1)
             }
-            s.options[s.options.length] = new Option('None', 0)
-            for (i = 0; i < data.config.streams; i++) {
-              s.options[s.options.length] = new Option(data.config.sname[i], -(i + 1))
+            if (data.config.streams > 0) {
+              s.options[s.options.length] = new Option('----', 0)
+              for (i = 0; i < data.config.streams; i++) {
+                s.options[s.options.length] = new Option(data.config.sname[i], -(i + 1))
+              }
             }
             active = 0
           } else {
