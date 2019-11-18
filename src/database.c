@@ -575,6 +575,12 @@ void dbWrite( void ) {
 	mptitle_t *root=getConfig()->root;
 	mptitle_t *runner=root;
 
+	if( getConfig()->mpmode != PM_DATABASE ) {
+		addMessage(0, "Trying to save database in play/stream mode!");
+		getConfig()->dbDirty=0;
+		return;
+	}
+
 	assert( root != NULL );
 
 	fileBackup( dbname );
