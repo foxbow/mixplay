@@ -104,7 +104,7 @@ const char *_mprccmdstrings[MPRC_NUM];
 #define PM_STREAM   0x01
 #define PM_PLAYLIST 0x02
 #define PM_DATABASE 0x03
-#define PM_SWITCH   0x40
+#define PM_SWITCH   0x04
 
 typedef struct {
 	char *name;

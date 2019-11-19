@@ -746,8 +746,7 @@ void *reader( ) {
 
 		/* Interpret mpg123 output and ignore invalid lines */
 		if( FD_ISSET( p_status[fdset][0], &fds ) &&
-				( 3 < readline( line, MAXPATHLEN, p_status[fdset][0] ) ) &&
-				(control->mpmode & PM_SWITCH) ) {
+				( 3 < readline( line, MAXPATHLEN, p_status[fdset][0] ) )) {
 			if( '@' == line[0] ) {
 				/* Don't print volume, progress and MP3Tag messages */
 				if( ( 'F' != line[1] ) && ( 'V' != line[1] ) && ( 'I' != line[1] ) ) {
