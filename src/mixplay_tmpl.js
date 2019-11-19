@@ -583,6 +583,8 @@ function tabify (parent, name, list, maxlines = 14) {
 }
 
 function fullUpdate (data) {
+  var choices = []
+  var cmds = []
   var e = document.getElementById('dnpfav0')
   wipeElements(e)
   document.title = data.current.artist + ' - ' + data.current.title
@@ -605,8 +607,15 @@ function fullUpdate (data) {
         cline.className = 'popselect'
         cline.innerHTML = titleline
       } else {
-        cline = xpopselect(['DNP', 'FAV', 'Replay'],
-          [0x080a, 0x0809, 0x0011],
+        choices = ['DNP']
+        cmds = [0x080a]
+        if (!(data.prev[i].flags & 1)) {
+          choices.push('FAV')
+          cmds.push(0x0809)
+        }
+        choices.push('Replay')
+        cmds.push(0x0011)
+        cline = xpopselect(choices, cmds,
           data.prev[i].key, titleline, 1)
       }
       e.appendChild(cline)
@@ -655,8 +664,15 @@ function fullUpdate (data) {
         cline.className = 'popselect'
         cline.innerHTML = titleline
       } else {
-        cline = cline = xpopselect(['DNP', 'FAV', 'Remove'],
-          [0x080a, 0x0809, 0x001c],
+        choices = ['DNP']
+        cmds = [0x080a]
+        if (!(data.next[i].flags & 1)) {
+          choices.push('FAV')
+          cmds.push(0x0809)
+        }
+        choices.push('Replay')
+        cmds.push(0x0011)
+        cline = xpopselect(choices, cmds,
           data.next[i].key, titleline, 3)
       }
       e.appendChild(cline)
