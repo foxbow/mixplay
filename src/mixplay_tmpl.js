@@ -6,7 +6,6 @@ var serverver = '~~MIXPLAY_VER~~'
 var isstream = 0
 var msglines = ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
 var msgpos = 0
-var active = 0
 var scrolls = []
 var numscrolls = 0
 var favplay = 0
@@ -14,6 +13,7 @@ var cmdtosend = ''
 var argtosend = ''
 var activecmd = -1
 var smallUI = getsmallUI()
+var active = 0
 
 function getsmallUI () {
   if (document.cookie) {
@@ -166,21 +166,6 @@ function fail (msg) {
 }
 
 /*
- * set profile to sanitized value
- */
-function setProf () {
-  var e = document.getElementById('profiles')
-  var id = e.value
-  if (id !== 0) {
-    /* pull main to front */
-    switchView(0)
-    sendCMD(0x06, id)
-  } else {
-    e.value = active
-  }
-}
-
-/*
  * toggle named tab, usually called by switchTab() but also used
  * to set active tab explicitly
  */
@@ -309,6 +294,13 @@ function sendCMD (cmd, arg = '') {
     text = document.createElement('em')
     text.innerHTML = '.. done ..'
     replaceChild(e, text)
+  }
+
+  if ((cmd === 0x06) ||
+      (cmd === 0x16) ||
+      (cmd === 0x17) ||
+      (cmd === 0x18)) {
+    doUpdate = -1
   }
 
   if ((cmd & 0x00ff) === 0x0013) {
@@ -479,7 +471,7 @@ function togglePopup (ident) {
   }
 }
 
-/* returns a <div> with text that when clicked presents the two choices */
+/* returns a <div> with text that when clicked presents the choices */
 function xpopselect (choice, cmd, arg, text, drag = 0) {
   const num = choice.length
   var i
@@ -487,28 +479,30 @@ function xpopselect (choice, cmd, arg, text, drag = 0) {
   var reply = document.createElement('p')
   reply.innerText = text
   reply.className = 'popselect'
-  const ident = cmd[0] + arg
-  reply.id = 'line' + ident
-  reply.onclick = function () { togglePopup(ident) }
-  var popspan = document.createElement('span')
-  popspan.className = 'popup'
-  if (document.getElementById('popup' + ident)) {
-    console.log('popup' + ident + ' already exists!')
-  } else {
-    popspan.id = 'popup' + ident
-    for (i = 0; i < num; i++) {
-      if (i !== 0) {
-        select = document.createElement('b')
-        select.innerText = '\u2000/\u2000 '
+  if (cmd.length > 0) {
+    const ident = cmd[0] + '' + arg
+    reply.id = 'line' + ident
+    reply.onclick = function () { togglePopup(ident) }
+    var popspan = document.createElement('span')
+    popspan.className = 'popup'
+    if (document.getElementById('popup' + ident)) {
+      console.log('popup' + ident + ' already exists!')
+    } else {
+      popspan.id = 'popup' + ident
+      for (i = 0; i < num; i++) {
+        if (i !== 0) {
+          select = document.createElement('b')
+          select.innerText = '\u2000/\u2000 '
+          popspan.appendChild(select)
+        }
+        select = clickable(choice[i], cmd[i], arg, ident)
         popspan.appendChild(select)
       }
-      select = clickable(choice[i], cmd[i], arg, ident)
+      select = document.createElement('b')
+      select.innerText = '\u2000\u274E'
       popspan.appendChild(select)
+      reply.appendChild(popspan)
     }
-    select = document.createElement('b')
-    select.innerText = '\u2000\u274E'
-    popspan.appendChild(select)
-    reply.appendChild(popspan)
   }
 
   /* playlist ordering does not make sense in streams */
@@ -835,9 +829,13 @@ function playerUpdate (data) {
     enableElement('fav', 0)
   }
 
-  if (active !== data.active) {
-    active = data.active
-    setActive(active)
+  active = data.active
+  if ((active === 0) && (isstream)) {
+    enableElement('schan', 1)
+    enableElement('cprof', 0)
+  } else {
+    enableElement('schan', 0)
+    enableElement('cprof', 1)
   }
 
   enableElement('current', !data.status)
@@ -874,6 +872,13 @@ function parseReply (reply) {
       return
     }
     isstream = (data.mpmode === 1) /* PM_STREAM */
+    if (data.mpmode & 4) {
+      document.body.className = 'busy'
+    } else {
+      if (activecmd === -1) {
+        document.body.className = ''
+      }
+    }
 
     /* full update */
     if (data.type & 1) {
@@ -947,14 +952,6 @@ function updateUI () {
 }
 
 /*
- * shows the current profile/channel in the profile select dropdown
- */
-function setActive (id) {
-  var s = document.getElementById('profiles')
-  s.value = id
-}
-
-/*
  * gets the basic configuration of the server
  * this should only happen once at start
  */
@@ -970,18 +967,61 @@ function getConfig () {
             return
           }
           if (data.type === -1) {
-            var s = document.getElementById('profiles')
-            s.options.length = 0
-            for (var i = 0; i < data.config.profiles; i++) {
-              s.options[s.options.length] = new Option(data.config.profile[i], i + 1)
-            }
-            if (data.config.streams > 0) {
-              s.options[s.options.length] = new Option('----', 0)
-              for (i = 0; i < data.config.streams; i++) {
-                s.options[s.options.length] = new Option(data.config.sname[i], -(i + 1))
+            var e
+            var items = []
+            var choices = []
+            var cmds = []
+            var i
+            setElement('active', 'No active profile/channel')
+            /* set profile list */
+            e = document.getElementById('profiles')
+            wipeElements(e)
+            if (data.config.profiles === 0) {
+              items[0] = document.createElement('em')
+              items[0].innerHTML = 'No profiles?'
+            } else {
+              for (i = 0; i < data.config.profiles; i++) {
+                choices = []
+                cmds = []
+                if (i !== (active - 1)) {
+                  choices = ['Play']
+                  cmds = [0x06]
+                } else {
+                  setElement('active', 'Using profile ' + data.config.profile[i])
+                }
+                if (i !== 0) {
+                  choices.push('Remove')
+                  cmds.push(0x18)
+                }
+                items[i] = xpopselect(choices, cmds, i + 1,
+                  data.config.profile[i])
               }
             }
-            active = 0
+            tabify(e, 'prolist', items, 10)
+
+            e = document.getElementById('channels')
+            items = []
+            wipeElements(e)
+            if (data.config.streams === 0) {
+              items[0] = document.createElement('em')
+              items[0].innerHTML = 'No channels'
+            } else {
+              for (i = 0; i < data.config.streams; i++) {
+                choices = []
+                cmds = []
+                if (i !== -(active + 1)) {
+                  choices = ['Play']
+                  cmds = [0x06]
+                } else {
+                  setElement('active', 'Tuned in to ' + data.config.sname[i])
+                }
+                choices.push('Remove')
+                cmds.push(0x18)
+                items[i] = xpopselect(choices, cmds, -(i + 1),
+                  data.config.sname[i])
+              }
+            }
+            tabify(e, 'chanlist', items, 10)
           } else {
             fail('Received reply of type ' + data.type + ' for config!')
           }
@@ -1011,43 +1051,38 @@ function sendArg (cmd) {
   }
 }
 
-/*
- * creates a new profile or loads a channel
- */
-function createLoad () {
-  var term = document.getElementById('ptext').value
-  var asking = ''
-  if (term.length < 3) {
-    window.alert('Need at least two letters!')
-  } else {
-    if (term.toLowerCase().startsWith('http')) {
-      sendCMD(0x17, term)
-    } else {
-      if (isstream) {
-        asking = 'Add current stream as channel ' + term + ' ?'
-      } else {
-        asking = 'Create new profile ' + term + ' ?'
-      }
-      if (window.confirm(asking)) {
-        sendCMD(0x16, term)
-        doUpdate = -1
-      }
+function loadURL2 (url) {
+  if (!url) {
+    console.log('loadURL() returned invalid value!')
+    url = ''
+  }
+  /* check result from clipboard */
+  if (!url.toLowerCase().startsWith('http') ||
+      !window.confirm('Load ' + url + '?')) {
+    url = window.prompt('Enter Address to load')
+  }
+
+  if (url) {
+    if (url.toLowerCase().startsWith('http')) {
+      sendCMD(0x17, url)
+      return
     }
-    /* pull main to front */
-    switchView(0)
+    window.alert('Invalid Address!')
   }
 }
 
-/*
- * removes the current profile
- */
-function remProf () {
-  var id = document.getElementById('profiles').value
-  if (id !== 0) {
-    if (window.confirm('Remove Profile #' + id + '?')) {
-      sendCMD(0x18, id)
-      doUpdate = -1
-    }
+/* promises, promises... */
+function loadURL () {
+  navigator.clipboard.readText().then(
+    clipText => loadURL2(clipText), function () { loadURL2('') })
+}
+
+function newActive () {
+  var name = window.prompt('Name for new channel')
+  if (name.length < 3) {
+    window.alert('Please give a longer name')
+  } else {
+    sendCMD(0x16, name)
   }
 }
 

@@ -847,9 +847,11 @@ void *reader( ) {
 						control->percent=( 100*intime )/( rem+intime );
 						sprintf( control->remtime, "%02i:%02i", (int)rem/60, (int)rem%60 );
 
-						/* we should just be switching from playlist to database */
+						/* we could just be switching from playlist to database */
 						if( control->current == NULL ) {
-							addMessage(0, "No current playlist PM_SWITCH is %s!", (control->mpmode&PM_SWITCH)?"set":"unset");
+							if( !(control->mpmode&PM_SWITCH) ) {
+								addMessage(0, "No current playlist and not switching!");
+							}
 							break;
 						}
 

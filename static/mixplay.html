@@ -70,29 +70,30 @@
     </div>
     <!-- Tools view -->
     <div id='extra2' class='inactive' >
-      <p><em>Player</em><br>
+      <p id='active'>No active profile/channel</p>
+      <p>
         <button id='setfavplay' onclick='sendCMD(0x1e)'>Enable Favplay</button>
         <button id='version'    onclick='showInfo()'>Player Info</button>
         <button id='download'   onclick='download(0)'>Download Title</button>
       </p>
-      <p><em>Profiles</em><br>
-      <select label='Profile' id='profiles'>
-      </select>
-      <button id='setprof' onclick='setProf()'>Set Profile</button>
-      <button id='remprof' onclick='remProf()'>Remove Profile</button>
-      <br>
-      <input id='ptext' type='text'>
-      <button id='newprof' onclick='createLoad()'>New/Load</button>
-      </p>
-      <p><em>Database</em><br>
-        <button id='rescan' onclick='sendCMD(0x08)'>ReScan</button>
-        <button id='dbinfo' onclick='sendCMD(0x12)'>DBInfo</button>
-      </p>
-      <p><em><button id='wipelog' onclick='wipeLog()'>Clear</button> Messages</em><br>
-        <div id='messages'>
-          <em>No messages.</em>
-        </div>
-      </p>
+      <button id='ctools0' class='active'   onclick='switchTab(this)'>&#x2630; Info</button>
+      <button id='ctools1' class='inactive' onclick='switchTab(this)'>&#x2630; Profiles</button>
+      <button id='ctools2' class='inactive' onclick='switchTab(this)'>&#x2630; Channels</button>
+      <div id='tools0' class='active'>
+        <button id='rescan' onclick='sendCMD(0x08)'>Rescan Database</button>
+        <button id='dbinfo' onclick='sendCMD(0x12)'>Database Info</button>
+        <div id='messages'></div><br>
+        <button id='wipelog' class='hide' onclick='wipeLog()'>Wipe</button>
+      </div>
+      <div id='tools1' class='inactive'>
+        <button id='cprof' onclick='newActive()'>New Profile</button>
+        <div id='profiles'><em>No profiles?</em></div>
+      </div>
+      <div id='tools2' class='inactive'>
+        <button id='lurl'  onclick='loadURL()'>Load URL</button>
+        <button id='schan' onclick='saveChan()'>Save Channel</button>
+        <div id='channels'><em>No Channels</em></div>
+      </div>
     </div>
     <!-- Playlist view -->
     <div id='extra3' class='inactive' >
