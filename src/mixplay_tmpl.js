@@ -268,14 +268,15 @@ function sendCMD (cmd, arg = '') {
   var code = Number(cmd).toString(16)
   var e
   var text
-
-  /* ignore volume */
-  if ((cmd !== 0x0d) && (cmd !== 0x0e)) {
+  cmd = Number(cmd)
+  code = Number(cmd).toString(16)
+  /* ignore volume controls */
+  if ((cmd !== 0x0d) && (cmd !== 0x0e) && (cmd !== 0x1d)) {
     /* avoid stacking  */
     if (activecmd !== -1) {
       return
     }
-    activecmd = cmd
+    activecmd = Number(cmd)
     /* give visual feedback that the command is being progressed */
     document.body.className = 'busy'
   }
@@ -294,13 +295,6 @@ function sendCMD (cmd, arg = '') {
     text = document.createElement('em')
     text.innerHTML = '.. done ..'
     replaceChild(e, text)
-  }
-
-  if ((cmd === 0x06) ||
-      (cmd === 0x16) ||
-      (cmd === 0x17) ||
-      (cmd === 0x18)) {
-    doUpdate = -1
   }
 
   if ((cmd & 0x00ff) === 0x0013) {
@@ -334,7 +328,24 @@ function sendCMD (cmd, arg = '') {
           fail('CMD Error: connection lost!')
           break
         case 204:
-          activecmd = -1
+          switch (activecmd) {
+            case 0x0d:
+            case 0x0e:
+            case 0x1d:
+              break;
+            case 0x06:
+            case 0x17:
+              doUpdate = -1
+              activecmd = -2
+              break
+            case 0x016:
+            case 0x018:
+              doUpdate = -1
+              activecmd = -1
+              break
+            default:
+              activecmd = -1
+          }
           break
         case 503:
           window.alert('Sorry, we\'re busy!')
@@ -437,7 +448,7 @@ function getPattern (choice, cmd, line) {
       break
   }
   text += line.substring(2)
-  return xpopselect([choice], [cmd], line, text, 0)
+  return popselect([[choice, cmd]], line, text, 0)
 }
 
 /* creates a selection in a popselect popup */
@@ -472,15 +483,15 @@ function togglePopup (ident) {
 }
 
 /* returns a <div> with text that when clicked presents the choices */
-function xpopselect (choice, cmd, arg, text, drag = 0) {
+function popselect (choice, arg, text, drag = 0) {
   const num = choice.length
   var i
   var select
   var reply = document.createElement('p')
   reply.innerText = text
   reply.className = 'popselect'
-  if (cmd.length > 0) {
-    const ident = cmd[0] + '' + arg
+  if (num > 0) {
+    const ident = choice[0][1] + '' + arg
     reply.id = 'line' + ident
     reply.onclick = function () { togglePopup(ident) }
     var popspan = document.createElement('span')
@@ -495,7 +506,7 @@ function xpopselect (choice, cmd, arg, text, drag = 0) {
           select.innerText = '\u2000/\u2000 '
           popspan.appendChild(select)
         }
-        select = clickable(choice[i], cmd[i], arg, ident)
+        select = clickable(choice[i][0], choice[i][1], arg, ident)
         popspan.appendChild(select)
       }
       select = document.createElement('b')
@@ -584,7 +595,6 @@ function tabify (parent, name, list, maxlines = 14) {
 
 function fullUpdate (data) {
   var choices = []
-  var cmds = []
   var e = document.getElementById('dnpfav0')
   wipeElements(e)
   document.title = data.current.artist + ' - ' + data.current.title
@@ -607,15 +617,13 @@ function fullUpdate (data) {
         cline.className = 'popselect'
         cline.innerHTML = titleline
       } else {
-        choices = ['DNP']
-        cmds = [0x080a]
+        choices = []
+        choices.push(['DNP', 0x080a])
         if (!(data.prev[i].flags & 1)) {
-          choices.push('FAV')
-          cmds.push(0x0809)
+          choices.push(['FAV', 0x0809])
         }
-        choices.push('Replay')
-        cmds.push(0x0011)
-        cline = xpopselect(choices, cmds,
+        choices.push(['Replay', 0x0011])
+        cline = popselect(choices,
           data.prev[i].key, titleline, 1)
       }
       e.appendChild(cline)
@@ -637,12 +645,12 @@ function fullUpdate (data) {
     cline.onclick = function () {
       sendCMD(0x00)
     }
-    cline.ondrop = function (e) {
-      sendCMD(0x11, e.dataTransfer.getData('title'))
-      enableElement(e.dataTransfer.getData('element'), 0)
+    cline.ondrop = function (ev) {
+      sendCMD(0x11, ev.dataTransfer.getData('title'))
+      enableElement(ev.dataTransfer.getData('element'), 0)
     }
-    cline.ondragover = function (e) {
-      e.preventDefault()
+    cline.ondragover = function (ev) {
+      ev.preventDefault()
     }
   }
   e.appendChild(cline)
@@ -664,15 +672,13 @@ function fullUpdate (data) {
         cline.className = 'popselect'
         cline.innerHTML = titleline
       } else {
-        choices = ['DNP']
-        cmds = [0x080a]
+        choices = []
+        choices.push(['DNP', 0x080a])
         if (!(data.next[i].flags & 1)) {
-          choices.push('FAV')
-          cmds.push(0x0809)
+          choices.push(['FAV', 0x0809])
         }
-        choices.push('Replay')
-        cmds.push(0x0011)
-        cline = xpopselect(choices, cmds,
+        choices.push(['Replay', 0x0011])
+        cline = popselect(choices,
           data.next[i].key, titleline, 3)
       }
       e.appendChild(cline)
@@ -700,21 +706,18 @@ function searchUpdate (data) {
   wipeElements(e)
   var items = []
   var choices = []
-  var cmds = []
   var i
   if (data.albums.length > 0) {
     for (i = 0; i < data.albums.length; i++) {
-      choices = ['Search']
-      cmds = [0x0413]
+      choices = []
+      choices.push(['Search', 0x0413])
       if ((!favplay) || (favplay && data.fpcurrent)) {
-        choices.push('FAV')
-        cmds.push(0x0409)
+        choices.push(['FAV', 0x0409])
       }
       if ((!favplay) || (favplay && !data.fpcurrent)) {
-        choices.push('DNP')
-        cmds.push(0x040a)
+        choices.push(['DNP', 0x040a])
       }
-      items[i] = xpopselect(choices, cmds,
+      items[i] = popselect(choices,
         data.albums[i],
         data.albart[i] + ' - ' + data.albums[i])
     }
@@ -729,17 +732,15 @@ function searchUpdate (data) {
   items = []
   if (data.artists.length > 0) {
     for (i = 0; i < data.artists.length; i++) {
-      choices = ['Search']
-      cmds = [0x0213]
+      choices = []
+      choices.push(['Search', 0x0213])
       if ((!favplay) || (favplay && data.fpcurrent)) {
-        choices.push('FAV')
-        cmds.push(0x0209)
+        choices.push(['FAV', 0x0209])
       }
       if ((!favplay) || (favplay && !data.fpcurrent)) {
-        choices.push('DNP')
-        cmds.push(0x020a)
+        choices.push(['DNP', 0x020a])
       }
-      items[i] = xpopselect(choices, cmds,
+      items[i] = popselect(choices,
         data.artists[i],
         data.artists[i])
     }
@@ -758,19 +759,18 @@ function searchUpdate (data) {
       items[0].href = '/cmd/0114?0'
       items[0].innerHTML = '-- Fav all --'
     } else {
-      items[0] = xpopselect(['Insert', 'Append'],
-        [0x080c, 0x0814],
+      items[0] = popselect([['Insert', 0x08c], ['Append', 0x0814]],
         0, '-- Play all --')
     }
     for (i = 0; i < data.titles.length; i++) {
+      choices = []
       if (favplay && data.fpcurrent) {
-        choices = ['FAV']
-        cmds = [0x0809]
+        choices.push(['FAV', 0x0809])
       } else {
-        choices = ['Insert', 'Append']
-        cmds = [0x080c, 0x0814]
+        choices.push(['Insert', 0x080c])
+        choices.push(['Append', 0x0814])
       }
-      items[i + 1] = xpopselect(choices, cmds,
+      items[i + 1] = popselect(choices,
         data.titles[i].key,
         data.titles[i].artist + ' - ' + data.titles[i].title)
     }
@@ -845,7 +845,12 @@ function playerUpdate (data) {
     enableElement('fav', 0)
   }
 
-  active = data.active
+  if (active !== data.active) {
+    active = data.active
+    activecmd = -1
+    doUpdate = -1
+  }
+
   if ((active === 0) && (isstream)) {
     enableElement('schan', 1)
     enableElement('cprof', 0)
@@ -889,9 +894,11 @@ function parseReply (reply) {
     }
     isstream = (data.mpmode === 1) /* PM_STREAM */
     if (data.mpmode & 4) {
+      activecmd = -2
       document.body.className = 'busy'
     } else {
-      if (activecmd === -1) {
+      if (activecmd === -2) {
+        activecmd = -1
         document.body.className = ''
       }
     }
@@ -986,7 +993,6 @@ function getConfig () {
             var e
             var items = []
             var choices = []
-            var cmds = []
             var i
             setElement('active', 'No active profile/channel')
             /* set profile list */
@@ -998,18 +1004,19 @@ function getConfig () {
             } else {
               for (i = 0; i < data.config.profiles; i++) {
                 choices = []
-                cmds = []
                 if (i !== (active - 1)) {
-                  choices = ['Play']
-                  cmds = [0x06]
+                  choices.push(['Play', 0x06])
                 } else {
-                  setElement('active', 'Using profile ' + data.config.profile[i])
+                  if (i !== 0) {
+                    choices.push(['Remove', 0x18])
+                  }
+                  if (favplay) {
+                    setElement('active', 'Using favplay on ' + data.config.profile[i])
+                  } else {
+                    setElement('active', 'Using profile ' + data.config.profile[i])
+                  }
                 }
-                if (i !== 0) {
-                  choices.push('Remove')
-                  cmds.push(0x18)
-                }
-                items[i] = xpopselect(choices, cmds, i + 1,
+                items[i] = popselect(choices, i + 1,
                   data.config.profile[i])
               }
             }
@@ -1024,16 +1031,13 @@ function getConfig () {
             } else {
               for (i = 0; i < data.config.streams; i++) {
                 choices = []
-                cmds = []
                 if (i !== -(active + 1)) {
-                  choices = ['Play']
-                  cmds = [0x06]
+                  choices.push(['Play', 0x06])
+                  choices.push(['Remove', 0x18])
                 } else {
                   setElement('active', 'Tuned in to ' + data.config.sname[i])
                 }
-                choices.push('Remove')
-                cmds.push(0x18)
-                items[i] = xpopselect(choices, cmds, -(i + 1),
+                items[i] = popselect(choices, -(i + 1),
                   data.config.sname[i])
               }
             }
@@ -1195,6 +1199,7 @@ function handleKey (event) {
   }
   event.preventDefault()
 }
+
 /*
  * start the UI update thread loops
  */

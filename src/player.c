@@ -312,6 +312,13 @@ void *setProfile( ) {
 	/* profile selected */
 	else if( cactive > 0 ){
 		active=cactive-1;
+		/* only load database if it has not yet been used */
+		if( control->mpmode != PM_DATABASE ) {
+			control->root=wipeTitles( control->root );
+			control->root=dbGetMusic( );
+		}
+		/* announce switching */
+		control->mpmode=PM_DATABASE|PM_SWITCH;
 
 		if( active > control->profiles ) {
 			addMessage ( 0, "Profile #%"PRId64" does no exist!", active );
@@ -331,13 +338,6 @@ void *setProfile( ) {
 		control->dbllist=loadList( mpc_doublets );
 
 		control->current=wipePlaylist( control->current );
-
-		/* only load database if it has not yet been used */
-		if( control->mpmode != PM_DATABASE ) {
-			control->root=wipeTitles( control->root );
-			control->root=dbGetMusic( );
-			control->mpmode=PM_DATABASE|PM_SWITCH;
-		}
 
 		if( NULL == control->root ) {
 			addMessage( 0, "Scanning musicdir" );
@@ -843,7 +843,7 @@ void *reader( ) {
 						sprintf( control->playtime, "%02i:%02i:%02i", intime/3600, ( intime%3600 )/60, intime%60 );
 					}
 					/* file play */
-					if( control->mpmode != PM_STREAM ) {
+					if( (control->mpmode&3) != PM_STREAM ) {
 						control->percent=( 100*intime )/( rem+intime );
 						sprintf( control->remtime, "%02i:%02i", (int)rem/60, (int)rem%60 );
 
@@ -1178,6 +1178,7 @@ void *reader( ) {
 						control->changed = 1;
 						asyncRun( plSetProfile );
 					}
+					sfree(&(control->argument));
 				}
 			}
 			break;
@@ -1187,6 +1188,7 @@ void *reader( ) {
 				if( control->argument == NULL ) {
 					addMessage( -1, "No profile given!" );
 				}
+				/* save the current stream */
 				else if(control->mpmode == PM_STREAM){
 					control->streams++;
 					control->stream=(char**)frealloc(control->stream, control->streams*sizeof( char * ) );
@@ -1198,22 +1200,13 @@ void *reader( ) {
 					writeConfig( NULL );
 					control->argument=NULL;
 				}
+				/* just add argument as new profile */
 				else {
 					control->profiles++;
 					control->profile=(profile_t **)frealloc( control->profile, control->profiles*sizeof(profile_t *) );
 					control->profile[control->profiles-1]=createProfile( control->argument, 0 );
-					control->active=control->profiles;
 					writeConfig( NULL );
 					control->argument=NULL;
-
-					dowrite( p_command[fdset][1], "STOP\n", 6 );
-					if( control->dbname[0] == 0 ) {
-						readConfig( );
-					}
-					setProfile( NULL );
-					control->current->title = control->root;
-					control->status=mpc_start;
-					sendplay( p_command[fdset][1] );
 				}
 			}
 			break;
@@ -1229,12 +1222,13 @@ void *reader( ) {
 						addMessage( -1, "Cannot remove empty profile!" );
 					}
 					if( profile > 0 ) {
-						if( profile == control->active ) {
+						if( profile == 1 ) {
+							addMessage( -1, "mixplay cannot be removed.");
+						} else if( profile == control->active ) {
 							addMessage( -1, "Cannot remove active profile!" );
 						}
 						else if( profile > control->profiles ) {
-							progressStart( "Profile #%i does not exist!", profile );
-							progressEnd();
+							addMessage( -1, "Profile #%i does not exist!", profile );
 						}
 						else {
 							free( control->profile[profile-1] );
@@ -1252,8 +1246,7 @@ void *reader( ) {
 					else {
 						profile=(-profile);
 						if( profile > control->streams ) {
-							progressStart( "Stream #%i does not exist!", profile );
-							progressEnd();
+							addMessage( -1, "Stream #%i does not exist!", profile );
 						}
 						else {
 							free( control->stream[profile-1] );
@@ -1273,6 +1266,7 @@ void *reader( ) {
 							writeConfig(NULL);
 						}
 					}
+					sfree(&(control->argument));
 				}
 			}
 
