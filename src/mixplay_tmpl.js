@@ -332,7 +332,7 @@ function sendCMD (cmd, arg = '') {
             case 0x0d:
             case 0x0e:
             case 0x1d:
-              break;
+              break
             case 0x06:
             case 0x17:
               doUpdate = -1
@@ -464,11 +464,12 @@ function clickable (text, cmd, arg, ident) {
       if (dcmd !== -1) {
         sendCMD(dcmd, this.getAttribute('data-arg'))
         const line = document.getElementById('line' + ident)
-        line.className = 'hide'
-        wipeElements(line)
+        /* line may be gone as sendcmd() already cleaned up search view */
+        if (line) {
+          line.className = 'hide'
+          wipeElements(line)
+        }
       }
-    } else {
-      console.log('popup' + ident + 'does no longer exist')
     }
   }
   reply.innerHTML = text
@@ -847,7 +848,6 @@ function playerUpdate (data) {
 
   if (active !== data.active) {
     active = data.active
-    activecmd = -1
     doUpdate = -1
   }
 

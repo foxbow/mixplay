@@ -489,12 +489,12 @@ int search( const char *pat, const mpcmd_t range ) {
 					( MPC_ISDISPLAY( range ) &&
 					isMatch( runner->display, pat, MPC_ISFUZZY(range) ) ) ) &&
 					( cnt++ < MAXSEARCH ) ) {
-				found = 1;
+				found = mpc_title;
 			}
 			if( MPC_ISARTIST(range) &&
 					isMatch( runner->artist, pat, MPC_ISFUZZY(range) ) ) {
 				if( MPC_EQARTIST(range) ) {
-					found = 1;
+					found |= mpc_artist;
 				}
 				/* check for new artist */
 				for( i=0; (i<res->anum) && strcmp( res->artists[i], runner->artist ); i++ );
@@ -504,10 +504,12 @@ int search( const char *pat, const mpcmd_t range ) {
 					res->artists[i]=runner->artist;
 				}
 			}
-			if( MPC_ISALBUM( range ) &&
-					isMatch( runner->album, pat, MPC_ISFUZZY(range) ) ) {
+			/* if we search for artists, also add the artist's albums */
+			if( ( MPC_EQARTIST(range) && MPC_EQARTIST(found) ) ||
+					( MPC_ISALBUM( range ) &&
+					isMatch( runner->album, pat, MPC_ISFUZZY(range) ) ) ) {
 				if (MPC_EQALBUM(range)) {
-					found = 1;
+					found |= mpc_album;
 				}
 				/* check for new albums */
 				for( i=0; (i<res->lnum) && strcmp( res->albums[i], runner->album ); i++ );
@@ -525,11 +527,11 @@ int search( const char *pat, const mpcmd_t range ) {
 							runner->album, runner->artist, res->albart[i] );
 					res->albart[i]=ARTIST_SAMPLER;
 				}
-				/* add title (too)? */
-				if (found) {
-					res->titles=appendToPL( runner, res->titles, 0 );
-					res->tnum++;
-				}
+			}
+			/* add title (too)? */
+			if (found) {
+				res->titles=appendToPL( runner, res->titles, 0 );
+				res->tnum++;
 			}
 		}
 		runner=runner->next;
