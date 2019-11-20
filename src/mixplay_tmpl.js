@@ -490,8 +490,8 @@ function popselect (choice, arg, text, drag = 0) {
   var select
   var reply = document.createElement('p')
   reply.innerText = text
-  reply.className = 'popselect'
   if (num > 0) {
+    reply.className = 'popselect'
     const ident = choice[0][1] + '' + arg
     reply.id = 'line' + ident
     reply.onclick = function () { togglePopup(ident) }
@@ -515,6 +515,8 @@ function popselect (choice, arg, text, drag = 0) {
       popspan.appendChild(select)
       reply.appendChild(popspan)
     }
+  } else {
+    reply.className = 'nopopselect'
   }
 
   /* playlist ordering does not make sense in streams */
@@ -824,6 +826,7 @@ function playerUpdate (data) {
     document.getElementById('setfavplay').innerHTML = 'Enable Favplay'
   }
 
+  enableElement('rescan', !favplay)
   enableElement('searchmode', favplay)
   enableElement('goprev', !isstream)
   enableElement('gonext', !isstream)
@@ -1011,9 +1014,9 @@ function getConfig () {
                     choices.push(['Remove', 0x18])
                   }
                   if (favplay) {
-                    setElement('active', 'Using favplay on ' + data.config.profile[i])
+                    setElement('active', 'Playing favplay ' + data.config.profile[i])
                   } else {
-                    setElement('active', 'Using profile ' + data.config.profile[i])
+                    setElement('active', 'Playing profile ' + data.config.profile[i])
                   }
                 }
                 items[i] = popselect(choices, i + 1,

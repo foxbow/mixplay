@@ -270,7 +270,7 @@ div.inactive, div.hide {
 }
 
 /* popup line */
-.popselect {
+p.popselect {
 	position: relative;
 	display: block;
 	cursor: copy;
@@ -278,6 +278,17 @@ div.inactive, div.hide {
 	margin-bottom: 0.2em;
 	border: none;
 	background: none;
+}
+
+/* popup line with no popup */
+p.nopopselect {
+	position: relative;
+	display: block;
+	margin-top: 0.2em;
+	margin-bottom: 0.2em;
+	border: none;
+	background: none;
+	cursor: default;
 }
 
 .popup {

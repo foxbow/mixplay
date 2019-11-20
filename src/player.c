@@ -1108,7 +1108,11 @@ void *reader( ) {
 			break;
 
 		case mpc_dbclean:
-			asyncRun( plDbClean );
+			if( !getFavplay() ) {
+				asyncRun( plDbClean );
+			} else {
+				addMessage(-1,"Database is immutable during favplay!");
+			}
 			break;
 
 		case mpc_stop:
@@ -1167,13 +1171,22 @@ void *reader( ) {
 				else {
 					profile=atoi( control->argument );
 					if( ( profile != 0 ) && ( profile != control->active ) ) {
+						/* do not play next title, it may be gone.. */
+						order=0;
+						/* reload database when switching from favplay to 'forget'
+						   playcount changes */
+						if( getFavplay() ) {
+							control->root=wipeTitles(control->root);
+							control->current=wipePlaylist(control->current);
+							control->root=dbGetMusic();
+							addMessage( 1, "Switching from Favplay");
+						}
 						/* todo: keep playing to the bitter end!
 						if( control->status == mpc_play ) {
 							order=0;
 							dowrite( p_command[fdset][1], "STOP\n", 6 );
 						}
 						*/
-						order=0;
 						control->active=profile;
 						control->changed = 1;
 						asyncRun( plSetProfile );
@@ -1405,7 +1418,18 @@ void *reader( ) {
 						order=0;
 						dowrite( p_command[fdset][1], "STOP\n", 6 );
 					}
-					addMessage( 1, "%s Favplay", toggleFavplay()?"Enabling":"Disabling");
+					/* reload database when switching back to normal play to 'forget'
+					   playcounts */
+					if( !toggleFavplay() ) {
+						control->root=wipeTitles(control->root);
+						control->current=wipePlaylist(control->current);
+						control->root=dbGetMusic();
+						addMessage( 1, "Disabling Favplay");
+					}
+					else {
+						addMessage( 1, "Enabling Favplay");
+					}
+
 					control->changed=1;
 					applyLists( 1 );
 
