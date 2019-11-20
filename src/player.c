@@ -197,12 +197,12 @@ void setStream( const char* stream, const char *name ) {
 	mpconfig_t *control=getConfig();
 	control->current=wipePlaylist( control->current );
 	control->root=wipeTitles(control->root);
-	control->current=addPLDummy( control->current, "Playing stream" );
+	control->current=addPLDummy( control->current, "" );
 	control->current=addPLDummy( control->current, name );
 	control->current=control->current->next;
 	if( endsWith( stream, ".m3u" ) ||
 			endsWith( stream, ".pls" ) ) {
-		addMessage( 0, "Remote playlist will probably not work.." );
+		addMessage( 1, "Remote playlist.." );
 		control->list=1;
 	}
 	else {
@@ -748,9 +748,13 @@ void *reader( ) {
 		if( FD_ISSET( p_status[fdset][0], &fds ) &&
 				( 3 < readline( line, MAXPATHLEN, p_status[fdset][0] ) )) {
 			if( '@' == line[0] ) {
-				/* Don't print volume, progress and MP3Tag messages */
-				if( ( 'F' != line[1] ) && ( 'V' != line[1] ) && ( 'I' != line[1] ) ) {
+				/* Don't print volume, tag and progress messages */
+				if( ( 'F' != line[1] ) && ( 'V' != line[1] ) && ( 'I' != line[1] )) {
 					addMessage( 2, "P+ %s", line );
+				}
+				/* Print tag info */
+				if ( 'I' == line[1] ) {
+					addMessage( 3, "P+ %s", line );
 				}
 				switch ( line[1] ) {
 					int cmd;
@@ -765,20 +769,28 @@ void *reader( ) {
 					/* ICY stream info */
 					if( ( control->current != NULL ) &&( NULL != strstr( line, "ICY-" ) ) ) {
 						if( NULL != strstr( line, "ICY-NAME: " ) ) {
-							strip( control->current->title->album, line+13, NAMELEN );
-							update=1;
+							if( control->current->prev == NULL ) {
+								addMessage(0,"Got stream title before playlist!?");
+							}
+							else {
+								strip( control->current->prev->title->title, line+13, NAMELEN );
+								update=1;
+							}
 						}
 
 						if( NULL != ( a = strstr( line, "StreamTitle" ) ) ) {
 							addMessage( 3, "%s", a );
 							a = a + 13;
-							t=strchr( a, '\'' );
+							t=strchr( a, ';' );
 							if( t != NULL ) {
+								t--;
 								*t = 0;
 							}
-							control->current=addPLDummy( control->current, a );
-							/* carry over stream title as album entry */
-							strtcpy( control->current->title->album, control->current->next->title->album, NAMELEN );
+							if( strlen(control->current->title->album) > 0 ) {
+								control->current=addPLDummy( control->current, a );
+							}
+							strip( control->current->title->display, a, MAXPATHLEN );
+							strip( control->current->title->title, a, NAMELEN );
 							/* if possible cut up title and artist */
 							if( NULL != ( t = strstr( a, " - " ) ) ) {
 								*t=0;
@@ -787,6 +799,8 @@ void *reader( ) {
 								strip( control->current->title->title, t, NAMELEN );
 							}
 							plCheck( 0 );
+							/* carry over stream title as album entry */
+							strcpy( control->current->title->album, control->current->prev->title->title );
 							update=1;
 						}
 					}

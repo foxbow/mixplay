@@ -167,6 +167,10 @@ static int hidCMD( int c ) {
 		return 0;
 	}
 
+	if( c == '\n' ) {
+		debugHidPrintline("");		
+	}
+
 	return -1;
 }
 

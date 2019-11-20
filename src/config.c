@@ -343,7 +343,7 @@ void writeConfig( const char *musicpath ) {
 	FILE	*fp;
 	char *home=NULL;
 
-	addMessage( 0, "Saving config" );
+	addMessage( 1, "Saving config" );
 	assert( _cconfig != NULL );
 
 	home=getenv("HOME");

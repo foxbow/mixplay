@@ -329,17 +329,18 @@ function sendCMD (cmd, arg = '') {
           break
         case 204:
           switch (activecmd) {
-            case 0x0d:
-            case 0x0e:
-            case 0x1d:
+            case 0x0d: /* vol+ */
+            case 0x0e: /* vol- */
+            case 0x1d: /* mute */
               break
-            case 0x06:
-            case 0x17:
+            case 0x06: /* select profile */
+            case 0x17: /* load path */
+              showPlay()
               doUpdate = -1
               activecmd = -2
               break
-            case 0x016:
-            case 0x018:
+            case 0x016: /* new profile/stream */
+            case 0x018: /* delete profile/stream */
               doUpdate = -1
               activecmd = -1
               break
@@ -611,14 +612,17 @@ function fullUpdate (data) {
     for (var i = Math.min(4, data.prev.length - 1); i >= 0; i--) {
       var titleline = ''
       var cline
-      if (data.prev[i].playcount >= 0) {
+      if (!isstream && (data.prev[i].playcount >= 0)) {
         titleline += '[' + data.prev[i].playcount + '/' + data.prev[i].skipcount + '] '
       }
-      titleline += data.prev[i].artist + ' - ' + data.prev[i].title
+      if (data.prev[i].artist.length > 0) {
+        titleline += data.prev[i].artist + ' - '
+      }
+      titleline += data.prev[i].title
       if (isstream) {
         cline = document.createElement('p')
         cline.className = 'popselect'
-        cline.innerHTML = titleline
+        cline.innerHTML = data.prev[i].title
       } else {
         choices = []
         choices.push(['DNP', 0x080a])
@@ -632,18 +636,22 @@ function fullUpdate (data) {
       e.appendChild(cline)
     }
   } else {
-    setElement('prev', '- - -')
+    setElement('prev', '')
   }
   setElement('title', data.current.title)
   setElement('artist', data.current.artist)
   setElement('album', data.current.album)
   titleline = ''
-  if (data.current.playcount >= 0) {
+  if (!isstream && (data.current.playcount >= 0)) {
     titleline += '[' + data.current.playcount + '/' + data.current.skipcount + '] '
   }
+  if (data.current.artist.length > 0) {
+    titleline += data.current.artist + ' - '
+  }
+  titleline += data.current.title
   cline = document.createElement('p')
   cline.id = 'ctitle'
-  cline.innerHTML = '&#x25B6; ' + titleline + data.current.artist + ' - ' + data.current.title
+  cline.innerHTML = '&#x25B6; ' + titleline
   if (!isstream) {
     cline.onclick = function () {
       sendCMD(0x00)
@@ -666,10 +674,13 @@ function fullUpdate (data) {
     }
     for (i = 0; i < data.next.length; i++) {
       titleline = ''
-      if (data.next[i].playcount >= 0) {
+      if (!isstream && (data.next[i].playcount >= 0)) {
         titleline = '[' + data.next[i].playcount + '/' + data.next[i].skipcount + '] '
       }
-      titleline += data.next[i].artist + ' - ' + data.next[i].title
+      if (data.next[i].artist.length > 0) {
+        titleline += data.next[i].artist + ' - '
+      }
+      titleline += data.next[i].title
       if (isstream) {
         cline = document.createElement('p')
         cline.className = 'popselect'
@@ -687,7 +698,7 @@ function fullUpdate (data) {
       e.appendChild(cline)
     }
   } else {
-    setElement('next', '- - -')
+    setElement('next', '')
   }
 
   if (!isstream) {
@@ -1101,12 +1112,19 @@ function loadURL () {
 }
 
 function newActive () {
-  var name = window.prompt('Name for new channel')
-  if (name.length < 3) {
-    window.alert('Please give a longer name')
-  } else {
-    sendCMD(0x16, name)
+  var name
+  name = document.getElementById('prev').innerText
+  if ((name.length < 3) || (!window.confirm('Create ' + name + '?'))) {
+    name = window.prompt('Name for new entry')
+    if (!name) {
+      return
+    }
+    if (name.length < 3) {
+      window.alert('Please give a longer name')
+      return
+    }
   }
+  sendCMD(0x16, name)
 }
 
 /*
@@ -1203,15 +1221,20 @@ function handleKey (event) {
   event.preventDefault()
 }
 
+function showPlay () {
+  if (window.innerWidth < window.innerHeight * 1.2) {
+    switchView(3)
+  } else {
+    switchView(0)
+  }
+}
+
 /*
  * start the UI update thread loops
  */
 function initializeUI () {
   /* todo: attach event listeners here and not in HTML */
-  if (window.innerWidth < window.innerHeight * 1.2) {
-    switchView(3)
-  }
-
+  showPlay()
   initScrolls()
   setsmallUI()
   updateUI()

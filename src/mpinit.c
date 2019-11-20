@@ -66,7 +66,7 @@ int setArgument( const char *arg ) {
 			strtcpy( line, arg, MAXPATHLEN );
 		}
 		control->mpmode=PM_STREAM|PM_SWITCH;
-		setStream( line, "Waiting for stream info..." );
+		setStream( line, "" );
 		return 1;
 	}
 	else if( endsWith( arg, ".mp3" ) ) {
