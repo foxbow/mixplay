@@ -497,12 +497,11 @@ static int jsonParseKeyVal( char *json, jsonObject **jo ) {
 static int setIndex( jsonObject *jo, int i ) {
 	char buf[20];
 	sprintf( buf, "%i", i );
-	jo->key=(char*)calloc( strlen(buf)+1, 1 );
+	jo->key=strdup(buf);
 	if( jo->key == NULL ) {
 		jsonFail( "Out of memory!" );
 		return -1;
 	}
-	strcpy( jo->key, buf );
 	return i+1;
 }
 
@@ -792,13 +791,12 @@ static jsonObject *jsonAppend( jsonObject *jo, const char *key ) {
 		jo=jo->next;
 	}
 
-	jo->key=(char*)calloc( strlen(key)+1, 1 );
+	/* make sure that the key can always be free'd */
+	jo->key=strdup(key);
 	if( jo->key == NULL ) {
 		jsonFail( "Out of memory!" );
 		return NULL;
 	}
-
-	strcpy( jo->key, key );
 
 	return jo;
 }
@@ -904,8 +902,20 @@ jsonObject *jsonAddArrElement( jsonObject *jo, jsonType type, void *val ) {
 	char key[20];
 	int index=0;
 
+	if( jo == NULL ) {
+		jsonFail( "Cannot add an array Element to an empty object!" );
+		return NULL;
+	}
+
+	while( jo->next != NULL ) {
+		jo=jo->next;
+	}
+
 	/* if the root object is the array object, switch to the values */
-	if( jo->type == json_array ) {
+	if( jo->type != json_array ) {
+		jsonFail( "No Array Object to add to!" );
+		return NULL;
+	} else {
 		jo=(jsonObject*)jo->val;
 	}
 
@@ -1100,13 +1110,18 @@ void jsonDiscard( jsonObject *jo ) {
 		/* key and value can be free'd */
 		if( jo->ref == 2 ) {
 			free( jo->key );
-			if( ( jo->type != json_boolean ) && ( jo->type != json_null ) ) {
-				free( jo->val);
+			jo->key=NULL;
+			if( ( jo->type != json_boolean ) &&
+			    ( jo->type != json_null ) &&
+					(jo->val != NULL) ) {
+				free( jo->val );
+				jo->val=NULL;
 			}
 		}
 		/* only key can be free'd */
 		else if( jo->ref == 1 ) {
 			free( jo->key );
+			jo->key=NULL;
 		}
 		free( jo );
 

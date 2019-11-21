@@ -24,6 +24,7 @@
 #include "config.h"
 #include "utils.h"
 #include "database.h"
+#include "json.h"
 
 #include "build/mpplayer_html.h"
 #include "build/mpplayer_js.h"
@@ -149,6 +150,7 @@ static void *clientHandler(void *args ) {
 	struct timespec ts;
 	ts.tv_nsec=250000;
 	ts.tv_sec=0;
+	char *manifest=NULL;
 
 	commdata=(char*)falloc( commsize, sizeof( char ) );
 	sock=*(int*)args;
@@ -301,6 +303,9 @@ static void *clientHandler(void *args ) {
 							flen=static_mpplayer_js_len;
 							mtype="application/javascript; charset=utf-8";
 							state=5;
+						}
+						else if( strstr( pos, "/manifest.json ") == pos ) {
+							state=10;
 						}
 						else if( strstr( pos, "/title/" ) == pos ) {
 							addMessage( 2, "received: %s", pos );
@@ -498,6 +503,38 @@ static void *clientHandler(void *args ) {
 				running&=~1;
 				break;
 
+			case 10: /* return manifest */
+				if( manifest == NULL ) {
+					/* this could be handled as a constant string from the start
+					   but this makes changes easier */
+					jsonObject *jo=jsonAddStr(NULL, "name", "Mixplay");
+					jsonObject *joicons=jsonAddStr( NULL, "src", "/mixplay.svg");
+					jsonAddStr(joicons, "sizes", "192x192");
+					jsonAddStr(joicons, "type", "image/svg+xml");
+					joicons=jsonAddObj( NULL, "none", joicons);
+					jsonAddArr(jo, "icons", joicons );
+					jsonAddStr(jo, "background_color", "darkblue");
+					jsonAddStr(jo, "theme_color", "darkblue");
+					jsonAddStr(jo, "display", "standalone");
+					/* automatically discard the jsonObject */
+					manifest=jsonToString(jo);
+				}
+				if( manifest != NULL ) {
+					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/manifest+json; charset=utf-8\015\012Content-Length: %i\015\012\015\012", (int)strlen(manifest) );
+					while( (ssize_t)( strlen(manifest) + strlen(commdata) + 8 ) > commsize ) {
+						commsize+=MP_BLKSIZE;
+						commdata=(char*)frealloc( commdata, commsize );
+					}
+					strcat( commdata, manifest );
+					len=strlen(commdata);
+				}
+				else {
+					addMessage( -1, "Could not create manifest!" );
+					len=serviceUnavailable( commdata );
+				}
+
+				break;
+
 			default:
 				len=0;
 			}
@@ -541,6 +578,7 @@ static void *clientHandler(void *args ) {
 		unlockClient( sock );
 	}
 	close(sock);
+	sfree( &manifest );
 	sfree( &commdata );
 	sfree( &jsonLine );
 
