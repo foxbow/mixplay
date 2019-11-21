@@ -98,7 +98,7 @@ function adaptUI () {
       lines = 15.25
     }
     if (isstream) {
-      lines = lines - 2
+      lines = lines - 4
     }
   }
 
@@ -180,7 +180,7 @@ function switchTabByRef (element, num) {
       if (i === parseInt(num)) {
         b.className = 'active'
         e.className = 'active'
-      } else {
+      } else if (b.className !== 'hide') {
         b.className = 'inactive'
         e.className = 'inactive'
       }
@@ -839,25 +839,19 @@ function playerUpdate (data) {
 
   enableElement('rescan', !favplay)
   enableElement('searchmode', favplay)
-  enableElement('goprev', !isstream)
-  enableElement('gonext', !isstream)
-  enableElement('progress', !isstream)
-  enableElement('remtime', !isstream)
+  enableElement('playpack', !isstream)
   enableElement('setfavplay', !isstream)
   enableElement('cextra1', !isstream)
   enableElement('lscroll', !isstream)
   enableElement('cdnpfav0', !isstream)
   enableElement('cdnpfav1', !isstream)
   enableElement('cdnpfav2', !isstream)
-  enableElement('dnp', !isstream)
 
   /* switching between stream and normal play */
   setElement('playtime', data.playtime)
   if (!isstream) {
     setElement('remtime', data.remtime)
     document.getElementById('progressbar').style.width = data.percent + '%'
-  } else {
-    enableElement('fav', 0)
   }
 
   if (active !== data.active) {
@@ -1090,9 +1084,14 @@ function loadURL2 (url) {
     console.log('loadURL() returned invalid value!')
     url = ''
   }
+  const parts = url.split('/')
+
   /* check result from clipboard */
-  if (!url.toLowerCase().startsWith('http') ||
-      !window.confirm('Load ' + url + '?')) {
+  if (url.toLowerCase().startsWith('http') && !url.endsWith('/')) {
+    if (!window.confirm('Load ' + parts[parts.length - 1] + '?')) {
+      url = window.prompt('Enter Address to load')
+    }
+  } else {
     url = window.prompt('Enter Address to load')
   }
 

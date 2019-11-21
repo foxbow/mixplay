@@ -279,7 +279,6 @@ void *setProfile( ) {
 	char		confdir[MAXPATHLEN]; /* = "~/.mixplay"; */
 	profile_t *profile;
 	int num;
-	int lastver;
 	int64_t active;
 	int64_t cactive;
 	mpconfig_t *control=getConfig();
@@ -341,11 +340,6 @@ void *setProfile( ) {
 
 		if( NULL == control->root ) {
 			addMessage( 0, "Scanning musicdir" );
-			lastver=getVerbosity();
-
-			if( lastver < 1 ) {
-				setVerbosity( 1 );
-			}
 
 			num = dbAddTitles( control->dbname, control->musicdir );
 
@@ -360,8 +354,6 @@ void *setProfile( ) {
 				fail( F_FAIL, "No music found at %s for database %s!\nThis should never happen!",
 					  control->musicdir,  control->dbname );
 			}
-
-			setVerbosity( lastver );
 		}
 
 		applyLists( 1 );
@@ -376,7 +368,6 @@ void *setProfile( ) {
 	}
 
 	/* if we're not in player context, start playing automatically */
-	control->status=mpc_start;
 	if( pthread_mutex_trylock( &_pcmdlock ) != EBUSY ) {
 		addMessage( 1, "Start play" );
 		control->command=mpc_start;
@@ -493,12 +484,7 @@ static void *plSetProfile( void *arg ) {
 	if( control->dbname[0] == 0 ) {
 		readConfig( );
 	}
-	/* update database with current playcount etc */
-	if( control->dbDirty ) {
-		dbWrite( );
-	}
 	setProfile( NULL );
-	sfree( &(control->argument) );
 	pthread_mutex_unlock( lock );;
 	return NULL;
 }
@@ -977,13 +963,14 @@ void *reader( ) {
 					break;
 
 				case 'E':
-					addMessage( 0, "Player %i: %s!", fdset, line+3 );
+					addMessage( -1, "Player %i: %s!", fdset, line+3 );
 					if( control->current != NULL ) {
 						addMessage( 1, "Index: %i\nName: %s\nPath: %s",
 								control->current->title->key,
 								control->current->title->display,
 								fullpath(control->current->title->path) );
 					}
+					strcpy(control->current->title->title, "No music");
 					control->status=mpc_idle;
 					break;
 
@@ -1008,7 +995,8 @@ void *reader( ) {
 			while( control->command == mpc_idle ) {
 				addMessage( 1, "Idling on command read" );
 			}
-			addMessage( 1, "MPC %s / %04x", mpcString(control->command), control->command );
+			addMessage( 1, "Status: %s, CMD: %s / %04x", mpcString(control->status),
+					mpcString(control->command), control->command );
 		}
 		else {
 			control->command=mpc_idle;
@@ -1195,12 +1183,9 @@ void *reader( ) {
 							control->root=dbGetMusic();
 							addMessage( 1, "Switching from Favplay");
 						}
-						/* todo: keep playing to the bitter end!
-						if( control->status == mpc_play ) {
-							order=0;
-							dowrite( p_command[fdset][1], "STOP\n", 6 );
+						else if( control->dbDirty ) {
+							dbWrite( );
 						}
-						*/
 						control->active=profile;
 						control->changed = 1;
 						asyncRun( plSetProfile );

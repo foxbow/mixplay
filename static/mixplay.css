@@ -145,6 +145,10 @@ div#playpack, div#viewtabs {
 	width: 100%
 }
 
+div#playpack.hide {
+	display: none;	
+}
+
 div#progress {
 	margin-top: 0.85em;
 }

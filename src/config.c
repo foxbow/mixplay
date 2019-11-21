@@ -252,6 +252,7 @@ mpconfig_t *readConfig( void ) {
 	_cconfig->port=MP_PORT;
 	_cconfig->changed=0;
 	_cconfig->isDaemon=0;
+	_cconfig->fpcurrent=1;
 	_cconfig->streamURL=NULL;
 	_cconfig->rcdev=NULL;
 
