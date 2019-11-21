@@ -691,7 +691,7 @@ function fullUpdate (data) {
         if (!(data.next[i].flags & 1)) {
           choices.push(['FAV', 0x0809])
         }
-        choices.push(['Replay', 0x0011])
+        choices.push(['Remove', 0x001c])
         cline = popselect(choices,
           data.next[i].key, titleline, 3)
       }
