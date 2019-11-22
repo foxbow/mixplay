@@ -104,8 +104,11 @@ $(OBJDIR)/mixplayd_css.h: static/mixplay.css
 $(OBJDIR)/mixplayd_js.h: static/mixplay.js
 	xxd -i static/mixplay.js > $(OBJDIR)/mixplayd_js.h
 
-$(OBJDIR)/mixplayd_svg.h: static/mixplay.js
+$(OBJDIR)/mixplayd_svg.h: static/mixplay.svg
 	xxd -i static/mixplay.svg > $(OBJDIR)/mixplayd_svg.h
+
+$(OBJDIR)/mixplayd_png.h: static/mixplay.png
+	xxd -i static/mixplay.png > $(OBJDIR)/mixplayd_png.h
 
 static/mixplay.js: src/mixplay_tmpl.js
 	sed -e 's/~~MPCOMM_VER~~/'${MPCOMM_VER}'/g' -e 's/~~MIXPLAY_VER~~/'${VERSION}'/g' src/mixplay_tmpl.js > static/mixplay.js

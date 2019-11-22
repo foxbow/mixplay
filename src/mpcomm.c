@@ -96,11 +96,11 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplayli
 	}
 	else {
 		val=jsonAddInt( NULL, "key", 0 );
-		jsonAddStr( val, "artist", "-" );
-		jsonAddStr( val, "album", "-" );
+		jsonAddStr( val, "artist", "Mixplay" );
+		jsonAddStr( val, "album", "" );
 		jsonAddStr( val, "title", getCurrentActivity() );
 		jsonAddInt( val, "flags", 0 );
-		jsonAddStr( val, "genre", "-" );
+		jsonAddStr( val, "genre", "" );
 	}
 
 	return jsonAddObj(jo, key, val);
@@ -111,46 +111,29 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplayli
  */
 static jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mpplaylist_t *pl, int dir ) {
 	jsonObject *jsonTitle=NULL;
-	jsonObject *ret=NULL;
-	char ikey[20];
-	int i=0;
 
+	jo=jsonInitArr( jo, key );
 	while( pl != NULL ) {
-		sprintf( ikey, "%i", i );
-		jsonTitle=jsonAddTitle( jsonTitle, ikey, pl );
-		if( i == 0 ) {
-			ret=jsonTitle;
-		}
+		jsonTitle=jsonAddTitle( NULL, "", pl );
+		jsonAddArrElement( jo, jsonTitle, json_object );
 		if( dir < 0 ) {
 			pl=pl->prev;
 		}
 		else {
 			pl=pl->next;
 		}
-		i++;
 	}
-
-	jo=jsonAddArr( jo, key, ret );
 
 	return jo;
 }
 
 static jsonObject *jsonAddList( jsonObject *jo, const char *key, marklist_t *list ) {
-	int num=0;
-	char buffer[20];
-	jsonObject *buf=NULL;
-	jsonObject *val=NULL;
-
+	jo = jsonInitArr( jo, key );
 	while( list != NULL ) {
-		sprintf( buffer, "%i", num );
-		buf=jsonAddStr( buf, buffer, list->dir );
-		if( num == 0 ) {
-			val=buf;
-		}
+		jsonAddArrElement( jo, list->dir, json_string );
 		list=list->next;
-		num++;
 	}
-	return jsonAddArr( jo, key, val );
+	return jo;
 }
 
 /**
@@ -233,20 +216,14 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 }
 
 static jsonObject *jsonAddProfiles( jsonObject *jo, const char *key, profile_t **vals, const int num ) {
-	jsonObject *buf=NULL;
-	jsonObject *val=NULL;
-	char buffer[20];
 	int i;
 
+	jo = jsonInitArr(jo, key);
 	for( i=0; i<num; i++ ) {
-		sprintf( buffer, "%i", i );
-		buf=jsonAddStr( buf, buffer, vals[i]->name );
-		if( i == 0 ) {
-			val=buf;
-		}
+		jsonAddArrElement( jo, vals[i]->name, json_string );
 	}
 
-	return jsonAddArr( jo, key, val );
+	return jo;
 }
 
 /**

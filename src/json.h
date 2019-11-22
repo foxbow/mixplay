@@ -59,11 +59,10 @@ jsonObject *jsonAddStr( jsonObject *jo, const char *key, const char *val );
 jsonObject *jsonAddStrs( jsonObject *jo, const char *key, char **vals, const int num );
 jsonObject *jsonAddInt( jsonObject *jo, const char *key, const int val );
 jsonObject *jsonAddObj( jsonObject *jo, const char *key, jsonObject *val );
-jsonObject *jsonAddArr( jsonObject *jo, const char *key, jsonObject *val );
 jsonObject *jsonAddBool( jsonObject *jo, const char *key, const unsigned val );
 
 jsonObject *jsonInitArr( jsonObject *jo, const char *key );
-jsonObject *jsonAddArrElement( jsonObject *jo, jsonType type, void *element );
+int jsonAddArrElement( jsonObject *jo, void *element, jsonType type );
 
 jsonObject *jsonRead( char *json );
 char *jsonToString( jsonObject *jo );

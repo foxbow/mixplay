@@ -639,7 +639,7 @@ void activity( int v, const char *msg, ... ) {
 	if ( _ftrpos % 1000 == 0 ) {
 		if ( v <= getVerbosity() ) {
 			if( _cconfig->status != mpc_idle ) {
-				addMessage( -2, "%s", _curact );
+				addMessage( 0, "%s", _curact );
 			}
 		}
 		_ftrpos=0;

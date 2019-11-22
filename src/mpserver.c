@@ -33,6 +33,7 @@
 #include "build/mixplayd_js.h"
 #include "build/mixplayd_css.h"
 #include "build/mixplayd_svg.h"
+#include "build/mixplayd_png.h"
 
 static pthread_mutex_t _sendlock=PTHREAD_MUTEX_INITIALIZER;
 
@@ -288,6 +289,14 @@ static void *clientHandler(void *args ) {
 							mtype="image/svg+xml";
 							state=5;
 						}
+						else if( strstr( pos, "/mixplay.png " ) == pos ) {
+							pthread_mutex_lock(&_sendlock);
+							fname="static/mixplay.png";
+							fdata=static_mixplay_png;
+							flen=static_mixplay_png_len;
+							mtype="image/png";
+							state=5;
+						}
 						else if( strstr( pos, "/mpplayer.html " ) == pos ) {
 							pthread_mutex_lock(&_sendlock);
 							fname="static/mpplayer.html";
@@ -507,12 +516,22 @@ static void *clientHandler(void *args ) {
 				if( manifest == NULL ) {
 					/* this could be handled as a constant string from the start
 					   but this makes changes easier */
-					jsonObject *jo=jsonAddStr(NULL, "name", "Mixplay");
-					jsonObject *joicons=jsonAddStr( NULL, "src", "/mixplay.svg");
-					jsonAddStr(joicons, "sizes", "192x192");
-					jsonAddStr(joicons, "type", "image/svg+xml");
-					joicons=jsonAddObj( NULL, "none", joicons);
-					jsonAddArr(jo, "icons", joicons );
+					jsonObject *jo;
+					jsonObject *joicons;
+					jsonObject *joelement;
+					jo=jsonAddStr(NULL, "name", "Mixplay");
+					joicons = jsonInitArr( jo, "icons" );
+					joelement = jsonAddStr( NULL, "src", "/mixplay.svg");
+					jsonAddStr(joelement, "sizes", "192x192");
+					jsonAddStr(joelement, "type", "image/svg+xml");
+					joelement = jsonAddObj( NULL, "", joelement );
+					jsonAddArrElement( joicons, joelement, json_object );
+					joelement = jsonAddStr( NULL, "src", "/mixplay.png");
+					jsonAddStr(joelement, "sizes", "192x192");
+					jsonAddStr(joelement, "type", "image/png");
+					joelement = jsonAddObj( NULL, "", joelement );
+					jsonAddArrElement( joicons, joelement, json_object );
+
 					jsonAddStr(jo, "background_color", "darkblue");
 					jsonAddStr(jo, "theme_color", "darkblue");
 					jsonAddStr(jo, "display", "standalone");

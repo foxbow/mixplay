@@ -4,7 +4,7 @@ var data = null
 var mpver = Number('~~MPCOMM_VER~~')
 var serverver = '~~MIXPLAY_VER~~'
 var isstream = 0
-var msglines = ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
+var msglines = []
 var msgpos = 0
 var scrolls = []
 var numscrolls = 0
@@ -14,6 +14,7 @@ var argtosend = ''
 var activecmd = -1
 var smallUI = getsmallUI()
 var active = 0
+var clipboard = false
 
 function getsmallUI () {
   if (document.cookie) {
@@ -76,6 +77,11 @@ function scrollToggle () {
   setTimeout(function () { scrollToggle() }, to)
 }
 
+function isActive (tab) {
+  const el = document.getElementById(tab)
+  return (el && (el.className === 'active'))
+}
+
 /*
  * Scales the font to fit into current window, enables scrolling
  * on texts that are longer than the parent containerand centers
@@ -84,8 +90,9 @@ function scrollToggle () {
 function adaptUI () {
   /* Number of lines in sub-tabs */
   var lines = 32.5
+  var minfont = 12
   var h = window.innerHeight
-  const maintab = document.getElementById('extra0').className === 'active'
+  const maintab = isActive('extra0')
 
   enableElement('uiextra', maintab)
   /* mantab scales to width too and has less lines to display */
@@ -100,10 +107,12 @@ function adaptUI () {
     if (isstream) {
       lines = lines - 4
     }
+  } else if (isActive('extra1') || isActive('extra2')) {
+    minfont = 14
   }
 
   /* font shall never get snmaller than 12px */
-  document.body.style.fontSize = Math.max(h / lines, 12) + 'px'
+  document.body.style.fontSize = Math.max(h / lines, minfont) + 'px'
 
   if (!maintab) {
     return
@@ -233,7 +242,7 @@ function addText (text) {
   var e = document.getElementById('messages')
 
   if (msgpos < numlines) {
-    msglines[msgpos] = text
+    msglines.push(text)
     msgpos++
   } else {
     for (var i = 0; i < numlines - 1; i++) {
@@ -242,7 +251,7 @@ function addText (text) {
     msglines[numlines - 1] = text
   }
 
-  for (i = 0; i < numlines; i++) {
+  for (i = 0; i < msgpos; i++) {
     if (msglines[i] !== '') {
       line += msglines[i] + '<br>\n'
     }
@@ -251,11 +260,8 @@ function addText (text) {
 }
 
 function wipeLog () {
-  var i
   var e = document.getElementById('messages')
-  for (i = 0; i < 15; i++) {
-    msglines[i] = ''
-  }
+  msglines = []
   msgpos = 0
   e.innerHTML = '<em>No messages.</em>'
 }
@@ -739,7 +745,7 @@ function searchUpdate (data) {
     items[0] = document.createElement('em')
     items[0].innerHTML = 'No albums found!'
   }
-  tabify(e, 'lres', items)
+  tabify(e, 'lres', items, 11)
 
   e = document.getElementById('search1')
   wipeElements(e)
@@ -762,7 +768,7 @@ function searchUpdate (data) {
     items[0] = document.createElement('em')
     items[0].innerHTML = 'No artists found!'
   }
-  tabify(e, 'ares', items)
+  tabify(e, 'ares', items, 11)
 
   e = document.getElementById('search0')
   items = []
@@ -792,7 +798,7 @@ function searchUpdate (data) {
     items[0] = document.createElement('em')
     items[0].innerHTML = 'Found ' + data.artists.length + ' artists and ' + data.albums.length + ' albums'
   }
-  tabify(e, 'tres', items)
+  tabify(e, 'tres', items, 11)
 }
 
 function dnpfavUpdate (data) {
@@ -1106,8 +1112,12 @@ function loadURL2 (url) {
 
 /* promises, promises... */
 function loadURL () {
-  navigator.clipboard.readText().then(
-    clipText => loadURL2(clipText), function () { loadURL2('') })
+  if (typeof navigator.clipboard.readText !== 'function') {
+    loadURL2('')
+  } else {
+    navigator.clipboard.readText().then(
+      clipText => loadURL2(clipText), function () { loadURL2('') })
+  }
 }
 
 function newActive () {

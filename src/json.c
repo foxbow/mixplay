@@ -819,7 +819,7 @@ jsonObject *jsonAddBool( jsonObject *jo, const char *key, const unsigned val ) {
 /**
  * creates a new JSON array object with the values in val and appends it to the end of the given root object chain
  */
-jsonObject *jsonAddArr( jsonObject *jo, const char *key, jsonObject *val ) {
+static jsonObject *jsonAddArr( jsonObject *jo, const char *key, jsonObject *val ) {
 	jo=jsonAppend( jo, key );
 	jo->type=json_array;
 	jo->val=val;
@@ -898,13 +898,13 @@ jsonObject *jsonAddObj( jsonObject *jo, const char *key, jsonObject *val ) {
 /*
  * Adds a new element to a jsonArray chain.
  */
-jsonObject *jsonAddArrElement( jsonObject *jo, jsonType type, void *val ) {
+int jsonAddArrElement( jsonObject *jo, void *val, jsonType type ) {
 	char key[20];
 	int index=0;
 
 	if( jo == NULL ) {
 		jsonFail( "Cannot add an array Element to an empty object!" );
-		return NULL;
+		return -1;
 	}
 
 	while( jo->next != NULL ) {
@@ -914,47 +914,80 @@ jsonObject *jsonAddArrElement( jsonObject *jo, jsonType type, void *val ) {
 	/* if the root object is the array object, switch to the values */
 	if( jo->type != json_array ) {
 		jsonFail( "No Array Object to add to!" );
-		return NULL;
-	} else {
-		jo=(jsonObject*)jo->val;
+		return -1;
 	}
 
-	if( jo != NULL ) {
+	if( jo->val != NULL ) {
+		jo=(jsonObject*)jo->val;
 		/* forward top the last element to get the highest index */
 		while( jo->next != NULL ) {
 			jo=jo->next;
 		}
 		index=atoi(jo->key)+1;
 	}
+
 	sprintf( key, "%i", index );
 
-	if( val == NULL ) {
-		jo->type=json_null;
+	if( index == 0 ) {
+		switch( type ) {
+		case json_array:
+			jo->val=jsonAddArr(NULL, key, (jsonObject*)val );
+			break;
+		case json_number:
+			jo->val=jsonAddInt(NULL, key, atoi((char*)val));
+			break;
+		case json_object:
+			jo->val=(jsonObject*)val;
+			((jsonObject*)jo->key)->val=strdup(key);
+			break;
+		case json_string:
+			jo->val=jsonAddStr(NULL, key, (char*)val );
+			break;
+		case json_boolean:
+			jo->val=jsonAddBool(NULL, key, (unsigned long)val );
+			break;
+		case json_null:
+			jo->val = jsonAddObj(NULL, key, NULL );
+			break;
+		default:
+			return 0;
+		}
+	} else {
+		switch( type ) {
+		case json_array:
+			jsonAddArr(jo, key, (jsonObject*)val );
+			break;
+		case json_number:
+			jsonAddInt(jo, key, atoi((char*)val));
+			break;
+		case json_object:
+			jo->next = val;
+			jo = (jsonObject*)jo->next;
+			if( jo->key != NULL) {
+				free(jo->key);
+			}
+			jo->key = strdup(key);
+			break;
+		case json_string:
+			jsonAddStr( jo, key, (char*)val );
+			break;
+		case json_boolean:
+			jsonAddBool( jo, key, (unsigned long)val );
+			break;
+		case json_null:
+			jsonAddObj(jo, key, NULL );
+			break;
+		default:
+			return 0;
+		}
 	}
-
-	switch( type ) {
-	case json_array:
-		jo=jsonAddArr(jo, key, (jsonObject*)val );
-		break;
-	case json_number:
-		jo=jsonAddInt(jo, key, atoi((char*)val));
-		break;
-	case json_object:
-		jo=jsonAddObj(jo, key, (jsonObject*)val);
-		break;
-	case json_string:
-		jo=jsonAddStr( jo, key, (char*)val );
-		break;
-	case json_boolean:
-		jo=jsonAddBool( jo, key, (unsigned long)val );
-		break;
-	case json_null:
-		jo=jsonAddObj(jo, key, NULL );
-	}
-
-	return jo;
+	return 1;
 }
 
+/*
+ * creates an empty jsonArray into which items can be added with
+ * jsonAddArrElement
+ */
 jsonObject *jsonInitArr( jsonObject *jo, const char *key ) {
 	jo=jsonAppend( jo, key );
 	jo->type=json_array;
