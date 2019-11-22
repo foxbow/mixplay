@@ -772,22 +772,25 @@ void *reader( ) {
 								t--;
 								*t = 0;
 							}
-							if( strlen(control->current->title->album) > 0 ) {
-								control->current=addPLDummy( control->current, a );
+							/* only do this if the title actually changed */
+							if (strcmp(a, control->current->title->display ) ) {
+								if( strlen(control->current->title->album) > 0 ) {
+									control->current=addPLDummy( control->current, a );
+								}
+								strip( control->current->title->display, a, MAXPATHLEN );
+								strip( control->current->title->title, a, NAMELEN );
+								/* if possible cut up title and artist */
+								if( NULL != ( t = strstr( a, " - " ) ) ) {
+									*t=0;
+									t=t+3;
+									strip( control->current->title->artist, a, NAMELEN );
+									strip( control->current->title->title, t, NAMELEN );
+								}
+								plCheck( 0 );
+								/* carry over stream title as album entry */
+								strcpy( control->current->title->album, control->current->prev->title->title );
+								update=1;
 							}
-							strip( control->current->title->display, a, MAXPATHLEN );
-							strip( control->current->title->title, a, NAMELEN );
-							/* if possible cut up title and artist */
-							if( NULL != ( t = strstr( a, " - " ) ) ) {
-								*t=0;
-								t=t+3;
-								strip( control->current->title->artist, a, NAMELEN );
-								strip( control->current->title->title, t, NAMELEN );
-							}
-							plCheck( 0 );
-							/* carry over stream title as album entry */
-							strcpy( control->current->title->album, control->current->prev->title->title );
-							update=1;
 						}
 					}
 					break;
