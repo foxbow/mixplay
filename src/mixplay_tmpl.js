@@ -1087,7 +1087,7 @@ function sendArg (cmd) {
 
 function loadURL2 (url) {
   if (!url) {
-    console.log('loadURL() returned invalid value!')
+    console.log('loadURL() returned an invalid value!')
     url = ''
   }
   const parts = url.split('/')
@@ -1110,19 +1110,34 @@ function loadURL2 (url) {
   }
 }
 
-/* promises, promises... */
+/*
+ * try to peek the clipboard. If the clipboard can be read forward
+ * the contents to the actual loadURL function. Otherwise just send
+ * an empty string.
+ */
 function loadURL () {
-  if (typeof navigator.clipboard.readText !== 'function') {
+  /* plain http on mobile causes readText() to never return
+     this may hit us on desktop soon as well =/ */
+  if ((document.location.protocol !== 'https:') &&
+      (typeof window.orientation !== 'undefined')) {
+    loadURL2('')
+  } else if (typeof navigator.clipboard.readText !== 'function') {
     loadURL2('')
   } else {
-    navigator.clipboard.readText().then(
-      clipText => loadURL2(clipText), function () { loadURL2('') })
+    navigator.clipboard.readText().then(clipText => {
+      loadURL2(clipText)
+    }).catch(err => {
+      console.log('readText: ' + err)
+      loadURL2('')
+    })
   }
 }
 
 function newActive () {
-  var name
-  name = document.getElementById('prev').innerText
+  var name = ''
+  if (isstream) {
+    name = document.getElementById('prev').innerText
+  }
   if ((name.length < 3) || (!window.confirm('Create ' + name + '?'))) {
     name = window.prompt('Name for new entry')
     if (!name) {
