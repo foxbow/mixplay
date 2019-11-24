@@ -1493,7 +1493,7 @@ void *reader( ) {
 
 	/* stop player(s) gracefully */
 	for( i=0; i<control->fade; i++) {
-		dowrite( p_command[i][1], "QUIT\n", 6 );
+		dowrite( p_command[i][1], "QUIT\n", 5 );
 	}
 	addMessage( 0, "Players stopped" );
 	closeAudio();

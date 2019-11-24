@@ -28,6 +28,10 @@ body.disconnect {
 	color: #f88;
 }
 
+div[id^='tools'] {
+	height: 24em;
+}
+
 div#volume {
 	margin-top: 0.6em;
 }
@@ -146,7 +150,7 @@ div#playpack, div#viewtabs {
 }
 
 div#playpack.hide {
-	display: none;	
+	display: none;
 }
 
 div#progress {

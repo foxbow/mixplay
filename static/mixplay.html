@@ -10,12 +10,12 @@
     <link rel="manifest" href="/manifest.json">
     <title>Mixplay</title>
   </head>
-  <body onload='initializeUI()' onresize='adaptUI()' onkeypress='handleKey(event)' onkeyup='blockSpace(event)'>
+  <body onload='initializeUI()' onresize='adaptUI(0)' onkeypress='handleKey(event)' onkeyup='blockSpace(event)'>
     <div id='viewtabs'>
       <button id='cextra0' class='active'   onclick='switchView(0)' accesskey='1'>&#x25B6;</button>
-      <button id='cextra1' class='inactive' onclick='switchView(1)' accesskey='2'>&#x1F50E;</button>
+      <button id='cextra1' class='inactive' onclick='switchView(1)' accesskey='2'>&#x2630;</button>
       <button id='cextra2' class='inactive' onclick='switchView(2)' accesskey='3'>&#x2692;</button>
-      <button id='cextra3' class='inactive' onclick='switchView(3)' accesskey='4'>&#x2630;</button>
+      <button id='cextra3' class='inactive' onclick='switchView(3)' accesskey='4'>&#x1F50E;</button>
       <button id='dvol'    class='inactive' onclick='sendCMD(0x0e)'>&#x1f509;</button>
       <div    id='volume'  class='progress' onclick='sendCMD(0x1d)' onwheel='volWheel(event)'>
         <div class='mute' id='volumebar'></div>
@@ -25,7 +25,7 @@
     </div>
 
     <!-- main -->
-    <div id='extra0' class='active' onselectstart='return false' onwheel='volWheel(event)'>
+    <div id='extra0' data-name='extra' data-num='0' class='active' onselectstart='return false' onwheel='volWheel(event)'>
       <div id='pscroll' class='scroll' onclick='sendCMD(0x02)'>
         <p id='prev'>prev</p>
       </div>
@@ -54,8 +54,42 @@
         <p id='next'>next</p>
       </div>
     </div>
+    <!-- Playlist view -->
+    <div id='extra1' data-name='extra' data-num='1' class='inactive' >
+      <button id='cdnpfav0' class='active'   onclick='switchTab(this)'>&#x2630; Playlist</button>
+      <button id='cdnpfav1' class='inactive' onclick='switchTab(this)'>&#x2630; DNP</button>
+      <button id='cdnpfav2' class='inactive' onclick='switchTab(this)'>&#x2630; FAV</button>
+      <div id='dnpfav0' data-name='dnpfav' data-num='0' class='active'><em>No Playlist</em></div>
+      <div id='dnpfav1' data-name='dnpfav' data-num='1' class='inactive'><em>No DNPs</em></div>
+      <div id='dnpfav2' data-name='dnpfav' data-num='2' class='inactive'><em>No Favourites</em></div>
+    </div>
+    <!-- Tools view -->
+    <div id='extra2' data-name='extra' data-num='2' class='inactive' >
+      <p id='active'>No active profile/channel</p>
+      <p id='download' class='active' onclick='download(0)'>Download Title</p>
+      <button id='ctools0' class='active'   onclick='switchTab(this)'>&#x2630; Info</button>
+      <button id='ctools1' class='inactive' onclick='switchTab(this)'>&#x2630; Profiles</button>
+      <button id='ctools2' class='inactive' onclick='switchTab(this)'>&#x2630; Channels</button>
+      <div id='tools0' data-name='tools' data-num='0' class='active'>
+        <button id='setfavplay' onclick='sendCMD(0x1e)'>Enable Favplay</button>
+        <button id='version'    onclick='showInfo()'>Player Info</button>
+        <button id='rescan' onclick='sendCMD(0x08)'>Rescan Database</button>
+        <button id='dbinfo' onclick='sendCMD(0x12)'>Database Info</button>
+        <div id='messages'></div>
+        <button id='wipelog' class='hide' onclick='wipeLog()'>Wipe</button>
+      </div>
+      <div id='tools1' data-name='tools' data-num='1' class='inactive'>
+        <button id='cprof' onclick='newActive()'>New Profile</button>
+        <div id='profiles'><em>No profiles?</em></div>
+      </div>
+      <div id='tools2' data-name='tools' data-num='2' class='inactive'>
+        <button id='lurl'  onclick='loadURL()'>Load URL</button>
+        <button id='schan' onclick='newActive()'>Save Channel</button>
+        <div id='channels'><em>No Channels</em></div>
+      </div>
+    </div>
     <!-- Search view -->
-    <div id='extra1' class='inactive' >
+    <div id='extra3' data-name='extra' data-num='3' class='inactive' >
       <em>Search:</em>
       <button id='searchmode' onclick='toggleSearch()'>Current titles</button><br/>
       <input  id='text' type='text' onkeydown='isEnter(event,0x0713)'><br>
@@ -68,42 +102,6 @@
       <div id='search0' class='active'><em>No titles found!</em></div>
       <div id='search1' class='inactive'><em>No artists found!</em></div>
       <div id='search2' class='inactive'><em>No albums found!</em></div>
-    </div>
-    <!-- Tools view -->
-    <div id='extra2' class='inactive' >
-      <p id='active'>No active profile/channel</p>
-      <p>
-        <button id='setfavplay' onclick='sendCMD(0x1e)'>Enable Favplay</button>
-        <button id='version'    onclick='showInfo()'>Player Info</button>
-        <button id='download'   onclick='download(0)'>Download Title</button>
-      </p>
-      <button id='ctools0' class='active'   onclick='switchTab(this)'>&#x2630; Info</button>
-      <button id='ctools1' class='inactive' onclick='switchTab(this)'>&#x2630; Profiles</button>
-      <button id='ctools2' class='inactive' onclick='switchTab(this)'>&#x2630; Channels</button>
-      <div id='tools0' class='active'>
-        <button id='rescan' onclick='sendCMD(0x08)'>Rescan Database</button>
-        <button id='dbinfo' onclick='sendCMD(0x12)'>Database Info</button>
-        <div id='messages'></div>
-        <button id='wipelog' class='hide' onclick='wipeLog()'>Wipe</button>
-      </div>
-      <div id='tools1' class='inactive'>
-        <button id='cprof' onclick='newActive()'>New Profile</button>
-        <div id='profiles'><em>No profiles?</em></div>
-      </div>
-      <div id='tools2' class='inactive'>
-        <button id='lurl'  onclick='loadURL()'>Load URL</button>
-        <button id='schan' onclick='newActive()'>Save Channel</button>
-        <div id='channels'><em>No Channels</em></div>
-      </div>
-    </div>
-    <!-- Playlist view -->
-    <div id='extra3' class='inactive' >
-      <button id='cdnpfav0' class='active'   onclick='switchTab(this)'>&#x2630; Playlist</button>
-      <button id='cdnpfav1' class='inactive' onclick='switchTab(this)'>&#x2630; DNP</button>
-      <button id='cdnpfav2' class='inactive' onclick='switchTab(this)'>&#x2630; FAV</button>
-      <div id='dnpfav0' class='active'><em>No Playlist</em></div>
-      <div id='dnpfav1' class='inactive'><em>No DNPs</em></div>
-      <div id='dnpfav2' class='inactive'><em>No Favourites</em></div>
     </div>
     <!-- control elements -->
     <div id='playpack'>

@@ -14,7 +14,7 @@ var argtosend = ''
 var activecmd = -1
 var smallUI = getsmallUI()
 var active = 0
-var clipboard = false
+var swipest
 
 function getsmallUI () {
   if (document.cookie) {
@@ -78,7 +78,7 @@ function scrollToggle () {
 }
 
 function isActive (tab) {
-  const el = document.getElementById(tab)
+  const el = document.getElementById('extra' + tab)
   return (el && (el.className === 'active'))
 }
 
@@ -86,14 +86,24 @@ function isActive (tab) {
  * Scales the font to fit into current window, enables scrolling
  * on texts that are longer than the parent containerand centers
  * shorter texts
+ * if keep is set to 1, the current tab is not switched
  */
-function adaptUI () {
+function adaptUI (keep = 0) {
   /* Number of lines in sub-tabs */
   var lines = 32.5
   var minfont = 12
   var h = window.innerHeight
-  const maintab = isActive('extra0')
+  var i
 
+  if (!keep && (isActive(0) || isActive(1))) {
+    if (window.innerWidth < h * 1.2) {
+      switchTabByRef('extra', 1)
+    } else {
+      switchTabByRef('extra', 0)
+    }
+  }
+
+  const maintab = isActive(0)
   enableElement('uiextra', maintab)
   /* mantab scales to width too and has less lines to display */
   if (maintab) {
@@ -107,10 +117,14 @@ function adaptUI () {
     if (isstream) {
       lines = lines - 4
     }
-  } else if (isActive('extra1') || isActive('extra2')) {
+  } else if (isActive(2) || isActive(3)) {
     minfont = 14
   }
 
+  /* stream history has more entries than normal play */
+  if (isstream && isActive(1)) {
+    lines++
+  }
   /* font shall never get snmaller than 12px */
   document.body.style.fontSize = Math.max(h / lines, minfont) + 'px'
 
@@ -180,9 +194,20 @@ function fail (msg) {
  */
 function switchTabByRef (element, num) {
   var i = 0
-  var b
-  var e = document.getElementById(element + i)
+  var b = document.getElementById('c' + element + num)
+  var e = document.getElementById(element + num)
 
+  /* do not leave the available elements */
+  if (e === null) {
+    return
+  }
+
+  /* do not enable hidden tabs by accident */
+  if (b.className === 'hide') {
+    return
+  }
+
+  e = document.getElementById(element + i)
   while (e !== null) {
     b = document.getElementById('c' + element + i)
     if (b !== null) {
@@ -199,10 +224,16 @@ function switchTabByRef (element, num) {
     i++
     e = document.getElementById(element + i)
   }
+
+  if (element === 'extra') {
+    adaptUI(1)
+  }
 }
 
 /**
  * toggle tabified result tabs
+ * this is just for the HTML code as this does NOT
+ * work on more than ten tabs
  */
 function switchTab (ref) {
   var name = ref.id.substring(1, ref.id.length - 1)
@@ -215,7 +246,6 @@ function switchTab (ref) {
  */
 function switchView (element) {
   switchTabByRef('extra', element)
-  adaptUI()
 }
 
 /*
@@ -590,6 +620,10 @@ function tabify (parent, name, list, maxlines = 14) {
         tabdiv.className = 'inactive'
       }
       tabdiv.width = '100%'
+      tabdiv.addEventListener('touchstart', touchstartEL, false)
+      tabdiv.addEventListener('touchend', touchendEL, false)
+      tabdiv.setAttribute('data-num', i)
+      tabdiv.setAttribute('data-name', name)
       parent.appendChild(tabdiv)
       for (var j = 0; (j < maxlines) &&
           ((maxlines * i) + j < num); j++) {
@@ -709,8 +743,9 @@ function fullUpdate (data) {
 
   if (!isstream) {
     enableElement('fav', !(data.current.flags & 1))
+    setElement('download', 'Download ' + document.title)
   }
-  adaptUI()
+  adaptUI(1)
 }
 
 function wipeElements (e) {
@@ -843,19 +878,22 @@ function playerUpdate (data) {
     document.getElementById('setfavplay').innerHTML = 'Enable Favplay'
   }
 
-  enableElement('rescan', !favplay)
   enableElement('searchmode', favplay)
   enableElement('playpack', !isstream)
   enableElement('setfavplay', !isstream)
-  enableElement('cextra1', !isstream)
+  enableElement('cextra3', !isstream)
   enableElement('lscroll', !isstream)
   enableElement('cdnpfav0', !isstream)
   enableElement('cdnpfav1', !isstream)
   enableElement('cdnpfav2', !isstream)
+  enableElement('download', !isstream)
+  enableElement('rescan', !isstream)
+  enableElement('dbinfo', !isstream)
 
   /* switching between stream and normal play */
   setElement('playtime', data.playtime)
   if (!isstream) {
+    enableElement('rescan', !favplay)
     setElement('remtime', data.remtime)
     document.getElementById('progressbar').style.width = data.percent + '%'
   }
@@ -1186,24 +1224,19 @@ function switchUI () {
     document.cookie = 'MPsmallUI=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
   }
   setsmallUI()
-  adaptUI()
+  adaptUI(1)
 }
 
 function blockSpace (event) {
   /* only do this if the main or playlist view is visible! */
-  if ((document.getElementById('extra0').className !== 'active') &&
-      (document.getElementById('extra3').className !== 'active')) {
-    return
-  }
-  if (event.key === ' ') {
+  if ((isActive(0) || isActive(1)) && (event.key === ' ')) {
     event.preventDefault()
   }
 }
 
 function handleKey (event) {
   /* only do this if the main or playlist view is visible! */
-  if ((document.getElementById('extra0').className !== 'active') &&
-      (document.getElementById('extra3').className !== 'active')) {
+  if (!isActive(0) && !isActive(1)) {
     return
   }
 
@@ -1247,9 +1280,51 @@ function handleKey (event) {
 
 function showPlay () {
   if (window.innerWidth < window.innerHeight * 1.2) {
-    switchView(3)
+    switchView(1)
   } else {
     switchView(0)
+  }
+}
+
+/**
+ * touchscreen control
+ */
+function touchstartEL (event) {
+  var touch = event.changedTouches[0]
+  swipest.x = touch.pageX
+  swipest.y = touch.pageY
+  swipest.event = event
+  /* prevent implicit clickevent */
+  event.preventDefault()
+}
+
+function touchendEL (event) {
+  var touch = event.changedTouches[0]
+  var dirx = 1
+  const wwidth = window.innerWidth / 3
+  var distx = touch.pageX - swipest.x
+  const disty = Math.abs(touch.pageY - swipest.y)
+
+  if (distx < 0) {
+    dirx = -1
+    distx = -distx
+  }
+
+  /* prevent false positives on vertical dragevents */
+  if ((distx > disty) && (distx > wwidth)) {
+    const name = this.getAttribute('data-name')
+    const num  = Number(this.getAttribute('data-num'))
+
+    if (dirx > 0) {
+      switchTabByRef(name, num - 1)
+    } else {
+      switchTabByRef(name, num + 1)
+    }
+    event.stopPropagation()
+  }
+  /* fire explicit clickevent on tap */
+  if (Math.max(distx, disty) < 5) {
+    event.target.fireEvent('onclick')
   }
 }
 
@@ -1258,6 +1333,18 @@ function showPlay () {
  */
 function initializeUI () {
   /* todo: attach event listeners here and not in HTML */
+  var i
+  var el
+  for (i = 0; i < 4; i++) {
+    el = document.getElementById('extra' + i)
+    el.addEventListener('touchstart', touchstartEL, false)
+    el.addEventListener('touchend', touchendEL, false)
+  }
+  for (i = 0; i < 3; i++) {
+    el = document.getElementById('tools' + i)
+    el.addEventListener('touchstart', touchstartEL, false)
+    el.addEventListener('touchend', touchendEL, false)
+  }
   showPlay()
   initScrolls()
   setsmallUI()
