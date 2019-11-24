@@ -14,7 +14,7 @@ var argtosend = ''
 var activecmd = -1
 var smallUI = getsmallUI()
 var active = 0
-var swipest
+var swipest = []
 
 function getsmallUI () {
   if (document.cookie) {
@@ -95,8 +95,9 @@ function adaptUI (keep = 0) {
   var h = window.innerHeight
   var i
 
+  /* decide on default view if needed */
   if (!keep && (isActive(0) || isActive(1))) {
-    if (window.innerWidth < h * 1.2) {
+    if (window.innerWidth < h) {
       switchTabByRef('extra', 1)
     } else {
       switchTabByRef('extra', 0)
@@ -123,7 +124,7 @@ function adaptUI (keep = 0) {
 
   /* stream history has more entries than normal play */
   if (isstream && isActive(1)) {
-    lines++
+    lines = 36
   }
   /* font shall never get snmaller than 12px */
   document.body.style.fontSize = Math.max(h / lines, minfont) + 'px'
@@ -194,17 +195,18 @@ function fail (msg) {
  */
 function switchTabByRef (element, num) {
   var i = 0
+  var switched = 0
   var b = document.getElementById('c' + element + num)
   var e = document.getElementById(element + num)
 
   /* do not leave the available elements */
   if (e === null) {
-    return
+    return 0
   }
 
   /* do not enable hidden tabs by accident */
   if (b.className === 'hide') {
-    return
+    return 0
   }
 
   e = document.getElementById(element + i)
@@ -212,6 +214,7 @@ function switchTabByRef (element, num) {
     b = document.getElementById('c' + element + i)
     if (b !== null) {
       if (i === parseInt(num)) {
+        switched = 1
         b.className = 'active'
         e.className = 'active'
       } else if (b.className !== 'hide') {
@@ -228,6 +231,8 @@ function switchTabByRef (element, num) {
   if (element === 'extra') {
     adaptUI(1)
   }
+
+  return switched
 }
 
 /**
@@ -1294,8 +1299,8 @@ function touchstartEL (event) {
   swipest.x = touch.pageX
   swipest.y = touch.pageY
   swipest.event = event
-  /* prevent implicit clickevent */
-  event.preventDefault()
+  /* prevent implicit clickevent
+  event.preventDefault() */
 }
 
 function touchendEL (event) {
@@ -1313,17 +1318,17 @@ function touchendEL (event) {
   /* prevent false positives on vertical dragevents */
   if ((distx > disty) && (distx > wwidth)) {
     const name = this.getAttribute('data-name')
-    const num  = Number(this.getAttribute('data-num'))
+    var num = Number(this.getAttribute('data-num'))
 
     if (dirx > 0) {
-      switchTabByRef(name, num - 1)
+      num--
     } else {
-      switchTabByRef(name, num + 1)
+      num++
     }
-    event.stopPropagation()
-  }
-  /* fire explicit clickevent on tap */
-  if (Math.max(distx, disty) < 5) {
+    if (switchTabByRef(name, num) === 1) {
+      event.stopPropagation()
+    }
+  } else if (Math.max(distx, disty) < 5) {
     event.target.fireEvent('onclick')
   }
 }
