@@ -29,7 +29,15 @@ body.disconnect {
 }
 
 div[id^='tools'] {
-	height: 24em;
+	height: 20em;
+}
+
+div[id^='search'] {
+	height: 22em;
+}
+
+div[id^='dnpfav'] {
+	height: 26em;
 }
 
 div#volume {
@@ -44,11 +52,11 @@ p#active {
 	text-align: center;
 }
 
-#extra3 {
+#extra1 {
 	overflow: hidden;
 }
 
-#extra3 p {
+#extra1 p {
 	inline-size: max-content;
 }
 
@@ -267,10 +275,13 @@ div.inactive, div.hide {
 	overflow: hidden;
 }
 
+p {
+	white-space: nowrap;
+}
+
 /* display attributes should be set in t/a/l/p/nscroll */
 .scroll p {
 	position: absolute;
-	white-space: nowrap;
 	padding-top: 0.2em;
 	padding-bottom: 0.2em;
 	margin: 0;

@@ -241,10 +241,8 @@ char *serializeConfig( void ) {
 	/* dump config into JSON object */
 	jo=jsonAddInt( NULL, "fade", config->fade );
 	jsonAddStr( jo, "musicdir", config->musicdir );
-	jsonAddInt( jo, "profiles", config->profiles );
 	jsonAddProfiles( jo, "profile", config->profile, config->profiles );
 	jsonAddInt( jo, "skipdnp", config->skipdnp );
-	jsonAddInt( jo, "streams", config->streams );
 	jsonAddStrs( jo, "stream", config->stream, config->streams );
 	jsonAddStrs( jo, "sname", config->sname, config->streams );
 

@@ -12,17 +12,9 @@ var favplay = 0
 var cmdtosend = ''
 var argtosend = ''
 var activecmd = -1
-var smallUI = getsmallUI()
+var smallUI = (document.cookie && (document.cookie.indexOf('MPsmallUI') !== -1))
 var active = 0
 var swipest = []
-
-function getsmallUI () {
-  if (document.cookie) {
-    if (document.cookie.indexOf('MPsmallUI') !== -1) {
-      return true
-    }
-  }
-}
 
 function replaceChild (e, c) {
   wipeElements(e)
@@ -108,6 +100,9 @@ function adaptUI (keep = 0) {
   enableElement('uiextra', maintab)
   /* mantab scales to width too and has less lines to display */
   if (maintab) {
+    enableElement('pscroll', !smallUI)
+    enableElement('nscroll', !smallUI)
+
     if (smallUI) {
       h = Math.min((window.innerWidth * 5) / 8, h)
       lines = 11.5
@@ -376,7 +371,7 @@ function sendCMD (cmd, arg = '') {
               break
             case 0x06: /* select profile */
             case 0x17: /* load path */
-              showPlay()
+              adaptUI(0)
               doUpdate = -1
               activecmd = -2
               break
@@ -625,7 +620,7 @@ function tabify (parent, name, list, maxlines = 14) {
         tabdiv.className = 'inactive'
       }
       tabdiv.width = '100%'
-      tabdiv.addEventListener('touchstart', touchstartEL, false)
+      tabdiv.addEventListener('touchstart', touchstartEL, { passive: true })
       tabdiv.addEventListener('touchend', touchendEL, false)
       tabdiv.setAttribute('data-num', i)
       tabdiv.setAttribute('data-name', name)
@@ -785,7 +780,7 @@ function searchUpdate (data) {
     items[0] = document.createElement('em')
     items[0].innerHTML = 'No albums found!'
   }
-  tabify(e, 'lres', items, 11)
+  tabify(e, 'lres', items, 14)
 
   e = document.getElementById('search1')
   wipeElements(e)
@@ -808,7 +803,7 @@ function searchUpdate (data) {
     items[0] = document.createElement('em')
     items[0].innerHTML = 'No artists found!'
   }
-  tabify(e, 'ares', items, 11)
+  tabify(e, 'ares', items, 14)
 
   e = document.getElementById('search0')
   items = []
@@ -838,7 +833,7 @@ function searchUpdate (data) {
     items[0] = document.createElement('em')
     items[0].innerHTML = 'Found ' + data.artists.length + ' artists and ' + data.albums.length + ' albums'
   }
-  tabify(e, 'tres', items, 11)
+  tabify(e, 'tres', items, 14)
 }
 
 function dnpfavUpdate (data) {
@@ -1055,11 +1050,11 @@ function getConfig () {
             /* set profile list */
             e = document.getElementById('profiles')
             wipeElements(e)
-            if (data.config.profiles === 0) {
+            if (data.config.profile.length === 0) {
               items[0] = document.createElement('em')
               items[0].innerHTML = 'No profiles?'
             } else {
-              for (i = 0; i < data.config.profiles; i++) {
+              for (i = 0; i < data.config.profile.length; i++) {
                 choices = []
                 if (i !== (active - 1)) {
                   choices.push(['Play', 0x06])
@@ -1082,11 +1077,11 @@ function getConfig () {
             e = document.getElementById('channels')
             items = []
             wipeElements(e)
-            if (data.config.streams === 0) {
+            if (data.config.sname.length === 0) {
               items[0] = document.createElement('em')
               items[0].innerHTML = 'No channels'
             } else {
-              for (i = 0; i < data.config.streams; i++) {
+              for (i = 0; i < data.config.sname.length; i++) {
                 choices = []
                 if (i !== -(active + 1)) {
                   choices.push(['Play', 0x06])
@@ -1214,11 +1209,6 @@ function isEnter (event, cmd) {
   }
 }
 
-function setsmallUI () {
-  enableElement('pscroll', !smallUI)
-  enableElement('nscroll', !smallUI)
-}
-
 function switchUI () {
   smallUI = !smallUI
   if (smallUI) {
@@ -1228,7 +1218,6 @@ function switchUI () {
   } else {
     document.cookie = 'MPsmallUI=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
   }
-  setsmallUI()
   adaptUI(1)
 }
 
@@ -1283,14 +1272,6 @@ function handleKey (event) {
   event.preventDefault()
 }
 
-function showPlay () {
-  if (window.innerWidth < window.innerHeight * 1.2) {
-    switchView(1)
-  } else {
-    switchView(0)
-  }
-}
-
 /**
  * touchscreen control
  */
@@ -1299,8 +1280,6 @@ function touchstartEL (event) {
   swipest.x = touch.pageX
   swipest.y = touch.pageY
   swipest.event = event
-  /* prevent implicit clickevent
-  event.preventDefault() */
 }
 
 function touchendEL (event) {
@@ -1337,22 +1316,42 @@ function touchendEL (event) {
  * start the UI update thread loops
  */
 function initializeUI () {
-  /* todo: attach event listeners here and not in HTML */
-  var i
   var el
-  for (i = 0; i < 4; i++) {
+  for (var i = 0; i < 4; i++) {
+    if (i < 3) {
+      el = document.getElementById('tools' + i)
+      el.setAttribute('data-num', i)
+      el.setAttribute('data-name', 'tools')
+      el.addEventListener('touchstart', touchstartEL, { passive: true })
+      el.addEventListener('touchend', touchendEL, false)
+      el = document.getElementById('search' + i)
+      el.setAttribute('data-num', i)
+      el.setAttribute('data-name', 'search')
+      el.addEventListener('touchstart', touchstartEL, { passive: true })
+      el.addEventListener('touchend', touchendEL, false)
+      el = document.getElementById('dnpfav' + i)
+      el.setAttribute('data-num', i)
+      el.setAttribute('data-name', 'dnpfav')
+      el.addEventListener('touchstart', touchstartEL, { passive: true })
+      el.addEventListener('touchend', touchendEL, false)
+    }
     el = document.getElementById('extra' + i)
-    el.addEventListener('touchstart', touchstartEL, false)
+    el.setAttribute('data-num', i)
+    el.setAttribute('data-name', 'extra')
+    el.addEventListener('touchstart', touchstartEL, { passive: true })
     el.addEventListener('touchend', touchendEL, false)
   }
-  for (i = 0; i < 3; i++) {
-    el = document.getElementById('tools' + i)
-    el.addEventListener('touchstart', touchstartEL, false)
-    el.addEventListener('touchend', touchendEL, false)
-  }
-  showPlay()
+  el = document.getElementById('volume')
+  el.addEventListener('wheel', volWheel, { passive: false })
+  el = document.getElementById('extra0')
+  el.addEventListener('wheel', volWheel, { passive: false })
+
+  /* set initial tab and sizes */
+  adaptUI(0)
+  /* initialize scrolltext */
   initScrolls()
-  setsmallUI()
+  /* start update communication with server */
   updateUI()
+  /* start scrolltext */
   scrollToggle()
 }
