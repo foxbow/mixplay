@@ -13,7 +13,6 @@ body {
   background-repeat: no-repeat;
   background-attachment: fixed;
 	font-size: 100%;
-	overflow-x: hidden;
 	display: flex;
 	flex-direction: column;
 	height: 100%;
@@ -51,10 +50,6 @@ p#active, p#download {
 
 #extra0 {
 	text-align: center;
-}
-
-#extra1 p {
-	inline-size: max-content;
 }
 
 #viewtabs button, #playpack button {
@@ -154,13 +149,13 @@ div#playpack {
 	width: 100%;
 	position: absolute;
 	bottom: 0px;
-	background-color: rgba(100, 100, 200, .2)
+	background-color: rgba(25, 25, 50, .8)
 }
 
 div#viewtabs {
 	display: flex;
 	width: 100%;
-	background-color: rgba(100, 100, 200, .2)
+	background-color: rgba(25, 25, 50, .2)
 }
 
 div#playpack.hide {
@@ -283,6 +278,8 @@ div.inactive, div.hide {
 
 p {
 	white-space: nowrap;
+	text-overflow: ellipsis;
+	overflow: hidden;
 }
 
 /* display attributes should be set in t/a/l/p/nscroll */

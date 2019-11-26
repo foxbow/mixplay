@@ -621,7 +621,7 @@ static void *mpserver( void *arg ) {
 
 
 	listen(mainsocket , 3);
-	addMessage( 0, "Listening on port %i", control->port );
+	addMessage( 1, "Listening on port %i", control->port );
 
 	/* redirect stdin/out/err in demon mode */
 	if( control->isDaemon ) {

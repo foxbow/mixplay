@@ -298,9 +298,9 @@ int main( int argc, char **argv ) {
 		if( control->changed ) {
 			writeConfig( NULL );
 		}
+		addMessage( 0, "Player terminated gracefully" );
 	}
 	unlink(PIDPATH);
-	addMessage( 0, "Player ended" );
 	freeConfig( );
 
 	return 0;

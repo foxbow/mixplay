@@ -84,30 +84,29 @@ function adaptUI (keep = 0) {
   /* Number of lines in sub-tabs */
   var lines
   var minfont = 12
-  var h = window.innerHeight
+  var h = document.documentElement.clientHeight
   var i
 
   /* decide on default view if needed */
   if (!keep && (isActive(0) || isActive(1))) {
-    if (window.innerWidth < h) {
-      switchTabByRef('extra', 1)
+    if (document.documentElement.clientWidth < h) {
+      switchView(1)
     } else {
-      switchTabByRef('extra', 0)
+      switchView(0)
     }
+    return
   }
 
   const maintab = isActive(0)
   enableElement('uiextra', maintab)
-  /* mantab scales to width too and has less lines to display */
+  /* maintab scales to width too */
   if (maintab) {
     enableElement('pscroll', !smallUI)
     enableElement('nscroll', !smallUI)
-
+    h = Math.min(document.documentElement.clientWidth, h)
     if (smallUI) {
-      h = Math.min((window.innerWidth * 5) / 8, h)
       lines = 11
     } else {
-      h = Math.min((window.innerWidth * 4) / 5, h)
       lines = 14.7
     }
   } else if (isActive(1)) {
@@ -1291,7 +1290,7 @@ function touchstartEL (event) {
 function touchendEL (event) {
   var touch = event.changedTouches[0]
   var dirx = 1
-  const wwidth = window.innerWidth / 3
+  const wwidth = document.documentElement.clientWidth / 3
   var distx = touch.pageX - swipest.x
   const disty = Math.abs(touch.pageY - swipest.y)
 
@@ -1312,6 +1311,9 @@ function touchendEL (event) {
     }
     if (switchTabByRef(name, num) === 1) {
       event.stopPropagation()
+      if (name === 'extra') {
+        adaptUI(1)
+      }
     }
   } else if (Math.max(distx, disty) < 5) {
     event.target.fireEvent('onclick')

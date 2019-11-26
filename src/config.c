@@ -555,7 +555,7 @@ void addMessage( int v, const char *msg, ... ) {
 				msgBuffAdd( _cconfig->msg, line );
 			}
 			else {
-				printf( "\rV %s\n", line );
+				printf( "\r%s\n", line );
 			}
 		}
 		else if( v < getDebug() ) {
