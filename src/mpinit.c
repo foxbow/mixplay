@@ -217,8 +217,9 @@ int initAll( ) {
 	ts.tv_nsec=250000;
 
 	/* start the comm server */
-	pthread_create( &control->stid, NULL, mpserver, NULL );
-	nanosleep(&ts, NULL);
+	if( startServer() != 0 ) {
+		return -1;
+	}
 
 	/* start the actual player */
 	pthread_create( &control->rtid, NULL, reader, NULL );

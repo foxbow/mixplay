@@ -9,12 +9,15 @@ body {
 	background: #000;
 	background-image: radial-gradient( circle at 90% -30%, white, darkblue 2%, black 100%);
 	color: #bbc;
-  height: 100%;
   margin: 0;
   background-repeat: no-repeat;
   background-attachment: fixed;
 	font-size: 100%;
 	overflow-x: hidden;
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	width: 100%;
 }
 
 body.busy {
@@ -28,32 +31,26 @@ body.disconnect {
 	color: #f88;
 }
 
-div[id^='tools'] {
-	height: 20em;
+/* minimal height to allow swiping - if someone misses it..
+div[id^='dnpfav'], div[id^='tools'], div[id^='search'] {
+	height: 10em;
 }
+*/
 
-div[id^='search'] {
-	height: 22em;
-}
-
-div[id^='dnpfav'] {
-	height: 26em;
+div[id^='extra'].active {
+	flex: 1;
 }
 
 div#volume {
 	margin-top: 0.6em;
 }
 
-p#active {
+p#active, p#download {
 	text-align: center;
 }
 
 #extra0 {
 	text-align: center;
-}
-
-#extra1 {
-	overflow: hidden;
 }
 
 #extra1 p {
@@ -139,7 +136,7 @@ div#volumebar.mute {
 
 /* combo for current title */
 #current, #playpack {
-	padding-top: 0.2em;
+	margin-top: 0.2em;
 	border:black;
 }
 
@@ -152,9 +149,18 @@ div#volumebar.mute {
 	display: block;
 }
 
-div#playpack, div#viewtabs {
+div#playpack {
 	display: flex;
-	width: 100%
+	width: 100%;
+	position: absolute;
+	bottom: 0px;
+	background-color: rgba(100, 100, 200, .2)
+}
+
+div#viewtabs {
+	display: flex;
+	width: 100%;
+	background-color: rgba(100, 100, 200, .2)
 }
 
 div#playpack.hide {

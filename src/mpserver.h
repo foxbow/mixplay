@@ -11,6 +11,6 @@
 /* basic communication block size */
 #define MP_BLKSIZE 512
 
-void *mpserver( );
+int startServer( );
 
 #endif /* _MPSERVER_H_ */

@@ -606,36 +606,19 @@ static void *clientHandler(void *args ) {
 
 /**
  * offers a HTTP connection to the player
- * this must only be called from initAll() and should probably move
- * into player.c
+ * must be called through startServer()
  */
-void *mpserver( ) {
+static void *mpserver( void *arg ) {
 	fd_set				fds;
 	struct timeval		to;
-	int 		mainsocket ,client_sock ,alen ,*new_sock;
-	struct sockaddr_in server , client;
-	mpconfig_t	*control;
+	int	mainsocket = (int)(long)arg;
+	int 	client_sock ,alen ,*new_sock;
+	struct sockaddr_in client;
+	mpconfig_t	*control=getConfig();
 	int devnull=0;
 
 	blockSigint();
 
-	control=getConfig( );
-
-	mainsocket = socket(AF_INET , SOCK_STREAM , 0);
-	if (mainsocket == -1) {
-		fail( errno, "Could not create socket");
-	}
-	addMessage( 1, "Socket created" );
-
-	server.sin_family = AF_INET;
-	server.sin_addr.s_addr = INADDR_ANY;
-	server.sin_port = htons( control->port );
-
-	if( bind(mainsocket,(struct sockaddr *)&server , sizeof(server)) < 0) {
-		fail( errno, "bind to port %i failed!", control->port );
-		return NULL;
-	}
-	addMessage( 1, "bind() done");
 
 	listen(mainsocket , 3);
 	addMessage( 0, "Listening on port %i", control->port );
@@ -689,4 +672,38 @@ void *mpserver( ) {
 
 	sleep(1);
 	return NULL;
+}
+
+/*
+ * starts the server thread
+ * this call blocks until the server socket was successfuly bound
+ * so that nothing else happens on fail()
+ */
+int startServer( ) {
+	mpconfig_t	*control=getConfig( );
+	struct sockaddr_in server;
+	int mainsocket;
+
+	mainsocket = socket(AF_INET , SOCK_STREAM , 0);
+	if (mainsocket == -1) {
+		addMessage( 0, "Could not create socket");
+		addError( errno );
+		return -1;
+	}
+	addMessage( 1, "Socket created" );
+
+	server.sin_family = AF_INET;
+	server.sin_addr.s_addr = INADDR_ANY;
+	server.sin_port = htons( control->port );
+
+	if( bind(mainsocket,(struct sockaddr *)&server , sizeof(server)) < 0) {
+		addMessage( 0, "bind to port %i failed!", control->port );
+		addError( errno );
+		return -1;
+	}
+	addMessage( 1, "bind() done");
+
+	pthread_create( &control->stid, NULL, mpserver, (void*)(long)mainsocket );
+
+	return 0;
 }

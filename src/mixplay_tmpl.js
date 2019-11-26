@@ -82,7 +82,7 @@ function isActive (tab) {
  */
 function adaptUI (keep = 0) {
   /* Number of lines in sub-tabs */
-  var lines = 32.5
+  var lines
   var minfont = 12
   var h = window.innerHeight
   var i
@@ -105,22 +105,26 @@ function adaptUI (keep = 0) {
 
     if (smallUI) {
       h = Math.min((window.innerWidth * 5) / 8, h)
-      lines = 11.5
+      lines = 11
     } else {
       h = Math.min((window.innerWidth * 4) / 5, h)
-      lines = 15.25
+      lines = 14.7
     }
-    if (isstream) {
-      lines = lines - 4
-    }
-  } else if (isActive(2) || isActive(3)) {
+  } else if (isActive(1)) {
+    lines = 32
+  } else if (isActive(2)) {
+    lines = 27
+    minfont = 14
+  } else if (isActive(3)) {
+    lines = 31.5
     minfont = 14
   }
 
-  /* stream history has more entries than normal play */
-  if (isstream && isActive(1)) {
-    lines = 36
+  /* streams have no control line */
+  if (isstream) {
+    lines -= 3
   }
+
   /* font shall never get snmaller than 12px */
   document.body.style.fontSize = Math.max(h / lines, minfont) + 'px'
 
@@ -128,7 +132,7 @@ function adaptUI (keep = 0) {
     return
   }
 
-  for (var i = 0; i < numscrolls; i++) {
+  for (i = 0; i < numscrolls; i++) {
     var scroll = scrolls[i]
     var element = scroll.element
     element.style.left = 'auto'
@@ -179,7 +183,7 @@ function fail (msg) {
   if (doUpdate !== 0) {
     doUpdate = 0
     if (window.confirm(msg + '\nRetry?')) {
-      location.reload()
+      document.location.reload()
     }
   }
 }
@@ -223,10 +227,6 @@ function switchTabByRef (element, num) {
     e = document.getElementById(element + i)
   }
 
-  if (element === 'extra') {
-    adaptUI(1)
-  }
-
   return switched
 }
 
@@ -239,13 +239,15 @@ function switchTab (ref) {
   var name = ref.id.substring(1, ref.id.length - 1)
   var num = parseInt(ref.id.substring(ref.id.length - 1))
   switchTabByRef(name, num)
+  adaptUI(1)
 }
 
 /*
  * toggle main UI tabs
  */
-function switchView (element) {
+function switchView (element, keep = 1) {
   switchTabByRef('extra', element)
+  adaptUI(keep)
 }
 
 /*
@@ -300,12 +302,18 @@ function wipeLog () {
  * send a command with optional argument to the server
  */
 function sendCMD (cmd, arg = '') {
-  var xmlhttp = new XMLHttpRequest()
+  var xmlhttp = new window.XMLHttpRequest()
   var code = Number(cmd).toString(16)
   var e
   var text
   cmd = Number(cmd)
   code = Number(cmd).toString(16)
+
+  /* prev and next don't make sense on stream */
+  if (isstream && ((cmd === 0x02) || (cmd === 0x03))) {
+    return
+  }
+
   /* ignore volume controls */
   if ((cmd !== 0x0d) && (cmd !== 0x0e) && (cmd !== 0x1d)) {
     /* avoid stacking  */
@@ -320,9 +328,6 @@ function sendCMD (cmd, arg = '') {
   while (code.length < 4) {
     code = '0' + code
   }
-
-  /* these commands should pull main to front */
-  if (code === '001e') switchView(0)
 
   /* clear title results after add all */
   if ((arg === '0') &&
@@ -371,7 +376,8 @@ function sendCMD (cmd, arg = '') {
               break
             case 0x06: /* select profile */
             case 0x17: /* load path */
-              adaptUI(0)
+            case 0x1e: /* toggle favplay */
+              switchView(0, 0)
               doUpdate = -1
               activecmd = -2
               break
@@ -712,7 +718,7 @@ function fullUpdate (data) {
     } else {
       setElement('next', data.next[0].artist + ' - ' + data.next[0].title)
     }
-    for (i = 0; i < data.next.length; i++) {
+    for (i = 0; i < Math.min(data.next.length, 14); i++) {
       titleline = ''
       if (!isstream && (data.next[i].playcount >= 0)) {
         titleline = '[' + data.next[i].playcount + '/' + data.next[i].skipcount + '] '
@@ -978,7 +984,7 @@ function parseReply (reply) {
  * handles different types of status replies
  */
 function updateUI () {
-  var xmlhttp = new XMLHttpRequest()
+  var xmlhttp = new window.XMLHttpRequest()
   xmlhttp.onreadystatechange = function () {
     if (xmlhttp.readyState === 4) {
       switch (xmlhttp.status) {
@@ -1031,7 +1037,7 @@ function updateUI () {
  * this should only happen once at start
  */
 function getConfig () {
-  var xmlhttp = new XMLHttpRequest()
+  var xmlhttp = new window.XMLHttpRequest()
   xmlhttp.onreadystatechange = function () {
     if (xmlhttp.readyState === 4) {
       if (xmlhttp.status === 200) {

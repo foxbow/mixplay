@@ -168,7 +168,7 @@ static int hidCMD( int c ) {
 	}
 
 	if( c == '\n' ) {
-		debugHidPrintline("");		
+		debugHidPrintline("");
 	}
 
 	return -1;
@@ -271,35 +271,36 @@ int main( int argc, char **argv ) {
 
 	addUpdateHook( &s_updateHook );
 
-	control->inUI=1;
-	initAll( );
-	#ifdef EPAPER
-	sleep(1);
-	if( control->status != mpc_quit ) {
-		epSetup();
-		addUpdateHook( &epUpdateHook );
-	}
-	#endif
-	hidfd=initHID();
- 	if( hidfd != -1 ) {
-		startHID( hidfd );
-	}
+	if( initAll( ) == 0 ){
+		control->inUI=1;
+		#ifdef EPAPER
+		sleep(1);
+		if( control->status != mpc_quit ) {
+			epSetup();
+			addUpdateHook( &epUpdateHook );
+		}
+		#endif
+		hidfd=initHID();
+	 	if( hidfd != -1 ) {
+			startHID( hidfd );
+		}
 
-	if( getDebug() ) {
-		addUpdateHook( &_debugHidUpdateHook );
-		debugHID();
-	}
-	pthread_join( control->stid, NULL );
-	pthread_join( control->rtid, NULL );
-	control->inUI=0;
-#ifdef EPAPER
-	epExit();
-#endif
-	if( control->changed ) {
-		writeConfig( NULL );
+		if( getDebug() ) {
+			addUpdateHook( &_debugHidUpdateHook );
+			debugHID();
+		}
+		pthread_join( control->stid, NULL );
+		pthread_join( control->rtid, NULL );
+		control->inUI=0;
+	#ifdef EPAPER
+		epExit();
+	#endif
+		if( control->changed ) {
+			writeConfig( NULL );
+		}
 	}
 	unlink(PIDPATH);
-	addMessage( 0, "Player terminated" );
+	addMessage( 0, "Player ended" );
 	freeConfig( );
 
 	return 0;
