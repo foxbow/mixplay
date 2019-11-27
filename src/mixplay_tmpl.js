@@ -107,7 +107,10 @@ function adaptUI (keep = 0) {
     if (smallUI) {
       lines = 11
     } else {
-      lines = 14.7
+      lines = 14.5
+    }
+    if (isstream) {
+      lines = lines - 2
     }
   } else if (isActive(1)) {
     lines = 32
@@ -117,11 +120,6 @@ function adaptUI (keep = 0) {
   } else if (isActive(3)) {
     lines = 31.5
     minfont = 14
-  }
-
-  /* streams have no control line */
-  if (isstream) {
-    lines -= 3
   }
 
   /* font shall never get snmaller than 12px */
@@ -749,7 +747,10 @@ function fullUpdate (data) {
   if (!isstream) {
     enableElement('fav', !(data.current.flags & 1))
     setElement('download', 'Download ' + document.title)
+  } else {
+    enableElement('fav', 0)
   }
+
   adaptUI(1)
 }
 
@@ -884,23 +885,16 @@ function playerUpdate (data) {
   }
 
   enableElement('searchmode', favplay)
-  enableElement('playpack', !isstream)
-  enableElement('setfavplay', !isstream)
-  enableElement('cextra3', !isstream)
-  enableElement('lscroll', !isstream)
-  enableElement('cdnpfav0', !isstream)
-  enableElement('cdnpfav1', !isstream)
-  enableElement('cdnpfav2', !isstream)
-  enableElement('download', !isstream)
-  enableElement('rescan', !isstream)
-  enableElement('dbinfo', !isstream)
 
   /* switching between stream and normal play */
-  setElement('playtime', data.playtime)
   if (!isstream) {
     enableElement('rescan', !favplay)
+    setElement('playtime', data.playtime)
     setElement('remtime', data.remtime)
     document.getElementById('progressbar').style.width = data.percent + '%'
+  } else {
+    setElement('remtime', data.playtime)
+    document.getElementById('progressbar').style.width = '100%'
   }
 
   if (active !== data.active) {
@@ -949,7 +943,24 @@ function parseReply (reply) {
       fail('Version clash, expected ' + mpver + ' and got ' + data.version)
       return
     }
-    isstream = (data.mpmode === 1) /* PM_STREAM */
+
+    if (isstream !== (data.mpmode === 1)) {
+      isstream = (data.mpmode === 1) /* PM_STREAM */
+      enableElement('goprev', !isstream)
+      enableElement('gonext', !isstream)
+      enableElement('playtime', !isstream)
+      enableElement('dnp', !isstream)
+      enableElement('setfavplay', !isstream)
+      enableElement('cextra3', !isstream)
+      enableElement('lscroll', !isstream)
+      enableElement('cdnpfav0', !isstream)
+      enableElement('cdnpfav1', !isstream)
+      enableElement('cdnpfav2', !isstream)
+      enableElement('download', !isstream)
+      enableElement('rescan', !isstream)
+      enableElement('dbinfo', !isstream)
+    }
+
     if (data.mpmode & 4) {
       activecmd = -2
       document.body.className = 'busy'

@@ -682,7 +682,7 @@ static void *mpserver( void *arg ) {
 int startServer( ) {
 	mpconfig_t	*control=getConfig( );
 	struct sockaddr_in server;
-	int mainsocket;
+	int mainsocket = -1;
 
 	mainsocket = socket(AF_INET , SOCK_STREAM , 0);
 	if (mainsocket == -1) {
@@ -696,10 +696,15 @@ int startServer( ) {
 	server.sin_addr.s_addr = INADDR_ANY;
 	server.sin_port = htons( control->port );
 
-	if( bind(mainsocket,(struct sockaddr *)&server , sizeof(server)) < 0) {
-		addMessage( 0, "bind to port %i failed!", control->port );
-		addError( errno );
-		return -1;
+	while ( bind(mainsocket,(struct sockaddr *)&server , sizeof(server)) < 0) {
+		if( (getDebug() > 0) && (errno == 98) ) {
+			addMessage(0, "Busy, retrying in 10s" );
+			sleep(10);
+		} else {
+			addMessage( 0, "bind to port %i failed!", control->port );
+			addError( errno );
+			return -1;
+		}
 	}
 	addMessage( 1, "bind() done");
 
