@@ -30,14 +30,9 @@ body.disconnect {
 	color: #f88;
 }
 
-/* minimal height to allow swiping - if someone misses it..
-div[id^='dnpfav'], div[id^='tools'], div[id^='search'] {
-	height: 10em;
-}
-*/
-
 div[id^='extra'].active {
 	flex: 1;
+	overflow: hidden;
 }
 
 div#volume {
@@ -83,11 +78,11 @@ p#ctitle:hover {
 
 }
 
-#volume:hover, .clickline {
+#volume:hover, .clickline:hover {
 	cursor: pointer;
 }
 
-#progress:hover {
+#progress:hover, div#playtime:hover {
 	cursor: w-resize;
 }
 
@@ -145,14 +140,12 @@ div#volumebar.mute {
 }
 
 div#playpack {
-	display: flex;
-	width: 100%;
 	position: absolute;
 	bottom: 0px;
-	background-color: rgba(25, 25, 50, .8)
+	background-color: rgba(10, 10, 20, 1)
 }
 
-div#viewtabs {
+div.buttonbar {
 	display: flex;
 	width: 100%;
 	background-color: rgba(25, 25, 50, .2)

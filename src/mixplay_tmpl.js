@@ -84,12 +84,15 @@ function adaptUI (keep = 0) {
   /* Number of lines in sub-tabs */
   var lines
   var minfont = 12
-  var h = document.documentElement.clientHeight
+  var h = window.innerHeight
   var i
+  var fsize
+  var bsize
+  var fac
 
   /* decide on default view if needed */
   if (!keep && (isActive(0) || isActive(1))) {
-    if (document.documentElement.clientWidth < h) {
+    if (window.innerWidth < h) {
       switchView(1)
     } else {
       switchView(0)
@@ -103,7 +106,7 @@ function adaptUI (keep = 0) {
   if (maintab) {
     enableElement('pscroll', !smallUI)
     enableElement('nscroll', !smallUI)
-    h = Math.min(document.documentElement.clientWidth, h)
+    h = Math.min(window.innerWidth, h)
     if (smallUI) {
       lines = 11
     } else {
@@ -113,7 +116,7 @@ function adaptUI (keep = 0) {
       lines = lines - 2
     }
   } else if (isActive(1)) {
-    lines = 32
+    lines = 31
   } else if (isActive(2)) {
     lines = 27
     minfont = 14
@@ -123,7 +126,16 @@ function adaptUI (keep = 0) {
   }
 
   /* font shall never get snmaller than 12px */
-  document.body.style.fontSize = Math.max(h / lines, minfont) + 'px'
+  fsize = Math.max(h / lines, minfont)
+  /* toolbars should grow/shrink with less magnification */
+  bsize = minfont + ((2 * (fsize - minfont)) / 3)
+  document.getElementById('playpack').style.fontSize = bsize + 'px'
+  document.getElementById('viewtabs').style.fontSize = bsize + 'px'
+
+  /* factor to fill gap between buttonbars */
+  var screw = 4.9 /* number of 'lines' the buttonbars take */
+  fac = (lines * fsize) / (((lines - screw) * fsize) + screw * bsize)
+  document.body.style.fontSize = (fsize * fac) + 'px'
 
   if (!maintab) {
     return
@@ -306,8 +318,8 @@ function sendCMD (cmd, arg = '') {
   cmd = Number(cmd)
   code = Number(cmd).toString(16)
 
-  /* prev and next don't make sense on stream */
-  if (isstream && ((cmd === 0x02) || (cmd === 0x03))) {
+  /* replay, prev and next don't make sense on stream */
+  if (isstream && ((cmd === 0x02) || (cmd === 0x03) || (cmd === 0x05))) {
     return
   }
 
@@ -643,6 +655,10 @@ function tabify (parent, name, list, maxlines = 14) {
 function fullUpdate (data) {
   var choices = []
   var e = document.getElementById('dnpfav0')
+  var maxnext = 10
+  if (isstream) {
+    maxnext = 15
+  }
   wipeElements(e)
   document.title = data.current.artist + ' - ' + data.current.title
   if (data.prev.length > 0) {
@@ -695,10 +711,8 @@ function fullUpdate (data) {
   cline = document.createElement('p')
   cline.id = 'ctitle'
   cline.innerHTML = '&#x25B6; ' + titleline
+  cline.onclick = function () { sendCMD(0x00) }
   if (!isstream) {
-    cline.onclick = function () {
-      sendCMD(0x00)
-    }
     cline.ondrop = function (ev) {
       sendCMD(0x11, ev.dataTransfer.getData('title'))
       enableElement(ev.dataTransfer.getData('element'), 0)
@@ -715,7 +729,7 @@ function fullUpdate (data) {
     } else {
       setElement('next', data.next[0].artist + ' - ' + data.next[0].title)
     }
-    for (i = 0; i < Math.min(data.next.length, 14); i++) {
+    for (i = 0; i < Math.min(data.next.length, maxnext); i++) {
       titleline = ''
       if (!isstream && (data.next[i].playcount >= 0)) {
         titleline = '[' + data.next[i].playcount + '/' + data.next[i].skipcount + '] '
@@ -1062,7 +1076,6 @@ function getConfig () {
             var items = []
             var choices = []
             var i
-            setElement('active', 'No active profile/channel')
             /* set profile list */
             e = document.getElementById('profiles')
             wipeElements(e)
@@ -1077,11 +1090,6 @@ function getConfig () {
                 } else {
                   if (i !== 0) {
                     choices.push(['Remove', 0x18])
-                  }
-                  if (favplay) {
-                    setElement('active', 'Playing favplay ' + data.config.profile[i])
-                  } else {
-                    setElement('active', 'Playing profile ' + data.config.profile[i])
                   }
                 }
                 items[i] = popselect(choices, i + 1,
@@ -1102,14 +1110,26 @@ function getConfig () {
                 if (i !== -(active + 1)) {
                   choices.push(['Play', 0x06])
                   choices.push(['Remove', 0x18])
-                } else {
-                  setElement('active', 'Tuned in to ' + data.config.sname[i])
                 }
                 items[i] = popselect(choices, -(i + 1),
                   data.config.sname[i])
               }
             }
             tabify(e, 'chanlist', items, 10)
+            if (active > 0) {
+              if (favplay) {
+                setElement('active', 'Playing favplay ' +
+                    data.config.profile[active - 1])
+              } else {
+                setElement('active', 'Playing profile ' +
+                    data.config.profile[active - 1])
+              }
+            } else if (active < 0) {
+              setElement('active', 'Tuned in to ' +
+                    data.config.sname[-active - 1])
+            } else {
+              setElement('active', 'No active profile/channel')
+            }
           } else {
             fail('Received reply of type ' + data.type + ' for config!')
           }
@@ -1278,6 +1298,9 @@ function handleKey (event) {
     case 'Q':
       pwSendCMD('Really stop the server?', 0x07)
       break
+    case 'I':
+      showInfo()
+      break
     case 'D':
       pwSendCMD('Mark doublets?', 0x0b)
       break
@@ -1301,7 +1324,7 @@ function touchstartEL (event) {
 function touchendEL (event) {
   var touch = event.changedTouches[0]
   var dirx = 1
-  const wwidth = document.documentElement.clientWidth / 3
+  const wwidth = window.innerWidth / 3
   var distx = touch.pageX - swipest.x
   const disty = Math.abs(touch.pageY - swipest.y)
 
@@ -1360,10 +1383,7 @@ function initializeUI () {
     el.addEventListener('touchstart', touchstartEL, { passive: true })
     el.addEventListener('touchend', touchendEL, false)
   }
-  el = document.getElementById('volume')
-  el.addEventListener('wheel', volWheel, { passive: false })
-  el = document.getElementById('extra0')
-  el.addEventListener('wheel', volWheel, { passive: false })
+  document.body.addEventListener('wheel', volWheel, { passive: false })
 
   /* set initial tab and sizes */
   adaptUI(0)

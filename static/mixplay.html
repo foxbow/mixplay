@@ -11,7 +11,7 @@
     <title>Mixplay</title>
   </head>
   <body onload='initializeUI()' onresize='adaptUI(0)' onkeypress='handleKey(event)' onkeyup='blockSpace(event)'>
-    <div id='viewtabs'>
+    <div id='viewtabs' class='buttonbar'>
       <button id='cextra0' class='active'   onclick='switchView(0)' accesskey='1'>&#x25B6;</button>
       <button id='cextra1' class='inactive' onclick='switchView(1)' accesskey='2'>&#x2630;</button>
       <button id='cextra2' class='inactive' onclick='switchView(2)' accesskey='3'>&#x2692;</button>
@@ -71,8 +71,6 @@
       <button id='ctools1' class='inactive' onclick='switchTab(this)'>&#x2630; Profiles</button>
       <button id='ctools2' class='inactive' onclick='switchTab(this)'>&#x2630; Channels</button>
       <div id='tools0' class='active'>
-        <button id='setfavplay' onclick='sendCMD(0x1e)'>Enable Favplay</button>
-        <button id='version'    onclick='showInfo()'>Player Info</button>
         <button id='rescan' onclick='sendCMD(0x08)'>Rescan Database</button>
         <button id='dbinfo' onclick='sendCMD(0x12)'>Database Info</button>
         <div id='messages'></div>
@@ -80,6 +78,7 @@
       </div>
       <div id='tools1' class='inactive'>
         <button id='cprof' onclick='newActive()'>New Profile</button>
+        <button id='setfavplay' onclick='sendCMD(0x1e)'>Enable Favplay</button>
         <div id='profiles'><em>No profiles?</em></div>
       </div>
       <div id='tools2' class='inactive'>
@@ -104,11 +103,11 @@
       <div id='search2' class='inactive'><em>No albums found!</em></div>
     </div>
     <!-- control elements -->
-    <div id='playpack'>
+    <div id='playpack' class='buttonbar'>
       <button id='goprev' class='inactive' onclick='sendCMD(0x02)'>&#x23ee;</button>
       <button id='play'   class='inactive' onclick='sendCMD(0x00)'>&#x23f8;</button>
       <button id='gonext' class='inactive' onclick='sendCMD(0x03)'>&#x23ed;</button>
-      <div id='playtime'>00:00</div>
+      <div id='playtime' onclick='sendCMD(0x05)'>00:00</div>
       <div id='progress' class='progress' onclick='sendCMD(0x05)'><div id='progressbar'></div></div>
       <div id='remtime'>00:00</div>
       <button id='fav' class='inactive' onclick='sendCMD(0x0809)'>&#x2665;</button>

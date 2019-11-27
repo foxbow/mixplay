@@ -197,7 +197,7 @@ void setStream( const char* stream, const char *name ) {
 	mpconfig_t *control=getConfig();
 	control->current=wipePlaylist( control->current );
 	control->root=wipeTitles(control->root);
-	control->current=addPLDummy( control->current, "" );
+	control->current=addPLDummy( control->current, "<waiting for info>" );
 	control->current=addPLDummy( control->current, name );
 	control->current=control->current->next;
 	if( endsWith( stream, ".m3u" ) ||
@@ -1227,15 +1227,12 @@ void *reader( ) {
 			break;
 
 		case mpc_remprof:
-			if( asyncTest() ) {
-				if( control->argument == NULL ) {
-					addMessage( -1, "No profile given!" );
-				}
-				else {
+			if( control->argument == NULL ) {
+				addMessage( -1, "No profile given!" );
+			}
+			else {
+				if( asyncTest() ) {
 					profile=atoi( control->argument );
-					if( profile == 0 ) {
-						addMessage( -1, "Cannot remove empty profile!" );
-					}
 					if( profile > 0 ) {
 						if( profile == 1 ) {
 							addMessage( -1, "mixplay cannot be removed.");
@@ -1249,19 +1246,21 @@ void *reader( ) {
 							free( control->profile[profile-1] );
 							for(i=profile;i<control->profiles;i++) {
 								control->profile[i-1]=control->profile[i];
+								if ( i == control->active ) {
+									control->active = control->active - 1;
+								}
 							}
 							control->profiles--;
-
-							if( control->active > profile ) {
-								control->active--;
-							}
 							writeConfig(NULL);
 						}
 					}
-					else {
+					else if( profile < 0 ) {
 						profile=(-profile);
 						if( profile > control->streams ) {
 							addMessage( -1, "Stream #%i does not exist!", profile );
+						}
+						else if( -profile == control->active ) {
+							addMessage( -1, "Cannot remove active profile!" );
 						}
 						else {
 							free( control->stream[profile-1] );
@@ -1269,22 +1268,20 @@ void *reader( ) {
 							for(i=profile;i<control->streams;i++) {
 								control->stream[i-1]=control->stream[i];
 								control->sname[i-1]=control->sname[i];
+								if ( i == control->active ) {
+									control->active = control->active - 1;
+								}
 							}
 							control->streams--;
-							control->profiles--;
-							if( profile > control->active ) {
-								control->active=1;
-							}
-							else if( control->active < -profile ) {
-								control->active=1;
-							}
+
 							writeConfig(NULL);
 						}
+					} else {
+						addMessage( -1, "Cannot remove empty profile!" );
 					}
-					sfree(&(control->argument));
 				}
+				sfree(&(control->argument));
 			}
-
 			break;
 
 		case mpc_path:
