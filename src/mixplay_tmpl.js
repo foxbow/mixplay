@@ -15,6 +15,7 @@ var activecmd = -1
 var smallUI = (document.cookie && (document.cookie.indexOf('MPsmallUI') !== -1))
 var active = 0
 var swipest = []
+var overflow = 0
 
 function replaceChild (e, c) {
   wipeElements(e)
@@ -70,8 +71,13 @@ function scrollToggle () {
 }
 
 function isActive (tab) {
-  const el = document.getElementById('extra' + tab)
+  const el = document.getElementById(tab)
   return (el && (el.className === 'active'))
+}
+
+function isPlay () {
+  return (isActive('extra0') ||
+    ((isActive('extra1') && isActive('dnpfav0'))))
 }
 
 /*
@@ -83,7 +89,7 @@ function isActive (tab) {
 function adaptUI (keep = 0) {
   /* Number of lines in sub-tabs */
   var lines
-  var minfont = 12
+  var minfont = 13
   var h = window.innerHeight
   var i
   var fsize
@@ -91,7 +97,7 @@ function adaptUI (keep = 0) {
   var fac
 
   /* decide on default view if needed */
-  if (!keep && (isActive(0) || isActive(1))) {
+  if (!keep && isPlay()) {
     if (window.innerWidth < h) {
       switchView(1)
     } else {
@@ -100,7 +106,7 @@ function adaptUI (keep = 0) {
     return
   }
 
-  const maintab = isActive(0)
+  const maintab = isActive('extra0')
   enableElement('uiextra', maintab)
   /* maintab scales to width too */
   if (maintab) {
@@ -115,18 +121,27 @@ function adaptUI (keep = 0) {
     if (isstream) {
       lines = lines - 2
     }
-  } else if (isActive(1)) {
+    minfont = 12
+  } else if (isActive('extra1')) {
     lines = 31
-  } else if (isActive(2)) {
+  } else if (isActive('extra2')) {
     lines = 27
-    minfont = 14
-  } else if (isActive(3)) {
+  } else if (isActive('extra3')) {
     lines = 31.5
-    minfont = 14
   }
 
-  /* font shall never get snmaller than 12px */
-  fsize = Math.max(h / lines, minfont)
+  /* font shall never get smaller than minfont */
+  fsize = h / lines
+  if (fsize < minfont) {
+    fsize = minfont
+    const of = Math.round(lines - (h / fsize) - 1)
+    if (overflow !== of) {
+      overflow = of
+      doUpdate = -1
+    }
+  } else {
+    overflow = 0
+  }
   /* toolbars should grow/shrink with less magnification */
   bsize = minfont + ((2 * (fsize - minfont)) / 3)
   document.getElementById('playpack').style.fontSize = bsize + 'px'
@@ -146,7 +161,7 @@ function adaptUI (keep = 0) {
     var element = scroll.element
     element.style.left = 'auto'
     element.style.right = 'auto'
-    var offRight = getComputedStyle(element).right
+    var offRight = window.getComputedStyle(element).right
     var right = parseInt(offRight, 10)
     scroll.offset = offRight
     if (offRight.charAt(0) === '-') {
@@ -241,12 +256,10 @@ function switchTabByRef (element, num) {
 
 /**
  * toggle tabified result tabs
- * this is just for the HTML code as this does NOT
- * work on more than ten tabs
  */
 function switchTab (ref) {
-  var name = ref.id.substring(1, ref.id.length - 1)
-  var num = parseInt(ref.id.substring(ref.id.length - 1))
+  var name = ref.getAttribute('data-name')
+  var num = parseInt(ref.getAttribute('data-num'))
   switchTabByRef(name, num)
   adaptUI(1)
 }
@@ -298,13 +311,6 @@ function addText (text) {
     }
   }
   e.innerHTML = line
-}
-
-function wipeLog () {
-  var e = document.getElementById('messages')
-  msglines = []
-  msgpos = 0
-  e.innerHTML = '<em>No messages.</em>'
 }
 
 /*
@@ -607,7 +613,8 @@ function popselect (choice, arg, text, drag = 0) {
 function tabify (parent, name, list, maxlines = 14) {
   var num = list.length
   var tabs
-
+  /* use five lines at the very least! */
+  maxlines = Math.max((maxlines - overflow), 5)
   if (num > 0) {
     tabs = parseInt((num - 1) / maxlines)
   }
@@ -622,7 +629,8 @@ function tabify (parent, name, list, maxlines = 14) {
         tabswitch.className = 'inactive'
       }
       tabswitch.setAttribute('data-num', i)
-      tabswitch.onclick = function () { switchTabByRef(name, this.getAttribute('data-num')) }
+      tabswitch.setAttribute('data-name', name)
+      tabswitch.onclick = function () { switchTab(this) }
       tabswitch.innerHTML = '[' + i + ']'
       parent.appendChild(tabswitch)
     }
@@ -637,8 +645,6 @@ function tabify (parent, name, list, maxlines = 14) {
       tabdiv.width = '100%'
       tabdiv.addEventListener('touchstart', touchstartEL, { passive: true })
       tabdiv.addEventListener('touchend', touchendEL, false)
-      tabdiv.setAttribute('data-num', i)
-      tabdiv.setAttribute('data-name', name)
       parent.appendChild(tabdiv)
       for (var j = 0; (j < maxlines) &&
           ((maxlines * i) + j < num); j++) {
@@ -656,9 +662,12 @@ function fullUpdate (data) {
   var choices = []
   var e = document.getElementById('dnpfav0')
   var maxnext = 10
+  var maxprev = 4
+  maxprev = Math.max((maxprev - overflow), 0)
   if (isstream) {
     maxnext = 15
   }
+  /* display at least one next title */
   wipeElements(e)
   document.title = data.current.artist + ' - ' + data.current.title
   if (data.prev.length > 0) {
@@ -668,7 +677,7 @@ function fullUpdate (data) {
     } else {
       setElement('prev', data.prev[0].artist + ' - ' + data.prev[0].title)
     }
-    for (var i = Math.min(4, data.prev.length - 1); i >= 0; i--) {
+    for (var i = Math.min(maxprev, data.prev.length - 1); i >= 0; i--) {
       var titleline = ''
       var cline
       if (!isstream && (data.prev[i].playcount >= 0)) {
@@ -792,6 +801,7 @@ function searchUpdate (data) {
       if ((!favplay) || (favplay && !data.fpcurrent)) {
         choices.push(['DNP', 0x040a])
       }
+
       items[i] = popselect(choices,
         data.albums[i],
         data.albart[i] + ' - ' + data.albums[i])
@@ -829,19 +839,24 @@ function searchUpdate (data) {
   items = []
   wipeElements(e)
   if (data.titles.length > 0) {
-    if (data.fpcurrent) {
-      items[0] = document.createElement('a')
-      items[0].href = '/cmd/0114?0'
-      items[0].innerHTML = '-- Fav all --'
-    } else {
-      items[0] = popselect([['Insert', 0x08c], ['Append', 0x0814]],
-        0, '-- Play all --')
+    choices = []
+    if ((!favplay) || (favplay && data.fpcurrent)) {
+      choices.push(['FAV', 0x0809])
     }
+    if ((!favplay) || (favplay && !data.fpcurrent)) {
+      choices.push(['DNP', 0x080a])
+      choices.push(['Insert', 0x080c])
+      choices.push(['Append', 0x0814])
+    }
+
+    items[0] = popselect(choices, 0, 'All results')
+
     for (i = 0; i < data.titles.length; i++) {
       choices = []
-      if (favplay && data.fpcurrent) {
+      if ((!favplay) || (favplay && data.fpcurrent)) {
         choices.push(['FAV', 0x0809])
-      } else {
+      } else if ((!favplay) || (favplay && !data.fpcurrent)) {
+        choices.push(['DNP', 0x080a])
         choices.push(['Insert', 0x080c])
         choices.push(['Append', 0x0814])
       }
@@ -926,9 +941,9 @@ function playerUpdate (data) {
 
   enableElement('current', !data.status)
   if (data.status) {
-    document.getElementById('play').value = '\u25B6'
+    document.getElementById('play').innerHTML = '\u25B6'
   } else {
-    document.getElementById('play').value = '\u23f8'
+    document.getElementById('play').innerHTML = '\u23f8'
   }
   if (data.volume > 0) {
     document.getElementById('volumebar').style.width = data.volume + '%'
@@ -1209,11 +1224,15 @@ function loadURL () {
 
 function newActive () {
   var name = ''
-  if (isstream) {
+  if (isstream && (active === 0)) {
     name = document.getElementById('prev').innerText
   }
-  if ((name.length < 3) || (!window.confirm('Create ' + name + '?'))) {
-    name = window.prompt('Name for new entry')
+  if ((name.length < 3) || (!window.confirm('Save channel as ' + name + '?'))) {
+    if (isstream && (active === 0)) {
+      name = window.prompt('Save channel as:')
+    } else {
+      name = window.prompt('Name for new profile:')
+    }
     if (!name) {
       return
     }
@@ -1259,14 +1278,14 @@ function switchUI () {
 
 function blockSpace (event) {
   /* only do this if the main or playlist view is visible! */
-  if ((isActive(0) || isActive(1)) && (event.key === ' ')) {
+  if (isPlay() && (event.key === ' ')) {
     event.preventDefault()
   }
 }
 
 function handleKey (event) {
   /* only do this if the main or playlist view is visible! */
-  if (!isActive(0) && !isActive(1)) {
+  if (!isPlay()) {
     return
   }
 
@@ -1335,8 +1354,13 @@ function touchendEL (event) {
 
   /* prevent false positives on vertical dragevents */
   if ((distx > disty) && (distx > wwidth)) {
-    const name = this.getAttribute('data-name')
-    var num = Number(this.getAttribute('data-num'))
+    const button = document.getElementById('c' + this.id)
+    if (!button) {
+      console.log('listener ' + this.id + 'has no Tab!')
+      return
+    }
+    const name = button.getAttribute('data-name')
+    var num = Number(button.getAttribute('data-num'))
 
     if (dirx > 0) {
       num--
@@ -1354,37 +1378,38 @@ function touchendEL (event) {
   }
 }
 
+function addTouch (name, num) {
+  var el = document.getElementById(name + num)
+  if (!el) {
+    console.log('There is no element ' + name + num)
+  }
+  el.setAttribute('data-num', num)
+  el.setAttribute('data-name', name)
+  el.addEventListener('touchstart', touchstartEL, { passive: true })
+  el.addEventListener('touchend', touchendEL, false)
+  el = document.getElementById('c' + name + num)
+  if (!el) {
+    console.log('Element ' + name + num + ' has no Tab!')
+  }
+  el.setAttribute('data-num', num)
+  el.setAttribute('data-name', name)
+}
+
 /*
  * start the UI update thread loops
  */
 function initializeUI () {
-  var el
   for (var i = 0; i < 4; i++) {
     if (i < 3) {
-      el = document.getElementById('tools' + i)
-      el.setAttribute('data-num', i)
-      el.setAttribute('data-name', 'tools')
-      el.addEventListener('touchstart', touchstartEL, { passive: true })
-      el.addEventListener('touchend', touchendEL, false)
-      el = document.getElementById('search' + i)
-      el.setAttribute('data-num', i)
-      el.setAttribute('data-name', 'search')
-      el.addEventListener('touchstart', touchstartEL, { passive: true })
-      el.addEventListener('touchend', touchendEL, false)
-      el = document.getElementById('dnpfav' + i)
-      el.setAttribute('data-num', i)
-      el.setAttribute('data-name', 'dnpfav')
-      el.addEventListener('touchstart', touchstartEL, { passive: true })
-      el.addEventListener('touchend', touchendEL, false)
+      addTouch('tools', i)
+      addTouch('search', i)
+      addTouch('dnpfav', i)
     }
-    el = document.getElementById('extra' + i)
-    el.setAttribute('data-num', i)
-    el.setAttribute('data-name', 'extra')
-    el.addEventListener('touchstart', touchstartEL, { passive: true })
-    el.addEventListener('touchend', touchendEL, false)
+    addTouch('extra', i)
   }
   document.body.addEventListener('wheel', volWheel, { passive: false })
-
+  document.body.addEventListener('keypress', handleKey)
+  document.body.addEventListener('keyup', blockSpace)
   /* set initial tab and sizes */
   adaptUI(0)
   /* initialize scrolltext */

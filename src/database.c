@@ -585,7 +585,7 @@ void dbWrite( void ) {
 	}
 
 	if( root == NULL ) {
-		addMessage(0, "Trying to save database in play/stream mode!");
+		addMessage(1, "Trying to save database in play/stream mode!");
 		getConfig()->dbDirty=0;
 		return;
 	}

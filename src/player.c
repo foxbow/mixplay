@@ -1204,7 +1204,7 @@ void *reader( ) {
 					addMessage( -1, "No profile given!" );
 				}
 				/* save the current stream */
-				else if(control->mpmode == PM_STREAM){
+				else if(control->active == 0){
 					control->streams++;
 					control->stream=(char**)frealloc(control->stream, control->streams*sizeof( char * ) );
 					control->stream[control->streams-1]=(char*)falloc( strlen(control->streamURL)+1, 1 );

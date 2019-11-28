@@ -10,7 +10,7 @@
     <link rel="manifest" href="/manifest.json">
     <title>Mixplay</title>
   </head>
-  <body onload='initializeUI()' onresize='adaptUI(0)' onkeypress='handleKey(event)' onkeyup='blockSpace(event)'>
+  <body onload='initializeUI()' onresize='adaptUI(0)'>
     <div id='viewtabs' class='buttonbar'>
       <button id='cextra0' class='active'   onclick='switchView(0)' accesskey='1'>&#x25B6;</button>
       <button id='cextra1' class='inactive' onclick='switchView(1)' accesskey='2'>&#x2630;</button>
@@ -65,16 +65,15 @@
     </div>
     <!-- Tools view -->
     <div id='extra2' class='inactive' >
-      <p id='active'>No active profile/channel</p>
-      <p id='download' class='active' onclick='download(0)'>Download Title</p>
       <button id='ctools0' class='active'   onclick='switchTab(this)'>&#x2630; Info</button>
       <button id='ctools1' class='inactive' onclick='switchTab(this)'>&#x2630; Profiles</button>
       <button id='ctools2' class='inactive' onclick='switchTab(this)'>&#x2630; Channels</button>
       <div id='tools0' class='active'>
+        <p id='active'>No active profile/channel</p>
+        <p id='download' class='active' onclick='download(0)'>Download Title</p>
         <button id='rescan' onclick='sendCMD(0x08)'>Rescan Database</button>
         <button id='dbinfo' onclick='sendCMD(0x12)'>Database Info</button>
         <div id='messages'></div>
-        <button id='wipelog' class='hide' onclick='wipeLog()'>Wipe</button>
       </div>
       <div id='tools1' class='inactive'>
         <button id='cprof' onclick='newActive()'>New Profile</button>
