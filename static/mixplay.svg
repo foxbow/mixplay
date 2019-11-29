@@ -6,53 +6,53 @@
    xmlns:svg="http://www.w3.org/2000/svg"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:xlink="http://www.w3.org/1999/xlink"
-   width="192"
-   height="192"
+   version="1.1"
    id="svg2"
-   version="1.1">
+   height="192"
+   width="192">
   <defs
      id="defs4">
     <linearGradient
        id="linearGradient4169">
       <stop
-         id="stop4171"
+         style="stop-color:#0000ff;stop-opacity:1;"
          offset="0"
-         style="stop-color:#0000ff;stop-opacity:1;" />
+         id="stop4171" />
       <stop
-         id="stop4173"
+         style="stop-color:#0000ff;stop-opacity:0"
          offset="1"
-         style="stop-color:#0000ff;stop-opacity:0" />
+         id="stop4173" />
     </linearGradient>
     <linearGradient
        id="linearGradient3377">
       <stop
-         style="stop-color:#0000ff;stop-opacity:1;"
+         id="stop3379"
          offset="0"
-         id="stop3379" />
+         style="stop-color:#0000ff;stop-opacity:1;" />
       <stop
-         style="stop-color:#0000ff;stop-opacity:0;"
+         id="stop3381"
          offset="1"
-         id="stop3381" />
+         style="stop-color:#0000ff;stop-opacity:0;" />
     </linearGradient>
     <linearGradient
-       gradientTransform="translate(1.3850302,-0.65078506)"
-       xlink:href="#linearGradient3377"
-       id="linearGradient3383"
-       x1="155.5"
-       y1="36.487179"
-       x2="-4.5"
-       y2="196.48718"
-       gradientUnits="userSpaceOnUse" />
-    <radialGradient
        gradientUnits="userSpaceOnUse"
-       gradientTransform="matrix(1.3063907,0.0196088,-0.01821708,1.2136709,-27.5776,-22.494101)"
-       r="96.753662"
-       fy="96.487923"
-       fx="95.744827"
-       cy="96.487923"
-       cx="95.744827"
+       y2="196.48718"
+       x2="-4.5"
+       y1="36.487179"
+       x1="155.5"
+       id="linearGradient3383"
+       xlink:href="#linearGradient3377"
+       gradientTransform="translate(1.3850302,-0.65078506)" />
+    <radialGradient
+       xlink:href="#linearGradient4169"
        id="radialGradient5803"
-       xlink:href="#linearGradient4169" />
+       cx="95.744827"
+       cy="96.487923"
+       fx="95.744827"
+       fy="96.487923"
+       r="96.753662"
+       gradientTransform="matrix(1.3063907,0.0196088,-0.01821708,1.2136709,-350.56065,-56.663593)"
+       gradientUnits="userSpaceOnUse" />
   </defs>
   <metadata
      id="metadata7">
@@ -66,41 +66,47 @@
       </cc:Work>
     </rdf:RDF>
   </metadata>
-  <rect
-     y="0.3780883"
-     x="-0.52787739"
-     height="192.21967"
-     width="192.54541"
-     id="rect3375"
-     style="fill:url(#radialGradient5803);fill-opacity:1;fill-rule:evenodd;stroke:none;stroke-width:0.96191239px;stroke-linecap:butt;stroke-linejoin:round;stroke-opacity:1" />
   <g
-     id="layer3"
-     style="display:none">
+     style="display:none"
+     id="layer3">
     <circle
-       style="fill:#ff0000;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       id="path3386"
-       cx="95.5"
+       r="100"
        cy="96.487183"
-       r="100" />
+       cx="95.5"
+       id="path3386"
+       style="fill:#ff0000;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
   </g>
-  <path
-     style="fill:#000000;stroke:#000000"
-     d="m 138.53051,131.1092 c 0.5658,11.54384 -14.12976,19.36 -23.38664,12.43824 -9.79456,-5.94471 -8.20332,-22.30597 2.54796,-26.25946 9.52203,-4.32637 21.1214,3.35325 20.83868,13.82122 z"
-     id="path3021" />
-  <path
-     style="fill:#000000;stroke:#000000"
-     d="m 78.486158,110.43728 c 0.5658,11.54384 -14.12976,19.36 -23.38664,12.43824 -9.79456,-5.94471 -8.20332,-22.30597 2.54796,-26.259461 9.52203,-4.32637 21.1214,3.35325 20.83868,13.821221 z"
-     id="path3023" />
-  <path
-     style="fill:#000000;stroke:#000000;stroke-width:0.95374149"
-     d="m 68.47687,64.808878 c 3.34875,0 6.69751,0 10.04626,0 0,15.090578 0,30.181155 0,45.271722 -3.34875,0 -6.69751,0 -10.04626,0 0,-15.090567 0,-30.181144 0,-45.271722 z"
-     id="rect3025" />
-  <path
-     style="fill:#000000;stroke:#000000;stroke-width:1.05341506"
-     d="m 128.52671,74.513888 c 3.31552,0 6.63106,0 9.94658,0 0,18.594046 0,37.188092 0,55.782132 -3.31552,0 -6.63106,0 -9.94658,0 0,-18.59404 0,-37.188086 0,-55.782132 z"
-     id="rect3027" />
-  <path
-     style="fill:#000000;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-     d="m 68.5,44.48718 34,40 36,-20 0,20 -39,18 -31,-38 z"
-     id="path3033" />
+  <ellipse
+     ry="94.779663"
+     rx="96.406784"
+     cy="95.593224"
+     cx="95.593224"
+     id="path3734"
+     style="fill:#00baff;stroke:#00ffff" />
+  <g
+     id="g3732">
+    <path
+       style="fill:#000000;stroke:#000000"
+       d="m 140.15763,134.36344 c 0.5658,11.54384 -14.12976,19.36 -23.38664,12.43824 -9.79456,-5.94471 -8.20332,-22.30597 2.54796,-26.25946 9.52203,-4.32637 21.1214,3.35325 20.83868,13.82122 z"
+       id="path3021" />
+    <path
+       style="fill:#000000;stroke:#000000"
+       d="m 80.113277,113.69152 c 0.5658,11.54384 -14.12976,19.36 -23.38664,12.43824 -9.79456,-5.94471 -8.20332,-22.30597 2.54796,-26.259464 9.52203,-4.32637 21.1214,3.353254 20.83868,13.821224 z"
+       id="path3023" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:0.95374149"
+       d="m 70.100409,57.768125 10.04984,10.29499 v 45.271725 h -10.04626 z"
+       id="rect3025" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:1.05341506"
+       d="m 130.15383,77.768125 c 3.31552,0 6.63106,0 9.94658,0 0,18.594046 0,37.188095 0,55.782135 -3.31552,0 -6.63106,0 -9.94658,0 0,-18.59404 0,-37.188089 0,-55.782135 z"
+       id="rect3027" />
+    <path
+       style="fill:#000000;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 70.100409,37.768125 34.000001,40 36,-20 v 20 l -39,18.000003 -31.000001,-38.000003 z"
+       id="path3033" />
+  </g>
+  <g
+     style="display:inline"
+     id="layer1" />
 </svg>
