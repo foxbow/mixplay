@@ -672,7 +672,7 @@ function fullUpdate (data) {
       var titleline = ''
       var cline
       if (!isstream && (data.prev[i].playcount >= 0)) {
-        titleline += '[' + data.prev[i].playcount + '/' + data.prev[i].favpcount + '] '
+        titleline += '[' + data.prev[i].playcount + '/' + data.prev[i].skipcount + '] '
       }
       if (data.prev[i].artist.length > 0) {
         titleline += data.prev[i].artist + ' - '
@@ -702,7 +702,7 @@ function fullUpdate (data) {
   setElement('album', data.current.album)
   titleline = ''
   if (!isstream && (data.current.playcount >= 0)) {
-    titleline += '[' + data.current.playcount + '/' + data.current.favpcount + '] '
+    titleline += '[' + data.current.playcount + '/' + data.current.skipcount + '] '
   }
   if (data.current.artist.length > 0) {
     titleline += data.current.artist + ' - '
@@ -732,7 +732,7 @@ function fullUpdate (data) {
     for (i = 0; i < Math.min(data.next.length, maxnext); i++) {
       titleline = ''
       if (!isstream && (data.next[i].playcount >= 0)) {
-        titleline = '[' + data.next[i].playcount + '/' + data.next[i].favpcount + '] '
+        titleline = '[' + data.next[i].playcount + '/' + data.next[i].skipcount + '] '
       }
       if (data.next[i].artist.length > 0) {
         titleline += data.next[i].artist + ' - '
@@ -930,6 +930,8 @@ function playerUpdate (data) {
   }
 
   enableElement('current', !data.status)
+  enableElement('ctitle', !data.status)
+  
   if (data.status) {
     document.getElementById('play').innerHTML = '\u25B6'
   } else {

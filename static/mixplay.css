@@ -134,7 +134,7 @@ div#volumebar.mute {
 	padding-bottom: 0.2em;
 }
 
-#current.hide {
+#current.hide, p.hide {
 	background-image: radial-gradient(darkred, transparent);
 	display: block;
 }
@@ -271,7 +271,7 @@ div.inactive, div.hide {
 
 p {
 	white-space: nowrap;
-	text-overflow: ellipsis;
+	text-overflow: clip;
 	overflow: hidden;
 }
 

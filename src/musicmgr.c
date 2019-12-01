@@ -1281,7 +1281,7 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 	mptitle_t *guard=NULL;
 	unsigned long num=0;
 	char *lastpat=NULL;
-	unsigned int pcount=getPlaycount(0);
+	unsigned int pcount=0;
 	unsigned int cycles=0;
 	int valid=0;
 	/* 0 - nothing checked
@@ -1315,6 +1315,10 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 	if( runner==NULL ) {
 		addMessage( -1, "No titles in the database!?" );
 		return NULL;
+	}
+
+	if (!getFavplay()) {
+		pcount=getPlaycount(0);
 	}
 
 	cycles=0;
@@ -1394,7 +1398,8 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 		}
 	} /* while( valid != 3 ) */
 
-	addMessage( 1, "[+] (%i/%i/%3s) %5d %s", runner->playcount, pcount,
+	addMessage( 1, "[+] (%i/%i/%3s) %5d %s",
+			(runner->flags&MP_FAV)?runner->favpcount:runner->playcount, pcount,
 			ONOFF( runner->flags&MP_FAV ), runner->key, runner->display );
 
 	/* count again in case this is a favourite */
