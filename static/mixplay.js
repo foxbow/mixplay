@@ -1,8 +1,6 @@
 /* -1: configuration; 0: no update; 1: normal updates */
 var doUpdate = -1
 var data = null
-var mpver = Number('~~MPCOMM_VER~~')
-var serverver = '~~MIXPLAY_VER~~'
 var isstream = 0
 var msglines = []
 var msgpos = 0
@@ -39,13 +37,6 @@ function toggleSearch () {
   text = document.createElement('em')
   text.innerHTML = 'No albums found!'
   replaceChild(e, text)
-}
-
-/*
- * pops up the current build ID
- */
-function showInfo () {
-  window.alert('mixplayd ' + serverver + '(' + mpver + ')')
 }
 
 /*
@@ -969,11 +960,6 @@ function playerUpdate (data) {
 function parseReply (reply) {
   var data = JSON.parse(reply)
   if (data !== undefined) {
-    if (data.version !== mpver) {
-      fail('Version clash, expected ' + mpver + ' and got ' + data.version)
-      return
-    }
-
     if (isstream !== (data.mpmode === 1)) {
       isstream = (data.mpmode === 1) /* PM_STREAM */
       enableElement('goprev', !isstream)
@@ -1083,10 +1069,6 @@ function getConfig () {
       if (xmlhttp.status === 200) {
         data = JSON.parse(xmlhttp.responseText)
         if (data !== undefined) {
-          if (data.version !== mpver) {
-            fail('Version clash, expected ' + mpver + ' and got ' + data.version)
-            return
-          }
           if (data.type === -1) {
             var e
             var items = []
@@ -1317,9 +1299,6 @@ function handleKey (event) {
       break
     case 'Q':
       pwSendCMD('Really stop the server?', 0x07)
-      break
-    case 'I':
-      showInfo()
       break
     case 'D':
       pwSendCMD('Mark doublets?', 0x0b)

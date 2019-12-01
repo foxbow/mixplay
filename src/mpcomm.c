@@ -17,10 +17,6 @@
 #include "utils.h"
 #include "json.h"
 
-#ifndef MPCOMM_VER
-#define MPCOMM_VER -1
-#endif
-
 static pthread_mutex_t _clientlock=PTHREAD_MUTEX_INITIALIZER;
 static int _curclient=-1;
 
@@ -149,8 +145,7 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 	jsonObject *jo=NULL;
 	mpplaylist_t *current=data->current;
 
-	jo=jsonAddInt( jo, "version", MPCOMM_VER );
-	jsonAddInt( jo, "type", type );
+	jo=jsonAddInt( jo, "type", type );
 
 	if( type & MPCOMM_FULLSTAT ) {
 		if( current != NULL ) {
@@ -232,15 +227,14 @@ static jsonObject *jsonAddProfiles( jsonObject *jo, const char *key, profile_t *
 
 /**
  * global/static part of the given config
+ * this should just be another subtype for the status
  */
 char *serializeConfig( void ) {
 	mpconfig_t *config=getConfig();
 	jsonObject *joroot=NULL;
 	jsonObject *jo=NULL;
 
-	/* start with version */
-	joroot=jsonAddInt( NULL, "version", MPCOMM_VER );
-	jsonAddInt( joroot, "type", MPCOMM_CONFIG );
+	joroot=jsonAddInt( joroot, "type", MPCOMM_CONFIG );
 
 	/* dump config into JSON object */
 	jo=jsonAddInt( NULL, "fade", config->fade );

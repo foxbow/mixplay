@@ -1,10 +1,8 @@
 CC=gcc
 VERSION=$(shell git describe --tags --abbrev=1 --dirty=-dev --always)
-MPCOMM_VER=20
 SRCDIR=src
 OBJDIR=build
 
-CCFLAGS=-DMPCOMM_VER="$(MPCOMM_VER)"
 CCFLAGS+=-DVERSION=\"$(VERSION)\"
 CCFLAGS+=-std=gnu99 -Wall -Wextra -pedantic -Werror -I . -g
 #CCFLAGS+=-std=gnu99 -Wall -Wextra -Werror -pedantic -I . -O2
@@ -35,12 +33,6 @@ BINDIR=$(HOME)/bin
 SHAREDIR=$(HOME)/.local/share
 endif
 
-ifneq ("$(shell cat $(OBJDIR)/CURVER)","$(MPCOMM_VER)")
-$(shell touch src/mixplay_tmpl.js)
-$(shell touch src/mpcomm.c)
-$(shell echo ${MPCOMM_VER} > $(OBJDIR)/CURVER)
-endif
-
 LIBS+=$(shell pkg-config --libs $(REFS))
 CCFLAGS+=$(shell pkg-config --cflags $(REFS))
 
@@ -54,7 +46,6 @@ clean:
 	touch $(OBJDIR)/KEEPDIR
 
 distclean: clean
-	rm -f static/mixplay.js
 	rm -f static/*~
 	rm -f $(SRCDIR)/gmixplay_app.h
 	rm -f $(SRCDIR)/mprc_html.h
@@ -109,9 +100,6 @@ $(OBJDIR)/mixplayd_svg.h: static/mixplay.svg
 
 $(OBJDIR)/mixplayd_png.h: static/mixplay.png
 	xxd -i static/mixplay.png > $(OBJDIR)/mixplayd_png.h
-
-static/mixplay.js: src/mixplay_tmpl.js
-	sed -e 's/~~MPCOMM_VER~~/'${MPCOMM_VER}'/g' -e 's/~~MIXPLAY_VER~~/'${VERSION}'/g' src/mixplay_tmpl.js > static/mixplay.js
 
 prepare:
 	apt-get install mpg123 libmpg123-dev libasound-dev

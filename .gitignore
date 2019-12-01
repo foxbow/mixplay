@@ -1,5 +1,4 @@
 # Generated headers and dependencies
-static/mixplay.js
 build/*
 *.d
 *.Td
