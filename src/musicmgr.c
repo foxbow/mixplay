@@ -489,7 +489,7 @@ int search( const char *pat, const mpcmd_t range ) {
 					( MPC_ISDISPLAY( range ) &&
 					isMatch( runner->display, pat, MPC_ISFUZZY(range) ) ) ) &&
 					( cnt++ < MAXSEARCH ) ) {
-				found = mpc_title;
+				found |= mpc_title;
 			}
 			if( MPC_ISARTIST(range) &&
 					isMatch( runner->artist, pat, MPC_ISFUZZY(range) ) ) {
@@ -608,7 +608,9 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 	marklist_t *ptr = NULL;
 	mptitle_t *root=getConfig()->root;
 	mptitle_t *runner=root;
-	unsigned minpc=getLowestPlaycount();
+	/* The default for new favourites in favplay
+	   in favplay playcount will only be maxpc and maxpc-1 */
+	unsigned maxpc=getPlaycount(1)-1;
 	int cnt=0;
 
 	if( NULL == root ) {
@@ -625,7 +627,6 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 			runner->flags = MP_DNP;
 			runner=runner->next;
 		} while( runner != root );
-		minpc=0;
 	}
 
 	do {
@@ -638,24 +639,12 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 					if( excl || getFavplay() ) {
 						addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
 						runner->flags=MP_FAV;
-						/* title joins favplay if it's the initial favlist application
-						   minpc is always larger or equal to playcount and nothing changes.
-							 If it's added during a favplay session it should blend into the
-							 titles but not repeated until playcount matches */
-						if( ( minpc > 0 ) && ( runner->playcount < minpc ) ) {
-							runner->playcount=minpc+1;
-							dbMarkDirty();
+						if( runner->playcount < maxpc ) {
+							runner->playcount=maxpc;
 						}
 					}
 					else if( !(runner->flags & MP_DNP ) ) {
 						addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
-						/* raise playcount to a proper value
-						   otherwise it may mean that the title gets repeated too often
-							 until it fits in */
-						if(runner->playcount < (2*minpc) ) {
-							runner->playcount=2*minpc;
-							dbMarkDirty();
-						}
 						runner->flags|=MP_FAV;
 					}
 					cnt++;
@@ -1165,11 +1154,11 @@ unsigned long countTitles( const unsigned int inc, const unsigned int exc ) {
 /**
  * returns the lowest playcount of the current list
  */
-unsigned getLowestPlaycount( void ) {
+unsigned getPlaycount( int high ) {
 	mptitle_t *base=getConfig()->root;
 	mptitle_t *runner=base;
 	unsigned min=UINT_MAX;
-
+	unsigned max=0;
 	if( base == NULL ) {
 		addMessage( 0, "Trying to get lowest playcount from empty database!" );
 		return 0;
@@ -1181,11 +1170,14 @@ unsigned getLowestPlaycount( void ) {
 				min=runner->playcount;
 			}
 		}
+		if( runner->playcount > max ) {
+			max=runner->playcount;
+		}
 		runner=runner->next;
 	}
 	while( runner != base );
 
-	return min;
+	return high?max:min;
 }
 
 /**
@@ -1294,7 +1286,7 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 	mptitle_t *guard=NULL;
 	unsigned long num=0;
 	char *lastpat=NULL;
-	unsigned int pcount=getLowestPlaycount();
+	unsigned int pcount=getPlaycount(0);
 	unsigned int cycles=0;
 	int valid=0;
 	/* 0 - nothing checked
@@ -1605,7 +1597,6 @@ mptitle_t *recurse( char *curdir, mptitle_t *files ) {
 void dumpInfo( mptitle_t *root, unsigned int skip ) {
 	mptitle_t *current=root;
 	unsigned int maxplayed=0;
-	unsigned int minplayed=-1; /* UINT_MAX; */
 	unsigned int pl=0;
 	unsigned int skipped=0;
 	unsigned int dnp=0;
@@ -1616,34 +1607,22 @@ void dumpInfo( mptitle_t *root, unsigned int skip ) {
 		if( current->flags & MP_FAV ) {
 			fav++;
 		}
-
 		if( current->flags & MP_DNP ) {
 			dnp++;
 		}
-
 		if( current->flags & MP_MARK ) {
 			marked++;
 		}
-
-		if( !( current->flags &MP_DNP ) ) {
-			if( current->playcount < minplayed ) {
-				minplayed=current->playcount;
-			}
-
-			if( current->playcount > maxplayed ) {
-				maxplayed=current->playcount;
-			}
-
-			if( current->skipcount > skip ) {
-				skipped++;
-			}
+		if( current->playcount > maxplayed ) {
+			maxplayed=current->playcount;
 		}
-
+		if( current->skipcount > skip ) {
+			skipped++;
+		}
 		current=current->next;
-	}
-	while( current != root );
+	} while( current != root );
 
-	for( pl=minplayed; pl <= maxplayed; pl++ ) {
+	while( pl <= maxplayed ) {
 		unsigned int pcount=0;
 		unsigned int dnpcnt=0;
 		unsigned int favcnt=0;
@@ -1651,7 +1630,7 @@ void dumpInfo( mptitle_t *root, unsigned int skip ) {
 		char line[MAXPATHLEN];
 
 		do {
-			if( !( current->flags & MP_DNP ) && ( current->playcount == pl ) ) {
+			if( current->playcount == pl ) {
 				pcount++;
 				if( current->flags & MP_DNP ) {
 					dnpcnt++;
@@ -1666,7 +1645,18 @@ void dumpInfo( mptitle_t *root, unsigned int skip ) {
 			current=current->next;
 		} while( current != root );
 
-		if( dnpcnt != pcount ){
+		/* no titles with playcount == pl ? Try to close the gap */
+		if (pcount == 0) {
+			do {
+				if( current->playcount > pl ) {
+					current->playcount--;
+				}
+				current=current->next;
+			} while( current != root );
+			maxplayed--;
+		}
+		/* normal output and forward to next count */
+		else {
 			switch( pl ) {
 			case 0:
 				sprintf( line, "Never played\t%i", pcount);
@@ -1692,8 +1682,9 @@ void dumpInfo( mptitle_t *root, unsigned int skip ) {
 					addMessage( 0, "%s (allfavs)", line );
 				}
 			}
+			pl++;
 		}
-	}
+	} /* while pl < maxplay */
 
 	addMessage( 0, "%4i\tfavourites", fav );
 	addMessage( 0, "%4i\tdo not plays", dnp );

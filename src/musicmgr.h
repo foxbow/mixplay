@@ -24,6 +24,7 @@ struct mptitle_s {
 	char title[NAMELEN];		/* Title info (from mp3) */
 	char album[NAMELEN];		/* Album info (from mp3) */
 	unsigned playcount;		/* play counter */
+	unsigned favpcount;		/* transient favplycount */
 	unsigned skipcount;		/* skip counter */
 	char genre[NAMELEN];
 	unsigned key;			/* DB key/index  - internal */
@@ -102,5 +103,5 @@ void dumpInfo( mptitle_t *root, unsigned int skip );
 int fillstick( mptitle_t *root, const char *target );
 int getPlaylists( const char *cd, struct dirent ***pllist );
 unsigned long countTitles( const unsigned int inc, const unsigned int exc );
-unsigned getLowestPlaycount( void );
+unsigned getPlaycount( int high );
 #endif /* _MUSICMGR_H_ */

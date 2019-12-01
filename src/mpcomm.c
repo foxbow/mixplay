@@ -68,6 +68,9 @@ void unlockClient( int client ) {
 	else if( _curclient != -1 ) {
 		addMessage( 0, "Client %i is not %i", client, _curclient );
 	}
+	else {
+		addMessage( 1, "Client %i was not locked!", client );
+	}
 }
 
 /*

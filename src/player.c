@@ -361,7 +361,6 @@ void *setProfile( ) {
 
 		addMessage( 1, "Profile set to %s.", profile->name );
 		if( control->argument != NULL ) {
-			progressEnd();
 			/* do not free, the string has become the new profile entry! */
 			control->argument=NULL;
 		}
@@ -1113,11 +1112,7 @@ void *reader( ) {
 			break;
 
 		case mpc_dbclean:
-			if( !getFavplay() ) {
-				asyncRun( plDbClean );
-			} else {
-				addMessage(-1,"Database is immutable during favplay!");
-			}
+			asyncRun( plDbClean );
 			break;
 
 		case mpc_stop:
@@ -1181,8 +1176,8 @@ void *reader( ) {
 						/* reload database when switching from favplay to 'forget'
 						   playcount changes */
 						if( getFavplay() ) {
-							control->root=wipeTitles(control->root);
 							control->current=wipePlaylist(control->current);
+							control->root=wipeTitles(control->root);
 							control->root=dbGetMusic();
 							addMessage( 1, "Switching from Favplay");
 						}

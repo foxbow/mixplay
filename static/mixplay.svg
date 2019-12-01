@@ -77,12 +77,12 @@
        style="fill:#ff0000;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
   </g>
   <ellipse
-     ry="94.779663"
-     rx="96.406784"
+     ry="93.164177"
+     rx="93.570953"
      cy="95.593224"
-     cx="95.593224"
+     cx="96"
      id="path3734"
-     style="fill:#00baff;stroke:#00ffff" />
+     style="fill:#00baff;stroke:#00ffff;stroke-width:0.97675043" />
   <g
      transform="translate(-5.6949153,-1.6271186)"
      id="g3732">

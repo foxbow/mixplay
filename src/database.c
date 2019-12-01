@@ -22,9 +22,6 @@ static void dbClose( int db ) {
 
 void dbMarkDirty( void ) {
 	/* ignore changes to the database in favplay mode */
-	if( getFavplay() ) {
-		return;
-	}
 	if( getConfig()->dbDirty++ > 25 ) {
 		dbWrite( );
 	}
@@ -578,11 +575,6 @@ void dbWrite( void ) {
 	const char *dbname=getConfig()->dbname;
 	mptitle_t *root=getConfig()->root;
 	mptitle_t *runner=root;
-
-	/* do not write database in favplay */
-	if( getFavplay() ) {
-		return;
-	}
 
 	if( root == NULL ) {
 		addMessage(1, "Trying to save database in play/stream mode!");

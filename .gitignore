@@ -7,6 +7,9 @@ build/*
 # Editor backups
 *~
 
+# icon in inkscape format
+src/mpicon.svg
+
 # Eclipse stuff
 .cproject
 .project

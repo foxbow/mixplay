@@ -903,7 +903,7 @@ function dnpfavUpdate (data) {
 function playerUpdate (data) {
   favplay = data.mpfavplay
   if (favplay) {
-    if (data.fpcurrent) {
+    if (!data.fpcurrent) {
       document.getElementById('searchmode').innerHTML = 'Current titles'
     } else {
       document.getElementById('searchmode').innerHTML = 'Database'
@@ -917,7 +917,6 @@ function playerUpdate (data) {
 
   /* switching between stream and normal play */
   if (!isstream) {
-    enableElement('rescan', !favplay)
     setElement('playtime', data.playtime)
     setElement('remtime', data.remtime)
     document.getElementById('progressbar').style.width = data.percent + '%'
@@ -956,7 +955,9 @@ function playerUpdate (data) {
 
   if (data.msg !== '') {
     if (data.msg.startsWith('ALERT:')) {
-      if (!data.msg.startsWith('ALERT:Done.')) {
+      if (data.msg.startsWith('ALERT:Done.')) {
+        addText(data.msg.substring(6))
+      } else {
         window.alert(data.msg.substring(6))
       }
     } else {
