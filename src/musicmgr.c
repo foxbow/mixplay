@@ -608,9 +608,6 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 	marklist_t *ptr = NULL;
 	mptitle_t *root=getConfig()->root;
 	mptitle_t *runner=root;
-	/* The default for new favourites in favplay
-	   in favplay playcount will only be maxpc and maxpc-1 */
-	unsigned maxpc=getPlaycount(1)-1;
 	int cnt=0;
 
 	if( NULL == root ) {
@@ -639,13 +636,11 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 					if( excl || getFavplay() ) {
 						addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
 						runner->flags=MP_FAV;
-						if( runner->playcount < maxpc ) {
-							runner->playcount=maxpc;
-						}
 					}
 					else if( !(runner->flags & MP_DNP ) ) {
 						addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
 						runner->flags|=MP_FAV;
+						runner->favpcount=runner->playcount;
 					}
 					cnt++;
 				}
@@ -1356,16 +1351,21 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 		guard=runner;
 		/* title did not pass playcountcheck and we are not in stuffing mode */
 		while( (valid & 2 ) != 2 ) {
-			/* ignore favourites rule on favplay */
-			if( ( runner->flags & MP_FAV ) && !getFavplay() ) {
-				if ( runner-> playcount <= 2*pcount ) {
+			if( runner->flags & MP_FAV ) {
+				/* favplay just uses favpcount */
+				if ( getFavplay() ){
+					if ( runner->favpcount <= pcount ) {
+						valid|=2;
+					}
+				}
+				/* normal play on favourite uses both */
+				else if ( runner-> playcount + runner->favpcount <= 2*pcount ) {
 					valid|=2;
 				}
 			}
-			else {
-				if ( runner->playcount <= pcount ) {
-					valid|=2;
-				}
+			/* not a fav, standard rule */
+			else if ( runner->playcount <= pcount ) {
+				valid|=2;
 			}
 
 			if( ( valid & 2 ) != 2 ) {
@@ -1596,12 +1596,14 @@ mptitle_t *recurse( char *curdir, mptitle_t *files ) {
  */
 void dumpInfo( mptitle_t *root, unsigned int skip ) {
 	mptitle_t *current=root;
-	unsigned int maxplayed=0;
-	unsigned int pl=0;
-	unsigned int skipped=0;
-	unsigned int dnp=0;
-	unsigned int fav=0;
-	unsigned int marked=0;
+	unsigned maxplayed=0;
+	unsigned pl=0;
+	unsigned skipped=0;
+	unsigned dnp=0;
+	unsigned fav=0;
+	unsigned marked=0;
+	unsigned numtitles=0;
+	unsigned fixed=0;
 
 	do {
 		if( current->flags & MP_FAV ) {
@@ -1619,8 +1621,11 @@ void dumpInfo( mptitle_t *root, unsigned int skip ) {
 		if( current->skipcount > skip ) {
 			skipped++;
 		}
+		numtitles++;
 		current=current->next;
 	} while( current != root );
+
+	addMessage( 0, "%4i\ttitles in Database", numtitles );
 
 	while( pl <= maxplayed ) {
 		unsigned int pcount=0;
@@ -1645,8 +1650,9 @@ void dumpInfo( mptitle_t *root, unsigned int skip ) {
 			current=current->next;
 		} while( current != root );
 
-		/* no titles with playcount == pl ? Try to close the gap */
-		if (pcount == 0) {
+		/* just a few titles (< 0.5%) with playcount == pl ? Try to close the gap */
+		if (pcount < numtitles/200) {
+			fixed=1;
 			do {
 				if( current->playcount > pl ) {
 					current->playcount--;
@@ -1690,6 +1696,9 @@ void dumpInfo( mptitle_t *root, unsigned int skip ) {
 	addMessage( 0, "%4i\tdo not plays", dnp );
 	addMessage( 0, "%4i\tskipped", skipped );
 	addMessage( 0, "%4i\tmarked", marked );
+	if (fixed) {
+		dbWrite();
+	}
 }
 
 /**

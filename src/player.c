@@ -388,11 +388,23 @@ static void playCount( mptitle_t *title ) {
 
 	/* marked - default play, not marked - searchplay */
 	if ( title->flags&MP_MARK ) {
-		title->playcount++;
-		if( title->skipcount > 0 ) {
-			title->skipcount--;
+		if( getFavplay() ) {
+			title->favpcount++;
 		}
-		dbMarkDirty();
+		else {
+			if( ( title->flags & MP_FAV ) &&
+					( title->favpcount < title->playcount ) ) {
+				title->favpcount++;
+			}
+			else {
+				title->playcount++;
+				dbMarkDirty();
+			}
+			if( title->skipcount > 0 ) {
+				title->skipcount--;
+				dbMarkDirty();
+			}
+		}
 	}
 }
 

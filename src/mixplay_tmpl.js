@@ -681,7 +681,7 @@ function fullUpdate (data) {
       var titleline = ''
       var cline
       if (!isstream && (data.prev[i].playcount >= 0)) {
-        titleline += '[' + data.prev[i].playcount + '/' + data.prev[i].skipcount + '] '
+        titleline += '[' + data.prev[i].playcount + '/' + data.prev[i].favpcount + '] '
       }
       if (data.prev[i].artist.length > 0) {
         titleline += data.prev[i].artist + ' - '
@@ -711,7 +711,7 @@ function fullUpdate (data) {
   setElement('album', data.current.album)
   titleline = ''
   if (!isstream && (data.current.playcount >= 0)) {
-    titleline += '[' + data.current.playcount + '/' + data.current.skipcount + '] '
+    titleline += '[' + data.current.playcount + '/' + data.current.favpcount + '] '
   }
   if (data.current.artist.length > 0) {
     titleline += data.current.artist + ' - '
@@ -741,7 +741,7 @@ function fullUpdate (data) {
     for (i = 0; i < Math.min(data.next.length, maxnext); i++) {
       titleline = ''
       if (!isstream && (data.next[i].playcount >= 0)) {
-        titleline = '[' + data.next[i].playcount + '/' + data.next[i].skipcount + '] '
+        titleline = '[' + data.next[i].playcount + '/' + data.next[i].favpcount + '] '
       }
       if (data.next[i].artist.length > 0) {
         titleline += data.next[i].artist + ' - '

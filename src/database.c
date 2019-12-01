@@ -137,6 +137,7 @@ static void db2entry( dbentry_t *dbentry, mptitle_t *entry ) {
 	snprintf( entry->display, MAXPATHLEN, "%s - %s", entry->artist, entry->title );
 	entry->playcount=dbentry->playcount;
 	entry->skipcount=dbentry->skipcount;
+	entry->favpcount=0;
 }
 
 /**

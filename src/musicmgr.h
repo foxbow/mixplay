@@ -24,7 +24,7 @@ struct mptitle_s {
 	char title[NAMELEN];		/* Title info (from mp3) */
 	char album[NAMELEN];		/* Album info (from mp3) */
 	unsigned playcount;		/* play counter */
-	unsigned favpcount;		/* transient favplycount */
+	unsigned favpcount;		/* transient favplaycount */
 	unsigned skipcount;		/* skip counter */
 	char genre[NAMELEN];
 	unsigned key;			/* DB key/index  - internal */
