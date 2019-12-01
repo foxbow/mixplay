@@ -1110,21 +1110,17 @@ void *reader( ) {
 			break;
 
 		case mpc_doublets:
-			if( asyncTest() ) {
-				if( control->argument != NULL ) {
-					if( strcmp( "mixplay", control->argument ) == 0 ) {
-						asyncRun( plCheckDoublets );
-					}
-					else {
-						addMessage( -1, "Wrong password!" );
-					}
-					sfree( &(control->argument) );
-				}
+			if( asyncTest() && checkPasswd()) {
+				asyncRun( plCheckDoublets );
 			}
+			sfree(&(control->argument));
 			break;
 
 		case mpc_dbclean:
-			asyncRun( plDbClean );
+			if( asyncTest() && checkPasswd()) {
+				asyncRun( plDbClean );
+			}
+			sfree(&(control->argument));
 			break;
 
 		case mpc_stop:
@@ -1162,17 +1158,10 @@ void *reader( ) {
 		case mpc_quit:
 			/* The player does not know about the main App so anything setting
 			 * mcp_quit MUST make sure that the main app terminates as well ! */
-			if( asyncTest() ) {
-				if( control->argument != NULL ) {
-					if( strcmp( "mixplay", control->argument ) == 0 ) {
-						control->status=mpc_quit;
-					}
-					else {
-						addMessage( -1, "Wrong password!" );
-					}
-					sfree( &(control->argument) );
-				}
+			if( asyncTest() && checkPasswd()) {
+				control->status=mpc_quit;
 			}
+			sfree(&(control->argument));
 			break;
 
 		case mpc_profile:
@@ -1333,7 +1322,10 @@ void *reader( ) {
 			break;
 
 		case mpc_dbinfo:
-			asyncRun( plDbInfo );
+			if(asyncTest() && checkPasswd()) {
+				asyncRun( plDbInfo );
+			}
+			sfree(&(control->argument));
 			break;
 
 		/* this is kinda ugly as the logic needs to be all over the place

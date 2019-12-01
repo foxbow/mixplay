@@ -243,6 +243,7 @@ mpconfig_t *readConfig( void ) {
 	_cconfig->status=mpc_idle;
 	_cconfig->command=mpc_idle;
 	_cconfig->dbname=(char*)falloc( MAXPATHLEN+1, 1 );
+	_cconfig->password=strdup("mixplay");
 	_cconfig->verbosity=0;
 	_cconfig->debug=0;
 	_cconfig->fade=1;
@@ -280,6 +281,11 @@ mpconfig_t *readConfig( void ) {
 
 				_cconfig->musicdir=(char*)falloc( strlen(pos)+1, 1 );
 				strip( _cconfig->musicdir, pos, strlen(pos) );
+			}
+			if( strstr( line, "password=" ) == line ) {
+				/* make sure that musicdir ends with a '/' */
+				_cconfig->password=(char*)frealloc( _cconfig->password, strlen(pos)+1 );
+				strip( _cconfig->password, pos, strlen(pos) );
 			}
 			if( strstr( line, "channel=" ) == line ) {
 				_cconfig->channel=(char*)falloc( strlen(pos)+1, 1 );
@@ -327,7 +333,6 @@ mpconfig_t *readConfig( void ) {
 		while( !feof( fp ) );
 
 		fclose(fp);
-
 		return _cconfig;
 	}
 
@@ -374,6 +379,7 @@ void writeConfig( const char *musicpath ) {
 	if( NULL != fp ) {
 		fprintf( fp, "[mixplay]" );
 		fprintf( fp, "\nmusicdir=%s", _cconfig->musicdir );
+		fprintf( fp, "\npassword=%s", _cconfig->password );
 		if( _cconfig->profiles == 0 ) {
 		fprintf( fp, "\nactive=1" );
 			fprintf( fp, "\nprofiles=mixplay;" );
@@ -904,4 +910,14 @@ void blockSigint() {
 	if( pthread_sigmask(SIG_BLOCK, &set, NULL) != 0 ) {
 		addMessage( 0, "Could not block SIGINT" );
 	}
+}
+
+int checkPasswd() {
+	if( getConfig()->argument != NULL ) {
+		if( strcmp( getConfig()->password, getConfig()->argument ) == 0 ) {
+			return 1;
+		}
+	}
+	addMessage( -1, "Wrong password!" );
+	return 0;
 }

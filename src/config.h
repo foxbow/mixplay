@@ -116,6 +116,7 @@ typedef struct {
  */
 typedef struct {
 	char *musicdir;				/* path to the music */
+	char *password;				/* password to lock up quit, scan and info */
 	int active;					/* active >0 = profile / 0=none / <0 = stream */
 	int profiles;				/* number of profiles */
 	profile_t **profile;	/* profiles */
@@ -205,6 +206,7 @@ char *fullpath( const char *file );
 mpplaylist_t *wipePlaylist( mpplaylist_t *pl );
 mptitle_t *wipeTitles( mptitle_t *root );
 marklist_t *wipeList( marklist_t *root );
+int checkPasswd();
 
 void blockSigint();
 

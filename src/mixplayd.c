@@ -32,8 +32,7 @@ static unsigned long _curmsg=0;
  **/
 static void sigint(int signo){
 	char *pass;
-	pass=(char*)falloc(8,1);
-	strcpy(pass, "mixplay");
+	pass=strdup(getConfig()->password);
 
 	addMessage( 0, "External quit on signal %i!", signo );
 	if( getConfig()->command == mpc_quit ) {
@@ -163,7 +162,7 @@ static int hidCMD( int c ) {
 
 	if ( c == 'Q' ) {
 		debugHidPrintline("[QUIT]");
-		setCommand( mpc_quit, strdup("mixplay") );
+		setCommand( mpc_quit, strdup(getConfig()->password) );
 		return 0;
 	}
 
