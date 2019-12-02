@@ -674,10 +674,6 @@ void applyLists( int clean ) {
 	applyDNPlist( control->dbllist );
 	applyDNPlist( control->dnplist );
 	pthread_mutex_unlock( &_pllock );
-
-	if( control->skipdnp ) {
-		DNPSkip( );
-	}
 }
 
 /**
@@ -1207,37 +1203,8 @@ static mptitle_t *skipOver( mptitle_t *current, int dir ) {
 void markSkip( mptitle_t *title ) {
 	title->skipcount++;
 	if( title->skipcount > getConfig()->skipdnp ) {
-		title->flags |= MP_DNP;
+		handleRangeCmd( title, mpc_display|mpc_dnp );
 	}
-}
-
-/**
- * marks titles that have been skipped for at least level times
- * as DNP so they will not end up in a mix.
- */
-int DNPSkip( void ) {
-	mptitle_t *base=getConfig()->root;
-	const unsigned int level=getConfig()->skipdnp;
-	mptitle_t *runner=base;
-	unsigned int skipskip=0;
-
-/* Sort out skipped titles */
-	do {
-		activity( 1, "DNPSkipping" );
-
-		if( runner->skipcount > level ) {
-			runner->flags |= MP_DNP;
-			addMessage( 2, "Marked %s as DNP after %i skips",
-					runner->display, runner->skipcount );
-			skipskip++;
-		}
-
-		runner=runner->next;
-	}
-	while( base != runner );
-
-	addMessage( 1, "Marked %i titles as DNP for being skipped", skipskip );
-	return skipskip;
 }
 
 /**
@@ -1599,11 +1566,10 @@ mptitle_t *recurse( char *curdir, mptitle_t *files ) {
  * does a database scan and dumps information about playrate
  * favourites and DNPs
  */
-void dumpInfo( mptitle_t *root, unsigned int skip ) {
+void dumpInfo( mptitle_t *root ) {
 	mptitle_t *current=root;
 	unsigned maxplayed=0;
 	unsigned pl=0;
-	unsigned skipped=0;
 	unsigned dnp=0;
 	unsigned fav=0;
 	unsigned marked=0;
@@ -1622,9 +1588,6 @@ void dumpInfo( mptitle_t *root, unsigned int skip ) {
 		}
 		if( current->playcount > maxplayed ) {
 			maxplayed=current->playcount;
-		}
-		if( current->skipcount > skip ) {
-			skipped++;
 		}
 		numtitles++;
 		current=current->next;
@@ -1702,7 +1665,6 @@ void dumpInfo( mptitle_t *root, unsigned int skip ) {
 
 	addMessage( 0, "%4i\tfavourites", fav );
 	addMessage( 0, "%4i\tdo not plays", dnp );
-	addMessage( 0, "%4i\tskipped", skipped );
 	addMessage( 0, "%4i\tmarked", marked );
 	if (fixed) {
 		dbWrite();

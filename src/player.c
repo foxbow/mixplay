@@ -481,7 +481,7 @@ static void *plDbInfo( void *arg ) {
 
 	progressStart( "Database Info" );
 	addMessage( 0, "Music dir: %s", control->musicdir );
-	dumpInfo( control->root, control->skipdnp );
+	dumpInfo( control->root );
 	progressEnd();
 	pthread_mutex_unlock( lock );;
 	return NULL;

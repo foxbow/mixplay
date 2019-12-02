@@ -86,7 +86,6 @@ int search( const char *pat, const mpcmd_t range );
 void moveTitleByIndex( unsigned from, unsigned after );
 
 void markSkip( mptitle_t *title );
-int DNPSkip( void );
 void applyLists( int clean );
 int searchPlay( const char *pat, unsigned num, const int global );
 int handleRangeCmd( mptitle_t *title, mpcmd_t cmd );
@@ -99,7 +98,7 @@ int writeList( const mpcmd_t cmd );
 
 int isMusic( const char *name );
 void dumpTitles( mptitle_t *root, const int pl );
-void dumpInfo( mptitle_t *root, unsigned int skip );
+void dumpInfo( mptitle_t *root );
 int fillstick( mptitle_t *root, const char *target );
 int getPlaylists( const char *cd, struct dirent ***pllist );
 unsigned long countTitles( const unsigned int inc, const unsigned int exc );
