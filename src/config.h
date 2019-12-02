@@ -159,6 +159,7 @@ typedef struct {
 	unsigned changed:1;
 	unsigned listDirty:1;
 	unsigned list:1;					/* remote playlist */
+	unsigned retry:1;					/* wait for socket */
 	char *rcdev;							/* device by-id of the remote control */
 	int rccodes[MPRC_NUM];		/* command codes for the remote */
 } mpconfig_t;

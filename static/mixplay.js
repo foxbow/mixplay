@@ -931,7 +931,7 @@ function playerUpdate (data) {
 
   enableElement('current', !data.status)
   enableElement('ctitle', !data.status)
-  
+
   if (data.status) {
     document.getElementById('play').innerHTML = '\u25B6'
   } else {

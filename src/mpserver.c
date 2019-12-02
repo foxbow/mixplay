@@ -577,7 +577,10 @@ static void *clientHandler(void *args ) {
 				else {
 					if( fullstat & MPCOMM_RESULT ) {
 						config->found->state=mpsearch_idle;
-						progressEnd();
+						/* not progressEnd() as that sends a confusing 'Done.' and it is
+						   certain here that the flow is in the correct context as search
+							 is synchronous */
+						unlockClient(sock);
 					}
 					if( fullstat & MPCOMM_LISTS ) {
 						config->listDirty=0;
@@ -683,6 +686,7 @@ int startServer( ) {
 	mpconfig_t	*control=getConfig( );
 	struct sockaddr_in server;
 	int mainsocket = -1;
+	int rcnt=0;
 
 	mainsocket = socket(AF_INET , SOCK_STREAM , 0);
 	if (mainsocket == -1) {
@@ -697,9 +701,12 @@ int startServer( ) {
 	server.sin_port = htons( control->port );
 
 	while ( bind(mainsocket,(struct sockaddr *)&server , sizeof(server)) < 0) {
-		if( (getDebug() > 0) && (errno == 98) ) {
-			addMessage(0, "Busy, retrying in 10s" );
-			sleep(10);
+		if( (control->retry) && (errno == 98) && (rcnt < 4) ) {
+			/* this commonly takes a minute so try three times to reconnect if the
+			   socket is still blocked, then something is really wrong */
+			rcnt++;
+			addMessage(0, "Busy, retrying in 20s" );
+			sleep(20);
 		} else {
 			addMessage( 0, "bind to port %i failed!", control->port );
 			addError( errno );

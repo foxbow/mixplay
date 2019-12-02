@@ -1661,6 +1661,9 @@ void dumpInfo( mptitle_t *root, unsigned int skip ) {
 			do {
 				if( current->playcount > pl ) {
 					current->playcount--;
+					if(current->favpcount > 0) {
+						current->favpcount--;
+					}
 				}
 				current=current->next;
 			} while( current != root );

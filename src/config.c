@@ -254,6 +254,7 @@ mpconfig_t *readConfig( void ) {
 	_cconfig->changed=0;
 	_cconfig->isDaemon=0;
 	_cconfig->fpcurrent=1;
+	_cconfig->retry=0;
 	_cconfig->streamURL=NULL;
 	_cconfig->rcdev=NULL;
 
@@ -524,7 +525,6 @@ void freeConfig( ) {
 void addMessage( int v, const char *msg, ... ) {
 	va_list args;
 	char *line;
-	unsigned	showdbg=1;
 
 	pthread_mutex_lock( &_addmsglock );
 	line = (char*)falloc( MP_MSGLEN+1, 1 );
@@ -537,22 +537,17 @@ void addMessage( int v, const char *msg, ... ) {
 		line[strlen(line)] = 0;
 	}
 
-	/* This should only go to the client */
-	if ( v == -2 ) {
-		v=-1;
-		showdbg=0;
-	}
-
 	if( _cconfig == NULL ) {
 		fprintf( stderr, "* %s\n", line );
 	}
 	else {
 		if( v <= getVerbosity() ) {
 			if( _cconfig->inUI ) {
-				if( showdbg && ( v < getDebug() ) ) {
+				if( v < getDebug() ) {
 					fprintf( stderr, "\rd%i %s\n", v, line );
 				}
-				/* not just a message but something important */
+				/* not just a message but something important so add the ALERT:
+				   prefix for the clients */
 				if( v == -1 ) {
 					memmove( line+6, line, MP_MSGLEN-6 );
 					memcpy( line, "ALERT:", 6 );
@@ -737,8 +732,7 @@ void progressStart( const char* msg, ... ) {
  * end a progress display
  */
 void progressEnd( void ) {
-	addMessage( -2, "Done." );
-	invokeHooks(_pfunc);
+	addMessage( -1, "Done." );
 }
 
 /**
