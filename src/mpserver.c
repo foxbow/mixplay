@@ -34,6 +34,7 @@
 #include "build/mixplayd_css.h"
 #include "build/mixplayd_svg.h"
 #include "build/mixplayd_png.h"
+#include "build/manifest_json.h"
 
 static pthread_mutex_t _sendlock=PTHREAD_MUTEX_INITIALIZER;
 
@@ -162,7 +163,7 @@ static void *clientHandler(void *args ) {
 
 	/* this one may terminate all willy nilly */
 	pthread_detach(pthread_self());
-	addMessage( 2, "Client handler started" );
+	addMessage( 3, "Client handler started" );
 	while( ( running & 1 ) && ( config->status!=mpc_quit ) ) {
 		FD_ZERO( &fds );
 		FD_SET( sock, &fds );
@@ -198,18 +199,29 @@ static void *clientHandler(void *args ) {
 				if( pos != NULL ) {
 					pos=pos+4;
 					end=strchr( pos, ' ' );
+					if( end != NULL ) {
+						*(end+1)=0;
+					}
+					/* This must not be an else due to the following elses */
 					if( end == NULL ) {
 						addMessage( 0, "Discarding %s", pos );
 					}
-					else {
-						*(end+1)=0;
+					/* control command */
+					else if ( strstr( pos, "/mpctrl/")) {
+						pos=pos+strlen("/mpctrl");
 						/* has an argument and/or msgcount been set? */
 						arg=strchr( pos, '?' );
 						if( arg != NULL ) {
+							*arg=0;
 							arg++;
 						}
 						if( strstr( pos, "/status " ) == pos ) {
 							state=1;
+						}
+						else if( strcmp( pos, "/status" ) == 0 ) {
+							state=1;
+							fullstat|=atoi(arg);
+							addMessage(2,"Statusrequest: %i", fullstat);
 						}
 						else if( strstr( pos, "/cmd/" ) == pos ) {
 							addMessage( 2, "received cmd: %s", pos );
@@ -249,7 +261,35 @@ static void *clientHandler(void *args ) {
 								}
 							}
 						}
-						else if( ( strstr( pos, "/ ") == pos ) || ( strstr( pos, "/index.html " ) == pos ) ) {
+						else if( strstr( pos, "/title/" ) == pos ) {
+							pos+=7;
+							index=atoi(pos);
+							if( ( config->current != NULL ) && ( index == 0 ) ) {
+								title=config->current->title;
+							}
+							else {
+								title=getTitleByIndex( index );
+							}
+
+							if( strstr( pos, "info " ) == pos ) {
+								state=9;
+							}
+							else if( title != NULL ) {
+								pthread_mutex_lock(&_sendlock);
+								fname=title->path;
+								state=8;
+							}
+							else {
+								send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
+								state=0;
+								running&=~1;
+							}
+						} else if( strstr( pos, "/version " ) == pos ) {
+								state=7;
+						}
+					} /* /mpctrl prefix end */
+					else {
+						if( ( strstr( pos, "/ ") == pos ) || ( strstr( pos, "/index.html " ) == pos ) ) {
 							pthread_mutex_lock(&_sendlock);
 							fname="static/mixplay.html";
 							fdata=static_mixplay_html;
@@ -314,32 +354,12 @@ static void *clientHandler(void *args ) {
 							state=5;
 						}
 						else if( strstr( pos, "/manifest.json ") == pos ) {
-							state=10;
-						}
-						else if( strstr( pos, "/title/" ) == pos ) {
-							addMessage( 2, "received: %s", pos );
-							pos+=7;
-							index=atoi(pos);
-							if( ( config->current != NULL ) && ( index == 0 ) ) {
-								title=config->current->title;
-							}
-							else {
-								title=getTitleByIndex( index );
-							}
-
-							if( strstr( pos, "info " ) == pos ) {
-								state=9;
-							}
-							else if( title != NULL ) {
-								pthread_mutex_lock(&_sendlock);
-								fname=title->path;
-								state=8;
-							}
-							else {
-								send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
-								state=0;
-								running&=~1;
-							}
+							pthread_mutex_lock(&_sendlock);
+							fname="static/manifest.json";
+							fdata=static_manifest_json;
+							flen=static_manifest_json_len;
+							mtype="application/manifest+json; charset=utf-8";
+							state=5;
 						}
 						else if( strstr( pos, "/favicon.ico " ) == pos ) {
 							/* ignore for now */
@@ -347,19 +367,13 @@ static void *clientHandler(void *args ) {
 							state=0;
 							running&=~1;
 						}
-						else if( strstr( pos, "/config ") == pos ) {
-							state=6;
-						}
-						else if( strstr( pos, "/version " ) == pos ) {
-							state=7;
-						}
 						else {
 							addMessage( 0, "Illegal get %s", pos );
 							send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
 							state=0;
 							running&=~1;
 						}
-					}
+					} /* no prefix */
 				} /* /get command */
 				else {
 					addMessage( 0, "Unknown command %s", commdata );
@@ -465,24 +479,10 @@ static void *clientHandler(void *args ) {
 				running&=~1;
 				break;
 
-				case 6: /* get config */
-					jsonLine=serializeConfig( );
-					if( jsonLine != NULL ) {
-						sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012", (int)strlen(jsonLine) );
-						while( (ssize_t)( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
-							commsize+=MP_BLKSIZE;
-							commdata=(char*)frealloc( commdata, commsize );
-						}
-						strcat( commdata, jsonLine );
-						len=strlen(commdata);
-						sfree( &jsonLine );
-						fullstat=MPCOMM_CONFIG;
-					}
-					else {
-						addMessage( 0, "Could not turn config into JSON" );
-						len=serviceUnavailable( commdata );
-					}
-					break;
+			case 6: /* get config should be unreachable */
+				addMessage(-1,"Get config is deprecated!");
+				len=serviceUnavailable( commdata );
+				break;
 
 			case 7: /* get current build version */
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
@@ -510,48 +510,6 @@ static void *clientHandler(void *args ) {
 						(int)strlen(line), line );
 				len=strlen(commdata);
 				running&=~1;
-				break;
-
-			case 10: /* return manifest */
-				if( manifest == NULL ) {
-					/* this could be handled as a constant string from the start
-					   but this makes changes easier */
-					jsonObject *jo;
-					jsonObject *joicons;
-					jsonObject *joelement;
-					jo=jsonAddStr(NULL, "name", "Mixplay");
-					joicons = jsonInitArr( jo, "icons" );
-					joelement = jsonAddStr( NULL, "src", "/mixplay.svg");
-					jsonAddStr(joelement, "sizes", "192x192");
-					jsonAddStr(joelement, "type", "image/svg+xml");
-					joelement = jsonAddObj( NULL, "", joelement );
-					jsonAddArrElement( joicons, joelement, json_object );
-					joelement = jsonAddStr( NULL, "src", "/mixplay.png");
-					jsonAddStr(joelement, "sizes", "192x192");
-					jsonAddStr(joelement, "type", "image/png");
-					joelement = jsonAddObj( NULL, "", joelement );
-					jsonAddArrElement( joicons, joelement, json_object );
-
-					jsonAddStr(jo, "background_color", "darkblue");
-					jsonAddStr(jo, "theme_color", "darkblue");
-					jsonAddStr(jo, "display", "standalone");
-					/* automatically discard the jsonObject */
-					manifest=jsonToString(jo);
-				}
-				if( manifest != NULL ) {
-					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/manifest+json; charset=utf-8\015\012Content-Length: %i\015\012\015\012", (int)strlen(manifest) );
-					while( (ssize_t)( strlen(manifest) + strlen(commdata) + 8 ) > commsize ) {
-						commsize+=MP_BLKSIZE;
-						commdata=(char*)frealloc( commdata, commsize );
-					}
-					strcat( commdata, manifest );
-					len=strlen(commdata);
-				}
-				else {
-					addMessage( -1, "Could not create manifest!" );
-					len=serviceUnavailable( commdata );
-				}
-
 				break;
 
 			default:
@@ -592,10 +550,10 @@ static void *clientHandler(void *args ) {
 	}
 	if( running & 2 ) {
 		removeNotifyHook( &mps_notify, &nextstat );
-		addMessage( 1, "Update Handler (%p) terminates", (void *)&nextstat );
+		addMessage( 2, "Update Handler (%p) terminates", (void *)&nextstat );
 	}
 
-	addMessage( 2, "Client handler exited" );
+	addMessage( 3, "Client handler exited" );
 	if( isCurClient(sock) ){
 		unlockClient( sock );
 	}

@@ -1,6 +1,10 @@
-/* -1: configuration; 0: no update; 1: normal updates */
-var doUpdate = -1
-var data = null
+/* MPCOMM_STAT == 0 - normal update
+   MPCOMM_FULLSTAT == 1 - +titles
+   MPCOMM_RESULT == 2 - searchresult
+   MPCOMM_LISTS == 4 - dnp/fav lists
+   MPCOMM_CONFIG == 8 - configuration
+   -1 - stopped */
+var doUpdate = 13
 var isstream = 0
 var msglines = []
 var msgpos = 0
@@ -45,7 +49,7 @@ function toggleSearch () {
  */
 function scrollToggle () {
   var to = 1000
-  if (doUpdate === 0) return
+  if (doUpdate === -1) return
   for (var i = 0; i < numscrolls; i++) {
     var element = scrolls[i].element
     if (scrolls[i].offset.charAt(0) === '-') {
@@ -91,6 +95,7 @@ function adaptUI (keep = 0) {
   if (!keep && isPlay()) {
     if (window.innerWidth < h) {
       switchView(1)
+      switchTabByRef('dnpfav', 0)
     } else {
       switchView(0)
     }
@@ -128,7 +133,7 @@ function adaptUI (keep = 0) {
     const of = Math.round(lines - (h / fsize) - 1)
     if (overflow !== of) {
       overflow = of
-      doUpdate = -1
+      doUpdate = 13
     }
   } else {
     overflow = 0
@@ -195,8 +200,8 @@ function initScrolls () {
  * stop updates and make sure that error messages do not stack
  */
 function fail (msg) {
-  if (doUpdate !== 0) {
-    doUpdate = 0
+  if (doUpdate !== -1) {
+    doUpdate = -1
     if (window.confirm(msg + '\nRetry?')) {
       document.location.reload()
     }
@@ -344,28 +349,36 @@ function sendCMD (cmd, arg = '') {
     replaceChild(e, text)
   }
 
-  if ((cmd & 0x00ff) === 0x0013) {
-    if (cmdtosend === '') {
-      cmdtosend = code
-      argtosend = arg
-      e = document.getElementById('search0')
-      text = document.createElement('em')
-      text.innerHTML = '.. searching ..'
-      replaceChild(e, text)
-      e = document.getElementById('search1')
-      text = document.createElement('em')
-      text.innerHTML = '.. searching ..'
-      replaceChild(e, text)
-      e = document.getElementById('search2')
-      text = document.createElement('em')
-      text.innerHTML = '.. searching ..'
-      replaceChild(e, text)
-    } else {
-      window.alert('Wait for previous search to be sent')
-    }
-    activecmd = -1
-    document.body.className = ''
-    return
+  /* all these commands have a progress */
+  switch (cmd & 0x00ff) {
+    case 0x13: /* mpc_search */
+      if (cmdtosend === '') {
+        e = document.getElementById('search0')
+        text = document.createElement('em')
+        text.innerHTML = '.. searching ..'
+        replaceChild(e, text)
+        e = document.getElementById('search1')
+        text = document.createElement('em')
+        text.innerHTML = '.. searching ..'
+        replaceChild(e, text)
+        e = document.getElementById('search2')
+        text = document.createElement('em')
+        text.innerHTML = '.. searching ..'
+        replaceChild(e, text)
+      }
+
+    case 0x08: /* mpc_dbclean */
+    case 0x0b: /* mpc_doublets */
+    case 0x12: /* mpc_dbinfo */
+      if (cmdtosend === '') {
+        cmdtosend = code
+        argtosend = arg
+      } else {
+        window.alert('Busy, sorry.')
+      }
+      activecmd = -1
+      document.body.className = ''
+      return
   }
 
   xmlhttp.onreadystatechange = function () {
@@ -379,18 +392,6 @@ function sendCMD (cmd, arg = '') {
             case 0x0d: /* vol+ */
             case 0x0e: /* vol- */
             case 0x1d: /* mute */
-              break
-            case 0x06: /* select profile */
-            case 0x17: /* load path */
-            case 0x1e: /* toggle favplay */
-              switchView(0, 0)
-              doUpdate = -1
-              activecmd = -2
-              break
-            case 0x016: /* new profile/stream */
-            case 0x018: /* delete profile/stream */
-              doUpdate = -1
-              activecmd = -1
               break
             default:
               activecmd = -1
@@ -410,9 +411,9 @@ function sendCMD (cmd, arg = '') {
   }
 
   if (arg !== '') {
-    xmlhttp.open('GET', '/cmd/' + code + '?' + arg, true)
+    xmlhttp.open('GET', '/mpctrl/cmd/' + code + '?' + arg, false)
   } else {
-    xmlhttp.open('GET', '/cmd/' + code, true)
+    xmlhttp.open('GET', '/mpctrl/cmd/' + code, false)
   }
   xmlhttp.send()
 }
@@ -892,6 +893,33 @@ function dnpfavUpdate (data) {
 }
 
 function playerUpdate (data) {
+  if (isstream !== (data.mpmode === 1)) {
+    isstream = (data.mpmode === 1) /* PM_STREAM */
+    enableElement('goprev', !isstream)
+    enableElement('gonext', !isstream)
+    enableElement('playtime', !isstream)
+    enableElement('dnp', !isstream)
+    enableElement('setfavplay', !isstream)
+    enableElement('cextra3', !isstream)
+    enableElement('lscroll', !isstream)
+    enableElement('cdnpfav0', !isstream)
+    enableElement('cdnpfav1', !isstream)
+    enableElement('cdnpfav2', !isstream)
+    enableElement('download', !isstream)
+    enableElement('rescan', !isstream)
+    enableElement('dbinfo', !isstream)
+  }
+
+  if (data.mpmode & 4) {
+    activecmd = -2
+    document.body.className = 'busy'
+  } else {
+    if (activecmd === -2) {
+      activecmd = -1
+      document.body.className = ''
+    }
+  }
+
   favplay = data.mpfavplay
   if (favplay) {
     if (!data.fpcurrent) {
@@ -918,7 +946,9 @@ function playerUpdate (data) {
 
   if (active !== data.active) {
     active = data.active
-    doUpdate = -1
+    /* The server should automatically send a full update on profile change
+    doUpdate = 13
+    */
   }
 
   if ((active === 0) && (isstream)) {
@@ -959,68 +989,44 @@ function playerUpdate (data) {
   }
 }
 
-function parseReply (reply) {
-  var data = JSON.parse(reply)
-  if (data !== undefined) {
-    if (isstream !== (data.mpmode === 1)) {
-      isstream = (data.mpmode === 1) /* PM_STREAM */
-      enableElement('goprev', !isstream)
-      enableElement('gonext', !isstream)
-      enableElement('playtime', !isstream)
-      enableElement('dnp', !isstream)
-      enableElement('setfavplay', !isstream)
-      enableElement('cextra3', !isstream)
-      enableElement('lscroll', !isstream)
-      enableElement('cdnpfav0', !isstream)
-      enableElement('cdnpfav1', !isstream)
-      enableElement('cdnpfav2', !isstream)
-      enableElement('download', !isstream)
-      enableElement('rescan', !isstream)
-      enableElement('dbinfo', !isstream)
-    }
-
-    if (data.mpmode & 4) {
-      activecmd = -2
-      document.body.className = 'busy'
-    } else {
-      if (activecmd === -2) {
-        activecmd = -1
-        document.body.className = ''
-      }
-    }
-
-    /* full update */
-    if (data.type & 1) {
-      fullUpdate(data)
-    }
-    /* search results */
-    if (data.type & 2) {
-      searchUpdate(data)
-    }
-    /* dnp/fav lists */
-    if (data.type & 4) {
-      dnpfavUpdate(data)
-    }
-
-    /* standard update */
-    playerUpdate(data)
-  }
-}
-
 /*
  * get current status from the server and update the UI elements with the data
  * handles different types of status replies
  */
 function updateUI () {
   var xmlhttp = new window.XMLHttpRequest()
+
   xmlhttp.onreadystatechange = function () {
+    var data
     if (xmlhttp.readyState === 4) {
       switch (xmlhttp.status) {
         case 0:
           fail('CMD Error: connection lost!')
           break
         case 200:
-          parseReply(xmlhttp.responseText)
+          data = JSON.parse(xmlhttp.responseText)
+          if (data !== undefined) {
+            /* full update */
+            if (data.type & 1) {
+              fullUpdate(data)
+            }
+            /* search results */
+            if (data.type & 2) {
+              searchUpdate(data)
+            }
+            /* dnp/fav lists */
+            if (data.type & 4) {
+              dnpfavUpdate(data)
+            }
+            /* config */
+            if (data.type & 8) {
+              updateConfig(data)
+            }
+            /* standard update */
+            playerUpdate(data)
+          } else {
+            console.log('JSON-less reply!')
+          }
           break
         case 204:
           break
@@ -1031,7 +1037,7 @@ function updateUI () {
           fail('Received Error ' + xmlhttp.status)
       }
 
-      if (doUpdate !== 0) {
+      if (doUpdate !== -1) {
         setTimeout(function () { updateUI() }, 750)
       } else {
         document.body.className = 'disconnect'
@@ -1040,110 +1046,85 @@ function updateUI () {
   }
 
   if (doUpdate === -1) {
-    setTimeout(function () { getConfig() }, 333)
-    doUpdate = 1
-  }
-
-  if (cmdtosend !== '') {
+    document.body.className = 'disconnect'
+    return
+  } else if (cmdtosend !== '') {
     /* snchronous command */
     if (argtosend !== '') {
-      xmlhttp.open('GET', '/cmd/' + cmdtosend + '?' + argtosend, true)
+      xmlhttp.open('GET', '/mpctrl/cmd/' + cmdtosend + '?' + argtosend, true)
     } else {
-      xmlhttp.open('GET', '/cmd/' + cmdtosend, true)
+      xmlhttp.open('GET', '/mpctrl/cmd/' + cmdtosend, true)
     }
     cmdtosend = ''
     argtosend = ''
+  } else if (doUpdate === 0) {
+    xmlhttp.open('GET', '/mpctrl/status', true)
   } else {
-    /* normal status update */
-    xmlhttp.open('GET', '/status', true)
+    xmlhttp.open('GET', '/mpctrl/status?' + doUpdate, true)
+    doUpdate = 0
   }
   xmlhttp.send()
 }
 
-/*
- * gets the basic configuration of the server
- * this should only happen once at start
- */
-function getConfig () {
-  var xmlhttp = new window.XMLHttpRequest()
-  xmlhttp.onreadystatechange = function () {
-    if (xmlhttp.readyState === 4) {
-      if (xmlhttp.status === 200) {
-        data = JSON.parse(xmlhttp.responseText)
-        if (data !== undefined) {
-          if (data.type === -1) {
-            var e
-            var items = []
-            var choices = []
-            var i
-            /* set profile list */
-            e = document.getElementById('profiles')
-            wipeElements(e)
-            if (data.config.profile.length === 0) {
-              items[0] = document.createElement('em')
-              items[0].innerHTML = 'No profiles?'
-            } else {
-              for (i = 0; i < data.config.profile.length; i++) {
-                choices = []
-                if (i !== (active - 1)) {
-                  choices.push(['Play', 0x06])
-                } else {
-                  if (i !== 0) {
-                    choices.push(['Remove', 0x18])
-                  }
-                }
-                items[i] = popselect(choices, i + 1,
-                  data.config.profile[i])
-              }
-            }
-            tabify(e, 'prolist', items, 10)
-
-            e = document.getElementById('channels')
-            items = []
-            wipeElements(e)
-            if (data.config.sname.length === 0) {
-              items[0] = document.createElement('em')
-              items[0].innerHTML = 'No channels'
-            } else {
-              for (i = 0; i < data.config.sname.length; i++) {
-                choices = []
-                if (i !== -(active + 1)) {
-                  choices.push(['Play', 0x06])
-                  choices.push(['Remove', 0x18])
-                }
-                items[i] = popselect(choices, -(i + 1),
-                  data.config.sname[i])
-              }
-            }
-            tabify(e, 'chanlist', items, 10)
-            if (active > 0) {
-              if (favplay) {
-                setElement('active', 'Playing favplay ' +
-                    data.config.profile[active - 1])
-              } else {
-                setElement('active', 'Playing profile ' +
-                    data.config.profile[active - 1])
-              }
-            } else if (active < 0) {
-              setElement('active', 'Tuned in to ' +
-                    data.config.sname[-active - 1])
-            } else {
-              setElement('active', 'No active profile/channel')
-            }
-          } else {
-            fail('Received reply of type ' + data.type + ' for config!')
-          }
-        } else {
-          fail('Received no Data for config!')
-        }
+function updateConfig (data) {
+  var e
+  var items = []
+  var choices = []
+  var i
+  /* set profile list */
+  e = document.getElementById('profiles')
+  wipeElements(e)
+  if (data.profile.length === 0) {
+    items[0] = document.createElement('em')
+    items[0].innerHTML = 'No profiles?'
+  } else {
+    for (i = 0; i < data.profile.length; i++) {
+      choices = []
+      if (i !== (active - 1)) {
+        choices.push(['Play', 0x06])
       } else {
-        fail('Received Error ' + xmlhttp.status + ' trying to get config')
+        if (i !== 0) {
+          choices.push(['Remove', 0x18])
+        }
       }
+      items[i] = popselect(choices, i + 1,
+        data.profile[i])
     }
   }
+  tabify(e, 'prolist', items, 10)
 
-  xmlhttp.open('GET', '/config', true)
-  xmlhttp.send()
+  e = document.getElementById('channels')
+  items = []
+  wipeElements(e)
+  if (data.sname.length === 0) {
+    items[0] = document.createElement('em')
+    items[0].innerHTML = 'No channels'
+  } else {
+    for (i = 0; i < data.sname.length; i++) {
+      choices = []
+      if (i !== -(active + 1)) {
+        choices.push(['Play', 0x06])
+        choices.push(['Remove', 0x18])
+      }
+      items[i] = popselect(choices, -(i + 1),
+        data.sname[i])
+    }
+  }
+  tabify(e, 'chanlist', items, 10)
+  if (active > 0) {
+    if (favplay) {
+      setElement('active', 'Playing favplay ' +
+          data.profile[active - 1])
+    } else {
+      setElement('active', 'Playing profile ' +
+          data.profile[active - 1])
+    }
+  } else if (active < 0) {
+    setElement('active', 'Tuned in to ' +
+          data.sname[-active - 1])
+  } else {
+    setElement('active', 'No active profile/channel')
+  }
 }
 
 /*

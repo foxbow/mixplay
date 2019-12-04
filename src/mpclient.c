@@ -45,7 +45,7 @@ int sendCMD(int fd, mpcmd_t cmd){
 	if( cmd == mpc_idle ) {
 		return 0;
 	}
-	snprintf( line, 1023, "get /cmd/%i x\015\012", cmd );
+	snprintf( line, 1023, "get /mpctrl/cmd/%i x\015\012", cmd );
 	if( send( fd, line, strlen(line), 0 ) == -1 ) {
 		return -1;
 	}
@@ -68,7 +68,7 @@ int getCurrentTitle( char *title, int tlen ) {
 		return -1;
 	}
 
-	if( send( fd, "get /title/info \015\012", 18, 0 ) == -1 ) {
+	if( send( fd, "get /mpctrl/title/info \015\012", 25, 0 ) == -1 ) {
 		close(fd);
 		return -2;
 	}

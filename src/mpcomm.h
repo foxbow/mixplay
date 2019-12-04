@@ -20,10 +20,9 @@
 /* return DNP and favlists */
 #define MPCOMM_LISTS 4
 /* return immutable configuration */
-#define MPCOMM_CONFIG -1
+#define MPCOMM_CONFIG 8
 
 char *serializeStatus( unsigned long *count, int clientid, int fullstat );
-char *serializeConfig( void );
 int setCurClient( int client );
 int isCurClient( int client );
 void unlockClient( int client );

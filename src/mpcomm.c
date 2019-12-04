@@ -69,6 +69,15 @@ void unlockClient( int client ) {
 	}
 }
 
+static jsonObject *jsonAddProfiles( jsonObject *jo, const char *key, profile_t **vals, const int num ) {
+	int i;
+	jo = jsonInitArr(jo, key);
+	for( i=0; i<num; i++ ) {
+		jsonAddArrElement( jo, vals[i]->name, json_string );
+	}
+	return jo;
+}
+
 /*
  * helperfunction to add a title to the given jsonOblect
  * if title is NULL an empty title will be created
@@ -173,6 +182,14 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 		jsonAddList( jo, "dnplist", data->dnplist );
 		jsonAddList( jo, "favlist", data->favlist );
 	}
+	if ( type & MPCOMM_CONFIG ) {
+		jsonAddInt( jo, "fade", data->fade );
+		jsonAddStr( jo, "musicdir", data->musicdir );
+		jsonAddProfiles( jo, "profile", data->profile, data->profiles );
+		jsonAddInt( jo, "skipdnp", data->skipdnp );
+		jsonAddStrs( jo, "stream", data->stream, data->streams );
+		jsonAddStrs( jo, "sname", data->sname, data->streams );
+	}
 	jsonAddInt( jo, "active", data->active );
 	jsonAddStr( jo, "playtime", data->playtime );
 	jsonAddStr( jo, "remtime", data->remtime );
@@ -216,40 +233,4 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 	}
 
 	return jsonToString( jo );
-}
-
-static jsonObject *jsonAddProfiles( jsonObject *jo, const char *key, profile_t **vals, const int num ) {
-	int i;
-
-	jo = jsonInitArr(jo, key);
-	for( i=0; i<num; i++ ) {
-		jsonAddArrElement( jo, vals[i]->name, json_string );
-	}
-
-	return jo;
-}
-
-/**
- * global/static part of the given config
- * this should just be another subtype for the status
- */
-char *serializeConfig( void ) {
-	mpconfig_t *config=getConfig();
-	jsonObject *joroot=NULL;
-	jsonObject *jo=NULL;
-
-	joroot=jsonAddInt( joroot, "type", MPCOMM_CONFIG );
-
-	/* dump config into JSON object */
-	jo=jsonAddInt( NULL, "fade", config->fade );
-	jsonAddStr( jo, "musicdir", config->musicdir );
-	jsonAddProfiles( jo, "profile", config->profile, config->profiles );
-	jsonAddInt( jo, "skipdnp", config->skipdnp );
-	jsonAddStrs( jo, "stream", config->stream, config->streams );
-	jsonAddStrs( jo, "sname", config->sname, config->streams );
-
-	/* add config object to the root object */
-	jsonAddObj( joroot, "config", jo );
-
-	return jsonToString( joroot );
 }

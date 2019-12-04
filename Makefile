@@ -101,6 +101,9 @@ $(OBJDIR)/mixplayd_svg.h: static/mixplay.svg
 $(OBJDIR)/mixplayd_png.h: static/mixplay.png
 	xxd -i static/mixplay.png > $(OBJDIR)/mixplayd_png.h
 
+$(OBJDIR)/manifest_json.h: static/manifest.json
+	xxd -i static/manifest.json > $(OBJDIR)/manifest_json.h
+
 prepare:
 	apt-get install mpg123 libmpg123-dev libasound-dev
 

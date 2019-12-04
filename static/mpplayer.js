@@ -11,7 +11,7 @@ function getInfo () {
     }
   }
 
-  xmlhttp.open('GET', '/title/info', true)
+  xmlhttp.open('GET', '/mpctrl/title/info', true)
   xmlhttp.send()
 }
 
