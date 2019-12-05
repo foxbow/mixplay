@@ -245,6 +245,7 @@ mpconfig_t *readConfig( void ) {
 	_cconfig->dbname=(char*)falloc( MAXPATHLEN+1, 1 );
 	_cconfig->password=strdup("mixplay");
 	_cconfig->verbosity=0;
+	_cconfig->skipdnp=3;
 	_cconfig->debug=0;
 	_cconfig->fade=1;
 	_cconfig->inUI=0;

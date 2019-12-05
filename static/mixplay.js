@@ -947,9 +947,7 @@ function playerUpdate (data) {
 
   if (active !== data.active) {
     active = data.active
-    /* The server should automatically send a full update on profile change
-    doUpdate = 13
-    */
+    doUpdate = 8
   }
 
   if ((active === 0) && (isstream)) {
