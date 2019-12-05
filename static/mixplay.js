@@ -847,7 +847,8 @@ function searchUpdate (data) {
       choices = []
       if ((!favplay) || (favplay && data.fpcurrent)) {
         choices.push(['FAV', 0x0809])
-      } else if ((!favplay) || (favplay && !data.fpcurrent)) {
+      }
+      if ((!favplay) || (favplay && !data.fpcurrent)) {
         choices.push(['DNP', 0x080a])
         choices.push(['Insert', 0x080c])
         choices.push(['Append', 0x0814])
