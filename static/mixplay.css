@@ -134,7 +134,7 @@ div#volumebar.mute {
 	padding-bottom: 0.2em;
 }
 
-#current.hide, p.hide {
+#current.hide, #ctitle.hide {
 	background-image: radial-gradient(darkred, transparent);
 	display: block;
 }
