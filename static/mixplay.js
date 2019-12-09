@@ -86,7 +86,7 @@ function isPlay () {
 function adaptUI (keep = 0) {
   /* Number of lines in sub-tabs */
   var lines
-  var minfont = 13
+  var minfont = 14
   var h = window.innerHeight
   var i
   var fsize
