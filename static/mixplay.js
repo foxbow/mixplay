@@ -80,6 +80,8 @@ function isPlay () {
  * on texts that are longer than the parent containerand centers
  * shorter texts
  * if keep is set to 1, the current tab is not switched
+ * if keep is -1 then the current tab is switched even when
+ * currently not in a play view
  */
 function adaptUI (keep = 0) {
   /* Number of lines in sub-tabs */
@@ -92,7 +94,7 @@ function adaptUI (keep = 0) {
   var fac
 
   /* decide on default view if needed */
-  if (!keep && isPlay()) {
+  if ((keep === -1) || (!keep && isPlay())) {
     if (window.innerWidth < h) {
       switchView(1)
       switchTabByRef('dnpfav', 0)
@@ -366,7 +368,7 @@ function sendCMD (cmd, arg = '') {
         text.innerHTML = '.. searching ..'
         replaceChild(e, text)
       }
-
+    /* fallthrough */
     case 0x08: /* mpc_dbclean */
     case 0x0b: /* mpc_doublets */
     case 0x12: /* mpc_dbinfo */
@@ -393,6 +395,9 @@ function sendCMD (cmd, arg = '') {
             case 0x0e: /* vol- */
             case 0x1d: /* mute */
               break
+            case 0x06: /* mpc_profile */
+              adaptUI(-1)
+            /* fallthrough */
             default:
               activecmd = -1
           }
