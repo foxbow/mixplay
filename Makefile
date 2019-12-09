@@ -12,17 +12,17 @@ OBJS=$(addprefix $(OBJDIR)/,mpserver.o utils.o musicmgr.o database.o \
 
 CLOBJS=$(addprefix $(OBJDIR)/,utils.o msgbuf.o config.o json.o mpclient.o)
 
+EPOBJS=$(addprefix $(ODBJDIR)/,mpepa.o epasupp.o mpclient.o)
+EPLIBS=-lwiringPi
+
 LIBS=-lmpg123 -lpthread
 REFS=alsa
 
 # build with 2.7" ePaper support ?
-ifeq ("$(shell dpkg -l wiringpi 2> /dev/null > /dev/null; echo $$?)","0")
-LIBS+=-lwiringPi
-OBJS+=$(OBJDIR)/mpepa.o $(OBJDIR)/epasupp.o
-CCFLAGS+=-DEPAPER
-else
-$(info WiringPi is not installed, disabling ePaper support )
-endif
+#ifeq ("$(shell dpkg -l wiringpi 2> /dev/null > /dev/null; echo $$?)","0")
+#else
+#$(info WiringPi is not installed, disabling ePaper support )
+#endif
 
 # Install globally when called as root
 ifeq ("$(shell id -un)","root")

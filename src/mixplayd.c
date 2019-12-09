@@ -20,9 +20,6 @@
 #include "utils.h"
 #include "player.h"
 #include "mpinit.h"
-#ifdef EPAPER
-#include "mpepa.h"
-#endif
 #include "mphid.h"
 
 static unsigned long _curmsg=0;
@@ -70,9 +67,6 @@ void fail( const int error, const char* msg, ... ) {
 	}
 
 	unlink(PIDPATH);
-#ifdef EPAPER
-	epExit();
-#endif
 	getConfig()->command=mpc_quit;
 	getConfig()->status=mpc_quit;
 
@@ -272,13 +266,6 @@ int main( int argc, char **argv ) {
 
 	if( initAll( ) == 0 ){
 		control->inUI=1;
-		#ifdef EPAPER
-		sleep(1);
-		if( control->status != mpc_quit ) {
-			epSetup();
-			addUpdateHook( &epUpdateHook );
-		}
-		#endif
 		hidfd=initHID();
 	 	if( hidfd != -1 ) {
 			startHID( hidfd );
@@ -291,9 +278,6 @@ int main( int argc, char **argv ) {
 		pthread_join( control->stid, NULL );
 		pthread_join( control->rtid, NULL );
 		control->inUI=0;
-	#ifdef EPAPER
-		epExit();
-	#endif
 		if( control->changed ) {
 			writeConfig( NULL );
 		}
