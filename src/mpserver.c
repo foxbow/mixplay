@@ -164,7 +164,7 @@ static void *clientHandler(void *args ) {
 	/* this one may terminate all willy nilly */
 	pthread_detach(pthread_self());
 	addMessage( 3, "Client handler started" );
-	while( ( running & 1 ) && ( config->status!=mpc_quit ) ) {
+	do {
 		FD_ZERO( &fds );
 		FD_SET( sock, &fds );
 
@@ -547,7 +547,8 @@ static void *clientHandler(void *args ) {
 				}
 			}
 		} /* if running & !mpc_start */
-	}
+	} while( ( running & 1 ) && ( config->status!=mpc_quit ) );
+
 	if( running & 2 ) {
 		removeNotifyHook( &mps_notify, &nextstat );
 		addMessage( 2, "Update Handler (%p) terminates", (void *)&nextstat );
@@ -629,9 +630,9 @@ static void *mpserver( void *arg ) {
 	}
 	addMessage( 0, "Server stopped" );
 	/* todo this may return before the threads are done cleaning up.. */
+	sleep(1);
 	close( mainsocket );
 
-	sleep(1);
 	return NULL;
 }
 

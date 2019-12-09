@@ -2,7 +2,7 @@
    "http://www.w3.org/TR/html4/loose.dtd">
 <html>
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" >
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" >
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" type="text/css" href="/mixplay.css" >
     <script type="text/javascript" src="/mixplay.js"></script>
@@ -15,12 +15,12 @@
       <button id='cextra0' class='active'   onclick='switchView(0)' accesskey='1'>&#x25B6;</button>
       <button id='cextra1' class='inactive' onclick='switchView(1)' accesskey='2'>&#x2630;</button>
       <button id='cextra2' class='inactive' onclick='switchView(2)' accesskey='3'>&#x2692;</button>
-      <button id='cextra3' class='inactive' onclick='switchView(3)' accesskey='4'>&#x1F50E;</button>
-      <button id='dvol'    class='inactive' onclick='sendCMD(0x0e)'>&#x1f509;</button>
+      <button id='cextra3' class='inactive' onclick='switchView(3)' accesskey='4'>&#x26b2;</button>
+      <button id='dvol'    class='inactive' onclick='sendCMD(0x0e)'>-</button>
       <div    id='volume'  class='progress' onclick='sendCMD(0x1d)'>
         <div class='mute' id='volumebar'></div>
       </div>
-      <button id='ivol'    class='inactive' onclick='sendCMD(0x0d)'>&#x1f50a;</button>
+      <button id='ivol'    class='inactive' onclick='sendCMD(0x0d)'>+</button>
       <button id='uiextra' class='inactive' onclick='switchUI()'   >&#x25a2;</button>
     </div>
 
@@ -103,9 +103,9 @@
     </div>
     <!-- control elements -->
     <div id='playpack' class='buttonbar'>
-      <button id='goprev' class='inactive' onclick='sendCMD(0x02)'>&#x23ee;</button>
-      <button id='play'   class='inactive' onclick='sendCMD(0x00)'>&#x23f8;</button>
-      <button id='gonext' class='inactive' onclick='sendCMD(0x03)'>&#x23ed;</button>
+      <button id='goprev' class='inactive' onclick='sendCMD(0x02)'>&#x276e;</button>
+      <button id='play'   class='inactive' onclick='sendCMD(0x00)'>||</button>
+      <button id='gonext' class='inactive' onclick='sendCMD(0x03)'>&#x276d;</button>
       <div id='playtime' onclick='sendCMD(0x05)'>00:00</div>
       <div id='progress' class='progress' onclick='sendCMD(0x05)'><div id='progressbar'></div></div>
       <div id='remtime'>00:00</div>

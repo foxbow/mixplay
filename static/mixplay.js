@@ -140,8 +140,11 @@ function adaptUI (keep = 0) {
   } else {
     overflow = 0
   }
+
   /* toolbars should grow/shrink with less magnification */
-  bsize = minfont + ((2 * (fsize - minfont)) / 3)
+  bsize = Math.max(window.innerWidth, 20 * minfont)
+  bsize = Math.min(bsize / 20, 30)
+  /*  bsize = minfont + ((2 * (fsize - minfont)) / 3) */
   document.getElementById('playpack').style.fontSize = bsize + 'px'
   document.getElementById('viewtabs').style.fontSize = bsize + 'px'
 
@@ -204,9 +207,8 @@ function initScrolls () {
 function fail (msg) {
   if (doUpdate !== -1) {
     doUpdate = -1
-    if (window.confirm(msg + '\nRetry?')) {
-      document.location.reload()
-    }
+    window.alert(msg + '\nRetry?')
+    document.location.reload()
   }
 }
 
@@ -969,7 +971,7 @@ function playerUpdate (data) {
   if (data.status) {
     document.getElementById('play').innerHTML = '\u25B6'
   } else {
-    document.getElementById('play').innerHTML = '\u23f8'
+    document.getElementById('play').innerHTML = '||'
   }
   if (data.volume > 0) {
     document.getElementById('volumebar').style.width = data.volume + '%'
