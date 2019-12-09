@@ -1364,6 +1364,15 @@ function addTouch (name, num) {
   el.setAttribute('data-name', name)
 }
 
+function power () {
+  const el = document.getElementById('black')
+  if (el.className === 'hide') {
+    el.className = ''
+  } else {
+    el.className = 'hide'
+  }
+}
+
 /*
  * start the UI update thread loops
  */

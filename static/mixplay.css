@@ -30,6 +30,14 @@ body.disconnect {
 	color: #f88;
 }
 
+div#black {
+	background-color: black;
+	color: #444;
+	position: absolute;
+	height: 100%;
+	width: 100%;
+}
+
 div[id^='extra'].active {
 	flex: 1;
 	overflow: hidden;
