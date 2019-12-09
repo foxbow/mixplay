@@ -203,6 +203,48 @@ static mpplaylist_t *remFromPL( mpplaylist_t *pltitle ) {
 	return ret;
 }
 
+/**
+ * checks if the playcount needs to be increased and if the skipcount
+ * needs to be decreased. In both cases the updated information is written
+ * back into the db.
+ */
+void playCount( mptitle_t *title, int skip ) {
+	/* playcount only makes sense with a title list */
+	if( getConfig()->mpmode == PM_STREAM ) {
+		return;
+	}
+
+	/* not marked = searchplay, does not count */
+	if ( !(title->flags&MP_MARK ) ) {
+		return;
+	}
+
+	if (skip) {
+		title->skipcount++;
+		if( title->skipcount > getConfig()->skipdnp ) {
+			/* prepare resurrection */
+			title->skipcount=0;
+			/* three strikes and you're out */
+			handleRangeCmd( title, mpc_display|mpc_dnp );
+		}
+		dbMarkDirty();
+	}
+	else if (title->skipcount > 0) {
+		title->skipcount--;
+		dbMarkDirty();
+	}
+
+	if( getFavplay() ||
+			( ( title->flags & MP_FAV ) &&
+			( title->favpcount < title->playcount ) ) ) {
+		title->favpcount++;
+	}
+	else {
+		title->playcount++;
+		dbMarkDirty();
+	}
+}
+
 /*
  * removes the title with the given key from the playlist
  * this returns NULL or a valid playlist anchor in case the current title was
@@ -230,7 +272,7 @@ mpplaylist_t *remFromPLByKey( mpplaylist_t *root, const unsigned key ) {
 	if( pl != NULL ) {
 		/* This may be too hard */
 		if( pl->title->flags & MP_MARK ) {
-			markSkip(pl->title);
+			playCount(pl->title, 1);
 		}
 		if( pl->prev != NULL ) {
 			pl->prev->next=pl->next;
@@ -370,7 +412,7 @@ static int getDirs( const char *cd, struct dirent ***dirlist ) {
  */
 static int matchTitle( mptitle_t *title, const char* pat ) {
 	int fuzzy=0;
-	char loname[1024];
+	char loname[MAXPATHLEN];
 	char *lopat;
 	int res=0;
 
@@ -381,27 +423,27 @@ static int matchTitle( mptitle_t *title, const char* pat ) {
 
 		switch( pat[0] ) {
 		case 't':
-			strltcpy( loname, title->title, 1024 );
+			strltcpy( loname, title->title, MAXPATHLEN );
 			break;
 
 		case 'a':
-			strltcpy( loname, title->artist, 1024 );
+			strltcpy( loname, title->artist, MAXPATHLEN );
 			break;
 
 		case 'l':
-			strltcpy( loname, title->album, 1024 );
+			strltcpy( loname, title->album, MAXPATHLEN );
 			break;
 
 		case 'g':
-			strltcpy( loname, title->genre, 1024 );
+			strltcpy( loname, title->genre, MAXPATHLEN );
 			break;
 
 		case 'd':
-			strltcpy( loname, title->display, 1024 );
+			strltcpy( loname, title->display, MAXPATHLEN );
 			break;
 
 		case 'p': /* @obsolete! */
-			strltcpy( loname, title->path, 1024 );
+			strltcpy( loname, title->path, MAXPATHLEN );
 			break;
 
 		default:
@@ -410,15 +452,14 @@ static int matchTitle( mptitle_t *title, const char* pat ) {
 		}
 	}
 	else {
-		strltcpy( loname, title->display, 1024 );
+		strltcpy( loname, title->display, MAXPATHLEN );
 	}
 
 	if( fuzzy ) {
 		res=patMatch( loname, pat+2 );
 	}
 	else {
-		lopat=(char*)falloc( strlen( pat+1 ), 1 );
-		strltcpy( lopat, pat+2, strlen( pat+1 ) );
+		lopat=toLower(strdup(pat+2));
 		res=( strcmp( loname, lopat ) == 0 );
 		free( lopat );
 	}
@@ -456,9 +497,14 @@ int search( const char *pat, const mpcmd_t range ) {
 	unsigned cnt=0;
 	unsigned dnp=0;
 	mpcmd_t found=0;
+	char *lopat;
 
 	/* enter while the last result has not been sent yet! */
 	assert(res->state!=mpsearch_done);
+	assert(pat!=NULL);
+
+	/* whatever pattern we get, ignore case */
+	lopat=toLower(strdup(pat));
 
 	/* free buffer playlist, the arrays will not get lost due to the realloc later */
 	res->titles=wipePlaylist(res->titles);
@@ -540,6 +586,7 @@ int search( const char *pat, const mpcmd_t range ) {
 	/* result can be sent out now */
 	res->state=mpsearch_done;
 
+	free(lopat);
 	return (cnt>MAXSEARCH)?-1:(int)cnt;
 }
 
@@ -1198,13 +1245,6 @@ static mptitle_t *skipOver( mptitle_t *current, int dir ) {
 	}
 
 	return marker;
-}
-
-void markSkip( mptitle_t *title ) {
-	title->skipcount++;
-	if( title->skipcount > getConfig()->skipdnp ) {
-		handleRangeCmd( title, mpc_display|mpc_dnp );
-	}
 }
 
 /**

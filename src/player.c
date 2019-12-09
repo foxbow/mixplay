@@ -376,39 +376,6 @@ void *setProfile( ) {
 }
 
 /**
- * checks if the playcount needs to be increased and if the skipcount
- * needs to be decreased. In both cases the updated information is written
- * back into the db.
- */
-static void playCount( mptitle_t *title ) {
-	/* playcount only makes sense with a database */
-	if( getConfig()->mpmode != PM_DATABASE ) {
-		return;
-	}
-
-	/* marked - default play, not marked - searchplay */
-	if ( title->flags&MP_MARK ) {
-		if( getFavplay() ) {
-			title->favpcount++;
-		}
-		else {
-			if( ( title->flags & MP_FAV ) &&
-					( title->favpcount < title->playcount ) ) {
-				title->favpcount++;
-			}
-			else {
-				title->playcount++;
-				dbMarkDirty();
-			}
-			if( title->skipcount > 0 ) {
-				title->skipcount--;
-				dbMarkDirty();
-			}
-		}
-	}
-}
-
-/**
  * asnchronous functions to run in the background and allow updates being sent to the
  * client
  */
@@ -616,9 +583,10 @@ void *reader( ) {
 	int 	p_status[2][2];			/* status pipes to mpg123 */
 	int 	p_command[2][2];		/* command pipes to mpg123 */
 	pid_t	pid[2];
-	mpcmd_t	cmd=mpc_idle;
-	unsigned	update=0;
-	unsigned	insert=0;
+	mpcmd_t cmd=mpc_idle;
+	unsigned update=0;
+	unsigned insert=0;
+	unsigned skipped=0;
 
 	blockSigint();
 
@@ -877,7 +845,8 @@ void *reader( ) {
 
 						if( ( control->fade ) && ( rem <= fade ) ){
 							/* should the playcount be increased? */
-							playCount( control->current->title );
+							playCount( control->current->title, skipped );
+							skipped=0;
 
 							if( control->current->next == control->current ) {
 								control->status=mpc_idle; /* Single song: STOP */
@@ -918,7 +887,7 @@ void *reader( ) {
 						else if( control->current != NULL ){
 							addMessage( 2, "Title change on player %i", fdset );
 							if( ( order == 1 ) && ( control->fade == 0 ) ) {
-								playCount( control->current->title );
+								playCount( control->current->title, skipped );
 							}
 
 							if( order < 0 ) {
@@ -1097,14 +1066,7 @@ void *reader( ) {
 					order=atoi(control->argument);
 					sfree(&(control->argument));
 				}
-
-				if( ( control->current->title->key != 0 ) &&
-					  ( control->current->title->flags & MP_MARK ) ) {
-					markSkip(control->current->title);
-					addMessage( 1, "Skipped");
-					/* updateCurrent( control ); - done in STOP handling */
-				}
-
+				skipped=1;
 				dowrite( p_command[fdset][1], "STOP\n", 6 );
 			}
 			break;

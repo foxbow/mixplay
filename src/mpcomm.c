@@ -97,7 +97,7 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplayli
 		jsonAddStr( val, "title", title->title );
 		jsonAddInt( val, "flags", title->flags );
 		jsonAddStr( val, "genre", title->genre );
-		if( getDebug() ) {
+		if( getDebug() > 1) {
 			if(getFavplay()){
 				jsonAddInt( val, "playcount", title->favpcount );
 			}
