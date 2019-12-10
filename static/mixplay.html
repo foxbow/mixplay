@@ -12,7 +12,6 @@
   </head>
   <body onload='initializeUI()' onresize='adaptUI(0)'>
     <div id='viewtabs' class='buttonbar'>
-      <button id='poweroff' class='inactive' onclick='power()'   >&#x263e;</button>
       <button id='cextra0' class='active'   onclick='switchView(0)' accesskey='1'>&#x25B6;</button>
       <button id='cextra1' class='inactive' onclick='switchView(1)' accesskey='2'>&#x2630;</button>
       <button id='cextra2' class='inactive' onclick='switchView(2)' accesskey='3'>&#x2692;</button>
@@ -114,6 +113,6 @@
       <button id='dnp' class='inactive' onclick='sendCMD(0x080a)'>&#x2620;</button>
     </div>
     <!-- hide everything -->
-    <div id='black' class='hide' onclick='power()'></div>
+    <div id='black' class='hide' onclick='power(1)'></div>
   </body>
 </html>

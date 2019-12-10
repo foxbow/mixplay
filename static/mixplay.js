@@ -18,6 +18,9 @@ var smallUI = (document.cookie && (document.cookie.indexOf('MPsmallUI') !== -1))
 var active = 0
 var swipest = []
 var overflow = 0
+var toval = 750
+var idletime = 0
+const idlesleep = 5 * 60 * 1000
 
 function replaceChild (e, c) {
   wipeElements(e)
@@ -969,8 +972,14 @@ function playerUpdate (data) {
   enableElement('ctitle', !data.status)
 
   if (data.status) {
+    if (idletime < idlesleep) {
+      idletime = idletime + toval
+    } else {
+      power(0)
+    }
     document.getElementById('play').innerHTML = '\u25B6'
   } else {
+    power(1)
     document.getElementById('play').innerHTML = '||'
   }
   if (data.volume > 0) {
@@ -1044,7 +1053,7 @@ function updateUI () {
       }
 
       if (doUpdate !== -1) {
-        setTimeout(function () { updateUI() }, 750)
+        setTimeout(function () { updateUI() }, toval)
       } else {
         document.body.className = 'disconnect'
       }
@@ -1364,12 +1373,15 @@ function addTouch (name, num) {
   el.setAttribute('data-name', name)
 }
 
-function power () {
+function power (on) {
   const el = document.getElementById('black')
-  if (el.className === 'hide') {
-    el.className = ''
-  } else {
+  if (on === 1) {
+    idletime = 0
+    toval = 750
     el.className = 'hide'
+  } else {
+    toval = 2500
+    el.className = ''
   }
 }
 
