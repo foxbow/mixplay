@@ -421,9 +421,9 @@ function sendCMD (cmd, arg = '') {
   }
 
   if (arg !== '') {
-    xmlhttp.open('GET', '/mpctrl/cmd/' + code + '?' + arg, false)
+    xmlhttp.open('GET', '/mpctrl/cmd/' + code + '?' + arg, true)
   } else {
-    xmlhttp.open('GET', '/mpctrl/cmd/' + code, false)
+    xmlhttp.open('GET', '/mpctrl/cmd/' + code, true)
   }
   xmlhttp.send()
 }

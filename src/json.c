@@ -213,13 +213,8 @@ static char *jsonDecode( const char *val ) {
 
 /**
  * creates an empty json node
- * if ref is 0 this means the content is owned by the node if not
- * it's a reference and must not be free'd
- * ref: 0 - neither key nor val are to be free'd
- *      1 - only key needs to be free'd
- *      2 - key and val are to be free'd
  */
-static jsonObject *jsonInit( int ref ) {
+static jsonObject *jsonInit( void ) {
 	jsonObject *jo=NULL;
 	jo=(jsonObject*)calloc(1, sizeof(jsonObject));
 	if( jo == NULL ) {
@@ -230,7 +225,6 @@ static jsonObject *jsonInit( int ref ) {
 	jo->next=NULL;
 	jo->val=NULL;
 	jo->type=json_null;
-	jo->ref=ref;
 	return jo;
 }
 
@@ -311,6 +305,7 @@ static int jsonParseString( char *json, char **val ) {
 	int ip=0;
 	int j=0;
 	int state=0;
+	char *start=NULL;
 
 	*val=NULL;
 	while( ip < len ) {
@@ -319,7 +314,7 @@ static int jsonParseString( char *json, char **val ) {
 			switch( json[ip] ) {
 			case '"':
 				state=1;
-				*val=json+ip+1;
+				start=json+ip+1;
 				break;
 			case ' ':
 				break;
@@ -334,6 +329,7 @@ static int jsonParseString( char *json, char **val ) {
 				break;
 			case '"':
 				json[ip]=0;
+				*val=strdup(start);
 				return ip+1;
 				break;
 			}
@@ -374,6 +370,9 @@ static int jsonParseString( char *json, char **val ) {
  * " starts a string
  * { starts an object
  * [ starts an array
+ * f is probably boolean false
+ * t is probably boolean true
+ * n is probably null
  * everything else is either a number or illegal.
  */
 static int jsonParseValue( char *json, jsonObject *jo ) {
@@ -391,13 +390,13 @@ static int jsonParseValue( char *json, jsonObject *jo ) {
 		break;
 	case '{':
 		jo->type=json_object;
-		jo->val=jsonInit(0);
+		jo->val=jsonInit();
 		jpos+=jsonParseObject( &json[jpos], (jsonObject **)&(jo->val) );
 		return jpos;
 		break;
 	case '[':
 		jo->type=json_array;
-		jo->val=jsonInit(0);
+		jo->val=jsonInit();
 		jpos+=jsonParseArray( &json[jpos], (jsonObject **)&(jo->val) );
 		return jpos;
 		break;
@@ -406,6 +405,7 @@ static int jsonParseValue( char *json, jsonObject *jo ) {
 			jo->type=json_boolean;
 			jo->val=(void *)-1;
 			jpos+=strlen("true");
+			return jpos;
 		}
 		else {
 			jsonParseFail( __func__, json, jpos, state );
@@ -416,6 +416,7 @@ static int jsonParseValue( char *json, jsonObject *jo ) {
 			jo->type=json_boolean;
 			jo->val=NULL;
 			jpos+=strlen("false");
+			return jpos;
 		}
 		else {
 			jsonParseFail( __func__, json, jpos, state );
@@ -426,6 +427,7 @@ static int jsonParseValue( char *json, jsonObject *jo ) {
 			jo->type=json_null;
 			jo->val=NULL;
 			jpos+=strlen("null");
+			return jpos;
 		}
 		else {
 			jsonParseFail( __func__, json, jpos, state );
@@ -452,7 +454,7 @@ static int jsonParseKeyVal( char *json, jsonObject **jo ) {
 	int state=0;
 	int len=strlen(json);
 
-	*jo=jsonInit(0);
+	*jo=jsonInit();
 
 	while( jpos < len ) {
 		switch( state ) {
@@ -521,7 +523,7 @@ static int jsonParseArray( char *json, jsonObject **jo ) {
 			switch( json[jpos] ) {
 			case '[':
 				jpos++;
-				*current=jsonInit(1);
+				*current=jsonInit();
 				if( *current==NULL ) {
 					return jsonParseFail( __func__, json, jpos, state );
 				}
@@ -549,7 +551,7 @@ static int jsonParseArray( char *json, jsonObject **jo ) {
 			case ',':
 				json[jpos]=0;
 				jpos++;
-				(*current)->next=jsonInit(1);
+				(*current)->next=jsonInit();
 				if( (*current)->next == NULL ) {
 					return jsonParseFail( __func__, json, jpos, state );
 				}
@@ -618,33 +620,11 @@ static int jsonParseObject( char *json, jsonObject **jo ) {
 	return jpos;
 }
 
-/*
- * resolves a JSON key path in dot notation
- */
-static jsonObject *jsonFollowPath( jsonObject *jo, const char *key ) {
-	jsonObject *target=jo;
-	char *path;
-	const char *pos;
-
-	if( strchr( key, '.' ) != NULL ) {
-		path=(char*)calloc( strlen( key )+1, 1 );
-		if( path == NULL ) {
-			jsonFail( "Out of memory!" );
-			return NULL;
-		}
-		strcpy( path, key );
-		strchr( path, '.' )[0]=0;
-		target=jsonFollowPath( jo, path );
-		free( path );
-	}
-
-	pos=strrchr( key, '.' );
-	if( pos == NULL ){
-		pos=key;
-	}
+static jsonObject *jsonFetch( jsonObject *jo, const char *key ) {
+	jsonObject *target = jo;
 
 	while( target != NULL ) {
-		if( strcmp( target->key, pos ) == 0 ) {
+		if( strcmp( target->key, key ) == 0 ) {
 			return target;
 		}
 		target=target->next;
@@ -654,13 +634,38 @@ static jsonObject *jsonFollowPath( jsonObject *jo, const char *key ) {
 }
 
 /*
+ * resolves a JSON key path in dot notation
+ */
+static jsonObject *jsonFollowPath( jsonObject *jo, const char *key ) {
+	char *path=strdup(key);
+	char *hook=path;
+	char *pos=strchr(path,'.');
+
+	while( pos != NULL ) {
+		*pos=0;
+		pos=pos+1;
+		jo=jsonFetch(jo,path);
+		if( jo == NULL ){
+			return NULL;
+		}
+		jo=(jsonObject*)jo->val;
+		path=pos;
+		pos=strchr(path,'.');
+	}
+
+	jo=jsonFetch(jo,path);
+	free(hook);
+	return jo;
+}
+
+/*
  * returns the jsonType of the current object
  * can also be used to check if an object exists - i.e. array indices
  */
 jsonType jsonPeek( jsonObject *jo, char *key ) {
 	jo=jsonFollowPath( jo, key );
 	if( jo == NULL ) {
-		return json_null;
+		return json_error;
 	}
 	return jo->type;
 }
@@ -781,13 +786,13 @@ jsonObject *jsonGetObj( jsonObject *jo, const char *key ) {
  */
 static jsonObject *jsonAppend( jsonObject *jo, const char *key ) {
 	if( jo == NULL ) {
-		jo=jsonInit(2);
+		jo=jsonInit();
 	}
 	else {
 		while( jo->next != NULL ) {
 			jo=jo->next;
 		}
-		jo->next=jsonInit(2);
+		jo->next=jsonInit();
 		jo=jo->next;
 	}
 
@@ -931,14 +936,17 @@ int jsonAddArrElement( jsonObject *jo, void *val, jsonType type ) {
 	if( index == 0 ) {
 		switch( type ) {
 		case json_array:
-			jo->val=jsonAddArr(NULL, key, (jsonObject*)val );
+			jo->val=jsonAddArr(NULL, key, (jsonObject*)val);
 			break;
 		case json_number:
 			jo->val=jsonAddInt(NULL, key, atoi((char*)val));
 			break;
 		case json_object:
 			jo->val=(jsonObject*)val;
-			((jsonObject*)jo->key)->val=strdup(key);
+			if (((jsonObject*)jo->val)->key) {
+				free(((jsonObject*)jo->val)->key);
+			}
+			((jsonObject*)jo->val)->key=strdup(key);
 			break;
 		case json_string:
 			jo->val=jsonAddStr(NULL, key, (char*)val );
@@ -947,7 +955,7 @@ int jsonAddArrElement( jsonObject *jo, void *val, jsonType type ) {
 			jo->val=jsonAddBool(NULL, key, (unsigned long)val );
 			break;
 		case json_null:
-			jo->val = jsonAddObj(NULL, key, NULL );
+			jo->val=jsonAddObj(NULL, key, NULL );
 			break;
 		default:
 			return 0;
@@ -962,11 +970,10 @@ int jsonAddArrElement( jsonObject *jo, void *val, jsonType type ) {
 			break;
 		case json_object:
 			jo->next = val;
-			jo = (jsonObject*)jo->next;
-			if( jo->key != NULL) {
-				free(jo->key);
+			if(jo->next->key){
+				free(jo->next->key);
 			}
-			jo->key = strdup(key);
+			jo->next->key=strdup(key);
 			break;
 		case json_string:
 			jsonAddStr( jo, key, (char*)val );
@@ -1054,6 +1061,10 @@ static char *jsonWriteVal( jsonObject *jo, char *json, size_t *len ) {
 	case json_null:
 		strcat( json, "null" );
 		break;
+	case json_error:
+		jsonFail("Illegal json_type set on %s", jo->key );
+		strcat( json, "json_error" );
+		break;
 	}
 	return json;
 }
@@ -1140,21 +1151,13 @@ void jsonDiscard( jsonObject *jo ) {
 
 		pos=jo->next;
 
-		/* key and value can be free'd */
-		if( jo->ref == 2 ) {
-			free( jo->key );
-			jo->key=NULL;
-			if( ( jo->type != json_boolean ) &&
-			    ( jo->type != json_null ) &&
-					(jo->val != NULL) ) {
-				free( jo->val );
-				jo->val=NULL;
-			}
-		}
-		/* only key can be free'd */
-		else if( jo->ref == 1 ) {
-			free( jo->key );
-			jo->key=NULL;
+		free( jo->key );
+		jo->key=NULL;
+		/* free value if it's a string, other complex values have been freed */
+		if( ( jo->type == json_string ) &&
+				( jo->val != NULL ) ) {
+			free( jo->val );
+			jo->val=NULL;
 		}
 		free( jo );
 

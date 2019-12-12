@@ -24,23 +24,20 @@ typedef enum  {
 	json_string,
 	json_number,
 	json_object,
-	json_array
+	json_array,
+	json_error
 } jsonType;
 
 typedef struct  jsonObject_s jsonObject;
 /*
  * key, val - the JSON key and value pair
  * type	 - JSON type of val
- * ref	  - 0 - key and val may be free'd
- *			1 - only key can be free'd
- *			2 - neither key nor val shall be free'd
  * next	 - next json pair
  */
 struct jsonObject_s{
 	char *key;
 	void *val;
 	jsonType type;
-	int ref;
 	jsonObject *next;
 };
 

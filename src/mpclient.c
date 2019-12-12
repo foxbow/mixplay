@@ -1,4 +1,4 @@
-/* simple API to send commands to mixplayd */
+/* simple API to send commands to mixplayd and read status informations */
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -34,66 +34,156 @@ int getConnection() {
 	return fd;
 }
 
-/* send the command to mixplayd.
+#define RBLKSIZE 512
+
+/* send a get request to the server and return the reply as a string
+   which MUST be free'd after use! */
+static char *sendRequest( int usefd, const char *path ) {
+	char *req;
+	char *reply=falloc(1, RBLKSIZE);
+	char *rdata=NULL;
+	char *pos;
+	size_t rlen=0;
+	int fd=-1;
+
+	if( usefd == -1 ) {
+		fd=getConnection();
+		if( fd < 0 ) {
+			return NULL;
+		}
+	}
+	else {
+		fd = usefd;
+	}
+
+	req = (char *)falloc( 1, 12 + strlen(path) + 3 + 1 );
+	strcpy( req, "get /mpctrl/" );
+	strtcat( req, path, strlen(path) );
+	strtcat( req, " \015\012", 2 );
+
+	if( send( fd, req, strlen(req), 0 ) == -1 ) {
+		free(req);
+		if( usefd == -1 ) {
+			close(fd);
+		}
+		return NULL;
+	}
+	free(req);
+
+
+	while( recv( fd, reply+rlen, RBLKSIZE, 0 ) == RBLKSIZE ) {
+		rlen += RBLKSIZE;
+		reply=frealloc(reply, rlen+RBLKSIZE);
+	}
+	if( usefd == -1 ) {
+		close(fd);
+	}
+
+	if( reply != NULL ) {
+		if( strstr( reply, "HTTP/1.1 200" ) == reply ) {
+			pos=strstr( reply, "Content-Length:" );
+			if( pos != NULL ) {
+	  		pos += strlen("Content-Length:")+1;
+				rlen=atoi(pos);
+				if( rlen != 0 ) {
+					/* add terminating NUL */
+					rlen=rlen+1;
+
+					pos = strstr(pos, "\015\012\015\012" );
+					if( pos != NULL ) {
+						pos+=4;
+
+						rdata=(char*)falloc(1, rlen);
+						strtcpy( rdata, pos, rlen );
+					}
+				}
+			}
+		}
+		else if( strstr( reply, "HTTP/1.1 ") == reply ) {
+			rdata=falloc(1,4);
+			strtcpy(rdata, reply+9, 3);
+		}
+		else {
+			rdata=strdup(reply);
+		}
+	}
+
+	free(reply);
+	return rdata;
+}
+
+/* send a command to mixplayd.
    returns:
 	  1 - success
-	  0 - no command to send
+	  0 - server busy
 	 -1 - failure on send
-	 -2 - error return from server  */
-int sendCMD(int fd, mpcmd_t cmd){
-	char line[1024];
+*/
+int sendCMD( int usefd, mpcmd_t cmd){
+	char req[1024];
+	char *reply;
+
 	if( cmd == mpc_idle ) {
-		return 0;
+		return 1;
 	}
-	snprintf( line, 1023, "get /mpctrl/cmd/%i x\015\012", cmd );
-	if( send( fd, line, strlen(line), 0 ) == -1 ) {
+
+	snprintf( req, 1023, "cmd/%i x\015\012", cmd );
+	reply=sendRequest(usefd, req);
+	if( reply == NULL ) {
 		return -1;
 	}
-	while( recv( fd, line, 1024, 0 ) == 1024 );
-	if( strstr( line, "204" ) == NULL ) {
-		printf("Reply: %s\n", line);
-		return -2;
-	}
+
 	return 1;
 }
 
-int getCurrentTitle( char *title, int tlen ) {
-	char line[1024];
-	int fd;
-	int rlen=0;
-	char *pos=NULL;
+/*
+ * copies the currently pplayed title into the given string and returns
+ * the stringlength or -1 on error.
+ */
+int getCurrentTitle( char *title, unsigned tlen ) {
+	char *line;
 
-	fd=getConnection();
-	if( fd < 0 ) {
+	line = sendRequest(-1, "title/info");
+	if( line == NULL ) {
 		return -1;
 	}
 
-	if( send( fd, "get /mpctrl/title/info \015\012", 25, 0 ) == -1 ) {
-		close(fd);
-		return -2;
-	}
-	while( recv( fd, line, 1024, 0 ) == 1024 );
-	close(fd);
-
-	pos=strstr( line, "Content-Length:" );
-	if( pos == NULL ) {
-		return -3;
-	}
-  pos += 16;
-	rlen=atoi(pos);
-
-	if( rlen == 0 ) {
-		return -4;
-	}
-	/* add terminating NUL */
-	rlen=rlen+1;
-
-	pos = strstr(pos, "\015\012\015\012" );
-	if( pos == NULL ) {
-		return -5;
-	}
-	pos+=4;
-
-	strtcpy( title, pos, tlen < rlen ? tlen : rlen );
+	strtcpy( title, line, tlen < strlen(line) ? tlen : strlen(line) );
+	free(line);
 	return strlen(title);
+}
+
+/*
+ * fetches the curent player status and returns the reply as a json object
+ * flgas is defined by MPCOMM_* in mpcomm.h
+ * reply is a jsonObject that either contains the expected data
+ * or a single json_integer objcet with the HTTP status code or
+ * -1 on a fatal error
+ */
+jsonObject *getStatus(int usefd, int flags) {
+	char *reply;
+	char req[20];
+	jsonObject *jo=NULL;
+
+	if (flags) {
+		sprintf(req, "status?%i", flags%15);
+		reply = sendRequest(usefd, req);
+	}
+	else {
+		reply = sendRequest(usefd, "status");
+	}
+
+	if ( reply != NULL ) {
+		if(strlen(reply) == 0 ) {
+			jo=jsonAddInt(NULL, "error", atoi(reply));
+		}
+		else {
+			jo=jsonRead(reply);
+		}
+		free(reply);
+	}
+	else {
+		jo=jsonAddInt(NULL, "error", -1);
+	}
+
+	return jo;
 }

@@ -33,30 +33,52 @@ void fail( const int error, const char* msg, ... ) {
 	exit( error );
 }
 
-static void drawAll() {
-	char title[80]="";
-	if( getCurrentTitle( title, 79 ) < 0 ) {
-		fail(errno, "Command failed.");
+static void drawAll(int fd) {
+	jsonObject *jo=NULL;
+	char *title;
+	char *artist;
+	int rv;
+
+	jo=getStatus(fd,1);
+
+	if( jsonPeek(jo, "type") == json_error ) {
+		rv=jsonGetInt(jo, "error");
+		fail(F_FAIL, "Server returned %i!", rv );
 	}
-	printf( "%s\r", title );
+	else {
+		title=jsonGetStr(jo,"current.title");
+		artist=jsonGetStr(jo,"current.artist");
+		if(( title == NULL ) || ( artist == NULL )) {
+			fail(F_FAIL, "Invalid status from server!");
+		}
+	}
+
+	printf( "%s - %s\r", artist, title );
 	fflush(stdout);
+
+	jsonDiscard(jo);
 }
 
 int main( ){
-	int fd;
 	char c=0;
 	mpcmd_t cmd=mpc_idle;
+	int running=1;
+	int fd=0;
 
 	if( readConfig() == NULL ) {
 		fail( F_FAIL, "No mixplayd configuration found!");
 	}
 
-	fd=getConnection();
+	fd = getConnection();
+	if( fd == -1 ) {
+		fail(errno, "Could not connect to server!");
+	}
 
 	printf( "Mixplay HID demo\n");
 
-	while ( fd != -1 ) {
+	while ( running ) {
 		c=getch(1000);
+		cmd=mpc_idle;
 		switch(c) {
 			case ' ':
 				cmd=mpc_play;
@@ -75,19 +97,17 @@ int main( ){
 				cmd=mpc_fav;
 				break;
 			case 'q':
-				close(fd);
-				cmd=mpc_idle;
-				fd=-1;
+				running=0;
 				break;
-			default:
-				cmd=mpc_idle;
 		}
 		if( sendCMD( fd, cmd ) < 0 ) {
 			fail(errno, "Command %s failed.", mpcString(cmd) );
+			close(fd);
 		}
 		if( cmd != mpc_idle ) {
 			printf( "\nSent %s\n", mpcString(cmd) );
 		}
-		drawAll();
+		drawAll(fd);
 	}
+	close(fd);
 }
