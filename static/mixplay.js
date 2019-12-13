@@ -18,7 +18,9 @@ var smallUI = (document.cookie && (document.cookie.indexOf('MPsmallUI') !== -1))
 var active = 0
 var swipest = []
 var overflow = 0
-var toval = 750
+const idleto = 2500
+const playto = 750
+var toval = playto
 var idletime = 0
 const idlesleep = 5 * 60 * 1000
 
@@ -91,6 +93,7 @@ function adaptUI (keep = 0) {
   var lines
   var minfont = 14
   var h = window.innerHeight
+  var w = window.innerWidth
   var i
   var fsize
   var bsize
@@ -104,11 +107,16 @@ function adaptUI (keep = 0) {
     } else {
       switchView(0)
     }
-    return
   }
 
   const maintab = isActive('extra0')
   enableElement('uiextra', maintab)
+
+  /* try to keep text readable on landscape */
+  if (w > h) {
+    minfont = 20
+  }
+
   /* maintab scales to width too */
   if (maintab) {
     enableElement('pscroll', !smallUI)
@@ -153,9 +161,13 @@ function adaptUI (keep = 0) {
 
   /* factor to fill gap between buttonbars */
   var screw = 4.9 /* number of 'lines' the buttonbars take */
-  fac = (lines * fsize) / (((lines - screw) * fsize) + screw * bsize)
-  document.body.style.fontSize = (fsize * fac) + 'px'
+  /* the formula looks weird but has been modified to make sure the divisor
+     stays large so the division results do not suffer too much precision loss
+   */
+  fac = ((lines * fsize) * fsize) / (((lines - screw) * fsize) + screw * bsize)
+  document.body.style.fontSize = fac + 'px'
 
+  /* nothing scrolls elsewhere */
   if (!maintab) {
     return
   }
@@ -1377,10 +1389,10 @@ function power (on) {
   const el = document.getElementById('black')
   if (on === 1) {
     idletime = 0
-    toval = 750
+    toval = playto
     el.className = 'hide'
   } else {
-    toval = 2500
+    toval = idleto
     el.className = ''
   }
 }

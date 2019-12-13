@@ -509,7 +509,8 @@ int dbNameCheck( void ) {
 							handleDBL(currentEntry);
 							addMessage( 1, "Marked %s", currentEntry->path );
 							fprintf( fp, "## Original at %s\n", runner->path );
-							fprintf( fp, "rm \"%s\"\n\n", currentEntry->path );
+							fprintf( fp, "echo \"p=%s\" >> %s/.mixplay/mixplay.dbl\n\n",
+								currentEntry->path, getenv("HOME"));
 							runner->flags |= MP_MARK;
 							count++;
 							break;
@@ -521,7 +522,8 @@ int dbNameCheck( void ) {
 							handleDBL(runner);
 							addMessage( 1, "Marked %s", runner->path );
 							fprintf( fp, "## Original at %s\n", currentEntry->path );
-							fprintf( fp, "rm \"%s\"\n\n", runner->path );
+							fprintf( fp, "echo \"p=%s\" >> %s/.mixplay/mixplay.dbl\n\n",
+								runner->path, getenv("HOME"));
 							currentEntry->flags |= MP_MARK;
 							count++;
 							break;
