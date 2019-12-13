@@ -246,14 +246,14 @@ void setCommand( mpcmd_t cmd, char *arg ) {
  * make mpeg123 play the given title
  */
 static void sendplay( int fdset ) {
-	char line[MAXPATHLEN+6]="load ";
+	char line[MAXPATHLEN+13]="load ";
 	mpconfig_t *control=getConfig();
 	assert( control->current != NULL );
 
 
 	if( (control->mpmode & 3) == PM_STREAM ) {
 		if(control->list) {
-			strcpy( line, "ll 1 ");
+			strcpy( line, "loadlist 1 ");
 		}
 		strtcat( line, control->streamURL, MAXPATHLEN+6 );
 	}
