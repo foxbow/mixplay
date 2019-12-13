@@ -7,8 +7,8 @@ html {
 
 body {
 	background: #000;
-	background-image: radial-gradient( circle at 90% -30%, white, darkblue 2%, black 100%);
-	color: #bbc;
+	background-image: radial-gradient( circle at 90% -30%, blue, darkblue 2%, black 100%);
+	color: #99a;
   margin: 0;
   background-repeat: no-repeat;
   background-attachment: fixed;
@@ -20,19 +20,18 @@ body {
 }
 
 body.busy {
-	background-color: #8f8;
-	background-image: radial-gradient( circle at 90% -30%, white, darkgreen 2%, black 100%);
+	background-color: #484;
+	background-image: radial-gradient( circle at 90% -30%, green, darkgreen 2%, black 100%);
 }
 
 body.disconnect {
-	background-color: #f88;
+	background-color: #844;
 	background-image: radial-gradient( circle at 90% -10%, red, darkred 20%, black 100%);
 	color: #f88;
 }
 
 div#black {
 	background-color: black;
-	color: #444;
 	position: absolute;
 	height: 100%;
 	width: 100%;
@@ -98,7 +97,7 @@ p#ctitle:hover {
 #pscroll, #nscroll {
 	font-size : 1.2em;
 	height: 1.5em;
-	background-color: rgba(100,100,100,.3);
+	background-color: rgba(50,50,50,.3);
 }
 
 #pscroll:hover {
@@ -110,7 +109,7 @@ p#ctitle:hover {
 }
 
 div#volumebar.mute {
-	background-color: rgba(200,100,000,.5);
+	background-color: rgba(100,50,50,.5);
 }
 
 
@@ -202,12 +201,12 @@ div.progress {
 	margin-top: 0.3em;
 	height: 0.6em;
 	width: 100%;
-	background-color: rgba(100,100,100,.2);
+	background-color: rgba(50,50,50,.2);
 }
 
 div.progress div {
 	height: 100%;
-	background-color: rgba(100,100,200,.5);
+	background-color: rgba(50,50,100,.5);
 }
 
 /* make download link look like a button */
@@ -219,7 +218,7 @@ a.download {
 }
 
 input, select {
-	background: rgba(100,100,100,.5);
+	background: rgba(50,50,50,.5);
 	color: inherit;
 	font-size: 1em;
 	border: 0;
@@ -240,7 +239,7 @@ button.active, button.inactive, button.hide {
 /* selected tab */
 button.active {
 	background-image: linear-gradient( lightblue, darkblue 20%, darkblue 80%, black );
-	background-color: rgba( 150, 150, 150, .5 );
+	background-color: rgba( 75, 75, 75, .5 );
 	display: inline;
 }
 
@@ -258,7 +257,7 @@ button.inactive {
 
 button.alert {
 	background: none;
-	color: #e88;
+	color: #844;
 }
 
 /* view controls */
@@ -316,7 +315,7 @@ p.nopopselect {
 
 .popup {
 	visibility: hidden;
-	background-color: rgba(50,50,100,.9);
+	background-color: rgba(25,25,50,.9);
 	text-align: center;
 	border-radius: 0.2em;
 	padding: 0.4em;
