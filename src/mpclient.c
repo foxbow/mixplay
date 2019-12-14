@@ -47,8 +47,7 @@ int getConnection() {
 	}
 
 	server.sin_family = AF_INET;
-//	server.sin_addr.s_addr = inet_addr("127.0.0.1");
-	server.sin_addr.s_addr = inet_addr("192.168.234.50");
+	server.sin_addr.s_addr = inet_addr("127.0.0.1");
 	server.sin_port = htons( getConfig()->port );
 	if( connect(fd, (struct sockaddr*)&server, sizeof(server)) == -1 ) {
 		close(fd);
