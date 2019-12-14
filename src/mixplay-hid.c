@@ -1,7 +1,5 @@
 /* HID client for mixplayd.
-   proof of concept for the client architecture and preparation for the
-	 flirc interface. */
-
+   just an example for the mpclient API */
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -11,27 +9,6 @@
 #include "config.h"
 #include "mpclient.h"
 #include "utils.h"
-
-/*
- * Print errormessage and exit
- * msg - Message to print
- * info - second part of the massage, for instance a variable
- * error - errno that was set
- *		 F_FAIL = print message w/o errno and exit
- */
-void fail( const int error, const char* msg, ... ) {
-	va_list args;
-	fprintf( stdout, "\n" );
-	printf("mixplay-hid: ");
-	va_start( args, msg );
-	vfprintf( stdout, msg, args );
-	va_end( args );
-	fprintf( stdout, "\n" );
-	if( error > 0 ) {
-		fprintf( stdout, "ERROR: %i - %s\n", abs( error ), strerror( abs( error ) ) );
-	}
-	exit( error );
-}
 
 static void drawAll(int fd) {
 	jsonObject *jo=NULL;

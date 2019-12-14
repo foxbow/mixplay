@@ -12,6 +12,9 @@ OBJS=$(addprefix $(OBJDIR)/,mpserver.o utils.o musicmgr.o database.o \
 
 CLOBJS=$(addprefix $(OBJDIR)/,utils.o msgbuf.o config.o json.o mpclient.o)
 
+SCLOBJS=$(addprefix $(OBJDIR)/,utils.o msgbuf.o config.o json.o mpclient.o dpms.o)
+SCLLIBS=-lX11 -lXext -lpthread
+
 EPOBJS=$(addprefix $(ODBJDIR)/,mpepa.o epasupp.o mpclient.o)
 EPLIBS=-lwiringPi
 
@@ -66,6 +69,9 @@ bin/mixplayd: $(OBJDIR)/mixplayd.o $(OBJS)
 
 bin/mixplay-hid: $(OBJDIR)/mixplay-hid.o $(CLOBJS)
 	$(CC) $^ -o $@ $(LIBS)
+
+bin/mixplay-scr: $(OBJDIR)/mixplay-scr.o $(SCLOBJS)
+	$(CC) $^ -o $@ $(SCLLIBS)
 
 bin/mprcinit: $(OBJDIR)/mprcinit.o $(OBJS)
 	$(CC) $^ -o $@ $(LIBS)

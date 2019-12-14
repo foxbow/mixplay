@@ -523,6 +523,10 @@ static int jsonParseArray( char *json, jsonObject **jo ) {
 			switch( json[jpos] ) {
 			case '[':
 				jpos++;
+				/* empty array! */
+				if( json[jpos] == ']' ) {
+					return jpos+1;
+				}
 				*current=jsonInit();
 				if( *current==NULL ) {
 					return jsonParseFail( __func__, json, jpos, state );
@@ -541,15 +545,12 @@ static int jsonParseArray( char *json, jsonObject **jo ) {
 		case 1: /* next value? */
 			switch( json[jpos] ){
 			case ' ':
-				json[jpos]=0;
 				jpos++;
 				break;
 			case ']':
-				json[jpos]=0;
 				return jpos+1;
 				break;
 			case ',':
-				json[jpos]=0;
 				jpos++;
 				(*current)->next=jsonInit();
 				if( (*current)->next == NULL ) {

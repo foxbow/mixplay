@@ -12,6 +12,9 @@ utility to create a valid configuration and learn about a remote control. This w
 ### mixplay-hid
 example standalone client that connects to a mixplay server, shows the current title and allows basic commands like the 'mixplay -d' HID interface.
 
+### mixplay-scr
+screen saver client for embedded set-ups.
+
 ## Mixplay helper scripts
 some bash scripts that depend on third party utilities but may come in handy for certain use cases. These are static and will not be touched by any make target build.
 
@@ -25,4 +28,3 @@ depends on 'flirc_util' to let a FLIRC adapter learn a new remote control. This 
 
 ### valgrind.sh
 depends on 'valgrind' to run a memory check on mixplay running in simple debug mode.
-

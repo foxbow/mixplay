@@ -1,4 +1,5 @@
 /* simple API to send commands to mixplayd and read status informations */
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -8,6 +9,27 @@
 
 #include "mpclient.h"
 #include "utils.h"
+
+/*
+ * Print errormessage and exit
+ * msg - Message to print
+ * info - second part of the massage, for instance a variable
+ * error - errno that was set
+ *		 F_FAIL = print message w/o errno and exit
+ */
+void fail( const int error, const char* msg, ... ) {
+	va_list args;
+	fprintf( stdout, "\n" );
+	printf("mixplay-hid: ");
+	va_start( args, msg );
+	vfprintf( stdout, msg, args );
+	va_end( args );
+	fprintf( stdout, "\n" );
+	if( error > 0 ) {
+		fprintf( stdout, "ERROR: %i - %s\n", abs( error ), strerror( abs( error ) ) );
+	}
+	exit( error );
+}
 
 /* open a connection to the server.
    returns:
@@ -25,7 +47,8 @@ int getConnection() {
 	}
 
 	server.sin_family = AF_INET;
-	server.sin_addr.s_addr = inet_addr("127.0.0.1");
+//	server.sin_addr.s_addr = inet_addr("127.0.0.1");
+	server.sin_addr.s_addr = inet_addr("192.168.234.50");
 	server.sin_port = htons( getConfig()->port );
 	if( connect(fd, (struct sockaddr*)&server, sizeof(server)) == -1 ) {
 		close(fd);
@@ -171,7 +194,6 @@ jsonObject *getStatus(int usefd, int flags) {
 	else {
 		reply = sendRequest(usefd, "status");
 	}
-
 	if ( reply != NULL ) {
 		if(strlen(reply) == 0 ) {
 			jo=jsonAddInt(NULL, "error", atoi(reply));
