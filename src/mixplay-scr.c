@@ -14,10 +14,10 @@
 #include "utils.h"
 
 static int displayPower( int on ) {
-	Display *dpy;
-	char *disp=":0";
 	int dummy;
 	int rv = -1;
+	Display *dpy;
+	char *disp=":0";
 
 	dpy = XOpenDisplay(disp);    /*  Open display and check for success */
  	if (dpy == NULL) {
@@ -44,12 +44,44 @@ static int displayPower( int on ) {
 	return rv;
 }
 
+/* returns 1 if the DPMSstate of the display is on */
+static int getDisplayState() {
+	int dummy;
+	int rv = -1;
+	Display *dpy;
+	char *disp=":0";
+	CARD16 level;
+
+	dpy = XOpenDisplay(disp);
+	if (dpy == NULL) {
+		fail(F_FAIL, "Unable to open display");
+		return -1;
+	}
+
+	if (DPMSQueryExtension(dpy, &dummy, &dummy)) {
+		DPMSEnable(dpy);
+		DPMSInfo(dpy, &level, &dummy);
+		if( level == DPMSModeOn ) {
+			rv=1;
+		}
+		else {
+			rv=0;
+		}
+	}
+	else {
+		fail(F_FAIL,"No DPMS support!");
+	}
+	XCloseDisplay(dpy);
+	return rv;
+}
+
 int main( int argc, char **argv ){
 	jsonObject *jo=NULL;
 	time_t to=0;
 	time_t timer=0;
 	mpcmd_t cmd=mpc_idle;
 	int fd=0;
+	int sstate=1;
 
 	if( argc != 2 ) {
 		fail(F_FAIL, "No timeout given!");
@@ -72,6 +104,8 @@ int main( int argc, char **argv ){
 	}
 
 	while ( cmd != mpc_quit ) {
+		/* allow everything to start up */
+		sleep(10);
 		jo=getStatus(fd,0);
 		if( jsonPeek(jo, "type") == json_error ) {
 			cmd=mpc_quit;
@@ -80,21 +114,29 @@ int main( int argc, char **argv ){
 			cmd=(mpcmd_t)jsonGetInt(jo,"status");
 		}
 		jsonDiscard(jo);
+
 		if( cmd == mpc_idle ) {
+			/* screen is on even though we turned it off, so someone else woke
+			   it up, better reset the timeout */
+			if(( sstate == 0 ) && (getDisplayState() == 1)) {
+				timer=0;
+				sstate=1;
+			}
 			if(timer == 0) {
 				timer=time(0);
 			}
-			if( time(0) - timer > to ) {
+			else if( time(0) - timer > to ) {
 				displayPower(0);
+				sstate=0;
 			}
 		}
 		else {
 			if( timer > 0 ) {
 				displayPower(1);
+				sstate=1;
 			}
 			timer=0;
 		}
-		sleep(10);
 	}
 	close(fd);
 }
