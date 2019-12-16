@@ -47,6 +47,7 @@ static int displayPower( int on ) {
 /* returns 1 if the DPMSstate of the display is on */
 static int getDisplayState() {
 	int dummy;
+	BOOL dummy2;
 	int rv = -1;
 	Display *dpy;
 	char *disp=":0";
@@ -60,7 +61,7 @@ static int getDisplayState() {
 
 	if (DPMSQueryExtension(dpy, &dummy, &dummy)) {
 		DPMSEnable(dpy);
-		DPMSInfo(dpy, &level, &dummy);
+		DPMSInfo(dpy, &level, &dummy2);
 		if( level == DPMSModeOn ) {
 			rv=1;
 		}
