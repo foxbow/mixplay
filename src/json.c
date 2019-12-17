@@ -207,19 +207,21 @@ static jsonObject *jsonInit( void ) {
  * we allow leading zeroes, even if JSON forbids that
  */
 static int jsonParseNum( char *json, char **val ) {
-	int len=strlen(json);
+	int len=64<strlen(json)?64:strlen(json);
 	int i=0;
 	int state=0;
-	*val=json;
+	char *start=json;
+	char buf[65]="";
 
 	while( i<len ) {
 		switch( state ) {
 		case 0: /* looking for a number */
 			switch( json[i] ) {
 			case ' ': /* unlikely to happen */
-				(*val)++;
-				break;
+				start++;
+			break;
 			case '-':
+			case '+':
 				state=1;
 				break;
 			default:
@@ -228,14 +230,13 @@ static int jsonParseNum( char *json, char **val ) {
 				}
 				else {
 					/* We found a non-number */
+					*val=strdup("");
 					return -1;
 				}
 			}
 			break;
-		case 1: /* prefix */
-			if( isdigit( json[i] ) ) {
-			}
-			else {
+		case 1: /* prefix digits */
+			if( !isdigit( json[i] ) ) {
 				state=2;
 			}
 			break;
@@ -249,11 +250,17 @@ static int jsonParseNum( char *json, char **val ) {
 				state=4;
 				break;
 			default:
+				strncpy(buf,start,i-1);
+				buf[i]=0;
+				*val=strdup(buf);
 				return i-1;
 			}
 			break;
 		case 3:
 			if( !isdigit( json[i] ) ) {
+				strncpy(buf,start,i-1);
+				buf[i]=0;
+				*val=strdup(buf);
 				return i-1;
 			}
 			break;
@@ -263,6 +270,7 @@ static int jsonParseNum( char *json, char **val ) {
 			}
 			else {
 				/* number format error */
+				*val=strdup("");
 				return -1;
 			}
 			break;
@@ -270,6 +278,7 @@ static int jsonParseNum( char *json, char **val ) {
 		i++;
 	}
 
+	*val=strdup("");
 	return -1;
 }
 
@@ -471,7 +480,7 @@ static int jsonParseKeyVal( char *json, jsonObject **jo ) {
 					*jo=jsonFail(*jo, "%s", json );
 					return -1;
 				}
-				jpos+=rv;jsonParseString( &json[jpos], &((*jo)->key) );
+				jpos+=rv;
 				state=1;
 				break;
 			default:
@@ -644,7 +653,7 @@ static jsonObject *jsonFetch( jsonObject *jo, const char *key ) {
 	jsonObject *target = jo;
 
 	while( target != NULL ) {
-		if( strcmp( target->key, key ) == 0 ) {
+		if( target->key && ( strcmp( target->key, key ) == 0 )) {
 			return target;
 		}
 		target=target->next;
@@ -754,7 +763,7 @@ int jsonGetInt( jsonObject *jo, const char *key ) {
 
 	pos=jsonFollowPath( jo, key );
 	if( ( pos != NULL ) && ( pos->type == json_number ) ) {
-		return atoi( (char*)pos->val );
+		return atoi( (char*)(pos->val) );
 	}
 
 	return 0;
@@ -915,9 +924,7 @@ jsonObject *jsonAddInt( jsonObject *jo, const char *key, const int val ) {
 	char buf[64];
 	jo=jsonAppend( jo, key );
 	sprintf( buf, "%i", val );
-	jo->val=calloc( strlen(buf)+1, sizeof(char) );
-	assert( jo->val != NULL );
-	strcpy( (char*)jo->val, buf );
+	jo->val=strdup(buf);
 	jo->type=json_number;
 	return jo;
 }
@@ -1061,9 +1068,9 @@ static char *sizeCheck( char *json, size_t *len ) {
  * "strval"|numval|{objval}|[arr],[val]
  */
 static char *jsonWriteVal( jsonObject *jo, char *json, size_t *len ) {
+	json=sizeCheck( json, len );
 	switch( jo->type ) {
 	case json_string:
-		json=sizeCheck( json, len );
 		strcat( json, "\"" );
 		strcat( json, (char*)jo->val );
 		strcat( json, "\"" );
