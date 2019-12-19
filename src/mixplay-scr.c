@@ -103,9 +103,9 @@ int main( int argc, char **argv ){
 		fail( errno, "Could not demonize!" );
 	}
 
+	/* allow everything to start up */
+	sleep(10);
 	while ( cmd != mpc_quit ) {
-		/* allow everything to start up */
-		sleep(10);
 		jo=getStatus(fd,0);
 		if( jsonPeek(jo, "type") == json_error ) {
 			cmd=mpc_quit;
@@ -129,6 +129,7 @@ int main( int argc, char **argv ){
 				displayPower(0);
 				sstate=0;
 			}
+			sleep(5);
 		}
 		else {
 			if( timer > 0 ) {
@@ -136,6 +137,7 @@ int main( int argc, char **argv ){
 				sstate=1;
 			}
 			timer=0;
+			sleep(1);
 		}
 	}
 	close(fd);

@@ -21,6 +21,10 @@ static void dbClose( int db ) {
 }
 
 void dbMarkDirty( void ) {
+	/* is there a database in use at all? */
+	if( getConfig()->mpmode != PM_DATABASE) {
+		return;
+	}
 	/* ignore changes to the database in favplay mode */
 	if( getConfig()->dbDirty++ > 25 ) {
 		dbWrite( );
