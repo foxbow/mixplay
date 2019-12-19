@@ -12,11 +12,15 @@
 
 static void drawAll(int fd) {
 	jsonObject *jo=NULL;
-	char *title;
+	char *title=NULL;
 	char *artist;
 	int rv;
 
 	jo=getStatus(fd,1);
+	title=jsonGetError(jo);
+	if(title!=NULL) {
+		fail(F_FAIL, "JSON Error! %s", title);
+	}
 
 	if( jsonPeek(jo, "type") == json_error ) {
 		rv=jsonGetInt(jo, "error");

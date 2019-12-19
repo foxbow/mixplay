@@ -178,7 +178,7 @@ int getCurrentTitle( char *title, unsigned tlen ) {
  * fetches the curent player status and returns the reply as a json object
  * flgas is defined by MPCOMM_* in mpcomm.h
  * reply is a jsonObject that either contains the expected data
- * or a single json_integer objcet with the HTTP status code or
+ * or a single json_integer object with the HTTP status code or
  * -1 on a fatal error
  */
 jsonObject *getStatus(int usefd, int flags) {
@@ -194,7 +194,7 @@ jsonObject *getStatus(int usefd, int flags) {
 		reply = sendRequest(usefd, "status");
 	}
 	if ( reply != NULL ) {
-		if(strlen(reply) == 0 ) {
+		if(strlen(reply) < 4 ) {
 			jo=jsonAddInt(NULL, "error", atoi(reply));
 		}
 		else {

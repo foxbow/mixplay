@@ -157,6 +157,8 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 	mpconfig_t *data=getConfig();
 	jsonObject *jo=NULL;
 	mpplaylist_t *current=data->current;
+	char *rv=NULL;
+	char *err=NULL;
 
 	jo=jsonAddInt( jo, "type", type );
 
@@ -232,5 +234,24 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 		jsonAddStr( jo, "msg", "" );
 	}
 
-	return jsonToString( jo );
+	err=jsonGetError(jo);
+	if( err != NULL ) {
+		addMessage(1,"%s",err);
+		sfree(&err);
+		jsonDiscard(jo);
+		return NULL;
+	}
+
+	rv=jsonToString( jo );
+	err=jsonGetError(jo);
+	if( err != NULL ) {
+		addMessage(1,"%s",err);
+		sfree(&rv);
+		sfree(&err);
+		jsonDiscard(jo);
+		return NULL;
+	}
+
+	jsonDiscard(jo);
+	return rv;
 }
