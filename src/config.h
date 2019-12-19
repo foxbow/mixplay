@@ -69,7 +69,7 @@ typedef enum {
 
 /* commands that can be used on a remote control */
 /* just use the key down event */
-#define MPRC_SINGLE 6
+#define MPRC_SINGLE 7
 /* use repoeated events */
 #define MPRC_REPEAT 2
 #define MPRC_NUM MPRC_SINGLE+MPRC_REPEAT

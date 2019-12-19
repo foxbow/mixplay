@@ -21,6 +21,7 @@
 #include "player.h"
 #include "mpinit.h"
 #include "mphid.h"
+#include "mpflirc.h"
 
 static unsigned long _curmsg=0;
 
@@ -95,16 +96,6 @@ static void s_updateHook( ) {
 static char _lasttitle[MAXPATHLEN+1];
 static mpcmd_t _last=mpc_start;
 
-static void debugHidPrintline( const char* text, ... ){
-	va_list args;
-	printf( "\r" );
-	va_start( args, text );
-	vprintf( text, args );
-	va_end( args );
-	printf( "\nMP> " );
-	fflush( stdout );
-}
-
 /*
  * print title and play changes
  */
@@ -119,7 +110,7 @@ static void _debugHidUpdateHook() {
 	/* has the title changed? */
 	if ( ( title != NULL ) && ( strcmp( title, _lasttitle ) != 0 ) ) {
 		strtcpy( _lasttitle, title, MAXPATHLEN );
-		debugHidPrintline("Now playing: %s",title);
+		hidPrintline("Now playing: %s",title);
 	}
 
 	/* has the status changed? */
@@ -127,10 +118,10 @@ static void _debugHidUpdateHook() {
 		_last=getConfig()->status;
 		switch(_last) {
 			case mpc_idle:
-				debugHidPrintline("[PAUSE]");
+				hidPrintline("[PAUSE]");
 				break;
 			case mpc_play:
-				debugHidPrintline("[PLAY]");
+				hidPrintline("[PLAY]");
 				break;
 			default:
 				/* ignored */
@@ -139,38 +130,11 @@ static void _debugHidUpdateHook() {
 	}
 }
 
-static int hidCMD( int c ) {
-	const char keys[MPRC_NUM+1]=" pnfd-.,";
-	int i;
-
-	if( c == -1 ) {
-		return 0;
-	}
-
-	for( i=0; i<MPRC_NUM; i++ ) {
-		if( c == keys[i] ) {
-			setCommand( _mprccmds[i], NULL );
-			return 0;
-		}
-	}
-
-	if ( c == 'Q' ) {
-		debugHidPrintline("[QUIT]");
-		setCommand( mpc_quit, strdup(getConfig()->password) );
-		return 0;
-	}
-
-	if( c == '\n' ) {
-		debugHidPrintline("");
-	}
-
-	return -1;
-}
-
 /* the most simple HID implementation for -d */
 static void debugHID( ) {
 	int c;
 	mpconfig_t *config=getConfig();
+	mpcmd_t cmd;
 
 	/* wait for the initialization to be done */
 	while( ( config->status != mpc_play ) &&
@@ -180,7 +144,14 @@ static void debugHID( ) {
 
 	while( config->status != mpc_quit ) {
 		c=getch( 750 );
-		hidCMD(c);
+		cmd=hidCMD(c);
+		if( cmd == mpc_quit ) {
+			hidPrintline("[QUIT]");
+			setCommand( mpc_quit, strdup(getConfig()->password) );
+		}
+		else if( cmd != mpc_idle ) {
+			setCommand(cmd, NULL);
+		}
 	}
 }
 
@@ -189,6 +160,7 @@ int main( int argc, char **argv ) {
 	FILE *pidlog=NULL;
 	struct timeval tv;
 	int hidfd=-1;
+	int rv=0;
 
 	control=readConfig( );
 	if( control == NULL ) {
@@ -202,37 +174,30 @@ int main( int argc, char **argv ) {
 	gettimeofday( &tv,NULL );
 	srandom( (getpid()*tv.tv_usec)%RAND_MAX );
 
-	switch( getArgs( argc, argv ) ) {
-	case 0: /* no arguments given */
-		break;
-
-	case 1: /* stream - does this even make sense? */
-		break;
-
-	case 2: /* single file */
-		break;
-
-	case 3: /* directory */
-		/* if no default directory is set, use the one given */
-		if( control->musicdir == NULL ) {
-			incDebug();
-			addMessage( 0, "Setting default configuration values and initializing..." );
-			setProfile( );
-			if( control->root == NULL ) {
-				addMessage( -1, "No music found at %s!", control->musicdir );
-				return -1;
-			}
-			addMessage( 0, "Initialization successful!" );
-			writeConfig( argv[optind] );
-			freeConfig( );
-			return 0;
-		}
-		break;
-	case 4: /* playlist */
-		break;
-	default:
+	rv=getArgs( argc, argv );
+	if( rv < 0 ) {
 		addMessage( 0, "Unknown argument '%s'!", argv[optind] );
 		return -1;
+	}
+
+	/* if no default directory is set, use the one given */
+	if ( ( rv == 3 ) && ( control->musicdir == NULL ) ) {
+		incDebug();
+		addMessage( 0, "Setting default configuration values and initializing..." );
+		setProfile( );
+		if( control->root == NULL ) {
+			addMessage( -1, "No music found at %s!", control->musicdir );
+			return -1;
+		}
+		addMessage( 0, "Initialization successful!" );
+		writeConfig( argv[optind] );
+		freeConfig( );
+		return 0;
+	}
+
+	/* plays with parameter should not detach */
+	if( rv > 0 ) {
+		incDebug();
 	}
 
 	if( access( PIDPATH, F_OK ) == 0 ) {
@@ -245,7 +210,8 @@ int main( int argc, char **argv ) {
 	signal(SIGINT, sigint );
 	signal(SIGTERM, sigint );
 
-	/* daemonization must happen before childs are created otherwise the pipes are cut */
+	/* daemonization must happen before childs are created otherwise the pipes
+	   are cut TODO: what about daemon(1,0)? */
 	if( getDebug() == 0 ) {
 		if( daemon( 1, 1 ) != 0 ) {
 			fail( errno, "Could not demonize!" );
@@ -266,9 +232,11 @@ int main( int argc, char **argv ) {
 
 	if( initAll( ) == 0 ){
 		control->inUI=1;
-		hidfd=initHID();
-	 	if( hidfd != -1 ) {
-			startHID( hidfd );
+
+		/* flirc handler */
+		hidfd=initFLIRC();
+		if( hidfd != -1 ) {
+			startFLIRC( hidfd );
 		}
 
 		if( getDebug() ) {

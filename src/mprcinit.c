@@ -5,6 +5,7 @@
 #include "config.h"
 #include "mphid.h"
 #include "utils.h"
+#include "mpflirc.h"
 
 /**
  * helperfunction for scandir()
@@ -35,7 +36,7 @@ void fail( const int error, const char* msg, ... ) {
 	exit( error );
 }
 
-int main(  ) {
+int main( ) {
 	int numdev=0;
 	int c=-1;
 	int fd=-1;
@@ -80,7 +81,7 @@ int main(  ) {
 	printf("\rOkay, trying to init %s\n", devices[c]->d_name );
 	sleep(1);
 	getConfig()->rcdev=strdup(devices[c]->d_name);
-	fd=initHID();
+	fd=initFLIRC();
 	if( fd == -1 ) {
 		printf("Failed to use %s!\n", devices[c]->d_name );
 		return -1;
@@ -95,9 +96,15 @@ int main(  ) {
 		while( getch(1000) == -1 );
 
 		for( i = 0; i<MPRC_NUM; i++ ) {
+			/* skip mpc_quit */
+			if(_mprccmds[i] == mpc_quit) {
+				getConfig()->rccodes[i]=-1;
+				continue;
+			}
 			printf("Code for %s: ", _mprccmdstrings[i] ); fflush(stdout);
 			if( getEventCode( &c, fd, 3000, 0) == -1 ) {
 				printf("NONE\n");
+				getConfig()->rccodes[i]=-1;
 			}
 			else {
 				printf("%i\n", c );

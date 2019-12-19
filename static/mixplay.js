@@ -160,7 +160,7 @@ function adaptUI (keep = 0) {
   document.getElementById('viewtabs').style.fontSize = bsize + 'px'
 
   /* factor to fill gap between buttonbars */
-  var screw = 4.9 /* number of 'lines' the buttonbars take */
+  var screw = 4.3 /* number of 'lines' the buttonbars take */
   /* the formula looks weird but has been modified to make sure the divisor
      stays large so the division results do not suffer too much precision loss
    */

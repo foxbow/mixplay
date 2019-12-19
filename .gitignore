@@ -1,3 +1,6 @@
+# Coverity results
+cov-int
+
 # Generated headers and dependencies
 build/*
 *.d

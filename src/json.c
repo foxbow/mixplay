@@ -382,7 +382,6 @@ static int jsonParseValue( char *json, jsonObject *jo ) {
 		break;
 	case '{':
 		jo->type=json_object;
-		jo->val=jsonInit();
 		rv=jsonParseObject( &json[jpos], (jsonObject **)&(jo->val) );
 		if( rv == -1 ) {
 			jo=jsonFail(jo, "Could not parse Object at %i", jpos);
@@ -394,7 +393,6 @@ static int jsonParseValue( char *json, jsonObject *jo ) {
 		break;
 	case '[':
 		jo->type=json_array;
-		jo->val=jsonInit();
 		rv=jsonParseArray( &json[jpos], (jsonObject **)&(jo->val) );
 		if( rv == -1 ) {
 			jo=jsonFail(jo, "Could not parse Array at %i", jpos);
@@ -691,22 +689,22 @@ static jsonObject *jsonFollowPath( jsonObject *jo, const char *key ) {
  * looks for an errormessage and ignores the path to it.
  */
 static jsonObject *jsonFindKey( jsonObject *jo, const char *key ) {
-	jsonObject *runner=jo;
 	jsonObject *knot=NULL;
-	while( runner != NULL ) {
-		if (strcmp(runner->key, key) == 0) {
+
+	while( jo != NULL ) {
+		if ( strcmp(jo->key, key) == 0) {
 			break;
 		}
-		if(( runner->type == json_object ) || (runner->type == json_array )) {
-			knot=jsonFindKey((jsonObject *)runner->val, key);
+		if(( jo->type == json_object ) || ( jo->type == json_array )) {
+			knot=jsonFindKey((jsonObject *)jo->val, key);
 			if( knot != NULL ) {
-				runner=knot;
+				jo=knot;
 				break;
 			}
 		}
-		runner=runner->next;
+		jo=jo->next;
 	}
-	return runner;
+	return jo;
 }
 
 /*

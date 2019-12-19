@@ -92,7 +92,6 @@ static char *sendRequest( int usefd, const char *path ) {
 	}
 	free(req);
 
-
 	while( recv( fd, reply+rlen, RBLKSIZE, 0 ) == RBLKSIZE ) {
 		rlen += RBLKSIZE;
 		reply=frealloc(reply, rlen+RBLKSIZE);
@@ -148,7 +147,7 @@ int sendCMD( int usefd, mpcmd_t cmd){
 		return 1;
 	}
 
-	snprintf( req, 1023, "cmd/%i x\015\012", cmd );
+	snprintf( req, 1023, "cmd/%04x x\015\012", cmd );
 	reply=sendRequest(usefd, req);
 	if( reply == NULL ) {
 		return -1;
