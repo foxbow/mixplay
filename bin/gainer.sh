@@ -10,7 +10,7 @@ else
 		if [ ! -f "${DIR}/.gain" ]; then
 			echo "Leveling ${DIR}"
 			touch "${DIR}/.gain"
-			mp3gain -q -k -a -T -p "${DIR}"/*mp3 2> /dev/null > /dev/null
+			mp3gain -q -k -r -T -p "${DIR}"/*mp3 2> /dev/null > /dev/null
 		fi
 	fi
 fi
