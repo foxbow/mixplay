@@ -456,12 +456,8 @@ static void *clientHandler(void *args ) {
 				break;
 
 			case 5: /* send file */
-				if( getDebug() ) {
-					if( stat(fname,&sbuf) == -1 ) {
-						fail( errno, "stat() failed on %s", fname );
-					}
+				if( getDebug() && (stat(fname,&sbuf) == 0 )) {
 					flen=sbuf.st_size;
-
 					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012Content-Length: %i;\015\012\015\012", mtype, flen );
 					send(sock, commdata, strlen(commdata), 0);
 					filePost( sock, fname );

@@ -412,7 +412,7 @@ static int getDirs( const char *cd, struct dirent ***dirlist ) {
  */
 static int matchTitle( mptitle_t *title, const char* pat ) {
 	int fuzzy=0;
-	char loname[MAXPATHLEN];
+	char loname[MAXPATHLEN+1];
 	char *lopat;
 	int res=0;
 
@@ -730,7 +730,7 @@ marklist_t *loadList( const mpcmd_t cmd ) {
 	FILE *file = NULL;
 	marklist_t *ptr = NULL;
 	marklist_t *bwlist = NULL;
-	char path[MAXPATHLEN+1];
+	char path[MAXPATHLEN];
 
 	char *buff;
 	int cnt=0;
@@ -745,10 +745,10 @@ marklist_t *loadList( const mpcmd_t cmd ) {
 		return NULL;
 	}
 
-	buff=(char*)falloc( MAXPATHLEN, 1 );
+	buff=(char*)falloc( MAXPATHLEN+3, 1 );
 
 	while( !feof( file ) ) {
-		if( fgets( buff, MAXPATHLEN, file ) == NULL ) {
+		if( fgets( buff, MAXPATHLEN+3, file ) == NULL ) {
 			continue;
 		}
 
@@ -767,8 +767,7 @@ marklist_t *loadList( const mpcmd_t cmd ) {
 				goto cleanup;
 			}
 
-			strltcpy( ptr->dir, buff, MAXPATHLEN );
-			ptr->dir[ strlen( buff )-1 ]=0;
+			strltcpy( ptr->dir, buff, MAXPATHLEN+2 );
 			ptr->next=NULL;
 			cnt++;
 		}
@@ -786,7 +785,7 @@ cleanup:
 int writeList( const mpcmd_t cmd ) {
 	int cnt=0;
 	marklist_t *runner;
-	char path[MAXPATHLEN+1];
+	char path[MAXPATHLEN];
 	FILE *fp=NULL;
 
 	if( getListPath(path, cmd) ) {
@@ -1828,7 +1827,7 @@ int addRangePrefix( char *line, mpcmd_t cmd ) {
  * applies it to the current database and playlist
  */
 int handleRangeCmd( mptitle_t *title, mpcmd_t cmd ) {
-	char line[MAXPATHLEN];
+	char line[MAXPATHLEN+2];
 	marklist_t *buff, *list;
 	int cnt=-1;
 	mpconfig_t *config=getConfig();
@@ -1836,19 +1835,19 @@ int handleRangeCmd( mptitle_t *title, mpcmd_t cmd ) {
 	if( addRangePrefix(line, cmd) == 0 ) {
 		switch( MPC_RANGE(cmd) ) {
 		case mpc_title:
-			strltcat( line, title->title, NAMELEN );
+			strltcat( line, title->title, NAMELEN+2 );
 			break;
 		case mpc_artist:
-			strltcat( line, title->artist, NAMELEN );
+			strltcat( line, title->artist, NAMELEN+2 );
 			break;
 		case mpc_album:
-			strltcat( line, title->album, NAMELEN );
+			strltcat( line, title->album, NAMELEN+2 );
 			break;
 		case mpc_genre:
-			strltcat( line, title->genre, NAMELEN );
+			strltcat( line, title->genre, NAMELEN+2 );
 			break;
 		case mpc_display:
-			strltcat( line, title->display, MAXPATHLEN );
+			strltcat( line, title->display, MAXPATHLEN+2 );
 			break;
 		default:
 			addMessage( 0, "Illegal range 0x%04x", MPC_RANGE(cmd) );
