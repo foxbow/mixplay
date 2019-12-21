@@ -59,13 +59,12 @@ void unlockClient( int client ) {
 		_curclient=-1;
 		addMessage( 1, "Unlocking %i", client );
 		pthread_mutex_unlock( &_clientlock );
-		return;
 	}
 	else if( _curclient != -1 ) {
 		addMessage( 0, "Client %i is not %i", client, _curclient );
 	}
 	else {
-		addMessage( 1, "Client %i was not locked!", client );
+		addMessage( 0, "Client %i was not locked!", client );
 	}
 }
 
@@ -159,6 +158,7 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 	mpplaylist_t *current=data->current;
 	char *rv=NULL;
 	char *err=NULL;
+	const char *msgline;
 
 	jo=jsonAddInt( jo, "type", type );
 
@@ -216,9 +216,8 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 	else if( clientid == _curclient ) {
 		if( *count < data->msg->count ) {
 			/* alerts are disruptive */
-			if( strcmp( "ALERT:", msgBuffPeek( data->msg, *count ) ) == 0 ) {
-				/* todo: the client should be unlocked AFTER this data has been
-				   has been sent not while it is still generated! */
+			msgline=msgBuffPeek( data->msg, *count );
+			if( strstr( msgline, "ALERT:" ) == msgline ) {
 				unlockClient( clientid );
 			}
 			jsonAddStr( jo, "msg", msgBuffPeek( data->msg, *count ) );

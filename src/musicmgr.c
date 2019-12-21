@@ -413,7 +413,6 @@ static int getDirs( const char *cd, struct dirent ***dirlist ) {
 static int matchTitle( mptitle_t *title, const char* pat ) {
 	int fuzzy=0;
 	char loname[MAXPATHLEN+1];
-	char *lopat;
 	int res=0;
 
 	if( ( '=' == pat[1] ) || ( '*' == pat[1] ) ) {
@@ -459,9 +458,7 @@ static int matchTitle( mptitle_t *title, const char* pat ) {
 		res=patMatch( loname, pat+2 );
 	}
 	else {
-		lopat=toLower(strdup(pat+2));
-		res=( strcmp( loname, lopat ) == 0 );
-		free( lopat );
+		res=( strcmp( loname, pat+2 ) == 0 );
 	}
 
 	return res;
@@ -674,7 +671,6 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 	}
 
 	do {
-		activity( 1, "Favourites " );
 		ptr=favourites;
 
 		while( ptr ) {
@@ -745,9 +741,10 @@ marklist_t *loadList( const mpcmd_t cmd ) {
 		return NULL;
 	}
 
-	buff=(char*)falloc( MAXPATHLEN+3, 1 );
+	buff=(char*)falloc( MAXPATHLEN+4, 1 );
 
 	while( !feof( file ) ) {
+		memset(buff, 0, MAXPATHLEN+3);
 		if( fgets( buff, MAXPATHLEN+3, file ) == NULL ) {
 			continue;
 		}
@@ -767,7 +764,7 @@ marklist_t *loadList( const mpcmd_t cmd ) {
 				goto cleanup;
 			}
 
-			strltcpy( ptr->dir, buff, MAXPATHLEN+2 );
+			strltcpy( ptr->dir, buff, strlen(buff) );
 			ptr->next=NULL;
 			cnt++;
 		}
@@ -1868,7 +1865,7 @@ int handleRangeCmd( mptitle_t *title, mpcmd_t cmd ) {
 		buff=list;
 		while( buff != NULL ) {
 			if( strcmp( line, buff->dir ) == 0 ) {
-				addMessage( 1, "%s already in list!",line);
+				addMessage( 0, "%s already in list!",line);
 				return -1;
 			}
 			buff=buff->next;
