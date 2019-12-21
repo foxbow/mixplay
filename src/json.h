@@ -46,9 +46,10 @@ char *jsonGetError( jsonObject *jo );
 jsonType jsonPeek( jsonObject *jo, char *key );
 int	jsonGetInt( jsonObject *jo, const char *key );
 char  *jsonGetStr( jsonObject *jo, const char *key );
-char **jsonGetStrs( jsonObject *jo, const char *key, const int num );
+char **jsonGetStrs( jsonObject *jo, const char *key, int *num );
 unsigned jsonGetBool( jsonObject *jo, const char *key );
 jsonObject *jsonGetObj( jsonObject *jo, const char *key );
+int jsonGetLength( jsonObject *jo, char *key );
 
 jsonObject *jsonAddStr( jsonObject *jo, const char *key, const char *val );
 jsonObject *jsonAddStrs( jsonObject *jo, const char *key, char **vals, const int num );

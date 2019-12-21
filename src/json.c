@@ -792,17 +792,19 @@ static void *jsonGetByIndex( jsonObject *jo, int i ) {
 /**
  * copy the array of strings into the vals pointer
  */
-char **jsonGetStrs( jsonObject *jo, const char *key, const int num ) {
+char **jsonGetStrs( jsonObject *jo, const char *key, int *num ) {
 	int i;
 	char **vals=NULL;
 	char *val;
 	jsonObject *pos=NULL;
 
 	pos=jsonFollowPath( jo, key );
-	if( (pos != NULL ) && ( pos->type == json_array ) ) {
-		vals=(char**)calloc( num, sizeof( char * ) );
+	*num=jsonGetLength( jo, NULL );
+
+	if( *num > 0 ) {
+		vals=(char**)calloc( *num, sizeof( char * ) );
 		assert( vals != NULL );
-		for( i=0; i<num; i++ ) {
+		for( i=0; i<*num; i++ ) {
 			val=(char *)jsonGetByIndex( pos, i );
 			if( val == NULL ) {
 				vals[i]=NULL;
@@ -938,6 +940,31 @@ jsonObject *jsonAddObj( jsonObject *jo, const char *key, jsonObject *val ) {
 	}
 	jo->val=val;
 	return jo;
+}
+
+/* returns the number of array elements or child objects
+   when key is NULL the current object is checked otherwise the path of key
+	 will be followed. If the resulting object does not exist, is no array
+	 and neither an object the function returns -1.
+*/
+int jsonGetLength( jsonObject *jo, char *key ) {
+	int len=0;
+
+	if ( key != NULL ) {
+			jo=jsonFetch(jo, key);
+	}
+	if((jo == NULL) ||
+			((jo->type != json_array) && (jo->type != json_object))) {
+		return -1;
+	}
+
+	jo=(jsonObject*)jo->val;
+	while(jo != NULL) {
+		len++;
+		jo=jo->next;
+	}
+
+	return len;
 }
 
 /*
