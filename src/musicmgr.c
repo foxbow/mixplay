@@ -214,8 +214,9 @@ void playCount( mptitle_t *title, int skip ) {
 		return;
 	}
 
-	/* not marked = searchplay, does not count */
-	if ( !(title->flags&MP_MARK ) ) {
+	/* not marked = searchplay, does not count
+	   just marked dnp? someone else may like it though */
+	if ( !(title->flags&MP_MARK ) || (title->flags&MP_DNP)) {
 		return;
 	}
 
@@ -1291,7 +1292,6 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 	   1 - namecheck okay
 	   2 - playcount okay
 	   3 - all okay
-	  -1 - stuffing
 	*/
 
 	if( pl != NULL ) {
@@ -1356,7 +1356,7 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 		}
 
 		guard=runner;
-		/* title did not pass playcountcheck and we are not in stuffing mode */
+		/* title did not pass playcountcheck */
 		while( (valid & 2 ) != 2 ) {
 			if( runner->flags & MP_FAV ) {
 				/* favplay just uses favpcount */
@@ -1376,6 +1376,7 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 			}
 
 			if( ( valid & 2 ) != 2 ) {
+				valid=0;
 				activity( 1, "Playcountskipping" );
 				/* simply pick a new title at random to avoid edge cases */
 				/* runner=skipTitles( runner, rand()%num ); */
@@ -1386,9 +1387,6 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 				if( runner == guard ) {
 					pcount++;	/* allow more replays */
 					addMessage( 1, "Increasing maxplaycount to %i (skip)", pcount );
-				}
-				else {
-					valid=0;
 				}
 			}
 		}
@@ -1622,8 +1620,15 @@ void dumpInfo( mptitle_t *root ) {
 		if( current->flags & MP_MARK ) {
 			marked++;
 		}
-		if( current->playcount > maxplayed ) {
-			maxplayed=current->playcount;
+		if(getFavplay()){
+			if( current->favpcount > maxplayed ) {
+				maxplayed=current->favpcount;
+			}
+		}
+		else {
+			if( current->playcount > maxplayed ) {
+				maxplayed=current->playcount;
+			}
 		}
 		numtitles++;
 		current=current->next;
@@ -1639,7 +1644,8 @@ void dumpInfo( mptitle_t *root ) {
 		char line[MAXPATHLEN];
 
 		do {
-			if( current->playcount == pl ) {
+			if( ( getFavplay() && current->favpcount == pl ) ||
+					(!getFavplay() && current->playcount == pl )) {
 				pcount++;
 				if( current->flags & MP_DNP ) {
 					dnpcnt++;
@@ -1655,7 +1661,7 @@ void dumpInfo( mptitle_t *root ) {
 		} while( current != root );
 
 		/* just a few titles (< 0.5%) with playcount == pl ? Try to close the gap */
-		if (pcount < numtitles/200) {
+		if (!getFavplay() && (pcount < numtitles/200)) {
 			fixed=1;
 			do {
 				if( current->playcount > pl ) {

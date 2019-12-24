@@ -64,7 +64,7 @@ void unlockClient( int client ) {
 		addMessage( 0, "Client %i is not %i", client, _curclient );
 	}
 	else {
-		addMessage( 0, "Client %i was not locked!", client );
+		addMessage( 1, "Client %i was not locked!", client );
 	}
 }
 
