@@ -10,28 +10,6 @@
 #include "player.h"
 #include "utils.h"
 
-#define TOSLEEP 25
-
-/* enable partial updates */
-#define EPS_PARTIAL 1
-
-/* the button mode */
-typedef enum {
-	bt_noinit=-1,
-	bt_dbplay=0,
-	bt_stream=1
-} _btmode_t;
-
-/* update mode */
-typedef enum {
-	um_full=-1,
-	um_none=0,
-	um_play=1,
-	um_buttons=2,
-	um_icons=3,		/* play and buttons */
-	um_title=4
-} _umode_t;
-
 /*
  * the last known state. Used to avoid updating too much.
  * set to mpc_start to force update.
@@ -46,105 +24,6 @@ static char _lasttitle[MAXPATHLEN+1];
 static _btmode_t _btmode=bt_noinit;
 static _umode_t _umode=um_full;
 
-/*
- * update the display with the current title and buttons
- * runs in it's own thread to not block updating
- */
-static void *_update( ) {
-	mpplaylist_t *current=NULL;
-
-	blockSigint();
-
-	while( getConfig()->status != mpc_quit ) {
-		pthread_mutex_lock( &_updatelock );
-		/* don't update on exit! */
-		if( getConfig()->status == mpc_quit ) {
-			break;
-		}
-		current=getConfig()->current;
-		epsWipeFull( epm_both );
-
-		if( current != NULL ) {
-			if( current->prev != NULL ) {
-				epsDrawString( epm_red, 40, 159, current->prev->title->display, 0 );
-			}
-			else {
-				epsDrawString( epm_red, 40, 160, "---", 1 );
-			}
-			if( current->next != NULL ) {
-				epsDrawString( epm_red, 40, 1, current->next->title->display, 0 );
-			}
-			else {
-				epsDrawString( epm_red, 40, 0, "---", 0 );
-			}
-
-			if( _last != mpc_idle ) {
-				if( current->title->flags & MP_FAV ) {
-					epsDrawSymbol( epm_red, 5, 150, ep_fav );
-				}
-				else {
-					epsDrawSymbol( epm_red, 5, 150, ep_play );
-				}
-				epsDrawString( epm_black, 40, 120, current->title->artist, 1 );
-				epsDrawString( epm_black, 40, 75,  current->title->title, 2 );
-				epsDrawString( epm_black, 40, 40,  current->title->album, 0 );
-			}
-			else {
-				epsDrawSymbol( epm_red, 5, 150, ep_pause );
-				epsDrawString( epm_red, 40, 120, current->title->artist, 1 );
-				epsDrawString( epm_red, 40, 75,  current->title->title, 2 );
-				epsDrawString( epm_red, 40, 40,  current->title->album, 0 );
-			}
-
-		}
-		else {
-			epsDrawString( epm_red, 40, 50, "Initializing", 1 );
-		}
-
-		epsLine( epm_black, 0, 128, 30, 128 );
-		epsLine( epm_black, 0, 66, 30, 66 );
-		epsLine( epm_black, 30, 0, 30, Y_MAX );
-		epsLine( epm_black, 30, 20, X_MAX, 20 );
-		epsLine( epm_black, 30, 150, X_MAX, 150 );
-
-		switch( _btmode ) {
-			case bt_noinit:
-			/* no break */
-			case bt_dbplay: /* -/next/dnp */
-			epsDrawSymbol( epm_black, 5, 90, ep_next );
-			epsDrawSymbol( epm_black, 5, 30, ep_dnp );
-			break;
-			case bt_stream: /* -/^/v */
-			epsDrawSymbol( epm_black, 5, 90, ep_up );
-			epsDrawSymbol( epm_black, 5, 30, ep_down );
-			break;
-			default:
-			addMessage( 0, "EP: update illegal epmode %i", _btmode );
-		}
-
-		/* update full or partial depending on mode */
-		switch( _umode ) {
-			case um_none:
-				/* no update.. */
-			break;
-			case um_play: /* play/pause */
-				epsPartialDisplay( 5, 150, 16, 16 );
-			break;
-			case um_buttons: /* buttons */
-				epsPartialDisplay( 5, 30, 16, 76 );
-			break;
-			case um_icons: /* play and buttons */
-				epsPartialDisplay( 5, 30, 16, 141 );
-			break;
-			default: /* full */
-				epsDisplay( );
-		}
-
-		_umode=um_none;
-		_updating=0;
-	}
-	return NULL;
-}
 
 /**
  * special handling for the server during information updates
@@ -321,7 +200,6 @@ void epExit( void ) {
  * and PowerOn
  */
 static void *_setButtons( ) {
-	addMessage( 2, "New Thread: _setButtons()" );
 	/* init buttons */
 	epsButton( KEY1, key1_cb );
 	epsButton( KEY2, key2_cb );
@@ -329,7 +207,6 @@ static void *_setButtons( ) {
 	/* DO NOT USE KEY4, it will break the HiFiBerry function!
 		 However it will act like a MUTE button as is... */
 	_btmode=0;
-	addMessage( 2, "End Thread: _setButtons()" );
 	return NULL;
 }
 
@@ -345,16 +222,6 @@ void epSetup() {
 	 * while the display is still busy waking up */
 	error=pthread_create( &tid, NULL, _setButtons, NULL );
 	if( error != 0 ) {
-		addMessage( 0, "EP: Could not start setup thread!" );
-		addError(error);
-		return;
-	}
-
-	/* start the background update thread. Failure to do this should be fatal! */
-	error=pthread_create( &tid, NULL, _update, NULL );
-	if( error != 0 ) {
-		addMessage( 0, "EP: Could not start update thread!" );
-		addError( error );
-		return;
+		fail( error, "EP: Could not start setup thread!" );
 	}
 }

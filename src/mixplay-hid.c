@@ -21,7 +21,7 @@ static void drawAll(int fd) {
 	int rv;
 	int state;
 
-	jo=getStatus(fd,1);
+	jo=getStatus(fd, MPCOMM_FULLSTAT);
 	title=jsonGetError(jo);
 	if(title!=NULL) {
 		fail(F_FAIL, "JSON Error! %s", title);

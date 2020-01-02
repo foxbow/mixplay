@@ -12,10 +12,10 @@
 #include <ctype.h>
 #include <errno.h>
 #include <unistd.h>
+#include <assert.h>
 
 #include "mpcomm.h"
 #include "utils.h"
-#include "json.h"
 
 static pthread_mutex_t _clientlock=PTHREAD_MUTEX_INITIALIZER;
 static int _curclient=-1;
@@ -78,7 +78,7 @@ static jsonObject *jsonAddProfiles( jsonObject *jo, const char *key, profile_t *
 }
 
 /*
- * helperfunction to add a title to the given jsonOblect
+ * helperfunction to add a title to the given jsonObject
  * if title is NULL an empty title will be created
  */
 static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplaylist_t *pl ) {
@@ -116,6 +116,39 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplayli
 	}
 
 	return jsonAddObj(jo, key, val);
+}
+
+/*
+ * helperfunction to fetch a title from the given jsonObject tree
+ */
+int jsonGetTitle( jsonObject *jo, const char *key, mptitle_t *title ) {
+	assert( title != NULL );
+	jsonObject *tjo=NULL;
+	if( jsonPeek(jo, key) == json_error ) {
+		title->key=0;
+		strcpy(title->artist, "Mixplay");
+		strcpy(title->album, "" );
+		strcpy(title->title, "" );
+		strcpy(title->display, "Mixplay");
+		title->flags=0;
+		strcpy(title->genre, "" );
+		return 0;
+	}
+	else {
+		tjo=jsonGetObj(jo, key);
+		title->key=jsonGetInt(tjo, "key");
+		jsonStrcpy(title->artist, tjo, "artist", NAMELEN);
+		jsonStrcpy(title->album,  tjo, "album",  NAMELEN);
+		jsonStrcpy(title->title,  tjo, "title",  NAMELEN);
+		title->flags=jsonGetInt(tjo, "flags");
+		jsonStrcpy(title->genre,  tjo, "genre",  NAMELEN);
+		snprintf(title->display, MAXPATHLEN, "%s - %s", title->artist, title->title);
+		title->playcount=jsonGetInt(tjo, "playcount");
+		title->skipcount=jsonGetInt(tjo, "skipcount");
+		return 1;
+	}
+
+	return -1;
 }
 
 /**

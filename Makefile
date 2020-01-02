@@ -45,7 +45,7 @@ all: $(OBJDIR)/dep.d bin/mixplayd bin/mprcinit
 clean:
 	rm -f $(OBJDIR)/*
 	rm -f bin/mixplayd
-	rm -f bin/mixplay-hid
+	rm -f bin/mixplay-*
 	rm -f bin/mprcinit
 	touch $(OBJDIR)/KEEPDIR
 
@@ -63,7 +63,7 @@ distclean: clean
 
 new: clean all
 
-client: bin/mixplay-hid
+clients: bin/mixplay-hid bin/mixplay-scr
 
 bin/mixplayd: $(OBJDIR)/mixplayd.o $(OBJS)
 	$(CC) $^ -o $@ $(LIBS)

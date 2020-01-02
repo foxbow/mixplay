@@ -7,10 +7,7 @@ else
 	TEST=$(find "${DIR}" -maxdepth 1 -name "*.mp3")
 
 	if [ "${TEST}" != "" ]; then
-		if [ ! -f "${DIR}/.gain" ]; then
-			echo "Leveling ${DIR}"
-			touch "${DIR}/.gain"
-			mp3gain -q -k -r -T -p "${DIR}"/*mp3 2> /dev/null > /dev/null
-		fi
+		echo "Leveling ${DIR}"
+		mp3gain -q -k -r -T -p "${DIR}"/*mp3 2> /dev/null > /dev/null
 	fi
 fi

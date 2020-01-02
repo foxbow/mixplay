@@ -734,7 +734,7 @@ char *jsonGetError( jsonObject *jo ) {
  * returns the jsonType of the current object
  * can also be used to check if an object exists - i.e. array indices
  */
-jsonType jsonPeek( jsonObject *jo, char *key ) {
+jsonType jsonPeek( jsonObject *jo, const char *key ) {
 	jo=jsonFollowPath( jo, key );
 	if( jo == NULL ) {
 		return json_error;
@@ -779,6 +779,14 @@ char *jsonGetStr( jsonObject *jo, const char *key ) {
 	return jsonDecode( (char*)jo->val );
 }
 
+int jsonStrcpy( char *target, jsonObject *jo, const char *key, int len ) {
+	jo=jsonFollowPath( jo, key );
+	if( jo == NULL ) {
+		strcpy( target, "" );
+		return 0;
+	}
+	return jsonDecodeInto( target, (char*)jo->val, len );
+}
 /*
  * helper function to resolve a JSON array index
  */

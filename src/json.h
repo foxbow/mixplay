@@ -43,9 +43,10 @@ struct jsonObject_s{
 
 char *jsonGetError( jsonObject *jo );
 
-jsonType jsonPeek( jsonObject *jo, char *key );
+jsonType jsonPeek( jsonObject *jo, const char *key );
 int	jsonGetInt( jsonObject *jo, const char *key );
 char  *jsonGetStr( jsonObject *jo, const char *key );
+int    jsonStrcpy( char *target, jsonObject *jo, const char *key, int len );
 char **jsonGetStrs( jsonObject *jo, const char *key, int *num );
 unsigned jsonGetBool( jsonObject *jo, const char *key );
 jsonObject *jsonGetObj( jsonObject *jo, const char *key );

@@ -107,7 +107,7 @@ int main( int argc, char **argv ){
 	/* allow everything to start up */
 	sleep(10);
 	while ( cmd != mpc_quit ) {
-		jo=getStatus(fd,0);
+		jo=getStatus(fd, MPCOMM_STAT);
 		if( jsonPeek(jo, "type") == json_error ) {
 			cmd=mpc_quit;
 		}
