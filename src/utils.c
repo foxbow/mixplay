@@ -280,7 +280,7 @@ void sfree( char **ptr ) {
  */
 void dumpbin( const void *data, size_t len ) {
 	size_t i, j;
-	for( j=0; j<len/8; j++ ) {
+	for( j=0; j<=len/8; j++ ) {
 		for( i=0; i< 8; i++ ) {
 			if( i <= len ) {
 				printf("%02x ", ((char*)data)[(j*8)+i] );

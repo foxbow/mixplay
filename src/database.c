@@ -203,11 +203,11 @@ static int dbPutTitle( int db, mptitle_t *title ) {
  * takes a database entry and adds it to a mixplay entry list
  * if there is no list, a new one will be created
  */
-static mptitle_t *addDBTitle( dbentry_t dbentry, mptitle_t *root, unsigned int index ) {
+static mptitle_t *addDBTitle( dbentry_t *dbentry, mptitle_t *root, unsigned int index ) {
 	mptitle_t *entry;
 	entry=(mptitle_t*)falloc( 1, sizeof( mptitle_t ) );
 
-	db2entry( &dbentry, entry );
+	db2entry( dbentry, entry );
 	entry->key=index;
 
 	if( NULL == root ) {
@@ -240,10 +240,10 @@ mptitle_t *dbGetMusic( ) {
 		/* support old database title path format */
 		if( ( dbentry.path[0] == '/' ) &&
 		    ( strstr( dbentry.path, getConfig()->musicdir ) != dbentry.path ) ) {
-			strcpy( dbentry.path, fullpath(&(dbentry.path[1])));
+			strtcpy( dbentry.path, fullpath(&(dbentry.path[1])), MAXPATHLEN );
 			getConfig()->dbDirty=1;
 		}
-		dbroot = addDBTitle( dbentry, dbroot, index );
+		dbroot = addDBTitle( &dbentry, dbroot, index );
 		index++;
 	}
 
@@ -352,7 +352,12 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 
 		/* round down so new titles have a slightly better chance to be played
 		   and to equalize favourites */
-		mean=(mean/count);
+		if( count > 0 ){
+			mean=(mean / count);
+		}
+		else {
+			addMessage(-1, "No playable titles available!");
+		}
 	}
 
 	addMessage( 0, "Using mean playcount %d", mean );

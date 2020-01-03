@@ -156,8 +156,8 @@ mpplaylist_t *addPLDummy( mpplaylist_t *pl, const char *name ){
 		}
 		pl=pl->prev;
 	}
-	strip( title->display, name, MAXPATHLEN );
-	strip( title->title, name, NAMELEN );
+	strip( title->display, name, MAXPATHLEN-1 );
+	strip( title->title, name, NAMELEN-1 );
 
 	pl->title=title;
 
@@ -501,9 +501,6 @@ int search( const char *pat, const mpcmd_t range ) {
 	assert(res->state!=mpsearch_done);
 	assert(pat!=NULL);
 
-	/* whatever pattern we get, ignore case */
-	lopat=toLower(strdup(pat));
-
 	/* free buffer playlist, the arrays will not get lost due to the realloc later */
 	res->titles=wipePlaylist(res->titles);
 	res->tnum=0;
@@ -514,6 +511,9 @@ int search( const char *pat, const mpcmd_t range ) {
 		addMessage(-1, "No database loaded." );
 		return 0;
 	}
+
+	/* whatever pattern we get, ignore case */
+	lopat=toLower(strdup(pat));
 
 	/* if player is in favplay mode and the search in in fav mode
 	   then search for DNP titles. */
@@ -750,7 +750,7 @@ marklist_t *loadList( const mpcmd_t cmd ) {
 			continue;
 		}
 
-		if( buff && strlen( buff ) > 1 ) {
+		if( strlen( buff ) > 1 ) {
 			if( !bwlist ) {
 				bwlist=(marklist_t *)falloc( 1, sizeof( marklist_t ) );
 				ptr=bwlist;
@@ -1106,12 +1106,12 @@ mptitle_t *loadPlaylist( const char *path ) {
 				( strlen( buff ) > 1 ) && ( buff[0] != '#' ) ) {
 			/* turn relative paths into absolute ones */
 			if( buff[0] != '/' ) {
-				strcpy( titlePath, mdir );
+				strtcpy( titlePath, mdir, MAXPATHLEN );
 				strtcat( titlePath, buff, MAXPATHLEN );
 				strtcpy( buff, titlePath, MAXPATHLEN );
 			}
 			 /* remove control chars like CR/LF */
-			strip( titlePath, buff, MAXPATHLEN );
+			strip( titlePath, buff, MAXPATHLEN-1 );
 			current=insertTitle( current, titlePath );
 			cnt++;
 			/* turn list into playlist too */
@@ -1343,7 +1343,7 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 					return(	addNewTitle( pl, root ) );
 				}
 			}
-			addMessage( 3, "%s != %s", runner->artist, lastpat==NULL?"---":lastpat );
+			addMessage( 3, "%s != %s", runner->artist, lastpat );
 
 			if( guard != runner ) {
 				/* we skipped and need to check playcount */

@@ -738,7 +738,7 @@ void *reader( ) {
 								addMessage(0,"Got stream title before playlist!?");
 							}
 							else {
-								strip( control->current->prev->title->title, line+13, NAMELEN );
+								strip( control->current->prev->title->title, line+13, NAMELEN-1 );
 								update=1;
 							}
 						}
@@ -756,14 +756,14 @@ void *reader( ) {
 								if( strlen(control->current->title->album) > 0 ) {
 									control->current=addPLDummy( control->current, a );
 								}
-								strip( control->current->title->display, a, MAXPATHLEN );
-								strip( control->current->title->title, a, NAMELEN );
+								strip( control->current->title->display, a, MAXPATHLEN-1 );
+								strip( control->current->title->title, a, NAMELEN-1 );
 								/* if possible cut up title and artist */
 								if( NULL != ( t = strstr( a, " - " ) ) ) {
 									*t=0;
 									t=t+3;
-									strip( control->current->title->artist, a, NAMELEN );
-									strip( control->current->title->title, t, NAMELEN );
+									strip( control->current->title->artist, a, NAMELEN-1 );
+									strip( control->current->title->title, t, NAMELEN-1 );
 								}
 								plCheck( 0 );
 								/* carry over stream title as album entry */

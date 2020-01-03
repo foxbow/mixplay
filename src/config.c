@@ -686,6 +686,7 @@ static void removeHook( void (*func)( void* ), void *arg, _mpfunc **list ) {
 
 	if( pos == NULL ) {
 		addMessage( 0 , "Empty callback list!" );
+		pthread_mutex_unlock(&_cblock);
 		return;
 	}
 

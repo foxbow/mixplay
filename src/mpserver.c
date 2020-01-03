@@ -642,6 +642,7 @@ int startServer( ) {
 	struct sockaddr_in server;
 	int mainsocket = -1;
 	int rcnt=0;
+	memset( &server, 0, sizeof(server) );
 
 	mainsocket = socket(AF_INET , SOCK_STREAM , 0);
 	if (mainsocket == -1) {
@@ -665,6 +666,7 @@ int startServer( ) {
 		} else {
 			addMessage( 0, "bind to port %i failed!", control->port );
 			addError( errno );
+			close(mainsocket);
 			return -1;
 		}
 	}
