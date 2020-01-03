@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <assert.h>
 
 #include "mpclient.h"
 #include "utils.h"
@@ -206,4 +207,36 @@ jsonObject *getStatus(int usefd, int flags) {
 	}
 
 	return jo;
+}
+
+/*
+ * helperfunction to fetch a title from the given jsonObject tree
+ */
+int jsonGetTitle( jsonObject *jo, const char *key, mptitle_t *title ) {
+	assert( title != NULL );
+	if( jsonPeek(jo, key) != json_object ) {
+		title->key=0;
+		strcpy(title->artist, "Mixplay");
+		strcpy(title->album, "" );
+		strcpy(title->title, "" );
+		strcpy(title->display, "Mixplay");
+		title->flags=0;
+		strcpy(title->genre, "" );
+		return 0;
+	}
+	else {
+		jo=jsonGetObj(jo, key);
+		title->key=jsonGetInt(jo, "key");
+		jsonStrcpy(title->artist, jo, "artist", NAMELEN);
+		jsonStrcpy(title->album,  jo, "album",  NAMELEN);
+		jsonStrcpy(title->title,  jo, "title",  NAMELEN);
+		title->flags=jsonGetInt(jo, "flags");
+		jsonStrcpy(title->genre,  jo, "genre",  NAMELEN);
+		snprintf(title->display, MAXPATHLEN, "%s - %s", title->artist, title->title);
+		title->playcount=jsonGetInt(jo, "playcount");
+		title->skipcount=jsonGetInt(jo, "skipcount");
+		return 1;
+	}
+
+	return -1;
 }

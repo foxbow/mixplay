@@ -782,10 +782,10 @@ char *jsonGetStr( jsonObject *jo, const char *key ) {
 int jsonStrcpy( char *target, jsonObject *jo, const char *key, int len ) {
 	jo=jsonFollowPath( jo, key );
 	if( jo == NULL ) {
-		strcpy( target, "" );
+		target[0]=0;
 		return 0;
 	}
-	return jsonDecodeInto( target, (char*)jo->val, len );
+	return jsonDecodeInto( (char*)jo->val, target, len );
 }
 /*
  * helper function to resolve a JSON array index

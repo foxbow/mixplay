@@ -15,40 +15,35 @@ char last[MAXPATHLEN]="";
 
 static void drawAll(int fd) {
 	jsonObject *jo=NULL;
-	char *title=NULL;
-	char *artist;
+	char *text=NULL;
+	mptitle_t title;
 	char current[MAXPATHLEN];
 	int rv;
 	int state;
 
 	jo=getStatus(fd, MPCOMM_FULLSTAT);
-	title=jsonGetError(jo);
-	if(title!=NULL) {
-		fail(F_FAIL, "JSON Error! %s", title);
+	text=jsonGetError(jo);
+	if(text != NULL) {
+		fail(F_FAIL, "JSON Error! %s", text);
 	}
 
-	if( jsonPeek(jo, "type") == json_error ) {
+	if(jsonPeek(jo, "type") == json_error) {
 		rv=jsonGetInt(jo, "error");
-		fail(F_FAIL, "Server returned %i!", rv );
+		fail(F_FAIL, "Server returned %i!", rv);
 	}
 	else {
-		title=jsonGetStr(jo,"current.title");
-		artist=jsonGetStr(jo,"current.artist");
+		jsonGetTitle(jo, "current", &title);
 		state=jsonGetInt(jo,"status");
-		if(( title == NULL ) || ( artist == NULL )) {
-			fail(F_FAIL, "Invalid status from server!");
-		}
 	}
+	jsonDiscard(jo);
 
-	snprintf(current, MAXPATHLEN-1, "[%s] %s - %s",
-			(state==0)?">":"|", artist, title );
+	snprintf(current, MAXPATHLEN-1, "[%s] %s",
+			(state == mpc_play)?">":"|", title.display );
 	if( strcmp(current, last) != 0 ) {
 		strcpy(last, current);
 		hidPrintline( "%s\r", current );
 		fflush(stdout);
 	}
-
-	jsonDiscard(jo);
 }
 
 int main( ){
@@ -73,6 +68,7 @@ int main( ){
 		cmd=hidCMD(c);
 		if( cmd == mpc_quit ) {
 			running = 0;
+			break;
 		}
 		else if( cmd != mpc_idle ) {
 			hidPrintline("Sent: %s", mpcString(cmd)+4);

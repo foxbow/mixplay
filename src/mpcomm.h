@@ -27,6 +27,5 @@ char *serializeStatus( unsigned long *count, int clientid, int fullstat );
 int setCurClient( int client );
 int isCurClient( int client );
 void unlockClient( int client );
-int jsonGetTitle( jsonObject *jo, const char *key, mptitle_t *title );
 
 #endif /* MPCOMM_H_ */

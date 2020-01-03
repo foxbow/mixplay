@@ -118,39 +118,6 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplayli
 	return jsonAddObj(jo, key, val);
 }
 
-/*
- * helperfunction to fetch a title from the given jsonObject tree
- */
-int jsonGetTitle( jsonObject *jo, const char *key, mptitle_t *title ) {
-	assert( title != NULL );
-	jsonObject *tjo=NULL;
-	if( jsonPeek(jo, key) == json_error ) {
-		title->key=0;
-		strcpy(title->artist, "Mixplay");
-		strcpy(title->album, "" );
-		strcpy(title->title, "" );
-		strcpy(title->display, "Mixplay");
-		title->flags=0;
-		strcpy(title->genre, "" );
-		return 0;
-	}
-	else {
-		tjo=jsonGetObj(jo, key);
-		title->key=jsonGetInt(tjo, "key");
-		jsonStrcpy(title->artist, tjo, "artist", NAMELEN);
-		jsonStrcpy(title->album,  tjo, "album",  NAMELEN);
-		jsonStrcpy(title->title,  tjo, "title",  NAMELEN);
-		title->flags=jsonGetInt(tjo, "flags");
-		jsonStrcpy(title->genre,  tjo, "genre",  NAMELEN);
-		snprintf(title->display, MAXPATHLEN, "%s - %s", title->artist, title->title);
-		title->playcount=jsonGetInt(tjo, "playcount");
-		title->skipcount=jsonGetInt(tjo, "skipcount");
-		return 1;
-	}
-
-	return -1;
-}
-
 /**
  * turns a playlist into a jsonObject.
  */

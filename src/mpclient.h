@@ -9,5 +9,6 @@ int getConnection();
 int sendCMD(int usefd, mpcmd_t cmd);
 int getCurrentTitle(char *title, unsigned tlen);
 jsonObject *getStatus(int usefd, int flags);
+int jsonGetTitle( jsonObject *jo, const char *key, mptitle_t *title );
 
 #endif
