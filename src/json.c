@@ -984,7 +984,7 @@ int jsonAddArrElement( jsonObject *jo, void *val, jsonType type ) {
 	int index=0;
 
 	if( jo == NULL ) {
-		jo=jsonFail( jo, "Cannot add an array Element to an empty object!" );
+		jsonFail( jo, "Cannot add an array Element to an empty object!" );
 		return -1;
 	}
 

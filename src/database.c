@@ -237,6 +237,8 @@ mptitle_t *dbGetMusic( ) {
 	db=dbOpen( getConfig()->dbname );
 
 	while( ( len = read( db, &dbentry, DBESIZE ) ) == DBESIZE ) {
+		/* explicitlöy terminate path */
+		dbentry.path[MAXPATHLEN]=0;
 		/* support old database title path format */
 		if( ( dbentry.path[0] == '/' ) &&
 		    ( strstr( dbentry.path, getConfig()->musicdir ) != dbentry.path ) ) {
