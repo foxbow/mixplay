@@ -130,7 +130,7 @@ int main( int argc, char **argv ){
 				displayPower(0);
 				sstate=0;
 			}
-			sleep(5);
+			sleep(1);
 		}
 		else {
 			if( timer > 0 ) {
@@ -138,7 +138,7 @@ int main( int argc, char **argv ){
 				sstate=1;
 			}
 			timer=0;
-			sleep(1);
+			sleep(5);
 		}
 	}
 	close(fd);
