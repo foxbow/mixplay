@@ -80,6 +80,7 @@ int main( int argc, char **argv ){
 	jsonObject *jo=NULL;
 	time_t to=0;
 	time_t timer=0;
+	time_t now=0;
 	mpcmd_t cmd=mpc_idle;
 	int fd=0;
 	int sstate=1;
@@ -91,7 +92,7 @@ int main( int argc, char **argv ){
 	to=atoi(argv[1]);
 
 	if( to < 10 ) {
-		fail(F_FAIL, "Timeout needs to be larger than 10 seconds!");
+		fail(F_FAIL, "Timeout must be at least 10 seconds!");
 	}
 
 	readConfig();
@@ -115,30 +116,42 @@ int main( int argc, char **argv ){
 			cmd=(mpcmd_t)jsonGetInt(jo,"status");
 		}
 		jsonDiscard(jo);
-
+		now=time(0);
 		if( cmd == mpc_idle ) {
-			/* screen is on even though we turned it off, so someone else woke
-			   it up, better reset the timeout */
-			if(( sstate == 0 ) && (getDisplayState() == 1)) {
-				timer=0;
-				sstate=1;
+			/* is the screen physically on? */
+			if( getDisplayState() == 1 ) {
+				/* Screen is on and we think it should be off. So someone
+					touched the screen. Give ten seconds to start anything,
+					otherwise turn screen off again */
+				if( sstate == 0 ) {
+					timer=now-to+10;
+					sstate=1;
+				}
+				/* screen is on */
+				else {
+					/* No timer yet, start countdown */
+					if( timer == 0 ) {
+						timer=now;
+					}
+					/* timeout hit? turn off screen */
+					if( (sstate == 1) && (now - timer > to) ) {
+						displayPower(0);
+						sstate=0;
+					}
+				}
 			}
-			if(timer == 0) {
-				timer=time(0);
-			}
-			else if( time(0) - timer > to ) {
-				displayPower(0);
-				sstate=0;
-			}
+			/* check more often so there is no lag between player and screen */
 			sleep(1);
 		}
 		else {
-			if( timer > 0 ) {
+			/* we turned the screen off? Turn it on! */
+			if( sstate == 0 ) {
 				displayPower(1);
 				sstate=1;
+				timer=0;
 			}
-			timer=0;
-			sleep(5);
+			/* No rush as long as we're playing.. */
+			sleep(10);
 		}
 	}
 	close(fd);
