@@ -239,7 +239,7 @@ int isDir( const char *path ) {
 }
 
 /**
- * wrapper around malloc/calloc that fails in-place with an error
+ * wrapper around calloc that fails in-place with an error
  */
 void *falloc( size_t num, size_t size ) {
 	void *result=NULL;

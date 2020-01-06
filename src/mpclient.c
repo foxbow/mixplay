@@ -47,6 +47,7 @@ int getConnection() {
 		return -1;
 	}
 
+	memset( &server, 0, sizeof(server) );
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = inet_addr("127.0.0.1");
 	server.sin_port = htons( getConfig()->port );
@@ -72,6 +73,7 @@ static char *sendRequest( int usefd, const char *path ) {
 	if( usefd == -1 ) {
 		fd=getConnection();
 		if( fd < 0 ) {
+			free(reply);
 			return NULL;
 		}
 	}
@@ -86,6 +88,7 @@ static char *sendRequest( int usefd, const char *path ) {
 
 	if( send( fd, req, strlen(req), 0 ) == -1 ) {
 		free(req);
+		free(reply);
 		if( usefd == -1 ) {
 			close(fd);
 		}
@@ -96,38 +99,38 @@ static char *sendRequest( int usefd, const char *path ) {
 	while( recv( fd, reply+rlen, RBLKSIZE, 0 ) == RBLKSIZE ) {
 		rlen += RBLKSIZE;
 		reply=frealloc(reply, rlen+RBLKSIZE);
+		memset(reply+rlen, 0, RBLKSIZE-1);
 	}
 	if( usefd == -1 ) {
 		close(fd);
 	}
+	reply[rlen + RBLKSIZE - 1]=0;
 
-	if( reply != NULL ) {
-		if( strstr( reply, "HTTP/1.1 200" ) == reply ) {
-			pos=strstr( reply, "Content-Length:" );
-			if( pos != NULL ) {
-	  		pos += strlen("Content-Length:")+1;
-				rlen=atoi(pos);
-				if( rlen != 0 ) {
-					/* add terminating NUL */
-					rlen=rlen+1;
+	if( strstr( reply, "HTTP/1.1 200" ) == reply ) {
+		pos=strstr( reply, "Content-Length:" );
+		if( pos != NULL ) {
+  		pos += strlen("Content-Length:")+1;
+			rlen=atoi(pos);
+			if( rlen != 0 ) {
+				/* add terminating NUL */
+				rlen=rlen+1;
 
-					pos = strstr(pos, "\015\012\015\012" );
-					if( pos != NULL ) {
-						pos+=4;
+				pos = strstr(pos, "\015\012\015\012" );
+				if( pos != NULL ) {
+					pos+=4;
 
-						rdata=(char*)falloc(1, rlen);
-						strtcpy( rdata, pos, rlen );
-					}
+					rdata=(char*)falloc(1, rlen);
+					strtcpy( rdata, pos, rlen );
 				}
 			}
 		}
-		else if( strstr( reply, "HTTP/1.1 ") == reply ) {
-			rdata=falloc(1,4);
-			strtcpy(rdata, reply+9, 3);
-		}
-		else {
-			rdata=strdup(reply);
-		}
+	}
+	else if( strstr( reply, "HTTP/1.1 ") == reply ) {
+		rdata=falloc(1,4);
+		strtcpy(rdata, reply+9, 3);
+	}
+	else {
+		rdata=strdup(reply);
 	}
 
 	free(reply);
@@ -153,6 +156,8 @@ int sendCMD( int usefd, mpcmd_t cmd){
 	if( reply == NULL ) {
 		return -1;
 	}
+	/* we ignore the reply, even if it's an error message */
+	free(reply);
 
 	return 1;
 }

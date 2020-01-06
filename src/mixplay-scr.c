@@ -123,7 +123,7 @@ int main( int argc, char **argv ){
 		}
 		jsonDiscard(jo);
 		now=time(0);
-		
+
 		/* nothing is playing */
 		if( cmd == mpc_idle ) {
 			/* is the screen physically on? */
@@ -142,15 +142,14 @@ int main( int argc, char **argv ){
 						timer=now;
 					}
 					/* timeout hit? turn off screen */
-					if( (sstate == 1) && (now - timer > to) ) {
+					if( now - timer >= to ) {
 						displayPower(0);
 						sstate=0;
 					}
 				}
-			}
-			/* check more often so there is no lag between player and screen */
-			sleep(1);
+			} /* when the display is off, nothing needs to be done */
 		}
+		/* player state is not idle */
 		else {
 			/* we turned the screen off? Turn it on! */
 			if( sstate == 0 ) {
@@ -158,9 +157,8 @@ int main( int argc, char **argv ){
 				sstate=1;
 				timer=0;
 			}
-			/* No rush as long as we're playing.. */
-			sleep(10);
 		}
+		sleep(1);
 	}
 	close(fd);
 }

@@ -577,7 +577,6 @@ static void *mpserver( void *arg ) {
 
 	blockSigint();
 
-
 	listen(mainsocket , 3);
 	addMessage( 1, "Listening on port %i", control->port );
 

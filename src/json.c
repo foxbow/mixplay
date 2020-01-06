@@ -673,7 +673,7 @@ static jsonObject *jsonFollowPath( jsonObject *jo, const char *key ) {
 		pos=pos+1;
 		jo=jsonFetch(jo,path);
 		if( jo == NULL ){
-			free(path);
+			free(hook);
 			return NULL;
 		}
 		jo=(jsonObject*)jo->val;
