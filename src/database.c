@@ -138,7 +138,9 @@ static void db2entry( dbentry_t *dbentry, mptitle_t *entry ) {
 	strcpy( entry->title, dbentry->title );
 	strcpy( entry->album, dbentry->album );
 	strcpy( entry->genre, dbentry->genre );
-	snprintf( entry->display, MAXPATHLEN-1, "%s - %s", entry->artist, entry->title );
+	strtcpy( entry->display, dbentry->artist, MAXPATHLEN-1 );
+	strtcat( entry->display, " - ", MAXPATHLEN-1 );
+	strtcat( entry->display, dbentry->title, MAXPATHLEN-1 );
 	entry->playcount=dbentry->playcount;
 	entry->skipcount=dbentry->skipcount;
 	entry->favpcount=0;

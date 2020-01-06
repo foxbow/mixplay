@@ -252,7 +252,9 @@ int jsonGetTitle( jsonObject *jo, const char *key, mptitle_t *title ) {
 		jsonStrcpy(title->title,  jo, "title",  NAMELEN);
 		title->flags=jsonGetInt(jo, "flags");
 		jsonStrcpy(title->genre,  jo, "genre",  NAMELEN);
-		snprintf(title->display, MAXPATHLEN, "%s - %s", title->artist, title->title);
+		strtcpy( title->display, title->artist, MAXPATHLEN-1 );
+		strtcat( title->display, " - ", MAXPATHLEN-1 );
+		strtcat( title->display, title->title, MAXPATHLEN-1 );
 		title->playcount=jsonGetInt(jo, "playcount");
 		title->skipcount=jsonGetInt(jo, "skipcount");
 		return 1;

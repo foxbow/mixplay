@@ -440,7 +440,10 @@ static void fillInfo( mpg123_handle *mh, mptitle_t *title ) {
 
 	assert( title->artist != NULL );
 
-	snprintf( title->display, MAXPATHLEN-1, "%s - %s", title->artist, title->title );
+	strtcpy( title->display, title->artist, MAXPATHLEN-1 );
+	strtcat( title->display, " - ", MAXPATHLEN-1 );
+	strtcat( title->display, title->title, MAXPATHLEN-1 );
+
 	mpg123_close( mh );
 	addMessage(3, "> %s/%s\n%s", title->artist, title->title, title->album );
 }

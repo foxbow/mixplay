@@ -978,13 +978,16 @@ int jsonGetLength( jsonObject *jo, char *key ) {
 
 /*
  * Adds a new element to a jsonArray chain.
+ * Must not be called with jo == NULL!
+ * returns -1 on empty jsonObject tree
+ *          0 on error
+ *          1 on success
  */
 int jsonAddArrElement( jsonObject *jo, void *val, jsonType type ) {
 	char key[20];
 	int index=0;
 
 	if( jo == NULL ) {
-		jsonFail( jo, "Cannot add an array Element to an empty object!" );
 		return -1;
 	}
 
@@ -994,7 +997,7 @@ int jsonAddArrElement( jsonObject *jo, void *val, jsonType type ) {
 
 	if( jo->type != json_array ) {
 		jsonFail( jo, "%s is no Array Object to add to!", jo->key );
-		return -1;
+		return 0;
 	}
 
 	if( jo->val != NULL ) {
@@ -1033,6 +1036,7 @@ int jsonAddArrElement( jsonObject *jo, void *val, jsonType type ) {
 			jo->val=jsonAddObj(NULL, key, NULL );
 			break;
 		default:
+			jsonFail( jo, "Illegal type id %i!", type );
 			return 0;
 		}
 	} else {
@@ -1060,6 +1064,7 @@ int jsonAddArrElement( jsonObject *jo, void *val, jsonType type ) {
 			jsonAddObj(jo, key, NULL );
 			break;
 		default:
+			jsonFail( jo, "Illegal type id %i!", type );
 			return 0;
 		}
 	}
