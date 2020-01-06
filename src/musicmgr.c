@@ -956,35 +956,6 @@ static mpplaylist_t *getPLEntry( mptitle_t *title, int range ) {
 }
 
 /*
- * play the given title next
- * if it's in the playlist it gets moved
- * otherwise it gets inserted as a new entry
- */
-void playNext( mptitle_t *title ) {
-	mpplaylist_t *source;
-	assert(title != NULL);
-
-	/* check played titles */
-	source=getPLEntry( title, 2 );
-	if( source != NULL ) {
-		title->flags&=~MP_MARK;
-	}
-	else {
-		/* check following titles */
-		source=getPLEntry( title, 1 );
-	}
-
-	if( source != NULL ) {
-		movePLEntry( source, getConfig()->current );
-	}
-	else {
-		/* add title as new one - should not happen */
-		addMessage(1, "Inserting %s as new!", title->display);
-		addToPL( title, getConfig()->current, 0 );
-	}
-}
-
-/*
  * moves a title in the playlist.
  * if after is NULL the current title is chosen as title to
  * insert after.

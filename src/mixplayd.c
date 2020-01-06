@@ -200,15 +200,15 @@ int main( int argc, char **argv ) {
 		incDebug();
 	}
 
+	/* TODO: this is a bad idea in a multithreaded environment! */
+	signal(SIGINT, sigint );
+	signal(SIGTERM, sigint );
+
 	if( access( PIDPATH, F_OK ) == 0 ) {
 		addMessage( 0, "Mixplayd is already running!" );
 		freeConfig();
 		return -1;
 	}
-
-	/* TODO: this is a bad idea in a multithreaded environment! */
-	signal(SIGINT, sigint );
-	signal(SIGTERM, sigint );
 
 	/* daemonization must happen before childs are created otherwise the pipes
 	   are cut TODO: what about daemon(1,0)? */
@@ -218,6 +218,10 @@ int main( int argc, char **argv ) {
 		}
 		openlog ("mixplayd", LOG_PID, LOG_DAEMON);
 		control->isDaemon=1;
+		if( access( PIDPATH, F_OK ) == 0 ) {
+			addMessage( 0, "Two mixplayd's having a race!" );
+			return -1;
+		}
 		pidlog=fopen( PIDPATH, "w");
 		if( pidlog == NULL ) {
 			addMessage( 0, "Cannot open %s!", PIDPATH );
@@ -251,7 +255,11 @@ int main( int argc, char **argv ) {
 		}
 		addMessage( 0, "Player terminated gracefully" );
 	}
-	unlink(PIDPATH);
+
+	if( access( PIDPATH, F_OK ) == 0 ) {
+		unlink(PIDPATH);
+	}
+
 	freeConfig( );
 
 	return 0;

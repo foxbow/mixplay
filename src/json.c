@@ -30,7 +30,8 @@ static jsonObject *jsonFail( jsonObject *jo, const char *msg, ... ) {
 	va_start( args, msg );
 	vsnprintf( jsonError, 1024, msg, args );
 	va_end( args );
-	return jsonAddStr( jo, "jsonError", jsonError );
+	jo=jsonAddStr( jo, "jsonError", jsonError );
+	return jo;
 }
 
 /**
