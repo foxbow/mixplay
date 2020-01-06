@@ -40,7 +40,9 @@ endif
 LIBS+=$(shell pkg-config --libs $(REFS))
 CCFLAGS+=$(shell pkg-config --cflags $(REFS))
 
-all: $(OBJDIR)/dep.d bin/mixplayd bin/mprcinit
+all: $(OBJDIR)/dep.d bin/mixplayd bin/mprcinit bin/mixplay-hid
+
+coverity: $(OBJDIR)/dep.d bin/mixplayd bin/mprcinit bin/mixplay-hid bin/mixplay-scr
 
 clean:
 	rm -f $(OBJDIR)/*

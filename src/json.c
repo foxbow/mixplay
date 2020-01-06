@@ -673,6 +673,7 @@ static jsonObject *jsonFollowPath( jsonObject *jo, const char *key ) {
 		pos=pos+1;
 		jo=jsonFetch(jo,path);
 		if( jo == NULL ){
+			free(path);
 			return NULL;
 		}
 		jo=(jsonObject*)jo->val;
@@ -717,7 +718,7 @@ char *jsonGetError( jsonObject *jo ) {
 	errObj=jsonFindKey(jo, "jsonError");
 	while(errObj != NULL) {
 		if( result == NULL ) {
-			result=malloc(strlen((char*)errObj->val)+3);
+			result=calloc(strlen((char*)errObj->val)+3,1);
 		}
 		else {
 			result=realloc(result,strlen(result)+strlen((char*)errObj->val)+3);

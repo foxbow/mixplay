@@ -71,6 +71,7 @@ static int getDisplayState() {
 	}
 	else {
 		fail(F_FAIL,"No DPMS support!");
+		rv=-1;
 	}
 	XCloseDisplay(dpy);
 	return rv;
@@ -83,7 +84,7 @@ int main( int argc, char **argv ){
 	time_t now=0;
 	mpcmd_t cmd=mpc_idle;
 	int fd=0;
-	int sstate=1;
+	int sstate;
 
 	if( argc != 2 ) {
 		fail(F_FAIL, "No timeout given!");
@@ -93,6 +94,11 @@ int main( int argc, char **argv ){
 
 	if( to < 10 ) {
 		fail(F_FAIL, "Timeout must be at least 10 seconds!");
+	}
+
+	sstate=getDisplayState();
+	if( sstate == -1 ) {
+		fail(F_FAIL, "Cannot access DPMS!");
 	}
 
 	readConfig();
@@ -117,6 +123,8 @@ int main( int argc, char **argv ){
 		}
 		jsonDiscard(jo);
 		now=time(0);
+		
+		/* nothing is playing */
 		if( cmd == mpc_idle ) {
 			/* is the screen physically on? */
 			if( getDisplayState() == 1 ) {
