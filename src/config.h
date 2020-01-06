@@ -148,6 +148,7 @@ typedef struct {
 	void *data;					/* extended data for gmixplay */
 	int  port;
 	int mpmode;						/* playmode, see PM_* */
+	unsigned sleepto;			/* idle timeout for clients */
 	unsigned dbDirty;
 	/* flags for mpmode */
 	unsigned fpcurrent:1;

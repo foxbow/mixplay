@@ -191,6 +191,7 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 		jsonAddInt( jo, "skipdnp", data->skipdnp );
 		jsonAddStrs( jo, "stream", data->stream, data->streams );
 		jsonAddStrs( jo, "sname", data->sname, data->streams );
+		jsonAddInt( jo, "sleepto", data->sleepto );
 	}
 	jsonAddInt( jo, "active", data->active );
 	jsonAddStr( jo, "playtime", data->playtime );

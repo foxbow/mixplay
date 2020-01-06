@@ -46,7 +46,7 @@ static void drawAll(int fd) {
 	}
 }
 
-int main( ){
+int main( int argc, char **argv ){
 	char c=0;
 	int running=1;
 	int fd=0;
@@ -56,11 +56,18 @@ int main( ){
 		fail( F_FAIL, "No mixplayd configuration found!");
 	}
 
-	fd = getConnection();
-	if( fd == -1 ) {
-		fail(errno, "Could not connect to server!");
+	if( argc == 2 ) {
+		fd = getConnection(argv[1]);
+		if( fd == -1 ) {
+			fail(errno, "Could not connect to server at %s!", argv[1]);
+		}
 	}
-
+	else {
+		fd = getConnection(NULL);
+		if( fd == -1 ) {
+			fail(errno, "Could not connect to local server!");
+		}
+	}
 	hidPrintline( "Mixplay HID demo\n");
 
 	while ( running ) {

@@ -22,7 +22,7 @@ const idleto = 2500
 const playto = 750
 var toval = playto
 var idletime = 0
-const idlesleep = 5 * 60 * 1000
+var idlesleep = 0
 
 function replaceChild (e, c) {
   wipeElements(e)
@@ -960,10 +960,8 @@ function playerUpdate (data) {
   /* switching between stream and normal play */
   if (!isstream) {
     setElement('playtime', data.playtime)
-    setElement('remtime', data.remtime)
     document.getElementById('progressbar').style.width = data.percent + '%'
   } else {
-    setElement('remtime', data.playtime)
     document.getElementById('progressbar').style.width = '100%'
   }
 
@@ -984,10 +982,12 @@ function playerUpdate (data) {
   enableElement('ctitle', !data.status)
 
   if (data.status) {
-    if (idletime < idlesleep) {
-      idletime = idletime + toval
-    } else {
-      power(0)
+    if (idlesleep > 0) {
+      if (idletime < idlesleep) {
+        idletime = idletime + toval
+      } else {
+        power(0)
+      }
     }
     document.getElementById('play').innerHTML = '\u25B6'
   } else {
@@ -1152,6 +1152,7 @@ function updateConfig (data) {
   } else {
     setElement('active', 'No active profile/channel')
   }
+  idlesleep = data.sleepto * 1000
 }
 
 /*
@@ -1397,6 +1398,18 @@ function power (on) {
   }
 }
 
+function clocktime () {
+  var now = new Date()
+  const min = now.getMinutes()
+  const sec = now.getSeconds()
+  var line = now.getHours() + ':'
+  if (min < 10) line = line + '0'
+  line = line + min + ':'
+  if (sec < 10) line = line + '0'
+  line = line + sec
+  setElement('remtime', line)
+  setTimeout(function () { clocktime() }, 1000)
+}
 /*
  * start the UI update thread loops
  */
@@ -1420,4 +1433,6 @@ function initializeUI () {
   updateUI()
   /* start scrolltext */
   scrollToggle()
+  /* start clock */
+  clocktime()
 }

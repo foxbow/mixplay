@@ -38,7 +38,7 @@ void fail( const int error, const char* msg, ... ) {
 	 -2 : unable to connect to server
 	 on error and the socket on success.
 */
-int getConnection() {
+int getConnection( const char *addr ) {
 	struct sockaddr_in server;
 	int fd;
 
@@ -49,7 +49,12 @@ int getConnection() {
 
 	memset( &server, 0, sizeof(server) );
 	server.sin_family = AF_INET;
-	server.sin_addr.s_addr = inet_addr("127.0.0.1");
+	if( addr == NULL ) {
+		server.sin_addr.s_addr = inet_addr("127.0.0.1");
+	}
+	else {
+		server.sin_addr.s_addr = inet_addr(addr);
+	}
 	server.sin_port = htons( getConfig()->port );
 	if( connect(fd, (struct sockaddr*)&server, sizeof(server)) == -1 ) {
 		close(fd);
@@ -71,7 +76,7 @@ static char *sendRequest( int usefd, const char *path ) {
 	int fd=-1;
 
 	if( usefd == -1 ) {
-		fd=getConnection();
+		fd=getConnection(NULL);
 		if( fd < 0 ) {
 			free(reply);
 			return NULL;

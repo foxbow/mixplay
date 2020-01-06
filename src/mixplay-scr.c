@@ -77,7 +77,7 @@ static int getDisplayState() {
 	return rv;
 }
 
-int main( int argc, char **argv ){
+int main(){
 	jsonObject *jo=NULL;
 	time_t to=0;
 	time_t timer=0;
@@ -86,14 +86,12 @@ int main( int argc, char **argv ){
 	int fd=0;
 	int sstate;
 
-	if( argc != 2 ) {
-		fail(F_FAIL, "No timeout given!");
-	}
+	readConfig();
 
-	to=atoi(argv[1]);
-
-	if( to < 10 ) {
-		fail(F_FAIL, "Timeout must be at least 10 seconds!");
+	/* could also be read from mixplayd */
+	to=getConfig()->sleepto;
+	if( to == 0 ) {
+		fail(F_FAIL, "No timeout set, disabling screensaver!");
 	}
 
 	sstate=getDisplayState();
@@ -101,8 +99,7 @@ int main( int argc, char **argv ){
 		fail(F_FAIL, "Cannot access DPMS!");
 	}
 
-	readConfig();
-	fd = getConnection();
+	fd = getConnection(NULL);
 	if( fd < 0 ) {
 		fail(errno, "Could not connect to server!");
 	}

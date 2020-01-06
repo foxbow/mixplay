@@ -246,6 +246,7 @@ mpconfig_t *readConfig( void ) {
 	_cconfig->password=strdup("mixplay");
 	_cconfig->verbosity=0;
 	_cconfig->skipdnp=3;
+	_cconfig->sleepto=0;
 	_cconfig->debug=0;
 	_cconfig->fade=1;
 	_cconfig->inUI=0;
@@ -314,6 +315,9 @@ mpconfig_t *readConfig( void ) {
 			}
 			if( strstr( line, "skipdnp=" ) == line ) {
 				_cconfig->skipdnp=atoi(pos);
+			}
+			if( strstr( line, "sleepto=" ) == line ) {
+				_cconfig->sleepto=atoi(pos);
 			}
 			if( strstr( line, "fade=" ) == line ) {
 				_cconfig->fade=atoi(pos);
@@ -403,6 +407,7 @@ void writeConfig( const char *musicpath ) {
 			fprintf( fp, "%s;", _cconfig->sname[i] );
 		}
 		fprintf( fp, "\nskipdnp=%i", _cconfig->skipdnp );
+		fprintf( fp, "\nsleepto=%i", _cconfig->sleepto );
 		fprintf( fp, "\nfade=%i", _cconfig->fade );
 		if( _cconfig->channel != NULL ) {
 			fprintf( fp, "\nchannel=%s", _cconfig->channel );

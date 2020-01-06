@@ -22,7 +22,7 @@ int main( int argc, char **argv ){
 	char last[MAXPATHLEN+1]="";
 
 	readConfig();
-	fd = getConnection();
+	fd = getConnection(NULL);
 	if( fd < 0 ) {
 		fail(errno, "Could not connect to server!");
 	}
