@@ -98,12 +98,20 @@ static char *sendRequest( int usefd, const char *path ) {
 
 	while( recv( fd, reply+rlen, RBLKSIZE, 0 ) == RBLKSIZE ) {
 		rlen += RBLKSIZE;
+		if( rlen >= 10240 ) {
+			free(reply);
+			close(fd);
+			fail(F_FAIL, "Reply too long!");
+			return NULL;
+		}
 		reply=frealloc(reply, rlen+RBLKSIZE);
 		memset(reply+rlen, 0, RBLKSIZE-1);
 	}
 	if( usefd == -1 ) {
 		close(fd);
 	}
+
+	/* force terminate reply */
 	reply[rlen + RBLKSIZE - 1]=0;
 
 	if( strstr( reply, "HTTP/1.1 200" ) == reply ) {
@@ -111,6 +119,13 @@ static char *sendRequest( int usefd, const char *path ) {
 		if( pos != NULL ) {
   		pos += strlen("Content-Length:")+1;
 			rlen=atoi(pos);
+
+			if(( rlen < 0 ) || ( rlen >= 10240 )) {
+				free(reply);
+				fail(F_FAIL, "Illegal Content-length!");
+				return NULL;
+			}
+
 			if( rlen != 0 ) {
 				/* add terminating NUL */
 				rlen=rlen+1;

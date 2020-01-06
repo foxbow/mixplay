@@ -138,7 +138,7 @@ static void db2entry( dbentry_t *dbentry, mptitle_t *entry ) {
 	strcpy( entry->title, dbentry->title );
 	strcpy( entry->album, dbentry->album );
 	strcpy( entry->genre, dbentry->genre );
-	snprintf( entry->display, MAXPATHLEN, "%s - %s", entry->artist, entry->title );
+	snprintf( entry->display, MAXPATHLEN-1, "%s - %s", entry->artist, entry->title );
 	entry->playcount=dbentry->playcount;
 	entry->skipcount=dbentry->skipcount;
 	entry->favpcount=0;
@@ -477,7 +477,7 @@ int dbNameCheck( void ) {
 		return -1;
 	}
 
-	snprintf( rmpath, MAXPATHLEN, "%s/.mixplay/rmlist.sh", getenv("HOME"));
+	snprintf( rmpath, MAXPATHLEN-1, "%s/.mixplay/rmlist.sh", getenv("HOME"));
 	fp=fopen( rmpath, "w" );
 	if( NULL == fp ) {
 		addMessage( -1, "Could not open %s for writing!", rmpath );
