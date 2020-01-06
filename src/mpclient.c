@@ -120,7 +120,7 @@ static char *sendRequest( int usefd, const char *path ) {
   		pos += strlen("Content-Length:")+1;
 			rlen=atoi(pos);
 
-			if(( rlen < 0 ) || ( rlen >= 10240 )) {
+			if( rlen >= 10240 ) {
 				free(reply);
 				fail(F_FAIL, "Illegal Content-length!");
 				return NULL;
