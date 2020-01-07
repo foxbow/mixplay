@@ -18,9 +18,7 @@ var smallUI = (document.cookie && (document.cookie.indexOf('MPsmallUI') !== -1))
 var active = 0
 var swipest = []
 var overflow = 0
-const idleto = 2500
-const playto = 750
-var toval = playto
+var toval = 750
 var idletime = 0
 var idlesleep = 0
 
@@ -1390,10 +1388,8 @@ function power (on) {
   const el = document.getElementById('black')
   if (on === 1) {
     idletime = 0
-    toval = playto
     el.className = 'hide'
   } else {
-    toval = idleto
     el.className = ''
   }
 }
@@ -1401,12 +1397,9 @@ function power (on) {
 function clocktime () {
   var now = new Date()
   const min = now.getMinutes()
-  const sec = now.getSeconds()
   var line = now.getHours() + ':'
   if (min < 10) line = line + '0'
-  line = line + min + ':'
-  if (sec < 10) line = line + '0'
-  line = line + sec
+  line = '[' + line + min + ']'
   setElement('remtime', line)
   setTimeout(function () { clocktime() }, 1000)
 }

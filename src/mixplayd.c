@@ -205,6 +205,8 @@ int main( int argc, char **argv ) {
 	signal(SIGTERM, sigint );
 
 	if( access( PIDPATH, F_OK ) == 0 ) {
+		/* todo: it may make sense to check if the found process id exists
+		         or if PIDPATH is a crash remain */
 		addMessage( 0, "Mixplayd is already running!" );
 		freeConfig();
 		return -1;
@@ -218,18 +220,20 @@ int main( int argc, char **argv ) {
 		}
 		openlog ("mixplayd", LOG_PID, LOG_DAEMON);
 		control->isDaemon=1;
-		if( access( PIDPATH, F_OK ) == 0 ) {
-			addMessage( 0, "Two mixplayd's having a race!" );
+		if( access( PIDPATH, F_OK ) != 0 ) {
+			pidlog=fopen( PIDPATH, "w");
+			if( pidlog == NULL ) {
+				addMessage( 0, "Cannot open %s!", PIDPATH );
+				addError(errno);
+				return -1;
+			}
+			fprintf( pidlog, "%i", getpid() );
+			fclose(pidlog);
+		}
+		else {
+			addMessage(0, "Race lost!");
 			return -1;
 		}
-		pidlog=fopen( PIDPATH, "w");
-		if( pidlog == NULL ) {
-			addMessage( 0, "Cannot open %s!", PIDPATH );
-			addError(errno);
-			return -1;
-		}
-		fprintf( pidlog, "%i", getpid() );
-		fclose(pidlog);
 	}
 
 	addUpdateHook( &s_updateHook );

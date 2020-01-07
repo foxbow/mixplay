@@ -39,7 +39,8 @@ static jsonObject *jsonFail( jsonObject *jo, const char *msg, ... ) {
  */
 static jsonObject *jsonParseFail( jsonObject *jo, const char *func, const char *str, const int i, const int state ) {
 	jo=jsonFail( jo, "%s#%i: Found invalid '%c' in JSON pos %i", func, state, str[i], i );
-	return jsonFail( jo, "%s", str);
+	jo=jsonFail( jo, "%s", str);
+	return jo;
 }
 
 /*
