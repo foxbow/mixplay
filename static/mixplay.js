@@ -1397,11 +1397,13 @@ function power (on) {
 function clocktime () {
   var now = new Date()
   const min = now.getMinutes()
-  var line = now.getHours() + ':'
+  const hrs = now.getHours()
+  var line = hrs + ':'
+  if (hrs < 10) line = '0' + line
   if (min < 10) line = line + '0'
-  line = '[' + line + min + ']'
+  line = '[ ' + line + min + ' ]'
   setElement('remtime', line)
-  setTimeout(function () { clocktime() }, 1000)
+  setTimeout(function () { clocktime() }, 5000)
 }
 /*
  * start the UI update thread loops

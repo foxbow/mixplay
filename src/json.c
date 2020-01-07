@@ -13,7 +13,7 @@
 
 #include "json.h"
 
-static jsonObject *jsonFail( jsonObject *jo, const char *msg, ... ) __attribute__((__format__(__printf__, 2, 3)));
+int jsonFail( jsonObject *jo, const char *msg, ... ) __attribute__((__format__(__printf__, 2, 3)));
 
 /* forward definitions of cyclic dependencies in static functions */
 static char *jsonWriteObj( jsonObject *jo, char *json, size_t *len );
@@ -24,23 +24,29 @@ static int jsonParseArray( char *json, jsonObject **jo );
 /*
  * error handling functions
  */
-static jsonObject *jsonFail( jsonObject *jo, const char *msg, ... ) {
+int jsonFail( jsonObject *jo, const char *msg, ... ) {
 	char jsonError[1025];
 	va_list args;
+	if( jo == NULL ) {
+		return -1;
+	}
 	va_start( args, msg );
 	vsnprintf( jsonError, 1024, msg, args );
 	va_end( args );
-	jo=jsonAddStr( jo, "jsonError", jsonError );
-	return jo;
+	jsonAddStr( jo, "jsonError", jsonError );
+	return 0;
 }
 
 /**
  * simple wrapper to keep old messages
  */
-static jsonObject *jsonParseFail( jsonObject *jo, const char *func, const char *str, const int i, const int state ) {
-	jo=jsonFail( jo, "%s#%i: Found invalid '%c' in JSON pos %i", func, state, str[i], i );
-	jo=jsonFail( jo, "%s", str);
-	return jo;
+int jsonParseFail( jsonObject *jo, const char *func, const char *str, const int i, const int state ) {
+	if( jo == NULL ) {
+		return -1;
+	}
+	jsonFail( jo, "%s#%i: Found invalid '%c' in JSON pos %i", func, state, str[i], i );
+	jsonFail( jo, "%s", str);
+	return 0;
 }
 
 /*
@@ -375,8 +381,8 @@ static int jsonParseValue( char *json, jsonObject *jo ) {
 		jo->type=json_string;
 		rv=jsonParseString( &json[jpos], (char **)&(jo->val) );
 		if( rv == -1 ) {
-			jo=jsonFail(jo, "Could not parse string at %i", jpos);
-			jo=jsonFail(jo, "%s", json);
+			jsonFail(jo, "Could not parse string at %i", jpos);
+			jsonFail(jo, "%s", json);
 			return -1;
 		}
 		jpos+=rv;
@@ -386,8 +392,8 @@ static int jsonParseValue( char *json, jsonObject *jo ) {
 		jo->type=json_object;
 		rv=jsonParseObject( &json[jpos], (jsonObject **)&(jo->val) );
 		if( rv == -1 ) {
-			jo=jsonFail(jo, "Could not parse Object at %i", jpos);
-			jo=jsonFail(jo, "%s", json);
+			jsonFail(jo, "Could not parse Object at %i", jpos);
+			jsonFail(jo, "%s", json);
 			return -1;
 		}
 		jpos+=rv;
@@ -397,8 +403,8 @@ static int jsonParseValue( char *json, jsonObject *jo ) {
 		jo->type=json_array;
 		rv=jsonParseArray( &json[jpos], (jsonObject **)&(jo->val) );
 		if( rv == -1 ) {
-			jo=jsonFail(jo, "Could not parse Array at %i", jpos);
-			jo=jsonFail(jo, "%s", json);
+			jsonFail(jo, "Could not parse Array at %i", jpos);
+			jsonFail(jo, "%s", json);
 			return -1;
 		}
 		jpos+=rv;
@@ -412,7 +418,7 @@ static int jsonParseValue( char *json, jsonObject *jo ) {
 			return jpos;
 		}
 		else {
-			jo=jsonParseFail( jo, __func__, json, jpos, state );
+			jsonParseFail( jo, __func__, json, jpos, state );
 			return -1;
 		}
 		break;
@@ -424,7 +430,7 @@ static int jsonParseValue( char *json, jsonObject *jo ) {
 			return jpos;
 		}
 		else {
-			jo=jsonParseFail( jo,__func__, json, jpos, state );
+			jsonParseFail( jo,__func__, json, jpos, state );
 			return -1;
 		}
 		break;
@@ -436,7 +442,7 @@ static int jsonParseValue( char *json, jsonObject *jo ) {
 			return jpos;
 		}
 		else {
-			jo=jsonParseFail( jo,__func__, json, jpos, state );
+			jsonParseFail( jo,__func__, json, jpos, state );
 			return -1;
 		}
 		break;
@@ -448,7 +454,7 @@ static int jsonParseValue( char *json, jsonObject *jo ) {
 			return jpos;
 		}
 		else {
-			jo=jsonParseFail( jo,__func__, json, jpos, state );
+			jsonParseFail( jo,__func__, json, jpos, state );
 			return -1;
 		}
 	}
@@ -476,15 +482,15 @@ static int jsonParseKeyVal( char *json, jsonObject **jo ) {
 			case '"':
 				rv=jsonParseString( &json[jpos], &((*jo)->key) );
 				if(rv == -1) {
-					*jo=jsonFail(*jo, "Could not parse key at %i", jpos);
-					*jo=jsonFail(*jo, "%s", json );
+					jsonFail(*jo, "Could not parse key at %i", jpos);
+					jsonFail(*jo, "%s", json );
 					return -1;
 				}
 				jpos+=rv;
 				state=1;
 				break;
 			default:
-				*jo=jsonParseFail( *jo, __func__, json, jpos, state );
+				jsonParseFail( *jo, __func__, json, jpos, state );
 				return -1;
 			}
 			break;
@@ -498,7 +504,7 @@ static int jsonParseKeyVal( char *json, jsonObject **jo ) {
 				jpos++;
 				break;
 			default:
-				*jo=jsonParseFail( *jo, __func__, json, jpos, state );
+				jsonParseFail( *jo, __func__, json, jpos, state );
 				return -1;
 			}
 			break;
@@ -556,7 +562,7 @@ static int jsonParseArray( char *json, jsonObject **jo ) {
 				jpos++;
 				break;
 			default:
-				*jo=jsonParseFail( *jo, __func__, json, jpos, state );
+				jsonParseFail( *jo, __func__, json, jpos, state );
 				return -1;
 			}
 			break;
@@ -577,8 +583,8 @@ static int jsonParseArray( char *json, jsonObject **jo ) {
 				jpos+=jsonParseValue( json+jpos, *current );
 				break;
 			default:
-			*jo=jsonParseFail( *jo, __func__, json, jpos, state );
-			return -1;
+				jsonParseFail( *jo, __func__, json, jpos, state );
+				return -1;
 			}
 			break;
 		}
@@ -614,7 +620,7 @@ static int jsonParseObject( char *json, jsonObject **jo ) {
 				jpos++;
 				break;
 			default:
-				*jo = jsonParseFail( *jo, __func__, json, jpos, state );
+				jsonParseFail( *jo, __func__, json, jpos, state );
 				return -1;
 			}
 			break;
@@ -639,7 +645,7 @@ static int jsonParseObject( char *json, jsonObject **jo ) {
 				current=&((*current)->next);
 				break;
 			default:
-				*jo=jsonParseFail( *jo, __func__, json, jpos, state );
+				jsonParseFail( *jo, __func__, json, jpos, state );
 				return -1;
 			}
 			break;
@@ -1137,7 +1143,7 @@ static char *jsonWriteVal( jsonObject *jo, char *json, size_t *len ) {
 		strcat( json, "null" );
 		break;
 	case json_error:
-		jo=jsonFail(jo, "Illegal json_type set on %s", jo->key );
+		jsonFail(jo, "Illegal json_type set on %s", jo->key );
 		strcat( json, "json_error" );
 		break;
 	}
