@@ -194,8 +194,8 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 		jsonAddInt( jo, "sleepto", data->sleepto );
 	}
 	jsonAddInt( jo, "active", data->active );
-	jsonAddStr( jo, "playtime", data->playtime );
-	jsonAddStr( jo, "remtime", data->remtime );
+	jsonAddInt( jo, "playtime", data->playtime );
+	jsonAddInt( jo, "remtime", data->remtime );
 	jsonAddInt( jo, "percent", data->percent );
 	jsonAddInt( jo, "volume", data->volume );
 	jsonAddInt( jo, "status", data->status );

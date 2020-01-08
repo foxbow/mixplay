@@ -19,7 +19,7 @@ SCLLIBS=-lX11 -lXext -lpthread
 EPOBJS=$(addprefix $(ODBJDIR)/,mpepa.o epasupp.o mpclient.o)
 EPLIBS=-lwiringPi
 
-LIBS=-lmpg123 -lpthread
+LIBS=-lmpg123 -lpthread -lm
 REFS=alsa
 
 # build with 2.7" ePaper support ?

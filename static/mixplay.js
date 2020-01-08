@@ -913,6 +913,30 @@ function dnpfavUpdate (data) {
   tabify(e, 'flist', items, 16)
 }
 
+function secsToTime (secs) {
+  var time = ''
+  const hrs = Math.round(secs / 3600)
+  secs = secs % 3600
+  const min = Math.round(secs / 60)
+  secs = secs % 60
+
+  if (hrs !== 0) {
+    if (hrs < 10) {
+      time = '0'
+    }
+    time = time + hrs + ':'
+  }
+  if (min < 10) {
+    time = time + '0'
+  }
+  time = time + min + ':'
+  if (secs < 10) {
+    time = time + '0'
+  }
+  time = time + secs
+  return time
+}
+
 function playerUpdate (data) {
   if (isstream !== (data.mpmode === 1)) {
     isstream = (data.mpmode === 1) /* PM_STREAM */
@@ -957,7 +981,8 @@ function playerUpdate (data) {
 
   /* switching between stream and normal play */
   if (!isstream) {
-    setElement('playtime', data.playtime)
+    setElement('playtime', secsToTime(data.playtime) + '/' +
+        secsToTime(data.remtime))
     document.getElementById('progressbar').style.width = data.percent + '%'
   } else {
     document.getElementById('progressbar').style.width = '100%'
@@ -1395,14 +1420,13 @@ function power (on) {
 }
 
 function clocktime () {
-  var now = new Date()
+  const now = new Date()
   const min = now.getMinutes()
   const hrs = now.getHours()
   var line = hrs + ':'
   if (hrs < 10) line = '0' + line
   if (min < 10) line = line + '0'
-  line = '[ ' + line + min + ' ]'
-  setElement('remtime', line)
+  setElement('time', '&nbsp;' + line + min + '&nbsp;')
   setTimeout(function () { clocktime() }, 5000)
 }
 /*

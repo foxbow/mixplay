@@ -130,8 +130,8 @@ typedef struct {
 	marklist_t *favlist;	/* favourites */
 	marklist_t *dnplist;	/* DNPlist */
 	marklist_t *dbllist;	/* doublets */
-	char playtime[20];			/* string containing time into song 00:00 */
-	char remtime[20];			/* string containing remaining playtime 00:00 */
+	unsigned playtime;			/* seconds time into song */
+	unsigned remtime;			/* seconds remaining */
 	int percent;				/* how many percent of the song have been played */
 	mpcmd_t command;				/* command to the player */
 	char *argument;				/* arguments to command */

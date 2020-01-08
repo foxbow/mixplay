@@ -67,7 +67,7 @@ button:hover {
 	cursor: pointer;
 }
 
-#playtime:hover, #remtime:hover, #splaytime:hover {
+#playtime:hover, #time:hover {
 	cursor: default;
 }
 
@@ -167,7 +167,7 @@ div#progress {
 	margin-top: 0.85em;
 }
 
-#playpack div#playtime, div#remtime {
+#playpack div#playtime, div#time {
 	margin-top: 0.6em;
 	margin-bottom: 0.2em;
 }
@@ -236,7 +236,7 @@ button.active, button.inactive, button.hide {
 	background: none;
 }
 
-div#remtime {
+div#time {
 	background-image: linear-gradient( lightblue, darkblue 20%, darkblue 80%, black );
 }
 

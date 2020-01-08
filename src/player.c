@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <alsa/asoundlib.h>
 #include <unistd.h>
+#include <math.h>
 
 #include "utils.h"
 #include "database.h"
@@ -577,8 +578,8 @@ void *reader( ) {
 	char 	line[MAXPATHLEN];
 	char 	*a, *t;
 	int 	order=1;
-	int 	intime=0;
-	int		oldtime=0;
+	float	intime=0.0;
+	float	oldtime=0.0;
 	int 	fade=3;
 	int 	p_status[2][2];			/* status pipes to mpg123 */
 	int 	p_command[2][2];		/* command pipes to mpg123 */
@@ -802,7 +803,7 @@ void *reader( ) {
 						addMessage( 0, "Error in Frame info: %s", line );
 						break;
 					}
-					intime=atoi( a );
+					intime=strtof( a, NULL );
 
 					if( invol < 100 ) {
 						invol++;
@@ -818,16 +819,11 @@ void *reader( ) {
 						break;
 					}
 
-					if( intime/60 < 60 ) {
-						sprintf( control->playtime, "%02i:%02i", intime/60, intime%60 );
-					}
-					else {
-						sprintf( control->playtime, "%02i:%02i:%02i", intime/3600, ( intime%3600 )/60, intime%60 );
-					}
+					control->playtime=(unsigned)roundf(intime);
 					/* file play */
 					if( (control->mpmode&3) != PM_STREAM ) {
 						control->percent=( 100*intime )/( rem+intime );
-						sprintf( control->remtime, "%02i:%02i", (int)rem/60, (int)rem%60 );
+						control->remtime=(unsigned)roundf(rem);
 
 						/* we could just be switching from playlist to database */
 						if( control->current == NULL ) {
@@ -1114,7 +1110,7 @@ void *reader( ) {
 		case mpc_repl:
 			dowrite( p_command[fdset][1], "JUMP 0\n", 8 );
 			control->percent=0;
-			strcpy(control->playtime, "00:00" );
+			control->playtime=0;
 			break;
 
 		case mpc_quit:

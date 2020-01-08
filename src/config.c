@@ -237,8 +237,8 @@ mpconfig_t *readConfig( void ) {
 	_cconfig->root=NULL;
 	_cconfig->current=NULL;
 	_cconfig->volume=80;
-	strcpy( _cconfig->playtime, "00:00" );
-	strcpy( _cconfig->remtime, "00:00" );
+	_cconfig->playtime=0;
+	_cconfig->remtime=0;
 	_cconfig->percent=0;
 	_cconfig->status=mpc_idle;
 	_cconfig->command=mpc_idle;
