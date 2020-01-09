@@ -74,6 +74,8 @@ static char *sendRequest( int usefd, const char *path ) {
 	char *pos;
 	size_t rlen=0;
 	int fd=-1;
+	struct timeval to;
+	fd_set fds;
 
 	if( usefd == -1 ) {
 		fd=getConnection(NULL);
@@ -101,16 +103,24 @@ static char *sendRequest( int usefd, const char *path ) {
 	}
 	free(req);
 
-	while( recv( fd, reply+rlen, RBLKSIZE, 0 ) == RBLKSIZE ) {
-		rlen += RBLKSIZE;
-		if( rlen >= 10240 ) {
-			free(reply);
-			close(fd);
-			fail(F_FAIL, "Reply too long!");
-			return NULL;
+	FD_ZERO( &fds );
+	FD_SET( fd, &fds );
+
+	to.tv_sec=1;
+	to.tv_usec=0;
+	select( FD_SETSIZE, &fds, NULL, NULL, &to );
+	if( FD_ISSET( fd, &fds ) ) {
+		while( recv( fd, reply+rlen, RBLKSIZE, 0 ) == RBLKSIZE ) {
+			rlen += RBLKSIZE;
+			if( rlen >= 10240 ) {
+				free(reply);
+				close(fd);
+				fail(F_FAIL, "Reply too long!");
+				return NULL;
+			}
+			reply=frealloc(reply, rlen+RBLKSIZE);
+			memset(reply+rlen, 0, RBLKSIZE-1);
 		}
-		reply=frealloc(reply, rlen+RBLKSIZE);
-		memset(reply+rlen, 0, RBLKSIZE-1);
 	}
 	if( usefd == -1 ) {
 		close(fd);
