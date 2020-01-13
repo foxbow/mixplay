@@ -69,16 +69,15 @@ int getConnection( const char *addr ) {
    which MUST be free'd after use! */
 static char *sendRequest( int usefd, const char *path ) {
 	char *req;
-	char *reply=falloc(1, RBLKSIZE);
+	char reply[10240];
 	char *rdata=NULL;
 	char *pos;
-	size_t rlen=0;
+	size_t rlen;
 	int fd=-1;
 
 	if( usefd == -1 ) {
 		fd=getConnection(NULL);
 		if( fd < 0 ) {
-			free(reply);
 			return NULL;
 		}
 	}
@@ -93,7 +92,6 @@ static char *sendRequest( int usefd, const char *path ) {
 
 	if( send( fd, req, strlen(req), 0 ) == -1 ) {
 		free(req);
-		free(reply);
 		if( usefd == -1 ) {
 			close(fd);
 		}
@@ -101,23 +99,18 @@ static char *sendRequest( int usefd, const char *path ) {
 	}
 	free(req);
 
-	while( recv( fd, reply+rlen, RBLKSIZE, 0 ) == RBLKSIZE ) {
-		rlen += RBLKSIZE;
-		if( rlen >= 10240 ) {
-			free(reply);
-			close(fd);
-			fail(F_FAIL, "Reply too long!");
-			return NULL;
-		}
-		reply=frealloc(reply, rlen+RBLKSIZE);
-		memset(reply+rlen, 0, RBLKSIZE-1);
+	if( recv( fd, reply, 10240, 0 ) == 10240 ) {
+		close(fd);
+		fail(F_FAIL, "Reply too long!");
+		return NULL;
 	}
+
 	if( usefd == -1 ) {
 		close(fd);
 	}
 
 	/* force terminate reply */
-	reply[rlen + RBLKSIZE - 1]=0;
+	reply[10240-1]=0;
 
 	if( strstr( reply, "HTTP/1.1 200" ) == reply ) {
 		pos=strstr( reply, "Content-Length:" );
@@ -126,7 +119,6 @@ static char *sendRequest( int usefd, const char *path ) {
 			rlen=atoi(pos);
 
 			if( rlen >= 10240 ) {
-				free(reply);
 				fail(F_FAIL, "Illegal Content-length!");
 				return NULL;
 			}
@@ -146,14 +138,13 @@ static char *sendRequest( int usefd, const char *path ) {
 		}
 	}
 	else if( strstr( reply, "HTTP/1.1 ") == reply ) {
-		rdata=falloc(1,4);
+		rdata=(char*)falloc(1,4);
 		strtcpy(rdata, reply+9, 3);
 	}
 	else {
 		rdata=strdup(reply);
 	}
 
-	free(reply);
 	return rdata;
 }
 
