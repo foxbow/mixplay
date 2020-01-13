@@ -18,7 +18,7 @@ var smallUI = (document.cookie && (document.cookie.indexOf('MPsmallUI') !== -1))
 var active = 0
 var swipest = []
 var overflow = 0
-var toval = 750
+var toval = 500
 var idletime = 0
 var idlesleep = 0
 
@@ -220,8 +220,11 @@ function initScrolls () {
 function fail (msg) {
   if (doUpdate !== -1) {
     doUpdate = -1
-    window.alert(msg + '\nRetry?')
-    document.location.reload()
+    if (window.alert(msg + '\nRetry?')) {
+      document.location.reload()
+    }
+    doUpdate = 13
+    updateUI()
   }
 }
 
@@ -384,6 +387,7 @@ function sendCMD (cmd, arg = '') {
         replaceChild(e, text)
       }
     /* fallthrough */
+    case 0x07: /* mpc_quit */
     case 0x08: /* mpc_dbclean */
     case 0x0b: /* mpc_doublets */
     case 0x12: /* mpc_dbinfo */
@@ -682,6 +686,7 @@ function fullUpdate (data) {
   /* display at least one next title */
   wipeElements(e)
   document.title = data.current.artist + ' - ' + data.current.title
+
   if (data.prev.length > 0) {
     if (isstream) {
     /* only the stream title */
@@ -989,8 +994,10 @@ function playerUpdate (data) {
   }
 
   if (active !== data.active) {
+    if (active !== 0) {
+      doUpdate = 8
+    }
     active = data.active
-    doUpdate = 8
   }
 
   if ((active === 0) && (isstream)) {
@@ -1001,10 +1008,19 @@ function playerUpdate (data) {
     enableElement('cprof', 1)
   }
 
-  enableElement('current', !data.status)
-  enableElement('ctitle', !data.status)
-
-  if (data.status) {
+  /* mpc_play */
+  if (data.status === 0) {
+    if (document.body.className === 'pause') {
+      document.body.className = ''
+    }
+    power(1)
+    document.getElementById('play').innerHTML = '||'
+  } else if (data.status === 7) {
+    fail('Server is shutting down')
+  } else {
+    if (document.body.className === '') {
+      document.body.className = 'pause'
+    }
     if (idlesleep > 0) {
       if (idletime < idlesleep) {
         idletime = idletime + toval
@@ -1013,10 +1029,8 @@ function playerUpdate (data) {
       }
     }
     document.getElementById('play').innerHTML = '\u25B6'
-  } else {
-    power(1)
-    document.getElementById('play').innerHTML = '||'
   }
+
   if (data.volume > 0) {
     document.getElementById('volumebar').style.width = data.volume + '%'
     document.getElementById('volumebar').className = ''

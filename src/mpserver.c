@@ -224,6 +224,7 @@ static void *clientHandler(void *args ) {
 							addMessage(2,"Statusrequest: %i", fullstat);
 						}
 						else if( strstr( pos, "/cmd/" ) == pos ) {
+							state = 2;
 							addMessage( 2, "received cmd: %s", pos );
 							pos+=5;
 							rawcmd=strtol( pos, &pos, 16 );
@@ -245,7 +246,6 @@ static void *clientHandler(void *args ) {
 								argument = NULL;
 							}
 
-							state = 2;
 							/* search is synchronous */
 							if( MPC_CMD(cmd) == mpc_search ) {
 								if( setCurClient(sock) != -1 ) {
@@ -380,6 +380,12 @@ static void *clientHandler(void *args ) {
 				}
 			} /* switch(retval) */
 		} /* if fd_isset */
+		else {
+			/* timeout and on our way out */
+			if( config->status == mpc_quit ) {
+				running&=~1;
+			}
+		}
 
 		if( running && ( config->status != mpc_start ) ) {
 			memset( commdata, 0, commsize );
@@ -387,10 +393,8 @@ static void *clientHandler(void *args ) {
 			case 1: /* get update */
 				/* an update client! Good, that one should get status updates too! */
 				if( running == 1 ) {
-					addMessage( 1, "Update Handler (%p) initialized", (void *)&nextstat );
+					addMessage( 1, "Update Handler (%p/%i) initialized", (void *)&nextstat, sock );
 					addNotifyHook( &mps_notify, &nextstat );
-					fullstat |= MPCOMM_LISTS;
-					fullstat |= MPCOMM_FULLSTAT;
 					running|=2;
 				}
 				if( config->listDirty ) {
@@ -525,32 +529,27 @@ static void *clientHandler(void *args ) {
 						addMessage( 1, "send failed" );
 					}
 				}
-				if( fullstat == MPCOMM_CONFIG ) {
-					fullstat=MPCOMM_FULLSTAT|MPCOMM_LISTS;
+				if( fullstat & MPCOMM_RESULT ) {
+					config->found->state=mpsearch_idle;
+					/* not progressEnd() as that sends a confusing 'Done.' and it is
+					   certain here that the flow is in the correct context as search
+						 is synchronous */
+					unlockClient(sock);
 				}
-				else {
-					if( fullstat & MPCOMM_RESULT ) {
-						config->found->state=mpsearch_idle;
-						/* not progressEnd() as that sends a confusing 'Done.' and it is
-						   certain here that the flow is in the correct context as search
-							 is synchronous */
-						unlockClient(sock);
-					}
-					if( fullstat & MPCOMM_LISTS ) {
-						config->listDirty=0;
-					}
-					fullstat=MPCOMM_STAT;
+				if( fullstat & MPCOMM_LISTS ) {
+					config->listDirty=0;
 				}
+				fullstat=MPCOMM_STAT;
 			}
 		} /* if running & !mpc_start */
-	} while( ( running & 1 ) && ( config->status!=mpc_quit ) );
+	} while( running & 1 );
 
 	if( running & 2 ) {
 		removeNotifyHook( &mps_notify, &nextstat );
-		addMessage( 2, "Update Handler (%p) terminates", (void *)&nextstat );
+		addMessage( 1, "Update Handler (%p/%i) terminates", (void *)&nextstat, sock );
 	}
 
-	addMessage( 3, "Client handler exited" );
+	addMessage( 2, "Client handler exited" );
 	if( isCurClient(sock) ){
 		unlockClient( sock );
 	}
@@ -619,7 +618,6 @@ static void *mpserver( void *arg ) {
 			 * or better use a threadpool */
 			if( pthread_create( &pid, NULL, clientHandler, (void*)new_sock ) < 0) {
 				addMessage( 0, "Could not create client handler thread!" );
-				continue;
 			}
 		}
 	}

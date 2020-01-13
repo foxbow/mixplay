@@ -160,7 +160,7 @@ static long controlVolume( long volume, int absolute ) {
  *         -2 if mute was enabled
  *         the current volume on unmute
  */
-int toggleMute() {
+static int toggleMute() {
 	mpconfig_t *config=getConfig();
 	int mswitch;
 

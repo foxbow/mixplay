@@ -30,6 +30,12 @@ body.disconnect {
 	color: #f88;
 }
 
+body.pause {
+	background-color: #000;
+	background-image: radial-gradient( circle at 90% -30%, blue, darkblue 2%, black 100%);
+	color: #448;
+}
+
 div#black {
 	background-color: black;
 	color: #444;
@@ -142,11 +148,6 @@ div#volumebar.mute {
 	padding-bottom: 0.2em;
 }
 
-#current.hide, #ctitle.hide {
-	background-image: radial-gradient(darkred, transparent);
-	display: block;
-}
-
 div#playpack {
 	position: absolute;
 	bottom: 0px;
@@ -189,7 +190,7 @@ button#dnp:hover, button#fav:hover, #ascroll:hover, #lscroll:hover, #genre:hover
 }
 
 button#fav {
-	color: darkgreen;
+	background-image: radial-gradient(green, black);
 }
 
 div#playtime, div#remtime, button#dnp, button#fav {
