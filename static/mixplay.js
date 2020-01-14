@@ -22,6 +22,18 @@ var toval = 500
 var idletime = 0
 var idlesleep = 0
 
+function setBody (cname) {
+  if (document.body.className === '') {
+    document.body.className = cname
+  }
+}
+
+function clearBody (cname) {
+  if (document.body.className === cname) {
+    document.body.className = ''
+  }
+}
+
 function replaceChild (e, c) {
   wipeElements(e)
   e.appendChild(c)
@@ -153,7 +165,6 @@ function adaptUI (keep = 0) {
   /* toolbars should grow/shrink with less magnification */
   bsize = Math.max(window.innerWidth, 20 * minfont)
   bsize = Math.min(bsize / 20, 30)
-  /*  bsize = minfont + ((2 * (fsize - minfont)) / 3) */
   document.getElementById('playpack').style.fontSize = bsize + 'px'
   document.getElementById('viewtabs').style.fontSize = bsize + 'px'
 
@@ -220,7 +231,7 @@ function initScrolls () {
 function fail (msg) {
   if (doUpdate !== -1) {
     doUpdate = -1
-    if (window.alert(msg + '\nRetry?')) {
+    if (window.confirm(msg + '\nRetry?')) {
       document.location.reload()
     }
     doUpdate = 13
@@ -353,7 +364,7 @@ function sendCMD (cmd, arg = '') {
     }
     activecmd = Number(cmd)
     /* give visual feedback that the command is being progressed */
-    document.body.className = 'busy'
+    setBody('busy')
   }
 
   while (code.length < 4) {
@@ -398,7 +409,7 @@ function sendCMD (cmd, arg = '') {
         window.alert('Busy, sorry.')
       }
       activecmd = -1
-      document.body.className = ''
+      clearBody('busy')
       return
   }
 
@@ -429,7 +440,7 @@ function sendCMD (cmd, arg = '') {
           fail('Received Error ' + xmlhttp.status + ' after sending 0x' + code)
       }
       if (activecmd === -1) {
-        document.body.className = ''
+        clearBody('busy')
       }
     }
   }
@@ -962,11 +973,11 @@ function playerUpdate (data) {
 
   if (data.mpmode & 4) {
     activecmd = -2
-    document.body.className = 'busy'
+    setBody('busy')
   } else {
     if (activecmd === -2) {
       activecmd = -1
-      document.body.className = ''
+      clearBody('busy')
     }
   }
 
@@ -1010,17 +1021,13 @@ function playerUpdate (data) {
 
   /* mpc_play */
   if (data.status === 0) {
-    if (document.body.className === 'pause') {
-      document.body.className = ''
-    }
+    clearBody('pause')
     power(1)
     document.getElementById('play').innerHTML = '||'
   } else if (data.status === 7) {
     fail('Server is shutting down')
   } else {
-    if (document.body.className === '') {
-      document.body.className = 'pause'
-    }
+    setBody('pause')
     if (idlesleep > 0) {
       if (idletime < idlesleep) {
         idletime = idletime + toval
