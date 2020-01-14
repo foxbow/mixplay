@@ -17,7 +17,7 @@ static void drawAll(int fd) {
 	jsonObject *jo=NULL;
 	char *text=NULL;
 	mptitle_t title;
-	char current[MAXPATHLEN];
+	char current[MAXPATHLEN+5];
 	int rv;
 	int state;
 
@@ -37,7 +37,7 @@ static void drawAll(int fd) {
 	}
 	jsonDiscard(jo);
 
-	snprintf(current, MAXPATHLEN-1, "[%s] %s",
+	snprintf(current, MAXPATHLEN+4, "[%s] %s",
 			(state == mpc_play)?">":"|", title.display );
 	if( strcmp(current, last) != 0 ) {
 		strcpy(last, current);

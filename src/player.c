@@ -1146,6 +1146,7 @@ void *reader( ) {
 						control->active=profile;
 						control->changed = 1;
 						asyncRun( plSetProfile );
+						order=1;
 					}
 					sfree(&(control->argument));
 				}
