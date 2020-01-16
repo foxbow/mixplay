@@ -204,7 +204,7 @@ static void *clientHandler(void *args ) {
 					}
 					/* This must not be an else due to the following elses */
 					if( end == NULL ) {
-						addMessage( 0, "Discarding %s", pos );
+						addMessage( 1, "Malformed request %s", pos );
 					}
 					/* control command */
 					else if ( strstr( pos, "/mpctrl/")) {
@@ -427,7 +427,7 @@ static void *clientHandler(void *args ) {
 				break;
 
 			case 2: /* set command */
-				if( cmd != mpc_idle ) {
+				if( cmd <= mpc_idle ) {
 					/* check commands that lock the reply channel */
 					if( ( cmd == mpc_dbinfo ) || ( cmd == mpc_dbclean) ||
 							( cmd == mpc_doublets ) ){
@@ -443,8 +443,12 @@ static void *clientHandler(void *args ) {
 						sprintf( commdata, "HTTP/1.1 204 No Content\015\012\015\012" );
 						len=strlen( commdata );
 					}
+					else {
+						addMessage(1, "No reply for %i", cmd);
+					}
 				}
 				else {
+					addMessage(1, "Invalid command %i", cmd);
 					sprintf( commdata, "HTTP/1.1 400 Invalid Command\015\012\015\012" );
 					len=strlen( commdata );
 				}

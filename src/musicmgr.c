@@ -1571,7 +1571,7 @@ mptitle_t *recurse( char *curdir, mptitle_t *files ) {
  * does a database scan and dumps information about playrate
  * favourites and DNPs
  */
-void dumpInfo( mptitle_t *root ) {
+void dumpInfo( mptitle_t *root, int smooth ) {
 	mptitle_t *current=root;
 	unsigned maxplayed=0;
 	unsigned pl=0;
@@ -1632,7 +1632,7 @@ void dumpInfo( mptitle_t *root ) {
 		} while( current != root );
 
 		/* just a few titles (< 0.5%) with playcount == pl ? Try to close the gap */
-		if (!getFavplay() && (pcount < numtitles/200)) {
+		if (smooth && !getFavplay() && (pcount < numtitles/200)) {
 			fixed=1;
 			do {
 				if( current->playcount > pl ) {

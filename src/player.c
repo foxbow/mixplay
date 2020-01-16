@@ -302,9 +302,9 @@ void *setProfile( ) {
 		control->mpmode=PM_STREAM|PM_SWITCH;
 
 		if( active >= control->streams ) {
-			addMessage( 0, "Stream #%"PRId64" does no exist!", active );
+			addMessage( 0, "Stream #%" PRId64 " does no exist!", active );
 			control->active=1;
-			return setProfile( NULL );
+			return setProfile( );
 		}
 
 		setStream( control->stream[active], control->sname[active] );
@@ -321,9 +321,9 @@ void *setProfile( ) {
 		control->mpmode=PM_DATABASE|PM_SWITCH;
 
 		if( active > control->profiles ) {
-			addMessage ( 0, "Profile #%"PRId64" does no exist!", active );
+			addMessage ( 0, "Profile #%" PRId64 " does no exist!", active );
 			control->active=1;
-			return setProfile(NULL);
+			return setProfile( );
 		}
 
 		profile=control->profile[active];
@@ -443,13 +443,25 @@ static void *plDbClean( void *arg ) {
 	return NULL;
 }
 
+static void *plDbFix( void *arg ) {
+	mpconfig_t *control=getConfig();
+	pthread_mutex_t *lock=(pthread_mutex_t *) arg;
+
+	progressStart( "Database smooth" );
+	addMessage( 0, "Music dir: %s", control->musicdir );
+	dumpInfo( control->root, 1 );
+	progressEnd();
+	pthread_mutex_unlock( lock );;
+	return NULL;
+}
+
 static void *plDbInfo( void *arg ) {
 	mpconfig_t *control=getConfig();
 	pthread_mutex_t *lock=(pthread_mutex_t *) arg;
 
 	progressStart( "Database Info" );
 	addMessage( 0, "Music dir: %s", control->musicdir );
-	dumpInfo( control->root );
+	dumpInfo( control->root, 0 );
 	progressEnd();
 	pthread_mutex_unlock( lock );;
 	return NULL;
@@ -463,7 +475,7 @@ static void *plSetProfile( void *arg ) {
 	if( control->dbname[0] == 0 ) {
 		readConfig( );
 	}
-	setProfile( NULL );
+	setProfile( );
 	pthread_mutex_unlock( lock );;
 	return NULL;
 }
@@ -606,7 +618,7 @@ void *reader( ) {
 	/* these may wait in the background until */
 	/* something needs to be played at all */
 	for( i=0; i <= control->fade; i++ ) {
-		addMessage(  2, "Starting player %"PRId64, i+1 );
+		addMessage(  2, "Starting player %" PRId64, i+1 );
 
 		/* create communication pipes */
 		if( ( pipe( p_status[i] ) != 0 ) || ( pipe( p_command[i] ) != 0 ) ) {
@@ -624,11 +636,11 @@ void *reader( ) {
 		/* child process */
 		if ( 0 == pid[i] ) {
 			if ( dup2( p_command[i][0], STDIN_FILENO ) != STDIN_FILENO ) {
-				fail( errno, "Could not dup stdin for player %"PRId64, i+1 );
+				fail( errno, "Could not dup stdin for player %" PRId64, i+1 );
 			}
 
 			if ( dup2( p_status[i][1], STDOUT_FILENO ) != STDOUT_FILENO ) {
-				fail( errno, "Could not dup stdout for player %"PRId64, i+1 );
+				fail( errno, "Could not dup stdout for player %" PRId64, i+1 );
 			}
 
 			/* this process needs no pipe handles */
@@ -1281,8 +1293,15 @@ void *reader( ) {
 			break;
 
 		case mpc_dbinfo:
-			if(asyncTest() && checkPasswd()) {
-				asyncRun( plDbInfo );
+			if( asyncTest() ) {
+				if( control->argument ) {
+					if( checkPasswd() ) {
+						asyncRun( plDbFix );
+					}
+				}
+				else {
+					asyncRun( plDbInfo );
+				}
 			}
 			sfree(&(control->argument));
 			break;

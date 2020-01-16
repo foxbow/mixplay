@@ -97,7 +97,7 @@ int writeList( const mpcmd_t cmd );
 
 int isMusic( const char *name );
 void dumpTitles( mptitle_t *root, const int pl );
-void dumpInfo( mptitle_t *root );
+void dumpInfo( mptitle_t *root, int smooth );
 int fillstick( mptitle_t *root, const char *target );
 int getPlaylists( const char *cd, struct dirent ***pllist );
 unsigned long countTitles( const unsigned int inc, const unsigned int exc );

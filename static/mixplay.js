@@ -64,7 +64,7 @@ function toggleSearch () {
  */
 function scrollToggle () {
   var to = 1000
-  if (doUpdate === -1) return
+  if (doUpdate < 0) return
   for (var i = 0; i < numscrolls; i++) {
     var element = scrolls[i].element
     if (scrolls[i].offset.charAt(0) === '-') {
@@ -229,13 +229,19 @@ function initScrolls () {
  * stop updates and make sure that error messages do not stack
  */
 function fail (msg) {
-  if (doUpdate !== -1) {
-    doUpdate = -1
-    if (window.confirm(msg + '\nRetry?')) {
-      document.location.reload()
-    }
-    doUpdate = 13
-    updateUI()
+  switch (doUpdate) {
+    case -2:
+      console.log(msg + '\nretry in ten secs')
+      activecmd = -1
+      setTimeout(function () { sendCMD(0x1f) }, 10000)
+      break
+    case -1:
+      break
+    default:
+      activecmd = -1
+      doUpdate = -1
+      window.alert(msg + '\nRetry?')
+      sendCMD(0x1f)
   }
 }
 
@@ -306,6 +312,8 @@ function pwSendCMD (msg, cmd) {
   var reply = window.prompt(msg)
   if ((reply !== null) && (reply !== '')) {
     sendCMD(cmd, reply)
+  } else if (cmd === 0x12) {
+    sendCMD(cmd)
   }
 }
 
@@ -411,6 +419,8 @@ function sendCMD (cmd, arg = '') {
       activecmd = -1
       clearBody('busy')
       return
+    case 0x1f: /* mpc_idle */
+      doUpdate = -2
   }
 
   xmlhttp.onreadystatechange = function () {
@@ -427,7 +437,11 @@ function sendCMD (cmd, arg = '') {
               break
             case 0x06: /* mpc_profile */
               adaptUI(-1)
-            /* fallthrough */
+              activecmd = -1
+              break
+            case 0x1f: /* mpc_idle */
+              document.location.reload()
+              break
             default:
               activecmd = -1
           }
@@ -1108,15 +1122,15 @@ function updateUI () {
           fail('Received Error ' + xmlhttp.status)
       }
 
-      if (doUpdate !== -1) {
-        setTimeout(function () { updateUI() }, toval)
-      } else {
+      if (doUpdate < 0) {
         document.body.className = 'disconnect'
+      } else {
+        setTimeout(function () { updateUI() }, toval)
       }
     }
   }
 
-  if (doUpdate === -1) {
+  if (doUpdate < 0) {
     document.body.className = 'disconnect'
     return
   } else if (cmdtosend !== '') {
