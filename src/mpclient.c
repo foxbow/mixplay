@@ -113,8 +113,9 @@ static char *sendRequest( int usefd, const char *path ) {
 				rlen = rlen+512;
 				reply = (char*)frealloc( reply, rlen+512 );
 			}
+			rlen=rlen+512;
 			/* force terminate reply */
-			reply[rlen+511] = 0;
+			reply[rlen-1] = 0;
 		}
 		else {
 			return NULL;
@@ -136,7 +137,7 @@ static char *sendRequest( int usefd, const char *path ) {
 			clen=atoi(pos);
 
 			if( clen > rlen ) {
-				fail(F_FAIL, "Illegal Content-length!");
+				fail(F_FAIL, "Illegal Content-length (%li > %li)!", clen, rlen);
 				return NULL;
 			}
 
