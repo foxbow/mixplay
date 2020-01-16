@@ -137,7 +137,7 @@ static char *sendRequest( int usefd, const char *path ) {
 			clen=atoi(pos);
 
 			if( clen > rlen ) {
-				fail(F_FAIL, "Illegal Content-length (%li > %li)!", clen, rlen);
+				fail(F_FAIL, "Illegal Content-length (%li > %li)!", (long)clen, (long)rlen);
 				return NULL;
 			}
 
