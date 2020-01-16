@@ -427,7 +427,7 @@ static void *clientHandler(void *args ) {
 				break;
 
 			case 2: /* set command */
-				if( cmd <= mpc_idle ) {
+				if(  MPC_CMD(cmd) < mpc_idle ) {
 					/* check commands that lock the reply channel */
 					if( ( cmd == mpc_dbinfo ) || ( cmd == mpc_dbclean) ||
 							( cmd == mpc_doublets ) ){
@@ -439,18 +439,13 @@ static void *clientHandler(void *args ) {
 						clmsg=config->msg->count;
 					}
 					setCommand(cmd,argument);
-					if( okreply ) {
-						sprintf( commdata, "HTTP/1.1 204 No Content\015\012\015\012" );
-						len=strlen( commdata );
-					}
-					else {
-						addMessage(1, "No reply for %i", cmd);
-					}
+				}
+				if( okreply ) {
+					sprintf( commdata, "HTTP/1.1 204 No Content\015\012\015\012" );
+					len=strlen( commdata );
 				}
 				else {
-					addMessage(1, "Invalid command %i", cmd);
-					sprintf( commdata, "HTTP/1.1 400 Invalid Command\015\012\015\012" );
-					len=strlen( commdata );
+					addMessage(1, "No reply for %i", cmd);
 				}
 				break;
 
