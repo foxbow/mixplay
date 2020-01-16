@@ -69,11 +69,14 @@ int getConnection( const char *addr ) {
    which MUST be free'd after use! */
 static char *sendRequest( int usefd, const char *path ) {
 	char *req;
-	char reply[10240];
+	char *reply=NULL;
 	char *rdata=NULL;
 	char *pos;
-	size_t rlen;
+	size_t rlen=0;
+	size_t clen=0;
 	int fd=-1;
+	fd_set fds;
+	struct timeval	to;
 
 	if( usefd == -1 ) {
 		fd=getConnection(NULL);
@@ -99,9 +102,26 @@ static char *sendRequest( int usefd, const char *path ) {
 	}
 	free(req);
 
-	if( recv( fd, reply, 10240, 0 ) == 10240 ) {
-		close(fd);
-		fail(F_FAIL, "Reply too long!");
+	FD_ZERO( &fds );
+	FD_SET( fd, &fds );
+	to.tv_sec=1;
+	to.tv_usec=0;
+	if( select( FD_SETSIZE, &fds, NULL, NULL, &to ) > 0 ) {
+		if( FD_ISSET(fd, &fds) ) {
+			reply = (char*)falloc(512,1);
+			while( recv( fd, reply+rlen, 512, MSG_DONTWAIT ) == 512 ) {
+				rlen = rlen+512;
+				reply = (char*)frealloc( reply, rlen+512 );
+			}
+			/* force terminate reply */
+			reply[rlen+511] = 0;
+		}
+		else {
+			return NULL;
+		}
+	}
+	else {
+		/* timeout */
 		return NULL;
 	}
 
@@ -109,30 +129,27 @@ static char *sendRequest( int usefd, const char *path ) {
 		close(fd);
 	}
 
-	/* force terminate reply */
-	reply[10240-1]=0;
-
 	if( strstr( reply, "HTTP/1.1 200" ) == reply ) {
 		pos=strstr( reply, "Content-Length:" );
 		if( pos != NULL ) {
   		pos += strlen("Content-Length:")+1;
-			rlen=atoi(pos);
+			clen=atoi(pos);
 
-			if( rlen >= 10240 ) {
+			if( clen > rlen ) {
 				fail(F_FAIL, "Illegal Content-length!");
 				return NULL;
 			}
 
-			if( rlen != 0 ) {
+			if( clen != 0 ) {
 				/* add terminating NUL */
-				rlen=rlen+1;
+				clen=clen+1;
 
 				pos = strstr(pos, "\015\012\015\012" );
 				if( pos != NULL ) {
 					pos+=4;
 
-					rdata=(char*)falloc(1, rlen);
-					strtcpy( rdata, pos, rlen );
+					rdata=(char*)falloc(1, clen);
+					strtcpy( rdata, pos, clen );
 				}
 			}
 		}
@@ -144,6 +161,7 @@ static char *sendRequest( int usefd, const char *path ) {
 	else {
 		rdata=strdup(reply);
 	}
+	free(reply);
 
 	return rdata;
 }

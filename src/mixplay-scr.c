@@ -83,7 +83,6 @@ int main(){
 	time_t timer=0;
 	time_t now=0;
 	mpcmd_t cmd=mpc_idle;
-	int fd=0;
 	int sstate;
 
 	readConfig();
@@ -99,21 +98,14 @@ int main(){
 		fail(F_FAIL, "Cannot access DPMS!");
 	}
 
-	fd = getConnection(NULL);
-	if( fd < 0 ) {
-		fail(errno, "Could not connect to server!");
-	}
-
 	if( daemon( 1, 0 ) != 0 ) {
 		fail( errno, "Could not demonize!" );
 	}
 
-	/* allow everything to start up */
-	sleep(10);
 	while ( cmd != mpc_quit ) {
-		jo=getStatus(fd, MPCOMM_STAT);
+		jo=getStatus(-1, MPCOMM_STAT);
 		if( jsonPeek(jo, "type") == json_error ) {
-			cmd=mpc_quit;
+			cmd=mpc_idle;
 		}
 		else {
 			cmd=(mpcmd_t)jsonGetInt(jo,"status");
@@ -157,5 +149,5 @@ int main(){
 		}
 		sleep(1);
 	}
-	close(fd);
+	displayPower(1);
 }

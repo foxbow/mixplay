@@ -64,7 +64,6 @@ function toggleSearch () {
  */
 function scrollToggle () {
   var to = 1000
-  if (doUpdate < 0) return
   for (var i = 0; i < numscrolls; i++) {
     var element = scrolls[i].element
     if (scrolls[i].offset.charAt(0) === '-') {
@@ -229,19 +228,18 @@ function initScrolls () {
  * stop updates and make sure that error messages do not stack
  */
 function fail (msg) {
-  switch (doUpdate) {
-    case -2:
-      console.log(msg + '\nretry in ten secs')
-      activecmd = -1
-      setTimeout(function () { sendCMD(0x1f) }, 10000)
-      break
-    case -1:
-      break
-    default:
-      activecmd = -1
-      doUpdate = -1
-      window.alert(msg + '\nRetry?')
-      sendCMD(0x1f)
+  if (doUpdate < 0) {
+    activecmd = -1
+  } else {
+    toval = 5000
+    doUpdate = -1
+    activecmd = -1
+    setElement('prev', '')
+    setElement('artist', '')
+    setElement('title', 'Connection lost!')
+    setElement('album', '..retrying..')
+    setElement('next', '')
+    adaptUI(-1)
   }
 }
 
@@ -359,6 +357,11 @@ function sendCMD (cmd, arg = '') {
   cmd = Number(cmd)
   code = Number(cmd).toString(16)
 
+  /* do not send commands if we know that we are offline */
+  if (doUpdate < 0) {
+    return
+  }
+
   /* replay, prev and next don't make sense on stream */
   if (isstream && ((cmd === 0x02) || (cmd === 0x03) || (cmd === 0x05))) {
     return
@@ -419,8 +422,6 @@ function sendCMD (cmd, arg = '') {
       activecmd = -1
       clearBody('busy')
       return
-    case 0x1f: /* mpc_idle */
-      doUpdate = -2
   }
 
   xmlhttp.onreadystatechange = function () {
@@ -439,11 +440,11 @@ function sendCMD (cmd, arg = '') {
               adaptUI(-1)
               activecmd = -1
               break
-            case 0x1f: /* mpc_idle */
-              document.location.reload()
-              break
             default:
               activecmd = -1
+          }
+          if (doUpdate < 0) {
+            document.location.reload()
           }
           break
         case 503:
@@ -629,7 +630,7 @@ function popselect (choice, arg, text, drag = 0) {
         e.dataTransfer.dropEffect = 'move'
       }
     }
-    /* elemant is drop target */
+    /* element is drop target */
     if (drag & 2) {
       reply.ondrop = function (e) {
         const source = parseInt(e.dataTransfer.getData('title'))
@@ -1038,8 +1039,6 @@ function playerUpdate (data) {
     clearBody('pause')
     power(1)
     document.getElementById('play').innerHTML = '||'
-  } else if (data.status === 7) {
-    fail('Server is shutting down')
   } else {
     setBody('pause')
     if (idlesleep > 0) {
@@ -1112,8 +1111,11 @@ function updateUI () {
           } else {
             console.log('JSON-less reply!')
           }
-          break
+          /* fallthrough */
         case 204:
+          if (doUpdate < 0) {
+            document.location.reload()
+          }
           break
         case 503:
           window.alert('Sorry, we\'re busy!')
@@ -1124,16 +1126,12 @@ function updateUI () {
 
       if (doUpdate < 0) {
         document.body.className = 'disconnect'
-      } else {
-        setTimeout(function () { updateUI() }, toval)
       }
+      setTimeout(function () { updateUI() }, toval)
     }
   }
 
-  if (doUpdate < 0) {
-    document.body.className = 'disconnect'
-    return
-  } else if (cmdtosend !== '') {
+  if (cmdtosend !== '') {
     /* snchronous command */
     if (argtosend !== '') {
       xmlhttp.open('GET', '/mpctrl/cmd/' + cmdtosend + '?' + argtosend, true)
@@ -1142,7 +1140,7 @@ function updateUI () {
     }
     cmdtosend = ''
     argtosend = ''
-  } else if (doUpdate === 0) {
+  } else if (doUpdate <= 0) {
     xmlhttp.open('GET', '/mpctrl/status', true)
   } else {
     xmlhttp.open('GET', '/mpctrl/status?' + doUpdate, true)
