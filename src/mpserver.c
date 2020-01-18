@@ -106,9 +106,9 @@ static char *strdec( char *target, const char *src ) {
 	return target;
 }
 
-static void mps_notify( void *type ) {
-	addMessage( 2, "Playlist changed" );
-	*(int*)type|=MPCOMM_FULLSTAT;
+/* this is just a dummy functin .. */
+static void mps_notify( void *arg ) {
+	addMessage( 1, "Notification %i", *(int*)arg );
 }
 
 static size_t serviceUnavailable( char *commdata ) {
@@ -397,9 +397,6 @@ static void *clientHandler(void *args ) {
 					addNotifyHook( &mps_notify, &nextstat );
 					running|=2;
 				}
-				if( config->listDirty ) {
-					fullstat |= MPCOMM_LISTS;
-				}
 				/* add flags that have been set outside */
 				fullstat |= nextstat;
 				nextstat=MPCOMM_STAT;
@@ -534,9 +531,6 @@ static void *clientHandler(void *args ) {
 					   certain here that the flow is in the correct context as search
 						 is synchronous */
 					unlockClient(sock);
-				}
-				if( fullstat & MPCOMM_LISTS ) {
-					config->listDirty=0;
 				}
 				fullstat=MPCOMM_STAT;
 			}

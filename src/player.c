@@ -538,7 +538,7 @@ static int playResults( mpcmd_t range, const char *arg, const int insert ) {
 				res=res->next;
 			}
 
-			notifyChange();
+			notifyChange(MPCOMM_FULLSTAT);
 			return config->found->tnum;
 		}
 
@@ -559,7 +559,7 @@ static int playResults( mpcmd_t range, const char *arg, const int insert ) {
 			config->current=pos;
 		}
 
-		notifyChange();
+		notifyChange(MPCOMM_FULLSTAT);
 		return 1;
 	}
 
@@ -1115,7 +1115,7 @@ void *reader( ) {
 		case mpc_fav:
 			if( (title != NULL ) && asyncTest() ) {
 				handleRangeCmd( title, control->command );
-				notifyChange();
+				notifyChange(MPCOMM_FULLSTAT);
 			}
 			break;
 
@@ -1430,7 +1430,7 @@ void *reader( ) {
 				else {
 					moveTitleByIndex( atoi( control->argument ), 0 );
 				}
-				notifyChange();
+				notifyChange(MPCOMM_FULLSTAT);
 
 				sfree( &(control->argument) );
 			}

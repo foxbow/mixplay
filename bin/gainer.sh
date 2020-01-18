@@ -8,6 +8,6 @@ else
 
 	if [ "${TEST}" != "" ]; then
 		echo "Leveling ${DIR}"
-		mp3gain -q -k -r -T -p "${DIR}"/*mp3 2> /dev/null > /dev/null
+		mp3gain -q -T -p "${DIR}"/*mp3 2> /dev/null > /dev/null
 	fi
 fi

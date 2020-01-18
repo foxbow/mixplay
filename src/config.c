@@ -639,7 +639,7 @@ void activity( int v, const char *msg, ... ) {
 	if ( _ftrpos % 500 == 0 ) {
 		/* update the UI to follow activity if nothing is playing */
 		if( _cconfig->status == mpc_idle ) {
-			notifyChange();
+			notifyChange(MPCOMM_FULLSTAT);
 		}
 	}
 
@@ -769,10 +769,17 @@ void removeNotifyHook( void (*func)( void * ), void *arg ) {
 }
 
 /**
- * notify all clients that the title info has unchanged
+ * notify all clients that a bigger update is needed
  */
-void notifyChange() {
-	invokeHooks(_nfunc);
+void notifyChange(int state) {
+	_mpfunc *pos=_nfunc;
+	pthread_mutex_lock(&_cblock);
+	while( pos != NULL ) {
+		*((int*)pos->arg)|=state;
+		pos->func(pos->arg);
+		pos=pos->next;
+	}
+	pthread_mutex_unlock(&_cblock);
 }
 
 /**

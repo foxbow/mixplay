@@ -158,12 +158,23 @@ typedef struct {
 	unsigned isDaemon:1;
 	unsigned inUI:1;					/* flag to show if the UI is active */
 	unsigned changed:1;
-	unsigned listDirty:1;
 	unsigned list:1;					/* remote playlist */
 	unsigned retry:1;					/* wait for socket */
 	char *rcdev;							/* device by-id of the remote control */
 	int rccodes[MPRC_NUM];		/* command codes for the remote */
 } mpconfig_t;
+
+/* message request types */
+/* return simple player status */
+#define MPCOMM_STAT 0
+/* return full title/playlist info */
+#define MPCOMM_FULLSTAT 1
+/* return a search result */
+#define MPCOMM_RESULT 2
+/* return DNP and favlists */
+#define MPCOMM_LISTS 4
+/* return immutable configuration */
+#define MPCOMM_CONFIG 8
 
 void writeConfig( const char *musicpath );
 mpconfig_t *readConfig( void );
@@ -193,7 +204,7 @@ void progressStart( const char *msg, ... ) __attribute__((__format__(__printf__,
 void progressEnd( void );
 void updateUI( void );
 
-void notifyChange();
+void notifyChange(int state);
 
 void addNotifyHook( void (*)( void *), void *arg );
 void addProgressHook( void (*)( void * ), void *id );

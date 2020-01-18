@@ -133,7 +133,7 @@ static int addToList( const char *line, mpcmd_t cmd ) {
 	fputc('\n',fp);
 	fclose( fp );
 
-	getConfig()->listDirty=1;
+	notifyChange(MPCOMM_LISTS);
 	return 1;
 }
 
@@ -884,7 +884,7 @@ int delFromList( const mpcmd_t cmd, const char *line ) {
 	if( cnt > 0 ) {
 		writeList( mode );
 		applyLists(1);
-		getConfig()->listDirty=1;
+		notifyChange(MPCOMM_LISTS);
 	}
 
 	return cnt;
@@ -917,7 +917,7 @@ static void movePLEntry( mpplaylist_t *entry, mpplaylist_t *pos ) {
 	pos->next=entry;
 
 	/* we tinkered the playlist, an update would be nice */
-	notifyChange();
+	notifyChange(MPCOMM_FULLSTAT);
 }
 
 /*
@@ -1413,7 +1413,7 @@ void plCheck( int del ) {
 				free( buf );
 				buf=pl;
 			}
-			notifyChange();
+			notifyChange(MPCOMM_FULLSTAT);
 			return;
 		}
 
@@ -1510,7 +1510,7 @@ void plCheck( int del ) {
 		cnt++;
 	}
 
-	notifyChange();
+	notifyChange(MPCOMM_FULLSTAT);
 }
 
 /*
