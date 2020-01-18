@@ -136,8 +136,9 @@ static char *sendRequest( int usefd, const char *path ) {
   		pos += strlen("Content-Length:")+1;
 			clen=atoi(pos);
 
+			/* content length larger than received data */
 			if( clen > rlen ) {
-				fail(F_FAIL, "Illegal Content-length (%li > %li)!", (long)clen, (long)rlen);
+				free(reply);
 				return NULL;
 			}
 
