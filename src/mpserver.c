@@ -108,7 +108,7 @@ static char *strdec( char *target, const char *src ) {
 
 /* this is just a dummy functin .. */
 static void mps_notify( void *arg ) {
-	addMessage( 1, "Notification %i", *(int*)arg );
+	addMessage( 1, "Notification %p/%i", arg, *(int*)arg );
 }
 
 static size_t serviceUnavailable( char *commdata ) {
