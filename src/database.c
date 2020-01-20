@@ -395,7 +395,7 @@ int dbAddTitles( char *basedir ) {
 
 	db=dbOpen( );
 	if( db == -1 ) {
-		wipeTitles(dbrunner);
+		getConfig()->root=wipeTitles(getConfig()->root);
 		return -1;
 	}
 
