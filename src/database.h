@@ -25,7 +25,7 @@ typedef struct {
 
 mptitle_t *dbGetMusic( void );
 int dbCheckExist( void );
-int dbAddTitles( const char *dbname, char *basedir );
+int dbAddTitles( char *basedir );
 void dbWrite( void );
 int dbNameCheck( void );
 mptitle_t *getTitleByIndex( unsigned int index );

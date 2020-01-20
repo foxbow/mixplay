@@ -49,6 +49,7 @@ char *toLower( char *text );
 int hexval( const char c );
 int dowrite( const int fd, const char *buf, const size_t buflen );
 int fileBackup( const char *name );
+int fileRevert( const char *path );
 int getch( long timeout );
 int getEventCode( int *code, int fd, unsigned timeout, int repeat );
 #endif

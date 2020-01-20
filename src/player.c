@@ -342,7 +342,7 @@ void *setProfile( ) {
 		if( NULL == control->root ) {
 			addMessage( 0, "Scanning musicdir" );
 
-			num = dbAddTitles( control->dbname, control->musicdir );
+			num = dbAddTitles( control->musicdir );
 
 			if( 0 == num ) {
 				fail( F_FAIL, "No music found at %s!", control->musicdir );
@@ -428,7 +428,7 @@ static void *plDbClean( void *arg ) {
 	}
 
 	addMessage( 0, "Checking for new titles.." );
-	i=dbAddTitles( control->dbname, control->musicdir );
+	i=dbAddTitles( control->musicdir );
 
 	if( i > 0 ) {
 		addMessage( 0, "Added %i new titles", i );

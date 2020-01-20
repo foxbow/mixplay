@@ -161,17 +161,20 @@ static void entry2db( mptitle_t *entry, dbentry_t *dbentry ) {
 }
 
 /**
- * opens the database file and handles errors
+ * opens the database file
  */
-static int dbOpen( const char *path ) {
+static int dbOpen( ) {
 	int db=-1;
+	char *path = getConfig()->dbname;
+
 	db = open( path, O_RDWR|O_CREAT, S_IRUSR|S_IWUSR );
 
 	if( -1 == db ) {
-		fail( errno, "Could not open database %s", path );
+		addMessage( -1, "Could not open database %s", path );
 	}
-
-	addMessage( 2, "Opened database %s", path );
+	else {
+		addMessage( 2, "Opened database %s", path );
+	}
 	return db;
 }
 
@@ -236,7 +239,10 @@ mptitle_t *dbGetMusic( ) {
 	mptitle_t *dbroot=NULL;
 	int db;
 	size_t len;
-	db=dbOpen( getConfig()->dbname );
+	db=dbOpen( );
+	if( db == -1 ) {
+		return NULL;
+	}
 
 	while( ( len = read( db, &dbentry, DBESIZE ) ) == DBESIZE ) {
 		/* explicitlöy terminate path */
@@ -254,7 +260,14 @@ mptitle_t *dbGetMusic( ) {
 	dbClose( db );
 
 	if( 0 != len ) {
-		fail( F_FAIL, "Database %s is corrupt!\nRun 'mixplay -C' to rescan", getConfig()->dbname );
+		addMessage(0, "Database is corrupt, trying backup.");
+		dbroot=wipeTitles(dbroot);
+		if( !fileRevert( getConfig()->dbname ) ) {
+			return dbGetMusic();
+		}
+		else {
+			addMessage( -1, "Database %s and backup are corrupt!\nRun 'mixplay -C' to rescan", getConfig()->dbname );
+		}
 	}
 
 	addMessage( 1, "Loaded %i titles from the database", index-1 );
@@ -324,7 +337,7 @@ static int dbAddTitle( int db, mptitle_t *title ) {
  * adds new titles to the database
  * the new titles will have a playcount set to blend into the mix
  */
-int dbAddTitles( const char *dbname, char *basedir ) {
+int dbAddTitles( char *basedir ) {
 	mptitle_t *fsroot;
 	mptitle_t *fsnext;
 	mptitle_t *dbroot;
@@ -380,7 +393,12 @@ int dbAddTitles( const char *dbname, char *basedir ) {
 
 	addMessage( 0, "Adding titles..." );
 
-	db=dbOpen( dbname );
+	db=dbOpen( );
+	if( db == -1 ) {
+		wipeTitles(dbrunner);
+		return -1;
+	}
+
 	while( NULL != fsroot ) {
 		activity( 1, "Adding" );
 		dbrunner = findTitle( dbroot, fsroot->path );
@@ -600,6 +618,9 @@ void dbWrite( void ) {
 
 	fileBackup( dbname );
 	db=dbOpen( dbname );
+	if( db == -1 ) {
+		return;
+	}
 
 	do {
 		runner->key=index;

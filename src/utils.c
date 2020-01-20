@@ -344,12 +344,28 @@ int dowrite( const int fd, const char *buf, const size_t buflen ) {
  * move the current file file into a backup
  */
 int fileBackup( const char *name ) {
-	char backupname[MAXPATHLEN]="";
+	char backupname[MAXPATHLEN+1]="";
 
 	strtcpy( backupname, name, MAXPATHLEN );
 	strtcat( backupname, ".bak", MAXPATHLEN );
 
 	if( rename( name, backupname ) ) {
+		return errno;
+	}
+
+	return 0;
+}
+
+/**
+ * move the backup file file back to the current file
+ */
+int fileRevert( const char *path ) {
+	char backup[MAXPATHLEN+1];
+
+	strtcpy(backup, path, MAXPATHLEN);
+	strtcat(backup, ".bak", MAXPATHLEN );
+
+	if( rename( backup, path ) ) {
 		return errno;
 	}
 
