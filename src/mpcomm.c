@@ -222,7 +222,7 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 			if( strstr( msgline, "ALERT:" ) == msgline ) {
 				unlockClient( clientid );
 			}
-			jsonAddStr( jo, "msg", msgBuffPeek( data->msg, *count ) );
+			jsonAddStr( jo, "msg", msgline );
 			(*count)++;
 		}
 		else {

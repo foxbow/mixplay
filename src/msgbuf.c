@@ -83,8 +83,8 @@ const char *msgBuffPeek( msgbuf_t *msgbuf, unsigned long msgno ) {
 			pos=msgbuf->current+msgbuf->lines; /* the latest entry */
 			pos=pos-(msgbuf->count-msgno ); /* get the proper offset */
 			retval=msgbuf->msg[pos%MSGNUM];
-			if( msgbuf->unread < (long)(msgbuf->count - msgno) ) {
-				msgbuf->unread=msgbuf->count-msgno;
+			if( msgbuf->unread > (long)(msgbuf->count - (msgno+1)) ) {
+				msgbuf->unread=msgbuf->count-(msgno+1);
 			}
 		}
 	}
