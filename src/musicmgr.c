@@ -1883,12 +1883,12 @@ int handleRangeCmd( mptitle_t *title, mpcmd_t cmd ) {
  * Adds a title to the global doublet list
  */
 int handleDBL( mptitle_t *title ) {
-	char line[MAXPATHLEN+3]="p=";
+	char line[MAXPATHLEN+2]="p=";
 	marklist_t *buff;
 	mpconfig_t *config=getConfig();
 	marklist_t *list=config->dbllist;
 
-	strltcat( line, title->path, MAXPATHLEN+2 );
+	strltcat( line, title->path, MAXPATHLEN+1 );
 
 	buff=list;
 	while( buff != NULL ) {
