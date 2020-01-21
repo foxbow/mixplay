@@ -66,7 +66,7 @@ int initFLIRC() {
 	char device[MAXPATHLEN];
 
 	if( getConfig()->rcdev == NULL ) {
-		addMessage( 1, "No input device set!\n" );
+		addMessage( 1, "No input device set!" );
 	}
 	else {
 		snprintf( device, MAXPATHLEN, "/dev/input/by-id/%s", getConfig()->rcdev );

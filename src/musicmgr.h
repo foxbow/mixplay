@@ -90,6 +90,7 @@ int searchPlay( const char *pat, unsigned num, const int global );
 int handleRangeCmd( mptitle_t *title, mpcmd_t cmd );
 int handleDBL( mptitle_t *title );
 int addRangePrefix( char *line, mpcmd_t cmd );
+int getListPath( char path[MAXPATHLEN], mpcmd_t cmd );
 
 marklist_t *loadList( const mpcmd_t cmd );
 int delFromList( const mpcmd_t cmp, const char *line );

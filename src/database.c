@@ -488,7 +488,7 @@ int dbNameCheck( void ) {
 	int				qcnt=0;
 	FILE 			*fp;
 	int				match;
-	char			rmpath[MAXPATHLEN];
+	char			rmpath[MAXPATHLEN+1];
 
 	/* not using the live database as we need the marker */
 	root=dbGetMusic( );
@@ -497,7 +497,7 @@ int dbNameCheck( void ) {
 		return -1;
 	}
 
-	snprintf( rmpath, MAXPATHLEN-1, "%s/.mixplay/rmlist.sh", getenv("HOME"));
+	snprintf( rmpath, MAXPATHLEN, "%s/.mixplay/rmlist.sh", getenv("HOME"));
 	fp=fopen( rmpath, "w" );
 	if( NULL == fp ) {
 		addMessage( -1, "Could not open %s for writing!", rmpath );
@@ -506,6 +506,8 @@ int dbNameCheck( void ) {
 
 	/* start with a clean list, old doublets may have been deleted by now */
 	getConfig()->dbllist=wipeList(getConfig()->dbllist);
+	getListPath( rmpath, mpc_doublets );
+	unlink(rmpath);
 
 	fprintf( fp, "#!/bin/bash\n" );
 
@@ -540,7 +542,7 @@ int dbNameCheck( void ) {
 							handleDBL(currentEntry);
 							addMessage( 1, "Marked %s", currentEntry->path );
 							fprintf( fp, "## Original at %s\n", runner->path );
-							fprintf( fp, "echo \"p=%s\" >> %s/.mixplay/mixplay.dbl\n\n",
+							fprintf( fp, "rm \"%s\" >> %s/.mixplay/mixplay.dbl\n\n",
 								currentEntry->path, getenv("HOME"));
 							runner->flags |= MP_MARK;
 							count++;
@@ -553,7 +555,7 @@ int dbNameCheck( void ) {
 							handleDBL(runner);
 							addMessage( 1, "Marked %s", runner->path );
 							fprintf( fp, "## Original at %s\n", currentEntry->path );
-							fprintf( fp, "echo \"p=%s\" >> %s/.mixplay/mixplay.dbl\n\n",
+							fprintf( fp, "rm \"%s\" >> %s/.mixplay/mixplay.dbl\n\n",
 								runner->path, getenv("HOME"));
 							currentEntry->flags |= MP_MARK;
 							count++;
@@ -563,9 +565,14 @@ int dbNameCheck( void ) {
 						case  6: /* 0110 */
 						case  9: /* 1001 */
 						case 10: /* 1010 */
-							fprintf( fp, "## %i\n", match );
+							fprintf( fp, "## Uncertain match! Either:\n" );
 							fprintf( fp, "#rm \"%s\"\n", currentEntry->path );
-							fprintf( fp, "#rm \"%s\"\n\n", runner->path );
+							fprintf( fp, "#echo \"%s\" >>  %s/.mixplay/mixplay.dbl\n",
+								currentEntry->path, getenv("HOME") );
+							fprintf( fp, "## Or:\n" );
+							fprintf( fp, "#rm \"%s\"\n", runner->path );
+							fprintf( fp, "#echo \"%s\" >>  %s/.mixplay/mixplay.dbl\n\n",
+								runner->path, getenv("HOME") );
 							runner->flags |= MP_MARK; /* make sure only one of the doublets is used for future checkings */
 							qcnt++;
 							break;

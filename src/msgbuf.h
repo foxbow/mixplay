@@ -8,11 +8,12 @@
  * Message ringbuffer structure
  */
 typedef struct {
-	char *msg[MSGNUM];			/* the message buffer */
-	int  current;				/* index if the first unhandles message line */
-	int  lines;					/* how many message lines are in use */
-	unsigned long count;		/* the number of the last read message */
-	pthread_mutex_t *msgLock;	/* mutex to control access to the messages */
+	char *msg[MSGNUM];        /* the message buffer */
+	int  current;             /* index if the first unhandles message line */
+	int  lines;               /* how many message lines are in use */
+	unsigned long count;      /* the number of the last message */
+	int unread;               /* the number of never read messages */
+	pthread_mutex_t *msgLock; /* mutex to control access to the messages */
 }  msgbuf_t;
 
 /**
@@ -25,5 +26,5 @@ const char *msgBuffPeek( msgbuf_t *msgbuf, unsigned long msgno );
 char *msgBuffAll(  msgbuf_t *msgbuf );
 void  msgBuffClear( msgbuf_t *msgbuf );
 void  msgBuffDiscard( msgbuf_t *msgbuf );
-
+unsigned long msgBufGetLastRead( msgbuf_t *msgbuf );
 #endif

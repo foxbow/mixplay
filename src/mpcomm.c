@@ -183,6 +183,7 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 	if ( type & MPCOMM_LISTS ) {
 		jsonAddList( jo, "dnplist", data->dnplist );
 		jsonAddList( jo, "favlist", data->favlist );
+		jsonAddList( jo, "dbllist", data->dbllist );
 	}
 	if ( type & MPCOMM_CONFIG ) {
 		jsonAddInt( jo, "fade", data->fade );

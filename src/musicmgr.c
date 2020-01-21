@@ -94,7 +94,7 @@ static int checkSim( const char *text, const char *pat ) {
 	}
 }
 
-static int getListPath( char path[MAXPATHLEN], mpcmd_t cmd ) {
+int getListPath( char path[MAXPATHLEN], mpcmd_t cmd ) {
 	if( getConfig()->active < 1 ) {
 		return -1;
 	}
@@ -718,6 +718,7 @@ void applyLists( int clean ) {
 	applyDNPlist( control->dbllist );
 	applyDNPlist( control->dnplist );
 	pthread_mutex_unlock( &_pllock );
+	notifyChange(MPCOMM_LISTS);
 }
 
 /**
@@ -884,7 +885,6 @@ int delFromList( const mpcmd_t cmd, const char *line ) {
 	if( cnt > 0 ) {
 		writeList( mode );
 		applyLists(1);
-		notifyChange(MPCOMM_LISTS);
 	}
 
 	return cnt;
@@ -1883,12 +1883,12 @@ int handleRangeCmd( mptitle_t *title, mpcmd_t cmd ) {
  * Adds a title to the global doublet list
  */
 int handleDBL( mptitle_t *title ) {
-	char line[MAXPATHLEN]="p=";
+	char line[MAXPATHLEN+3]="p=";
 	marklist_t *buff;
 	mpconfig_t *config=getConfig();
 	marklist_t *list=config->dbllist;
 
-	strltcat( line, title->path, MAXPATHLEN );
+	strltcat( line, title->path, MAXPATHLEN+2 );
 
 	buff=list;
 	while( buff != NULL ) {

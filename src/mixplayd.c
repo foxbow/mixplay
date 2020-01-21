@@ -168,7 +168,6 @@ int main( int argc, char **argv ) {
 		printf("Run 'mprcinit' first\n");
 		return 1;
 	}
-	muteVerbosity();
 
 	/* improve 'randomization' */
 	gettimeofday( &tv,NULL );
@@ -196,7 +195,7 @@ int main( int argc, char **argv ) {
 	}
 
 	/* plays with parameter should not detach */
-	if( rv > 0 ) {
+	if( (rv > 0) && !getDebug() ) {
 		incDebug();
 	}
 
@@ -216,6 +215,7 @@ int main( int argc, char **argv ) {
 	   are cut TODO: what about daemon(1,0)? */
 	if( getDebug() == 0 ) {
 		if( daemon( 1, 1 ) != 0 ) {
+			/* one of the few really fatal cases! */
 			fail( errno, "Could not demonize!" );
 		}
 		openlog ("mixplayd", LOG_PID, LOG_DAEMON);

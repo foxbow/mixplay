@@ -10,6 +10,7 @@ msgbuf_t *msgBuffInit() {
 	msgBuf->lines=0;
 	msgBuf->current=0;
 	msgBuf->count=0;
+	msgBuf->unread=0;
 	pthread_mutex_init( msgBuf->msgLock, NULL );
 	return msgBuf;
 }
@@ -39,6 +40,9 @@ unsigned long msgBuffAdd( msgbuf_t *msgbuf, char *line ) {
 		msgbuf->lines++;
 	}
 	msgbuf->count++;
+	if( msgbuf->unread < MSGNUM ) {
+		msgbuf->unread++;
+	}
 	pthread_mutex_unlock( msgbuf->msgLock );
 	return msgbuf->count;
 }
@@ -56,6 +60,7 @@ char *msgBuffGet( msgbuf_t *msgbuf ) {
 		msgbuf->msg[msgbuf->current]=NULL;
 		msgbuf->current =(msgbuf->current+1)%MSGNUM;
 		msgbuf->lines--;
+		msgbuf->unread--;
 	}
 	pthread_mutex_unlock( msgbuf->msgLock );
 	return retval;
@@ -78,6 +83,9 @@ const char *msgBuffPeek( msgbuf_t *msgbuf, unsigned long msgno ) {
 			pos=msgbuf->current+msgbuf->lines; /* the latest entry */
 			pos=pos-(msgbuf->count-msgno ); /* get the proper offset */
 			retval=msgbuf->msg[pos%MSGNUM];
+			if( msgbuf->unread < (long)(msgbuf->count - msgno) ) {
+				msgbuf->unread=msgbuf->count-msgno;
+			}
 		}
 	}
 	pthread_mutex_unlock( msgbuf->msgLock );
@@ -109,9 +117,15 @@ char *msgBuffAll( msgbuf_t *msgbuf ) {
 		strcat( buff, msgbuf->msg[lineno] );
 		strcat( buff, "\n" );
 	}
+	msgbuf->unread=0;
 	pthread_mutex_unlock( msgbuf->msgLock );
 
 	return buff;
+}
+
+/* returns the number of the last unread message */
+unsigned long msgBufGetLastRead( msgbuf_t *msgbuf ) {
+	return msgbuf->count - msgbuf->unread;
 }
 
 /**
@@ -122,6 +136,10 @@ void msgBuffClear( msgbuf_t *msgbuf ) {
 	while( ( line=msgBuffGet( msgbuf ) ) != NULL ) {
 		free( line );
 	}
+	msgbuf->lines=0;
+	msgbuf->current=0;
+	msgbuf->count=0;
+	msgbuf->unread=0;
 }
 
 /*

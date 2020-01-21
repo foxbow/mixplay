@@ -942,6 +942,21 @@ function dnpfavUpdate (data) {
     }
   }
   tabify(e, 'flist', items, 16)
+
+  e = document.getElementById('dnpfav3')
+  wipeElements(e)
+  items = []
+  if (data.dbllist.length === 0) {
+    items[0] = document.createElement('em')
+    items[0].innerHTML = 'No doublets yet'
+  } else {
+    for (i = 0; i < data.dbllist.length; i++) {
+      items[i] = document.createElement('p')
+      items[i].className = 'popselect'
+      items[i].innerHTML = data.dbllist[i]
+    }
+  }
+  tabify(e, 'llist', items, 16)
 }
 
 function secsToTime (secs) {
@@ -1470,9 +1485,9 @@ function initializeUI () {
     if (i < 3) {
       addTouch('tools', i)
       addTouch('search', i)
-      addTouch('dnpfav', i)
     }
     addTouch('extra', i)
+    addTouch('dnpfav', i)
   }
   document.body.addEventListener('wheel', volWheel, { passive: false })
   document.body.addEventListener('keypress', handleKey)

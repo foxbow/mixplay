@@ -574,13 +574,6 @@ void addMessage( int v, const char *msg, ... ) {
 	pthread_mutex_unlock( &_addmsglock );
 }
 
-/**
- * gets the current message removes it from the ring
- */
-char *getMessage() {
-	return msgBuffGet( _cconfig->msg );
-}
-
 void incDebug( void ) {
 	assert( _cconfig != NULL );
 	_cconfig->debug++;
@@ -589,12 +582,6 @@ void incDebug( void ) {
 int getDebug( void ) {
 	assert( _cconfig != NULL );
 	return _cconfig->debug;
-}
-
-int setVerbosity( int v ) {
-	assert( _cconfig != NULL );
-	_cconfig->verbosity=v;
-	return _cconfig->verbosity;
 }
 
 int getVerbosity( void ) {
@@ -606,10 +593,6 @@ int incVerbosity() {
 	assert( _cconfig != NULL );
 	_cconfig->verbosity++;
 	return _cconfig->verbosity;
-}
-
-void muteVerbosity() {
-	setVerbosity(0);
 }
 
 static int _ftrpos=0;

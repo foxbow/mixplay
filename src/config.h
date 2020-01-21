@@ -190,12 +190,9 @@ void freeProfile( profile_t *profile );
 void incDebug( void );
 int getDebug( void );
 int getVerbosity( void );
-int setVerbosity( int );
 int incVerbosity( void );
-void muteVerbosity( void );
 void addMessage( int v, const char *msg, ... ) __attribute__((__format__(__printf__, 2, 3)));
 #define addError(x) addMessage( 0, "%i - %s", x, strerror(x) );
-char *getMessage( void );
 
 char *getCurrentActivity( void );
 void activity( int v, const char *msg, ... ) __attribute__((__format__(__printf__, 2, 3)));

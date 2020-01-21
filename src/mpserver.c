@@ -159,7 +159,7 @@ static void *clientHandler(void *args ) {
 	free( args );
 
 	config = getConfig();
-	clmsg = config->msg->count;
+	clmsg = msgBufGetLastRead(config->msg);
 
 	/* this one may terminate all willy nilly */
 	pthread_detach(pthread_self());
@@ -380,12 +380,6 @@ static void *clientHandler(void *args ) {
 				}
 			} /* switch(retval) */
 		} /* if fd_isset */
-		else {
-			/* timeout and on our way out */
-			if( config->status == mpc_quit ) {
-				running&=~1;
-			}
-		}
 
 		if( running && ( config->status != mpc_start ) ) {
 			memset( commdata, 0, commsize );
@@ -534,7 +528,13 @@ static void *clientHandler(void *args ) {
 				}
 				fullstat=MPCOMM_STAT;
 			}
+
 		} /* if running & !mpc_start */
+		if( config->status == mpc_quit ) {
+			addMessage(0,"stopping handler");
+			running&=~1;
+		}
+
 	} while( running & 1 );
 
 	if( running & 2 ) {
