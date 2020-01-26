@@ -176,6 +176,7 @@ button {
 	font-size: 1em;
 	border: none;
 	color: inherit;
+	padding: 0.15em;
 }
 
 button#dnp {
@@ -236,6 +237,10 @@ button.active, button.inactive, button.hide {
 
 div#time {
 	background-image: linear-gradient( lightblue, darkblue 20%, darkblue 80%, black );
+}
+
+div#profiles, div#channels {
+	font-size: 1.5em;
 }
 
 /* selected tab */

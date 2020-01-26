@@ -21,6 +21,7 @@ var overflow = 0
 var toval = 500
 var idletime = 0
 var idlesleep = 0
+var currentPop = ''
 
 function setBody (cname) {
   if (document.body.className === '') {
@@ -97,7 +98,7 @@ function isPlay () {
  * if keep is -1 then the current tab is switched even when
  * currently not in a play view
  */
-function adaptUI (keep = 0) {
+function adaptUI (keep) {
   /* Number of lines in sub-tabs */
   var lines
   var minfont = 14
@@ -298,9 +299,9 @@ function switchTab (ref) {
 /*
  * toggle main UI tabs
  */
-function switchView (element, keep = 1) {
+function switchView (element) {
   switchTabByRef('extra', element)
-  adaptUI(keep)
+  adaptUI(1)
 }
 
 /*
@@ -309,7 +310,7 @@ function switchView (element, keep = 1) {
 function pwSendCMD (msg, cmd) {
   var reply = window.prompt(msg)
   if ((reply !== null) && (reply !== '')) {
-    sendCMD(cmd, reply)
+    sendCMDArg(cmd, reply)
   } else if (cmd === 0x12) {
     sendCMD(cmd)
   }
@@ -349,7 +350,7 @@ function addText (text) {
 /*
  * send a command with optional argument to the server
  */
-function sendCMD (cmd, arg = '') {
+function sendCMDArg (cmd, arg) {
   var xmlhttp = new window.XMLHttpRequest()
   var code = Number(cmd).toString(16)
   var e
@@ -468,6 +469,11 @@ function sendCMD (cmd, arg = '') {
   xmlhttp.send()
 }
 
+/* send command without arguments */
+function sendCMD (cmd) {
+  sendCMDArg(cmd, '')
+}
+
 /*
  * use scrollwheel to control volume
  */
@@ -562,7 +568,7 @@ function clickable (text, cmd, arg, ident) {
     if (popup) {
       const dcmd = this.getAttribute('data-cmd')
       if (dcmd !== -1) {
-        sendCMD(dcmd, this.getAttribute('data-arg'))
+        sendCMDArg(dcmd, this.getAttribute('data-arg'))
         const line = document.getElementById('line' + ident)
         /* line may be gone as sendcmd() already cleaned up search view */
         if (line) {
@@ -570,21 +576,42 @@ function clickable (text, cmd, arg, ident) {
           wipeElements(line)
         }
       }
+      currentPop = ''
     }
   }
   reply.innerHTML = text
   return reply
 }
 
+function setParentFontSize (ident, size) {
+  const e = document.getElementById('line' + ident)
+  if (e) {
+    e.style.fontSize = size
+  }
+}
+
 function togglePopup (ident) {
-  var popup = document.getElementById('popup' + ident)
+  const popup = document.getElementById('popup' + ident)
   if (popup !== null) {
     popup.classList.toggle('show')
+  }
+  if (currentPop === '') {
+    currentPop = ident
+    setParentFontSize(ident, '1.5em')
+  } else {
+    if (currentPop === ident) {
+      setParentFontSize(ident, '')
+      currentPop = ''
+    } else {
+      togglePopup(currentPop)
+      currentPop = ident
+      setParentFontSize(ident, '1.5em')
+    }
   }
 }
 
 /* returns a <div> with text that when clicked presents the choices */
-function popselect (choice, arg, text, drag = 0) {
+function popselect (choice, arg, text, drag) {
   const num = choice.length
   var i
   var select
@@ -635,7 +662,7 @@ function popselect (choice, arg, text, drag = 0) {
       reply.ondrop = function (e) {
         const source = parseInt(e.dataTransfer.getData('title'))
         if (source !== arg) {
-          sendCMD(0x11, source + '/' + arg)
+          sendCMDArg(0x11, source + '/' + arg)
           enableElement(e.dataTransfer.getData('element'), 0)
         }
       }
@@ -652,7 +679,7 @@ function popselect (choice, arg, text, drag = 0) {
  * name: unique name for tab control
  * list: array of DOM elements to tabify
  */
-function tabify (parent, name, list, maxlines = 14) {
+function tabify (parent, name, list, maxlines) {
   var num = list.length
   var tabs
   /* use five lines at the very least! */
@@ -766,7 +793,7 @@ function fullUpdate (data) {
   cline.onclick = function () { sendCMD(0x00) }
   if (!isstream) {
     cline.ondrop = function (ev) {
-      sendCMD(0x11, ev.dataTransfer.getData('title'))
+      sendCMDArg(0x11, ev.dataTransfer.getData('title'))
       enableElement(ev.dataTransfer.getData('element'), 0)
     }
     cline.ondragover = function (ev) {
@@ -847,7 +874,7 @@ function searchUpdate (data) {
 
       items[i] = popselect(choices,
         data.albums[i],
-        data.albart[i] + ' - ' + data.albums[i])
+        data.albart[i] + ' - ' + data.albums[i], 0)
     }
   } else {
     items[0] = document.createElement('em')
@@ -870,7 +897,7 @@ function searchUpdate (data) {
       }
       items[i] = popselect(choices,
         data.artists[i],
-        data.artists[i])
+        data.artists[i], 0)
     }
   } else {
     items[0] = document.createElement('em')
@@ -892,7 +919,7 @@ function searchUpdate (data) {
       choices.push(['Append', 0x0814])
     }
 
-    items[0] = popselect(choices, 0, 'All results')
+    items[0] = popselect(choices, 0, 'All results', 0)
 
     for (i = 0; i < data.titles.length; i++) {
       choices = []
@@ -906,7 +933,7 @@ function searchUpdate (data) {
       }
       items[i + 1] = popselect(choices,
         data.titles[i].key,
-        data.titles[i].artist + ' - ' + data.titles[i].title)
+        data.titles[i].artist + ' - ' + data.titles[i].title, 0)
     }
   } else {
     items[0] = document.createElement('em')
@@ -996,6 +1023,7 @@ function playerUpdate (data) {
     enableElement('cdnpfav0', !isstream)
     enableElement('cdnpfav1', !isstream)
     enableElement('cdnpfav2', !isstream)
+    enableElement('cdnpfav3', !isstream)
     enableElement('download', !isstream)
     enableElement('rescan', !isstream)
     enableElement('dbinfo', !isstream)
@@ -1186,7 +1214,7 @@ function updateConfig (data) {
         }
       }
       items[i] = popselect(choices, i + 1,
-        data.profile[i])
+        data.profile[i], 0)
     }
   }
   tabify(e, 'prolist', items, 10)
@@ -1205,7 +1233,7 @@ function updateConfig (data) {
         choices.push(['Remove', 0x18])
       }
       items[i] = popselect(choices, -(i + 1),
-        data.sname[i])
+        data.sname[i], 0)
     }
   }
   tabify(e, 'chanlist', items, 10)
@@ -1233,7 +1261,7 @@ function sendArg (cmd) {
   if (isstream) return
   var term = document.getElementById('text').value
   if (term.length > 1) {
-    sendCMD(cmd, term)
+    sendCMDArg(cmd, term)
   } else {
     window.alert('Need at least two letters!')
   }
@@ -1257,7 +1285,7 @@ function loadURL2 (url) {
 
   if (url) {
     if (url.toLowerCase().startsWith('http')) {
-      sendCMD(0x17, url)
+      sendCMDArg(0x17, url)
       return
     }
     window.alert('Invalid Address!')
@@ -1278,9 +1306,9 @@ function loadURL () {
   } else if (typeof navigator.clipboard.readText !== 'function') {
     loadURL2('')
   } else {
-    navigator.clipboard.readText().then(clipText => {
+    navigator.clipboard.readText().then(function (clipText) {
       loadURL2(clipText)
-    }).catch(err => {
+    }).catch(function (err) {
       console.log('readText: ' + err)
       loadURL2('')
     })
@@ -1306,13 +1334,13 @@ function newActive () {
       return
     }
   }
-  sendCMD(0x16, name)
+  sendCMDArg(0x16, name)
 }
 
 /*
  * download a title by key(0=current)
  */
-function download (key = 0) {
+function download (key) {
   if (window.confirm('Download ' + document.getElementById('title').innerHTML + ' ?')) {
     window.location = '/title/' + key
   }
