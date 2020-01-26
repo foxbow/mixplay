@@ -1027,6 +1027,7 @@ function playerUpdate (data) {
     enableElement('download', !isstream)
     enableElement('rescan', !isstream)
     enableElement('dbinfo', !isstream)
+    enableElement('doublet', !isstream)
   }
 
   if (data.mpmode & 4) {
@@ -1217,7 +1218,7 @@ function updateConfig (data) {
         data.profile[i], 0)
     }
   }
-  tabify(e, 'prolist', items, 10)
+  tabify(e, 'prolist', items, 7)
 
   e = document.getElementById('channels')
   items = []
@@ -1236,7 +1237,7 @@ function updateConfig (data) {
         data.sname[i], 0)
     }
   }
-  tabify(e, 'chanlist', items, 10)
+  tabify(e, 'chanlist', items, 7)
   if (active > 0) {
     if (favplay) {
       setElement('active', 'Playing favplay ' +
