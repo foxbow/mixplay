@@ -631,7 +631,7 @@ function popselect (choice, arg, text, drag) {
       for (i = 0; i < num; i++) {
         if (i !== 0) {
           select = document.createElement('b')
-          select.innerText = '\u2000/\u2000 '
+          select.innerText = ' / '
           popspan.appendChild(select)
         }
         select = clickable(choice[i][0], choice[i][1], arg, ident)
@@ -759,7 +759,7 @@ function fullUpdate (data) {
       titleline += data.prev[i].title
       if (isstream) {
         cline = document.createElement('p')
-        cline.className = 'popselect'
+        cline.className = 'nopopselect'
         cline.innerHTML = data.prev[i].title
       } else {
         choices = []
@@ -819,7 +819,7 @@ function fullUpdate (data) {
       titleline += data.next[i].title
       if (isstream) {
         cline = document.createElement('p')
-        cline.className = 'popselect'
+        cline.className = 'nopopselect'
         cline.innerHTML = titleline
       } else {
         choices = []
@@ -840,8 +840,6 @@ function fullUpdate (data) {
   if (!isstream) {
     enableElement('fav', !(data.current.flags & 1))
     setElement('download', 'Download ' + document.title)
-  } else {
-    enableElement('fav', 0)
   }
 
   adaptUI(1)
@@ -880,7 +878,7 @@ function searchUpdate (data) {
     items[0] = document.createElement('em')
     items[0].innerHTML = 'No albums found!'
   }
-  tabify(e, 'lres', items, 14)
+  tabify(e, 'lres', items, 12)
 
   e = document.getElementById('search1')
   wipeElements(e)
@@ -903,7 +901,7 @@ function searchUpdate (data) {
     items[0] = document.createElement('em')
     items[0].innerHTML = 'No artists found!'
   }
-  tabify(e, 'ares', items, 14)
+  tabify(e, 'ares', items, 12)
 
   e = document.getElementById('search0')
   items = []
@@ -939,7 +937,7 @@ function searchUpdate (data) {
     items[0] = document.createElement('em')
     items[0].innerHTML = 'Found ' + data.artists.length + ' artists and ' + data.albums.length + ' albums'
   }
-  tabify(e, 'tres', items, 14)
+  tabify(e, 'tres', items, 12)
 }
 
 function dnpfavUpdate (data) {
@@ -979,7 +977,7 @@ function dnpfavUpdate (data) {
   } else {
     for (i = 0; i < data.dbllist.length; i++) {
       items[i] = document.createElement('p')
-      items[i].className = 'popselect'
+      items[i].className = 'nopopselect'
       items[i].innerHTML = data.dbllist[i]
     }
   }
@@ -1028,6 +1026,7 @@ function playerUpdate (data) {
     enableElement('rescan', !isstream)
     enableElement('dbinfo', !isstream)
     enableElement('doublet', !isstream)
+    enableElement('fav', !isstream)
   }
 
   if (data.mpmode & 4) {
@@ -1134,6 +1133,8 @@ function updateUI () {
         case 200:
           data = JSON.parse(xmlhttp.responseText)
           if (data !== undefined) {
+            /* standard update */
+            playerUpdate(data)
             /* full update */
             if (data.type & 1) {
               fullUpdate(data)
@@ -1150,8 +1151,6 @@ function updateUI () {
             if (data.type & 8) {
               updateConfig(data)
             }
-            /* standard update */
-            playerUpdate(data)
           } else {
             console.log('JSON-less reply!')
           }
@@ -1238,6 +1237,7 @@ function updateConfig (data) {
     }
   }
   tabify(e, 'chanlist', items, 7)
+
   if (active > 0) {
     if (favplay) {
       setElement('active', 'Playing favplay ' +

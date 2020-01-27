@@ -1142,8 +1142,9 @@ void *reader( ) {
 				else {
 					profile=atoi( control->argument );
 					if( ( profile != 0 ) && ( profile != control->active ) ) {
-						/* do not play next title, it may be gone.. */
+						/* full stop current title/channel */
 						order=0;
+						dowrite( p_command[fdset][1], "STOP\n", 6 );
 						/* reload database when switching from favplay to 'forget'
 						   playcount changes */
 						if( getFavplay() ) {
