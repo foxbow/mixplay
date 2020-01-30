@@ -840,7 +840,7 @@ void *reader( ) {
 						/* we could just be switching from playlist to database */
 						if( control->current == NULL ) {
 							if( !(control->mpmode&PM_SWITCH) ) {
-								addMessage(0, "No current playlist and not switching!");
+								addMessage(1, "No current playlist and not switching!");
 							}
 							break;
 						}

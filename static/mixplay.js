@@ -1063,7 +1063,7 @@ function playerUpdate (data) {
   }
 
   if (active !== data.active) {
-    if (active !== 0) {
+    if ((active !== 0) && (!data.type & 8)) {
       doUpdate = 8
     }
     active = data.active
