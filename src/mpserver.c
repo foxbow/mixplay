@@ -106,7 +106,7 @@ static char *strdec( char *target, const char *src ) {
 	return target;
 }
 
-/* this is just a dummy functin .. */
+/* this is just a dummy function .. */
 static void mps_notify( void *arg ) {
 	addMessage( 1, "Notification %p/%i", arg, *(int*)arg );
 }
@@ -389,11 +389,16 @@ static void *clientHandler(void *args ) {
 				if( running == 1 ) {
 					addMessage( 1, "Update Handler (%p/%i) initialized", (void *)&nextstat, sock );
 					addNotifyHook( &mps_notify, &nextstat );
+					/* a new updater should get the current title too */
+					nextstat|=MPCOMM_FULLSTAT;
 					running|=2;
 				}
 				/* add flags that have been set outside */
-				fullstat |= nextstat;
-				nextstat=MPCOMM_STAT;
+				if( nextstat != MPCOMM_STAT ) {
+					addMessage( 2, "Notification %p/%i applied", (void*)&nextstat, nextstat );
+					fullstat |= nextstat;
+					nextstat=MPCOMM_STAT;
+				}
 				if( config->found->state != mpsearch_idle ) {
 					fullstat |= MPCOMM_RESULT;
  					while( config->found->state == mpsearch_busy ) {
@@ -410,6 +415,8 @@ static void *clientHandler(void *args ) {
 					strcat( commdata, jsonLine );
 					len=strlen(commdata);
 					sfree( &jsonLine );
+					/* do not clear result flag! */
+					fullstat&=MPCOMM_RESULT;
 				}
 				else {
 					addMessage( 0, "Could not turn status into JSON" );
@@ -525,8 +532,9 @@ static void *clientHandler(void *args ) {
 					   certain here that the flow is in the correct context as search
 						 is synchronous */
 					unlockClient(sock);
+					/* clear result flag */
+					fullstat&=~MPCOMM_RESULT;
 				}
-				fullstat=MPCOMM_STAT;
 			}
 
 		} /* if running & !mpc_start */
@@ -539,7 +547,7 @@ static void *clientHandler(void *args ) {
 
 	if( running & 2 ) {
 		removeNotifyHook( &mps_notify, &nextstat );
-		addMessage( 1, "Update Handler (%p/%i) terminates", (void *)&nextstat, sock );
+		addMessage( 1, "Update Handler (%p=%i/%i) terminates", (void *)&nextstat, nextstat, sock );
 	}
 
 	addMessage( 2, "Client handler exited" );
