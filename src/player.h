@@ -7,13 +7,14 @@
 
 #ifndef __PLAYER_H__
 #define __PLAYER_H__
+#include "config.h"
 
 /* percentage of volume change for mpc_ivol and mpc_dvol */
 #define VOLSTEP 2
 
 void setCommand( mpcmd_t cmd, char *arg );
-void *reader( );
-void *setProfile( );
+void *reader( void* );
+void *setProfile( void* );
 void setStream( const char* stream, const char *name );
 
 #endif /* __PLAYER_H__ */

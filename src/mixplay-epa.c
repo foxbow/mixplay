@@ -84,7 +84,7 @@ int main( int argc, char **argv ){
 			epsLine( epm_black, 30, 20, X_MAX, 20 );
 			epsLine( epm_black, 30, 150, X_MAX, 150 );
 
-			if( jsonGetInt(jo, "mpmode") == PM_DATABASE ) {
+			if( jsonGetInt(jo, "mpmode") & PM_DATABASE ) {
 				epsDrawSymbol( epm_black, 5, 90, ep_next );
 				epsDrawSymbol( epm_black, 5, 30, ep_dnp );
 			}

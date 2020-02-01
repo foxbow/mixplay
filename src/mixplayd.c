@@ -183,7 +183,7 @@ int main( int argc, char **argv ) {
 	if ( ( rv == 3 ) && ( control->musicdir == NULL ) ) {
 		incDebug();
 		addMessage( 0, "Setting default configuration values and initializing..." );
-		setProfile( );
+		setProfile(NULL);
 		if( control->root == NULL ) {
 			addMessage( -1, "No music found at %s!", control->musicdir );
 			return -1;
@@ -238,6 +238,7 @@ int main( int argc, char **argv ) {
 
 	addUpdateHook( &s_updateHook );
 
+	control->mpmode&=~PM_SWITCH;
 	if( initAll( ) == 0 ){
 		control->inUI=1;
 

@@ -210,7 +210,7 @@ static mpplaylist_t *remFromPL( mpplaylist_t *pltitle ) {
  */
 void playCount( mptitle_t *title, int skip ) {
 	/* playcount only makes sense with a title list */
-	if( getConfig()->mpmode == PM_STREAM ) {
+	if( getConfig()->mpmode & PM_STREAM ) {
 		return;
 	}
 
@@ -226,7 +226,7 @@ void playCount( mptitle_t *title, int skip ) {
 			/* prepare resurrection */
 			title->skipcount=0;
 			/* three strikes and you're out */
-			handleRangeCmd( title, mpc_display|mpc_dnp );
+			handleRangeCmd( title, (mpcmd_t)(mpc_display|mpc_dnp) );
 		}
 		dbMarkDirty();
 	}
@@ -494,7 +494,7 @@ int search( const char *pat, const mpcmd_t range ) {
 	unsigned int i=0;
 	unsigned cnt=0;
 	unsigned dnp=0;
-	mpcmd_t found=0;
+	mpcmd_t found=mpc_play;
 	char *lopat;
 
 	/* enter while the last result has not been sent yet! */
@@ -525,7 +525,7 @@ int search( const char *pat, const mpcmd_t range ) {
 	do {
 		activity( 1, "searching" );
 		/* dnp XNOR MP_DNP */
-		found = 0;
+		found = mpc_play;
 		if( ( runner->flags & MP_DNP ) == dnp ) {
 			/* check for searchrange and pattern */
 			if( ( ( MPC_ISTITLE(range) &&
@@ -533,12 +533,12 @@ int search( const char *pat, const mpcmd_t range ) {
 					( MPC_ISDISPLAY( range ) &&
 					isMatch( runner->display, pat, MPC_ISFUZZY(range) ) ) ) &&
 					( cnt++ < MAXSEARCH ) ) {
-				found |= mpc_title;
+				found = (mpcmd_t)(found | mpc_title);
 			}
 			if( MPC_ISARTIST(range) &&
 					isMatch( runner->artist, pat, MPC_ISFUZZY(range) ) ) {
 				if( MPC_EQARTIST(range) ) {
-					found |= mpc_artist;
+					found = (mpcmd_t)(found | mpc_artist);
 				}
 				/* check for new artist */
 				for( i=0; (i<res->anum) && strcmp( res->artists[i], runner->artist ); i++ );
@@ -553,7 +553,7 @@ int search( const char *pat, const mpcmd_t range ) {
 					( MPC_ISALBUM( range ) &&
 					isMatch( runner->album, pat, MPC_ISFUZZY(range) ) ) ) {
 				if (MPC_EQALBUM(range)) {
-					found |= mpc_album;
+					found = (mpcmd_t)(found | mpc_album);
 				}
 				/* check for new albums */
 				for( i=0; (i<res->lnum) && strcmp( res->albums[i], runner->album ); i++ );
@@ -1388,7 +1388,7 @@ void plCheck( int del ) {
 	mpplaylist_t *pl=getConfig()->current;
 	mpplaylist_t *buf=pl;
 
-	if( ( (getConfig()->mpmode&3) == PM_PLAYLIST ) && !getConfig()->mpmix ) {
+	if((getConfig()->mpmode & PM_PLAYLIST ) && !getConfig()->mpmix ) {
 		addMessage( 1, "plCheck: Sorted playlist");
 		if( getConfig()->current == NULL ) {
 			addMessage( 0, "No playlist available!");
@@ -1399,7 +1399,7 @@ void plCheck( int del ) {
 	/* there is a playlist, so clean up */
 	if( pl != NULL ) {
 		/* It's a stream, so truncate stream title history to 20 titles */
-		if( (getConfig()->mpmode&3) == PM_STREAM ) {
+		if( getConfig()->mpmode & PM_STREAM ) {
 			while( ( pl->next != NULL ) && ( cnt < 20 ) ) {
 				pl=pl->next;
 				cnt++;
@@ -1848,7 +1848,7 @@ int handleRangeCmd( mptitle_t *title, mpcmd_t cmd ) {
 			buff=buff->next;
 		}
 
-		buff=falloc( 1, sizeof( marklist_t ) );
+		buff=(marklist_t *)falloc( 1, sizeof( marklist_t ) );
 		strcpy( buff->dir, line );
 		buff->next=NULL;
 
@@ -1899,7 +1899,7 @@ int handleDBL( mptitle_t *title ) {
 		buff=buff->next;
 	}
 
-	buff=falloc( 1, sizeof( marklist_t ) );
+	buff=(marklist_t*)falloc( 1, sizeof( marklist_t ) );
 	strcpy( buff->dir, line );
 	buff->next=NULL;
 

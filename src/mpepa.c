@@ -60,7 +60,7 @@ void epUpdateHook( ) {
 	}
 
 	/* disable DNP/FAV on stream play */
-	if( ( getConfig()->mpmode != PM_DATABASE ) && ( _btmode != bt_stream ) ) {
+	if( !(getConfig()->mpmode & PM_DATABASE ) && ( _btmode != bt_stream ) ) {
 		_btmode=bt_stream;
 		_umode|=um_title;
 		_umode|=um_icons;

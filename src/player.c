@@ -276,7 +276,7 @@ static void sendplay( int fdset ) {
  * sets the current profile
  * This is thread-able to have progress information on startup!
  */
-void *setProfile( ) {
+void *setProfile( void *arg ) {
 	char		confdir[MAXPATHLEN]; /* = "~/.mixplay"; */
 	profile_t *profile;
 	int num;
@@ -304,7 +304,7 @@ void *setProfile( ) {
 		if( active >= control->streams ) {
 			addMessage( 0, "Stream #%" PRId64 " does no exist!", active );
 			control->active=1;
-			return setProfile( );
+			return setProfile(NULL);
 		}
 
 		setStream( control->stream[active], control->sname[active] );
@@ -323,7 +323,7 @@ void *setProfile( ) {
 		if( active > control->profiles ) {
 			addMessage ( 0, "Profile #%" PRId64 " does no exist!", active );
 			control->active=1;
-			return setProfile( );
+			return setProfile(NULL);
 		}
 
 		profile=control->profile[active];
@@ -367,13 +367,15 @@ void *setProfile( ) {
 		}
 	}
 
+	/* switch is done */
+	control->mpmode&=~PM_SWITCH;
 	/* if we're not in player context, start playing automatically */
 	if( pthread_mutex_trylock( &_pcmdlock ) != EBUSY ) {
 		addMessage( 1, "Start play" );
 		control->command=mpc_start;
 	}
 	addMessage( 2, "End Thread: setProfile()" );
-	return NULL;
+	return arg;
 }
 
 /**
@@ -475,7 +477,7 @@ static void *plSetProfile( void *arg ) {
 	if( control->dbname[0] == 0 ) {
 		readConfig( );
 	}
-	setProfile( );
+	setProfile(NULL);
 	pthread_mutex_unlock( lock );;
 	return NULL;
 }
@@ -575,7 +577,7 @@ static int playResults( mpcmd_t range, const char *arg, const int insert ) {
  * The original plan was to keep this UI independent so it could be used
  * in mixplay, gmixplay and probably other GUI variants (ie: web)
  */
-void *reader( ) {
+void *reader( void *arg ) {
 	mpconfig_t  *control=getConfig();
 	mptitle_t *title=NULL;
 	mptitle_t *tbuf=NULL;
@@ -840,7 +842,7 @@ void *reader( ) {
 						/* we could just be switching from playlist to database */
 						if( control->current == NULL ) {
 							if( !(control->mpmode&PM_SWITCH) ) {
-								addMessage(0, "No current playlist and not switching!");
+								addMessage(0, "No current title and not switching!");
 							}
 							break;
 						}
@@ -924,7 +926,12 @@ void *reader( ) {
 							else {
 								order=0;
 							}
-							plCheck( 0 );
+							if(control->mpmode & PM_DATABASE) {
+								plCheck( 0 );
+							}
+							else {
+								addMessage(0,"Switching to profile.");
+							}
 						}
 						else {
 							addMessage( 1, "Player status without current title" );
@@ -1475,5 +1482,5 @@ void *reader( ) {
 	/* todo: should not be needed */
 	sleep(1);
 
-	return NULL;
+	return arg;
 }
