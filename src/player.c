@@ -251,8 +251,7 @@ static void sendplay( int fdset ) {
 	mpconfig_t *control=getConfig();
 	assert( control->current != NULL );
 
-
-	if( (control->mpmode & 3) == PM_STREAM ) {
+	if( control->mpmode & PM_STREAM ) {
 		if(control->list) {
 			strcpy( line, "loadlist 1 ");
 		}
@@ -263,7 +262,7 @@ static void sendplay( int fdset ) {
 	}
 	strtcat( line, "\n", MAXPATHLEN+6 );
 	/* remove MP_SWITCH flag so replies will be handled correctly */
-	control->mpmode &= 3;
+	control->mpmode &= ~PM_SWITCH;
 
 	if ( dowrite( fdset, line, MAXPATHLEN+6 ) == -1 ) {
 		fail( errno, "Could not write\n%s", line );
@@ -312,11 +311,14 @@ void *setProfile( void *arg ) {
 	/* profile selected */
 	else if( cactive > 0 ){
 		active=cactive-1;
+		addMessage(1,"= Playmode=%u",control->mpmode);
+
 		/* only load database if it has not yet been used */
-		if( control->mpmode != PM_DATABASE ) {
+		if( !(control->mpmode & PM_DATABASE) ) {
 			control->root=wipeTitles( control->root );
 			control->root=dbGetMusic( );
 		}
+
 		/* announce switching */
 		control->mpmode=PM_DATABASE|PM_SWITCH;
 
@@ -367,8 +369,6 @@ void *setProfile( void *arg ) {
 		}
 	}
 
-	/* switch is done */
-	control->mpmode&=~PM_SWITCH;
 	/* if we're not in player context, start playing automatically */
 	if( pthread_mutex_trylock( &_pcmdlock ) != EBUSY ) {
 		addMessage( 1, "Start play" );
@@ -835,7 +835,7 @@ void *reader( void *arg ) {
 
 					control->playtime=(unsigned)roundf(intime);
 					/* file play */
-					if( (control->mpmode&3) != PM_STREAM ) {
+					if( !(control->mpmode & PM_STREAM) ) {
 						control->percent=( 100*intime )/( rem+intime );
 						control->remtime=(unsigned)roundf(rem);
 
@@ -883,13 +883,15 @@ void *reader( void *arg ) {
 					switch ( cmd ) {
 					case 0: /* STOP */
 						addMessage( 2, "Player %i stopped", fdset );
-						/* player was not yet fully initialized, start again */
+						/* player was not yet fully initialized or the current
+						   profile/stream has changed start again */
 						if( control->status == mpc_start ) {
 							addMessage( 2, "Restart player %i..", fdset );
 							sendplay( p_command[fdset][1] );
+							control->mpmode&=~PM_SWITCH;
 						}
 						/* stream stopped playing (PAUSE) */
-						else if( control->mpmode == PM_STREAM ) {
+						else if( control->mpmode & PM_STREAM ) {
 							addMessage( 2, "Stream stopped");
 							control->status=mpc_idle;
 						}
@@ -928,9 +930,6 @@ void *reader( void *arg ) {
 							}
 							if(control->mpmode & PM_DATABASE) {
 								plCheck( 0 );
-							}
-							else {
-								addMessage(0,"Switching to profile.");
 							}
 						}
 						else {
@@ -1038,7 +1037,7 @@ void *reader( void *arg ) {
 			/* has the player been properly initialized yet? */
 			if( control->status != mpc_start ) {
 				/* streamplay cannot be properly paused for longer */
-				if( (control->mpmode&3) == PM_STREAM ) {
+				if( control->mpmode & PM_STREAM ) {
 					if( control->status == mpc_play ) {
 						dowrite( p_command[fdset][1], "STOP\n", 6 );
 					}
@@ -1393,7 +1392,7 @@ void *reader( void *arg ) {
 
 		case mpc_favplay:
 			if( asyncTest() ) {
-				if( control->mpmode == PM_DATABASE ) {
+				if( control->mpmode & PM_DATABASE ) {
 					if( countTitles( MP_FAV, 0 ) < 21 ) {
 						addMessage( -1, "Need at least 21 Favourites to enable Favplay." );
 						break;

@@ -1009,8 +1009,8 @@ function secsToTime (secs) {
 }
 
 function playerUpdate (data) {
-  if (isstream !== (data.mpmode === 1)) {
-    isstream = (data.mpmode === 1) /* PM_STREAM */
+  if (isstream !== (data.mpmode & 1)) {
+    isstream = (data.mpmode & 1) /* PM_STREAM */
     enableElement('goprev', !isstream)
     enableElement('gonext', !isstream)
     enableElement('playtime', !isstream)
@@ -1029,7 +1029,7 @@ function playerUpdate (data) {
     enableElement('fav', !isstream)
   }
 
-  if (data.mpmode & 4) {
+  if (data.mpmode & 8) {
     activecmd = -2
     setBody('busy')
   } else {

@@ -259,6 +259,7 @@ mpconfig_t *readConfig( void ) {
 	_cconfig->retry=0;
 	_cconfig->streamURL=NULL;
 	_cconfig->rcdev=NULL;
+	_cconfig->mpmode=PM_NONE;
 
 	snprintf( _cconfig->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", home );
 
