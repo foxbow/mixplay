@@ -221,7 +221,7 @@ static void *clientHandler(void *args ) {
 						else if( strcmp( pos, "/status" ) == 0 ) {
 							state=1;
 							fullstat|=atoi(arg);
-							if( fullstat == 0 ) {
+							if( !( running&2 ) ) {
 								/* one shot */
 								running=4;
 							}
