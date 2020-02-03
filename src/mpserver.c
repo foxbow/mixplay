@@ -221,6 +221,10 @@ static void *clientHandler(void *args ) {
 						else if( strcmp( pos, "/status" ) == 0 ) {
 							state=1;
 							fullstat|=atoi(arg);
+							if( fullstat == 0 ) {
+								/* one shot */
+								running=4;
+							}
 							addMessage(2,"Statusrequest: %i", fullstat);
 						}
 						else if( strstr( pos, "/cmd/" ) == pos ) {
@@ -389,7 +393,6 @@ static void *clientHandler(void *args ) {
 				if( running == 1 ) {
 					addMessage( 1, "Update Handler (%p/%i) initialized", (void *)&nextstat, sock );
 					addNotifyHook( &mps_notify, &nextstat );
-					/* a new updater should get the current title too */
 					nextstat|=MPCOMM_FULLSTAT;
 					running|=2;
 				}

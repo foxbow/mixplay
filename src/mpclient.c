@@ -222,7 +222,7 @@ jsonObject *getStatus(int usefd, int flags) {
 	char req[20];
 	jsonObject *jo=NULL;
 
-	if (flags) {
+	if (flags || (usefd == -1)) {
 		sprintf(req, "status?%i", flags%15);
 		reply = sendRequest(usefd, req);
 	}
