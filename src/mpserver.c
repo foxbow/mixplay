@@ -372,7 +372,7 @@ static void *clientHandler(void *args ) {
 							running&=~1;
 						}
 						else {
-							addMessage( 0, "Illegal get %s", pos );
+							addMessage( 1, "Illegal get %s", pos );
 							send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
 							state=0;
 							running&=~1;
@@ -380,7 +380,14 @@ static void *clientHandler(void *args ) {
 					} /* no prefix */
 				} /* /get command */
 				else {
-					addMessage( 0, "Unknown command %s", commdata );
+					end=strchr(commdata,' ');
+					if( end != NULL) {
+						*end=0;
+					}
+					addMessage( 1, "Illegal method %s", commdata );
+					send(sock , "HTTP/1.0 405 Method Not Allowed\015\012\015\012", 35, 0);
+					state=0;
+					running&=~1;
 				}
 			} /* switch(retval) */
 		} /* if fd_isset */
