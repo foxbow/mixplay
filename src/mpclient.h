@@ -5,7 +5,9 @@
 /* so that MPCOMM_ macros are available */
 #include "mpcomm.h"
 
-int getConnection( const char *addr );
+int setMPPort( int port );
+int setMPHost( const char *host );
+int getConnection( void );
 int sendCMD(int usefd, mpcmd_t cmd);
 int getCurrentTitle(char *title, unsigned tlen);
 jsonObject *getStatus(int usefd, int flags);

@@ -1,9 +1,8 @@
 /* Screen saver client.
-   Checks the player's state every ten seconds. If the player
+   Checks the player's state every second. If the player
 	 is idle for longer than the given timeout, the screen is
 	 powered off via DPMS */
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
 #include <X11/Xlib.h>
@@ -79,59 +78,69 @@ static int getDisplayState() {
 
 int main(){
 	jsonObject *jo=NULL;
-	time_t to=0;
-	time_t timer=0;
-	time_t now=0;
-	mpcmd_t cmd=mpc_idle;
+	int to=0;
+	int timer=0;
+	mpcmd_t state=mpc_idle;
 	int sstate;
-
-	readConfig();
-
-	/* could also be read from mixplayd */
-	to=getConfig()->sleepto;
-	if( to == 0 ) {
-		fail(F_FAIL, "No timeout set, disabling screensaver!");
-	}
 
 	sstate=getDisplayState();
 	if( sstate == -1 ) {
 		fail(F_FAIL, "Cannot access DPMS!");
 	}
 
+	/* todo parameters: timeout, host, port */
+
+	jo=getStatus(-1, MPCOMM_CONFIG);
+	if( jsonPeek(jo, "type") == json_error ) {
+		fail(F_FAIL, "Server cannot be reached!");
+	}
+	else {
+		to=jsonGetInt(jo,"sleepto");
+	}
+	jsonDiscard(jo);
+
+	if( to == 0 ) {
+		fail(F_FAIL, "No timeout set, disabling screensaver!");
+	}
+	timer=to;
+
 	if( daemon( 1, 0 ) != 0 ) {
 		fail( errno, "Could not demonize!" );
 	}
 
-	while ( cmd != mpc_quit ) {
+	while ( state != mpc_stop ) {
 		jo=getStatus(-1, MPCOMM_STAT);
 		if( jsonPeek(jo, "type") == json_error ) {
-			cmd=mpc_idle;
+			state=mpc_idle;
 		}
 		else {
-			cmd=(mpcmd_t)jsonGetInt(jo,"status");
+			state=(mpcmd_t)jsonGetInt(jo,"status");
 		}
 		jsonDiscard(jo);
-		now=time(0);
 
 		/* nothing is playing */
-		if( cmd == mpc_idle ) {
+		if( state == mpc_idle ) {
 			/* is the screen physically on? */
 			if( getDisplayState() == 1 ) {
 				/* Screen is on and we think it should be off. So someone
 					touched the screen. Give ten seconds to start anything,
 					otherwise turn screen off again */
 				if( sstate == 0 ) {
-					timer=now-to+10;
+					timer=10;
 					sstate=1;
 				}
 				/* screen is on */
 				else {
 					/* No timer yet, start countdown */
 					if( timer == 0 ) {
-						timer=now;
+						timer=to;
+						sstate=1;
+					}
+					else {
+						timer--;
 					}
 					/* timeout hit? turn off screen */
-					if( now - timer >= to ) {
+					if( timer == 0 ) {
 						displayPower(0);
 						sstate=0;
 					}
@@ -144,8 +153,8 @@ int main(){
 			if( sstate == 0 ) {
 				displayPower(1);
 				sstate=1;
-				timer=0;
 			}
+			timer=to;
 		}
 		sleep(1);
 	}

@@ -11,6 +11,9 @@
 #include "mpclient.h"
 #include "utils.h"
 
+static int  _mpport=MP_PORT;
+static char _mphost[16]="127.0.0.1";
+
 /*
  * Print errormessage and exit
  * msg - Message to print
@@ -32,13 +35,29 @@ void fail( const int error, const char* msg, ... ) {
 	exit( error );
 }
 
+int setMPPort( int port ) {
+	if( ( port < 1025 ) || ( port > 65535 ) ) {
+		return -1;
+	}
+	_mpport=port;
+	return 0;
+}
+
+int setMPHost( const char *host ) {
+	if( strlen(host) > 16 ) {
+		return -1;
+	}
+	strtcpy( _mphost, host, 15);
+	return 0;
+}
+
 /* open a connection to the server.
    returns:
 	 -1 : No socket available
 	 -2 : unable to connect to server
 	 on error and the socket on success.
 */
-int getConnection( const char *addr ) {
+int getConnection( void ) {
 	struct sockaddr_in server;
 	int fd;
 
@@ -49,13 +68,8 @@ int getConnection( const char *addr ) {
 
 	memset( &server, 0, sizeof(server) );
 	server.sin_family = AF_INET;
-	if( addr == NULL ) {
-		server.sin_addr.s_addr = inet_addr("127.0.0.1");
-	}
-	else {
-		server.sin_addr.s_addr = inet_addr(addr);
-	}
-	server.sin_port = htons( getConfig()->port );
+	server.sin_addr.s_addr = inet_addr(_mphost);
+	server.sin_port = _mpport;
 	if( connect(fd, (struct sockaddr*)&server, sizeof(server)) == -1 ) {
 		close(fd);
 		return -2;
@@ -79,7 +93,7 @@ static char *sendRequest( int usefd, const char *path ) {
 	struct timeval	to;
 
 	if( usefd == -1 ) {
-		fd=getConnection(NULL);
+		fd=getConnection( );
 		if( fd < 0 ) {
 			return NULL;
 		}

@@ -30,7 +30,7 @@ typedef enum {
 	mpc_quit,
 	mpc_dbclean,
 	mpc_fav,
-	mpc_dnp,
+	mpc_dnp,           /* 10 */
 	mpc_doublets,
 	mpc_insert,
 	mpc_ivol,
@@ -40,7 +40,7 @@ typedef enum {
 	mpc_move,
 	mpc_dbinfo,
 	mpc_search,
-	mpc_append,
+	mpc_append,        /* 20 */
 	mpc_setvol,
 	mpc_newprof,
 	mpc_path,
@@ -50,7 +50,7 @@ typedef enum {
 	mpc_delfav,
 	mpc_remove,
 	mpc_mute,
-	mpc_favplay,
+	mpc_favplay,       /* 30 */
 	mpc_idle,
 	mpc_title=1<<8,
 	mpc_artist=1<<9,

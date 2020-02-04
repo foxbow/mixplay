@@ -57,13 +57,10 @@ int main( int argc, char **argv ){
 	}
 
 	if( argc == 2 ) {
-		fd = getConnection(argv[1]);
-		if( fd == -1 ) {
-			fail(errno, "Could not connect to server at %s!", argv[1]);
-		}
+		setMPHost(argv[1]);
 	}
 	else {
-		fd = getConnection(NULL);
+		fd = getConnection( );
 		if( fd == -1 ) {
 			fail(errno, "Could not connect to local server!");
 		}
