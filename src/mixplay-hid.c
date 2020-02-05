@@ -11,9 +11,9 @@
 #include "utils.h"
 #include "mphid.h"
 
-char last[MAXPATHLEN]="";
+char last[MAXPATHLEN+1]="";
 
-static void drawAll(int fd) {
+static int drawAll(int fd) {
 	jsonObject *jo=NULL;
 	char *text=NULL;
 	mptitle_t title;
@@ -21,7 +21,7 @@ static void drawAll(int fd) {
 	int rv;
 	int state;
 
-	jo=getStatus(fd, MPCOMM_FULLSTAT);
+	jo=getStatus(fd, MPCOMM_STAT);
 	text=jsonGetError(jo);
 	if(text != NULL) {
 		fail(F_FAIL, "JSON Error! %s", text);
@@ -32,18 +32,20 @@ static void drawAll(int fd) {
 		fail(F_FAIL, "Server returned %i!", rv);
 	}
 	else {
-		jsonGetTitle(jo, "current", &title);
 		state=jsonGetInt(jo,"status");
+		if(jsonGetInt(jo, "type") & MPCOMM_FULLSTAT) {
+			jsonGetTitle(jo, "current", &title);
+			snprintf(current, MAXPATHLEN, "%s", title.display );
+			if( strcmp(current, last) != 0 ) {
+				strcpy(last, current);
+				hidPrintline( "%s\r", current );
+				fflush(stdout);
+			}
+		}
 	}
 	jsonDiscard(jo);
 
-	snprintf(current, MAXPATHLEN+4, "[%s] %s",
-			(state == mpc_play)?">":"|", title.display );
-	if( strcmp(current, last) != 0 ) {
-		strcpy(last, current);
-		hidPrintline( "%s\r", current );
-		fflush(stdout);
-	}
+	return state;
 }
 
 int main( int argc, char **argv ){
@@ -56,16 +58,22 @@ int main( int argc, char **argv ){
 		fail( F_FAIL, "No mixplayd configuration found!");
 	}
 
+	fd=getCurrentTitle(last, MAXPATHLEN);
+	if( fd < 0 ) {
+		fail( errno, "Could not get current title!");
+	}
+
 	if( argc == 2 ) {
 		setMPHost(argv[1]);
 	}
 	else {
 		fd = getConnection( );
-		if( fd == -1 ) {
-			fail(errno, "Could not connect to local server!");
+		if( fd < 0 ) {
+			fail(errno, "Could not connect to server!");
 		}
 	}
 	hidPrintline( "Mixplay HID demo\n");
+	hidPrintline( "%s", last);
 
 	while ( running ) {
 		c=getch(1000);

@@ -51,32 +51,6 @@ int setMPHost( const char *host ) {
 	return 0;
 }
 
-/* open a connection to the server.
-   returns:
-	 -1 : No socket available
-	 -2 : unable to connect to server
-	 on error and the socket on success.
-*/
-int getConnection( void ) {
-	struct sockaddr_in server;
-	int fd;
-
-	fd=socket(AF_INET, SOCK_STREAM, 0);
-	if( fd == -1 ) {
-		return -1;
-	}
-
-	memset( &server, 0, sizeof(server) );
-	server.sin_family = AF_INET;
-	server.sin_addr.s_addr = inet_addr(_mphost);
-	server.sin_port = _mpport;
-	if( connect(fd, (struct sockaddr*)&server, sizeof(server)) == -1 ) {
-		close(fd);
-		return -2;
-	}
-	return fd;
-}
-
 #define RBLKSIZE 512
 
 /* send a get request to the server and return the reply as a string
@@ -102,8 +76,13 @@ static char *sendRequest( int usefd, const char *path ) {
 		fd = usefd;
 	}
 
-	req = (char *)falloc( 1, 12 + strlen(path) + 3 + 1 );
-	strcpy( req, "get /mpctrl/" );
+	req = (char *)falloc( 1, 13 + strlen(path) + 3 + 1 );
+	if( strstr( path, "cmd" ) == path ) {
+		strcpy( req, "POST /mpctrl/" );
+	}
+	else {
+		strcpy( req, "GET /mpctrl/" );
+	}
 	strtcat( req, path, strlen(path) );
 	strtcat( req, " \015\012", 2 );
 
@@ -170,7 +149,7 @@ static char *sendRequest( int usefd, const char *path ) {
 			}
 		}
 	}
-	else if( strstr( reply, "HTTP/1.1 ") == reply ) {
+	else if( strstr( reply, "HTTP/1.") == reply ) {
 		rdata=(char*)falloc(1,4);
 		strtcpy(rdata, reply+9, 3);
 	}
@@ -180,6 +159,41 @@ static char *sendRequest( int usefd, const char *path ) {
 	free(reply);
 
 	return rdata;
+}
+
+/* open a connection to the server.
+   returns:
+	 -1 : No socket available
+	 -2 : unable to connect to server
+	 on error and the socket on success.
+	 also registers an update handler for good measure..
+*/
+int getConnection( void ) {
+	struct sockaddr_in server;
+	int fd;
+	char *reply;
+
+	fd=socket(AF_INET, SOCK_STREAM, 0);
+	if( fd == -1 ) {
+		return -1;
+	}
+
+	memset( &server, 0, sizeof(server) );
+	server.sin_family = AF_INET;
+	server.sin_addr.s_addr = inet_addr(_mphost);
+	server.sin_port = htons(_mpport);
+	if( connect(fd, (struct sockaddr*)&server, sizeof(server)) == -1 ) {
+		close(fd);
+		return -2;
+	}
+
+	reply=sendRequest( fd, "status" );
+	if( reply == NULL ) {
+		close(fd);
+		return -3;
+	}
+
+	return fd;
 }
 
 /* send a command to mixplayd.
@@ -214,12 +228,11 @@ int sendCMD( int usefd, mpcmd_t cmd){
 int getCurrentTitle( char *title, unsigned tlen ) {
 	char *line;
 
-	line = sendRequest(-1, "title/info");
+	line = sendRequest(-1, "title/info" );
 	if( line == NULL ) {
 		return -1;
 	}
-
-	strtcpy( title, line, tlen < strlen(line) ? tlen : strlen(line) );
+	strtcpy( title, line, tlen < strlen(line) ? tlen : strlen(line)+1 );
 	free(line);
 	return strlen(title);
 }

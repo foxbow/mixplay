@@ -153,7 +153,7 @@ static void *clientHandler(void *args ) {
 	ts.tv_nsec=250000;
 	ts.tv_sec=0;
 	char *manifest=NULL;
-
+	unsigned method=0;
 	commdata=(char*)falloc( commsize, sizeof( char ) );
 	sock=*(int*)args;
 	free( args );
@@ -190,14 +190,32 @@ static void *clientHandler(void *args ) {
 				running&=~1;
 				break;
 			default:
+				method=0;
 				toLower( commdata );
+				addMessage(3, "%s", commdata);
 				/* don't send empty replies for non-web clients */
 				if( strstr( commdata, "xmixplay: 1" ) != NULL ) {
 					okreply=0;
 				}
-				pos=strstr( commdata, "get " );
-				if( pos != NULL ) {
-					pos=pos+4;
+				end=strchr( commdata, ' ' );
+				if( end == NULL ) {
+					addMessage( 1, "Malformed request %s", pos );
+					method=-1;
+				}
+				else {
+					*end=0;
+					pos=end+1;
+					if( strcmp(commdata, "get") == 0 ) {
+						method=1;
+					}
+					else if( strcmp(commdata, "post") == 0 ) {
+						method=2;
+					}
+					else {
+						method=0;
+					}
+				}
+				if( method > 0 ) {
 					end=strchr( pos, ' ' );
 					if( end != NULL ) {
 						*(end+1)=0;
@@ -205,6 +223,7 @@ static void *clientHandler(void *args ) {
 					/* This must not be an else due to the following elses */
 					if( end == NULL ) {
 						addMessage( 1, "Malformed request %s", pos );
+						method=-1;
 					}
 					/* control command */
 					else if ( strstr( pos, "/mpctrl/")) {
@@ -215,6 +234,14 @@ static void *clientHandler(void *args ) {
 							*arg=0;
 							arg++;
 						}
+					}
+					/* everything else is treated like a GET <path> */
+					else {
+						method=3;
+					}
+				}
+				switch(method) {
+					case 1: /* GET mpcmd */
 						if( strstr( pos, "/status " ) == pos ) {
 							state=1;
 						}
@@ -227,7 +254,41 @@ static void *clientHandler(void *args ) {
 							}
 							addMessage(2,"Statusrequest: %i", fullstat);
 						}
-						else if( strstr( pos, "/cmd/" ) == pos ) {
+						else if( strstr( pos, "/title/" ) == pos ) {
+							pos+=7;
+							index=atoi(pos);
+							if( ( config->current != NULL ) && ( index == 0 ) ) {
+								title=config->current->title;
+							}
+							else {
+								title=getTitleByIndex( index );
+							}
+
+							if( strstr( pos, "info " ) == pos ) {
+								state=9;
+							}
+							else if( title != NULL ) {
+								pthread_mutex_lock(&_sendlock);
+								fname=title->path;
+								state=8;
+							}
+							else {
+								send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
+								state=0;
+								running&=~1;
+							}
+						}
+						else if( strstr( pos, "/version " ) == pos ) {
+								state=7;
+						}
+						else {
+							send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
+							state=0;
+							running&=~1;
+						}
+						break;
+					case 2: /* POST */
+						if( strstr( pos, "/cmd/" ) == pos ) {
 							state = 2;
 							addMessage( 2, "received cmd: %s", pos );
 							pos+=5;
@@ -265,35 +326,15 @@ static void *clientHandler(void *args ) {
 								}
 							}
 						}
-						else if( strstr( pos, "/title/" ) == pos ) {
-							pos+=7;
-							index=atoi(pos);
-							if( ( config->current != NULL ) && ( index == 0 ) ) {
-								title=config->current->title;
-							}
-							else {
-								title=getTitleByIndex( index );
-							}
-
-							if( strstr( pos, "info " ) == pos ) {
-								state=9;
-							}
-							else if( title != NULL ) {
-								pthread_mutex_lock(&_sendlock);
-								fname=title->path;
-								state=8;
-							}
-							else {
-								send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
-								state=0;
-								running&=~1;
-							}
-						} else if( strstr( pos, "/version " ) == pos ) {
-								state=7;
+						else { /* unresolvable POST request */
+							send(sock , "HTTP/1.0 406 Not Acceptable\015\012\015\012", 31, 0);
+							state=0;
+							running&=~1;
 						}
-					} /* /mpctrl prefix end */
-					else {
-						if( ( strstr( pos, "/ ") == pos ) || ( strstr( pos, "/index.html " ) == pos ) ) {
+						break;
+					case 3: /* get file */
+						if( ( strstr( pos, "/ ") == pos ) ||
+								( strstr( pos, "/index.html " ) == pos ) ) {
 							pthread_mutex_lock(&_sendlock);
 							fname="static/mixplay.html";
 							fdata=static_mixplay_html;
@@ -301,7 +342,8 @@ static void *clientHandler(void *args ) {
 							mtype="text/html; charset=utf-8";
 							state=5;
 						}
-						else if( ( strstr( pos, "/rc " ) == pos ) || ( strstr( pos, "/rc.html " ) == pos )  ) {
+						else if( ( strstr( pos, "/rc " ) == pos ) ||
+								( strstr( pos, "/rc.html " ) == pos )  ) {
 							pthread_mutex_lock(&_sendlock);
 							fname="static/mprc.html";
 							fdata=static_mprc_html;
@@ -377,18 +419,22 @@ static void *clientHandler(void *args ) {
 							state=0;
 							running&=~1;
 						}
-					} /* no prefix */
-				} /* /get command */
-				else {
-					end=strchr(commdata,' ');
-					if( end != NULL) {
-						*end=0;
-					}
-					addMessage( 1, "Illegal method %s", commdata );
-					send(sock , "HTTP/1.0 405 Method Not Allowed\015\012\015\012", 35, 0);
-					state=0;
-					running&=~1;
-				}
+						break;
+					case -1:
+						addMessage( 1, "Illegal method %s", commdata );
+						send(sock , "HTTP/1.0 405 Method Not Allowed\015\012\015\012", 35, 0);
+						state=0;
+						running&=~1;
+						break;
+					case -2: /* generic file not found */
+						send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
+						state=0;
+						running&=~1;
+						break;
+					default:
+						addMessage(0,"Unknown method %i!", method);
+						break;
+				} /* switch(method) */
 			} /* switch(retval) */
 		} /* if fd_isset */
 
@@ -546,7 +592,6 @@ static void *clientHandler(void *args ) {
 					fullstat&=~MPCOMM_RESULT;
 				}
 			}
-
 		} /* if running & !mpc_start */
 		if( config->status == mpc_quit ) {
 			addMessage(0,"stopping handler");

@@ -462,9 +462,9 @@ function sendCMDArg (cmd, arg) {
   }
 
   if (arg !== '') {
-    xmlhttp.open('GET', '/mpctrl/cmd/' + code + '?' + arg, true)
+    xmlhttp.open('POST', '/mpctrl/cmd/' + code + '?' + arg, true)
   } else {
-    xmlhttp.open('GET', '/mpctrl/cmd/' + code, true)
+    xmlhttp.open('POST', '/mpctrl/cmd/' + code, true)
   }
   xmlhttp.send()
 }
@@ -1177,9 +1177,9 @@ function updateUI () {
   if (cmdtosend !== '') {
     /* snchronous command */
     if (argtosend !== '') {
-      xmlhttp.open('GET', '/mpctrl/cmd/' + cmdtosend + '?' + argtosend, true)
+      xmlhttp.open('POST', '/mpctrl/cmd/' + cmdtosend + '?' + argtosend, true)
     } else {
-      xmlhttp.open('GET', '/mpctrl/cmd/' + cmdtosend, true)
+      xmlhttp.open('POST', '/mpctrl/cmd/' + cmdtosend, true)
     }
     cmdtosend = ''
     argtosend = ''
