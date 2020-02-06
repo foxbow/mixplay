@@ -118,7 +118,16 @@ static char *jsonEncode( const char *val ) {
 			break;
 		/* no explicit encoding of extended chars yet! */
 		default:
-			ret[op++]=val[ip];
+			/* filter out unprintable characters */
+			if( !iscntrl(val[ip]) ) {
+				ret[op++]=val[ip];
+			}
+#if JSON_DEBUG
+			else {
+				printf("Unprintable %c (%u) in %s\n", val[ip], (unsigned char)val[ip], val);
+			}
+#endif
+			/* todo enable \uXXXX encoding */
 		}
 	}
 	ret[op]=0;

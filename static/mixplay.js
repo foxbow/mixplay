@@ -853,13 +853,14 @@ function wipeElements (e) {
 }
 
 function searchUpdate (data) {
-  switchTabByRef('search', 0)
   var e = document.getElementById('search2')
   wipeElements(e)
   var items = []
   var choices = []
   var i
   if (data.albums.length > 0) {
+    enableElement('csearch2', 1)
+    switchTabByRef('search', 2)
     for (i = 0; i < data.albums.length; i++) {
       choices = []
       choices.push(['Search', 0x0413])
@@ -875,6 +876,7 @@ function searchUpdate (data) {
         data.albart[i] + ' - ' + data.albums[i], 0)
     }
   } else {
+    enableElement('csearch2', 0)
     items[0] = document.createElement('em')
     items[0].innerHTML = 'No albums found!'
   }
@@ -884,6 +886,8 @@ function searchUpdate (data) {
   wipeElements(e)
   items = []
   if (data.artists.length > 0) {
+    enableElement('csearch1', 1)
+    switchTabByRef('search', 1)
     for (i = 0; i < data.artists.length; i++) {
       choices = []
       choices.push(['Search', 0x0213])
@@ -898,6 +902,7 @@ function searchUpdate (data) {
         data.artists[i], 0)
     }
   } else {
+    enableElement('csearch1', 0)
     items[0] = document.createElement('em')
     items[0].innerHTML = 'No artists found!'
   }
@@ -907,6 +912,8 @@ function searchUpdate (data) {
   items = []
   wipeElements(e)
   if (data.titles.length > 0) {
+    enableElement('csearch0', 1)
+    switchTabByRef('search', 0)
     choices = []
     if ((!favplay) || (favplay && data.fpcurrent)) {
       choices.push(['FAV', 0x0809])
@@ -934,6 +941,7 @@ function searchUpdate (data) {
         data.titles[i].artist + ' - ' + data.titles[i].title, 0)
     }
   } else {
+    enableElement('csearch0', 0)
     items[0] = document.createElement('em')
     items[0].innerHTML = 'Found ' + data.artists.length + ' artists and ' + data.albums.length + ' albums'
   }

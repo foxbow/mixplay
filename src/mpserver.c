@@ -546,7 +546,6 @@ static void *clientHandler(void *args ) {
 				/* todo: attachment or inline? */
 
 			case 8: /* send mp3 */
-				pthread_mutex_lock(&_sendlock);
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: audio/mpeg;\015\012"
 						"Content-Disposition: attachment; filename=\"%s.mp3\"\015\012\015\012", title->display );
 				send(sock , commdata, strlen(commdata), 0);
