@@ -10,8 +10,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-
+#include <stdint.h>
 #include "json.h"
+/* for hexval  */
+#include "utils.h"
 
 int jsonFail( jsonObject *jo, const char *msg, ... ) __attribute__((__format__(__printf__, 2, 3)));
 
@@ -116,23 +118,60 @@ static char *jsonEncode( const char *val ) {
 			ret[op++]='\\';
 			ret[op++]='t';
 			break;
-		/* no explicit encoding of extended chars yet! */
 		default:
 			/* filter out unprintable characters */
-			if( !iscntrl(val[ip]) ) {
+			if( (unsigned char)val[ip] > 31 ) {
 				ret[op++]=val[ip];
 			}
-#if JSON_DEBUG
-			else {
-				printf("Unprintable %c (%u) in %s\n", val[ip], (unsigned char)val[ip], val);
-			}
-#endif
-			/* todo enable \uXXXX encoding */
 		}
 	}
 	ret[op]=0;
 
 	return ret;
+}
+
+/* decodes a unicode hex value into a unicode binary string
+   according to RFC 3629 */
+static int utfDecode( const char* in, char *out ) {
+	uint64_t unicode=0;
+	int i;
+	if( strlen(in) < 4 ) {
+		return -1;
+	}
+
+	for(i=0; i<4; i++) {
+		unicode=unicode*16;
+		unicode=unicode+hexval(in[i]);
+	}
+
+	/* one byte - easy! */
+	if(unicode < 0x00000080) {
+		out[0]=(char)(unicode & 0x0000007f);
+		return 1;
+	}
+	/* two bytes */
+	else if( unicode < 0x00000800 ) {
+		out[0]=0xb0 | ( ( unicode >> 6 ) & 0x0000001f );
+		out[1]=0x80 | ( unicode & 0x0000003f);
+		return 2;
+	}
+	/* three bytes */
+	else if( unicode < 0x00010000 ) {
+		out[0]=0xe0 | ( (unicode >> 12 ) & 0x0000000f );
+		out[1]=0x80 | ( (unicode >> 6 ) & 0x0000003f );
+		out[2]=0x80 | ( unicode & 0x0000003f );
+		return 3;
+	}
+	/* four bytes */
+	else if ( unicode < 00110000 ) {
+		out[0]=0xf0 | ( (unicode >> 18 ) & 0x00000007 );
+		out[1]=0x80 | ( (unicode >> 12 ) & 0x0000003f );
+		out[2]=0x80 | ( (unicode >> 6 ) & 0x0000003f );
+		out[3]=0x80 | ( unicode & 0x0000003f);
+		return 4;
+	}
+
+	return -1;
 }
 
 /*
@@ -141,6 +180,7 @@ static char *jsonEncode( const char *val ) {
 static int jsonDecodeInto( const char *val, char *ret, size_t len ) {
 	unsigned ip=0;
 	unsigned op=0;
+	int rv=0;
 
 	while( ( ip < strlen(val) ) && ( op < len-1) ) {
 		if( val[ip]  == '\\' ) {
@@ -170,6 +210,15 @@ static int jsonDecodeInto( const char *val, char *ret, size_t len ) {
 			case 't':
 				ret[op++]='\t';
 				break;
+			case 'u':
+				rv=utfDecode( val+ip+1, ret+op );
+				if( rv > 0 ) {
+					ip+=4;
+					op+=rv;
+				}
+				else {
+					return -1;
+				}
 			default:
 				return -1;
 			}
