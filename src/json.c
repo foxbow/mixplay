@@ -163,7 +163,7 @@ static int utfDecode( const char* in, char *out ) {
 		return 3;
 	}
 	/* four bytes */
-	else if ( unicode < 00110000 ) {
+	else if ( unicode < 0x00110000 ) {
 		out[0]=0xf0 | ( (unicode >> 18 ) & 0x00000007 );
 		out[1]=0x80 | ( (unicode >> 12 ) & 0x0000003f );
 		out[2]=0x80 | ( (unicode >> 6 ) & 0x0000003f );
