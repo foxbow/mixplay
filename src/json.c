@@ -219,6 +219,7 @@ static int jsonDecodeInto( const char *val, char *ret, size_t len ) {
 				else {
 					return -1;
 				}
+				break;
 			default:
 				return -1;
 			}

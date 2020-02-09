@@ -82,8 +82,9 @@ int main(){
 	int timer=0;
 	mpcmd_t state=mpc_idle;
 	int sstate;
+	int dstate=getDisplayState();
 
-	sstate=getDisplayState();
+	sstate=dstate;
 	if( sstate == -1 ) {
 		fail(F_FAIL, "Cannot access DPMS!");
 	}
@@ -118,13 +119,13 @@ int main(){
 		}
 		jsonDiscard(jo);
 
+		/* get display state */
+		dstate=getDisplayState();
 		/* nothing is playing */
 		if( state == mpc_idle ) {
 			/* is the screen physically on? */
-			if( getDisplayState() == 1 ) {
-				/* Screen is on and we think it should be off. So someone
-					touched the screen. Give ten seconds to start anything,
-					otherwise turn screen off again */
+			if( dstate == 1 ) {
+				/* should it be off - then turn it off again in 10s */
 				if( sstate == 0 ) {
 					timer=10;
 					sstate=1;
@@ -140,7 +141,7 @@ int main(){
 						timer--;
 					}
 					/* timeout hit? turn off screen */
-					if( timer == 0 ) {
+					if( timer <= 0 ) {
 						displayPower(0);
 						sstate=0;
 					}
@@ -150,7 +151,7 @@ int main(){
 		/* player state is not idle */
 		else {
 			/* we turned the screen off? Turn it on! */
-			if( sstate == 0 ) {
+			if( (sstate == 0) || (dstate == 0)) {
 				displayPower(1);
 				sstate=1;
 			}
@@ -158,5 +159,6 @@ int main(){
 		}
 		sleep(1);
 	}
+	/* always turn the screen on on exit */
 	displayPower(1);
 }
