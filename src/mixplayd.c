@@ -162,6 +162,25 @@ int main( int argc, char **argv ) {
 	int hidfd=-1;
 	int rv=0;
 
+	/* first of all check if there isn't already another instance running */
+	if( access( PIDPATH, F_OK ) == 0 ) {
+		pidlog=fopen(PIDPATH, "r");
+		if( pidlog == NULL ) {
+			addMessage(0, "Cannot open %s!", PIDPATH);
+			addError(errno);
+			return -1;
+		}
+		fscanf( pidlog, "%i", &rv );
+		fclose(pidlog);
+		/* does the pid exist? */
+		if(!kill(rv,0) && !errno) {
+			addMessage( 0, "Mixplayd is already running!" );
+			return -1;
+		}
+		addMessage( 0, "Found stale pidfile, you may want to check for a core!" );
+		unlink(PIDPATH);
+	}
+
 	control=readConfig( );
 	if( control == NULL ) {
 		printf("Cannot find configuration!\n");
@@ -203,37 +222,32 @@ int main( int argc, char **argv ) {
 	signal(SIGINT, sigint );
 	signal(SIGTERM, sigint );
 
-	if( access( PIDPATH, F_OK ) == 0 ) {
-		/* todo: it may make sense to check if the found process id exists
-		         or if PIDPATH is a crash remain */
-		addMessage( 0, "Mixplayd is already running!" );
-		freeConfig();
-		return -1;
-	}
-
 	/* daemonization must happen before childs are created otherwise the pipes
 	   are cut TODO: what about daemon(1,0)? */
 	if( getDebug() == 0 ) {
 		if( daemon( 1, 1 ) != 0 ) {
 			/* one of the few really fatal cases! */
-			fail( errno, "Could not demonize!" );
+			addMessage( 0, "Could not demonize!" );
+			addError(errno);
+			return -1;
 		}
 		openlog ("mixplayd", LOG_PID, LOG_DAEMON);
 		control->isDaemon=1;
-		if( access( PIDPATH, F_OK ) != 0 ) {
-			pidlog=fopen( PIDPATH, "w");
-			if( pidlog == NULL ) {
-				addMessage( 0, "Cannot open %s!", PIDPATH );
-				addError(errno);
-				return -1;
-			}
-			fprintf( pidlog, "%i", getpid() );
-			fclose(pidlog);
-		}
-		else {
-			addMessage(0, "Race lost!");
+	}
+
+	if( access( PIDPATH, F_OK ) != 0 ) {
+		pidlog=fopen( PIDPATH, "w");
+		if( pidlog == NULL ) {
+			addMessage( 0, "Cannot open %s!", PIDPATH );
+			addError(errno);
 			return -1;
 		}
+		fprintf( pidlog, "%i", getpid() );
+		fclose(pidlog);
+	}
+	else {
+		addMessage(0, "Another mixplayd was quicker!");
+		return -1;
 	}
 
 	addUpdateHook( &s_updateHook );
