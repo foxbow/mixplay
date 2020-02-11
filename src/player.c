@@ -261,11 +261,12 @@ static void sendplay( int fdset ) {
 		strtcat( line, fullpath(control->current->title->path), MAXPATHLEN+6 );
 	}
 	strtcat( line, "\n", MAXPATHLEN+6 );
-	/* remove MP_SWITCH flag so replies will be handled correctly */
-	control->mpmode &= ~PM_SWITCH;
-
 	if ( dowrite( fdset, line, MAXPATHLEN+6 ) == -1 ) {
 		fail( errno, "Could not write\n%s", line );
+	}
+	if( control->status == mpc_start ) {
+		/* We have switched */
+		control->mpmode &= ~PM_SWITCH;
 	}
 
 	addMessage( 2, "CMD: %s", line );
@@ -888,7 +889,6 @@ void *reader( void *arg ) {
 						if( control->status == mpc_start ) {
 							addMessage( 2, "Restart player %i..", fdset );
 							sendplay( p_command[fdset][1] );
-							control->mpmode&=~PM_SWITCH;
 						}
 						/* stream stopped playing (PAUSE) */
 						else if( control->mpmode & PM_STREAM ) {

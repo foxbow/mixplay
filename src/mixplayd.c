@@ -252,7 +252,6 @@ int main( int argc, char **argv ) {
 
 	addUpdateHook( &s_updateHook );
 
-	control->mpmode&=~PM_SWITCH;
 	if( initAll( ) == 0 ){
 		control->inUI=1;
 
