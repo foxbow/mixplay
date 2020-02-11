@@ -313,15 +313,13 @@ static void *clientHandler(void *args ) {
 
 							/* search is synchronous */
 							if( MPC_CMD(cmd) == mpc_search ) {
-								if( setCurClient(sock) != -1 ) {
+								if( setCurClient(sock) == sock ) {
 									/* this client cannot already search! */
 									assert( getConfig()->found->state == mpsearch_idle );
 									getConfig()->found->state=mpsearch_busy;
 									setCommand(cmd, argument);
 									state=1;
 								} else {
-									/* No progressEnd() as it never started */
-									unlockClient(sock);
 									state=4;
 								}
 							}

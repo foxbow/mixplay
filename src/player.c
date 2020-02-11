@@ -928,7 +928,7 @@ void *reader( void *arg ) {
 							else {
 								order=0;
 							}
-							if(control->mpmode & PM_DATABASE) {
+							if(control->mpmode == PM_DATABASE) {
 								plCheck( 0 );
 							}
 						}
@@ -1335,12 +1335,12 @@ void *reader( void *arg ) {
 						nanosleep( &ts, NULL );
 					}
 					addMessage( 1, "Results sent!");
-					sfree( &(control->argument) );
 				}
 			}
 			else {
 				addMessage( 1, "search async locked!");
 			}
+			sfree( &(control->argument) );
 			break;
 
 		case mpc_insert:
