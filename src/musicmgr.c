@@ -917,7 +917,7 @@ static void movePLEntry( mpplaylist_t *entry, mpplaylist_t *pos ) {
 	pos->next=entry;
 
 	/* we tinkered the playlist, an update would be nice */
-	notifyChange(MPCOMM_FULLSTAT);
+	notifyChange(MPCOMM_TITLES);
 }
 
 /*
@@ -1413,7 +1413,7 @@ void plCheck( int del ) {
 				free( buf );
 				buf=pl;
 			}
-			notifyChange(MPCOMM_FULLSTAT);
+			notifyChange(MPCOMM_TITLES);
 			return;
 		}
 
@@ -1510,7 +1510,7 @@ void plCheck( int del ) {
 		cnt++;
 	}
 
-	notifyChange(MPCOMM_FULLSTAT);
+	notifyChange(MPCOMM_TITLES);
 }
 
 /*

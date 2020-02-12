@@ -168,7 +168,7 @@ typedef struct {
 /* return simple player status */
 #define MPCOMM_STAT 0
 /* return full title/playlist info */
-#define MPCOMM_FULLSTAT 1
+#define MPCOMM_TITLES 1
 /* return a search result */
 #define MPCOMM_RESULT 2
 /* return DNP and favlists */

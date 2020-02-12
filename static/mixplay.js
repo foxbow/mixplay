@@ -1,5 +1,5 @@
 /* MPCOMM_STAT == 0 - normal update
-   MPCOMM_FULLSTAT == 1 - +titles
+   MPCOMM_TITLES == 1 - +titles
    MPCOMM_RESULT == 2 - searchresult
    MPCOMM_LISTS == 4 - dnp/fav lists
    MPCOMM_CONFIG == 8 - configuration

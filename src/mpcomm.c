@@ -162,7 +162,7 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 
 	jo=jsonAddInt( jo, "type", type );
 
-	if( type & MPCOMM_FULLSTAT ) {
+	if( type & MPCOMM_TITLES ) {
 		if( current != NULL ) {
 			jsonAddTitles( jo, "prev", current->prev, -1 );
 			jsonAddTitle( jo, "current", current );

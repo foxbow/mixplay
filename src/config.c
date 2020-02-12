@@ -621,18 +621,12 @@ void activity( int v, const char *msg, ... ) {
 	++_ftrpos;
 
 	if ( _ftrpos % 500 == 0 ) {
-		/* update the UI to follow activity if nothing is playing */
-		if( _cconfig->status == mpc_idle ) {
-			notifyChange(MPCOMM_FULLSTAT);
-		}
+		/* update the UI to follow activity */
+		notifyChange(MPCOMM_TITLES);
 	}
 
 	if ( _ftrpos % 1000 == 0 ) {
-		if ( v <= getVerbosity() ) {
-			if( _cconfig->status != mpc_idle ) {
-				addMessage( 0, "%s", _curact );
-			}
-		}
+		addMessage( v, "%s", _curact );
 		_ftrpos=0;
 	}
 
