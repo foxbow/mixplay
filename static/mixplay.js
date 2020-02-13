@@ -22,6 +22,7 @@ var toval = 500
 var idletime = 0
 var idlesleep = 0
 var currentPop = ''
+const landscape = (window.screen.height < window.screen.width)
 
 function setBody (cname) {
   if (document.body.className === '') {
@@ -70,10 +71,10 @@ function scrollToggle () {
     if (scrolls[i].offset.charAt(0) === '-') {
       if (element.style.right === scrolls[i].offset) {
         element.style.right = '0px'
-        to = 10000
+        to = 6000
       } else {
         element.style.right = scrolls[i].offset
-        to = 15000
+        to = 11000
       }
     }
   }
@@ -107,7 +108,6 @@ function adaptUI (keep) {
   var i
   var fsize
   var bsize
-  var fac
 
   /* decide on default view if needed */
   if ((keep === -1) || (!keep && isPlay())) {
@@ -122,8 +122,8 @@ function adaptUI (keep) {
   const maintab = isActive('extra0')
   enableElement('uiextra', maintab)
 
-  /* try to keep text readable on landscape */
-  if (w > h) {
+  /* try to keep text readable on landscape screens */
+  if (landscape) {
     minfont = 20
   }
 
