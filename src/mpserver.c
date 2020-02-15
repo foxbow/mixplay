@@ -116,6 +116,11 @@ static size_t serviceUnavailable( char *commdata ) {
 	return strlen(commdata);
 }
 
+#define CL_RUN 1
+#define CL_UPD 2
+#define CL_ONE 4
+#define CL_SRC 8
+
 /**
  * This will handle connection for each client
  */
@@ -124,7 +129,7 @@ static void *clientHandler(void *args ) {
 	size_t len=0;
 	size_t sent, msglen;
 	struct timeval to;
-	int running=1;
+	unsigned running=CL_RUN;
 	char *commdata=NULL;
 	char *jsonLine=NULL;
 	fd_set fds;
@@ -183,11 +188,11 @@ static void *clientHandler(void *args ) {
 			switch( retval ) {
 			case -1:
 				addMessage( 1, "Read error on socket!\n%s", strerror( errno ) );
-				running&=~1;
+				running&=~CL_RUN;
 				break;
 			case 0:
 				addMessage( 1, "Client disconnected");
-				running&=~1;
+				running&=~CL_RUN;
 				break;
 			default:
 				method=0;
@@ -248,9 +253,9 @@ static void *clientHandler(void *args ) {
 						else if( strcmp( pos, "/status" ) == 0 ) {
 							state=1;
 							fullstat|=atoi(arg);
-							if( !( running&2 ) ) {
+							if( !( running&CL_UPD ) ) {
 								/* one shot */
-								running=4;
+								running=CL_ONE;
 							}
 							addMessage(2,"Statusrequest: %i", fullstat);
 						}
@@ -275,7 +280,7 @@ static void *clientHandler(void *args ) {
 							else {
 								send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
 								state=0;
-								running&=~1;
+								running&=~CL_RUN;
 							}
 						}
 						else if( strstr( pos, "/version " ) == pos ) {
@@ -284,7 +289,7 @@ static void *clientHandler(void *args ) {
 						else {
 							send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
 							state=0;
-							running&=~1;
+							running&=~CL_RUN;
 						}
 						break;
 					case 2: /* POST */
@@ -318,6 +323,7 @@ static void *clientHandler(void *args ) {
 									assert( getConfig()->found->state == mpsearch_idle );
 									getConfig()->found->state=mpsearch_busy;
 									setCommand(cmd, argument);
+									running|=CL_SRC;
 									state=1;
 								} else {
 									state=4;
@@ -327,7 +333,7 @@ static void *clientHandler(void *args ) {
 						else { /* unresolvable POST request */
 							send(sock , "HTTP/1.0 406 Not Acceptable\015\012\015\012", 31, 0);
 							state=0;
-							running&=~1;
+							running&=~CL_RUN;
 						}
 						break;
 					case 3: /* get file */
@@ -409,25 +415,25 @@ static void *clientHandler(void *args ) {
 							/* ignore for now */
 							send( sock, "HTTP/1.1 204 No Content\015\012\015\012", 28, 0 );
 							state=0;
-							running&=~1;
+							running&=~CL_RUN;
 						}
 						else {
 							addMessage( 1, "Illegal get %s", pos );
 							send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
 							state=0;
-							running&=~1;
+							running&=~CL_RUN;
 						}
 						break;
 					case -1:
 						addMessage( 1, "Illegal method %s", commdata );
 						send(sock , "HTTP/1.0 405 Method Not Allowed\015\012\015\012", 35, 0);
 						state=0;
-						running&=~1;
+						running&=~CL_RUN;
 						break;
 					case -2: /* generic file not found */
 						send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
 						state=0;
-						running&=~1;
+						running&=~CL_RUN;
 						break;
 					default:
 						addMessage(0,"Unknown method %i!", method);
@@ -441,11 +447,11 @@ static void *clientHandler(void *args ) {
 			switch( state ) {
 			case 1: /* get update */
 				/* an update client! Good, that one should get status updates too! */
-				if( running == 1 ) {
+				if( running == CL_RUN ) {
 					addMessage( 1, "Update Handler (%p/%i) initialized", (void *)&nextstat, sock );
 					addNotifyHook( &mps_notify, &nextstat );
-					nextstat|=MPCOMM_FULLSTAT;
-					running|=2;
+					nextstat|=MPCOMM_TITLES;
+					running|=CL_UPD;
 				}
 				/* add flags that have been set outside */
 				if( nextstat != MPCOMM_STAT ) {
@@ -453,7 +459,8 @@ static void *clientHandler(void *args ) {
 					fullstat |= nextstat;
 					nextstat=MPCOMM_STAT;
 				}
-				if( config->found->state != mpsearch_idle ) {
+				/* only look at the search state if this is the searcher */
+				if( (running&CL_SRC) && (config->found->state != mpsearch_idle) ) {
 					fullstat |= MPCOMM_RESULT;
  					while( config->found->state == mpsearch_busy ) {
 						nanosleep( &ts, NULL );
@@ -527,7 +534,7 @@ static void *clientHandler(void *args ) {
 					pthread_mutex_unlock(&_sendlock);
 				}
 				len=0;
-				running&=~1;
+				running&=~CL_RUN;
 				break;
 
 			case 6: /* get config should be unreachable */
@@ -539,7 +546,7 @@ static void *clientHandler(void *args ) {
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
 						(int)strlen(VERSION), VERSION );
 				len=strlen(commdata);
-				running&=~1;
+				running&=~CL_RUN;
 				break;
 				/* todo: attachment or inline? */
 
@@ -551,7 +558,7 @@ static void *clientHandler(void *args ) {
 				filePost( sock, fullpath(title->path) );
 				title=NULL;
 				len=0;
-				running&=~1;
+				running&=~CL_RUN;
 				break;
 
 			case 9: /* return "artist - title" line */
@@ -559,7 +566,7 @@ static void *clientHandler(void *args ) {
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
 						(int)strlen(line), line );
 				len=strlen(commdata);
-				running&=~1;
+				running&=~CL_RUN;
 				break;
 
 			default:
@@ -587,17 +594,19 @@ static void *clientHandler(void *args ) {
 					unlockClient(sock);
 					/* clear result flag */
 					fullstat&=~MPCOMM_RESULT;
+					/* done searching */
+					running&=~CL_SRC;
 				}
 			}
 		} /* if running & !mpc_start */
 		if( config->status == mpc_quit ) {
 			addMessage(0,"stopping handler");
-			running&=~1;
+			running&=~CL_RUN;
 		}
 
-	} while( running & 1 );
+	} while( running & CL_RUN );
 
-	if( running & 2 ) {
+	if( running & CL_UPD ) {
 		removeNotifyHook( &mps_notify, &nextstat );
 		addMessage( 1, "Update Handler (%p=%i/%i) terminates", (void *)&nextstat, nextstat, sock );
 	}
@@ -605,6 +614,9 @@ static void *clientHandler(void *args ) {
 	addMessage( 2, "Client handler exited" );
 	if( isCurClient(sock) ){
 		unlockClient( sock );
+	}
+	if( running & CL_SRC ) {
+		config->found->state = mpsearch_idle;
 	}
 	close(sock);
 	sfree( &manifest );

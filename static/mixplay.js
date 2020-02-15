@@ -1,5 +1,5 @@
 /* MPCOMM_STAT == 0 - normal update
-   MPCOMM_FULLSTAT == 1 - +titles
+   MPCOMM_TITLES == 1 - +titles
    MPCOMM_RESULT == 2 - searchresult
    MPCOMM_LISTS == 4 - dnp/fav lists
    MPCOMM_CONFIG == 8 - configuration
@@ -22,6 +22,7 @@ var toval = 500
 var idletime = 0
 var idlesleep = 0
 var currentPop = ''
+const landscape = (window.screen.height < window.screen.width)
 
 function setBody (cname) {
   if (document.body.className === '') {
@@ -70,10 +71,10 @@ function scrollToggle () {
     if (scrolls[i].offset.charAt(0) === '-') {
       if (element.style.right === scrolls[i].offset) {
         element.style.right = '0px'
-        to = 10000
+        to = 6000
       } else {
         element.style.right = scrolls[i].offset
-        to = 15000
+        to = 11000
       }
     }
   }
@@ -107,7 +108,6 @@ function adaptUI (keep) {
   var i
   var fsize
   var bsize
-  var fac
 
   /* decide on default view if needed */
   if ((keep === -1) || (!keep && isPlay())) {
@@ -122,8 +122,8 @@ function adaptUI (keep) {
   const maintab = isActive('extra0')
   enableElement('uiextra', maintab)
 
-  /* try to keep text readable on landscape */
-  if (w > h) {
+  /* try to keep text readable on landscape screens */
+  if (landscape) {
     minfont = 20
   }
 
@@ -133,33 +133,16 @@ function adaptUI (keep) {
     enableElement('nscroll', !smallUI)
     h = Math.min(window.innerWidth, h)
     if (smallUI) {
-      lines = 11
+      lines = 7.5
     } else {
-      lines = 14.5
+      lines = 10.75
     }
     if (isstream) {
       lines = lines - 2
     }
     minfont = 12
-  } else if (isActive('extra1')) {
-    lines = 31
-  } else if (isActive('extra2')) {
-    lines = 27
-  } else if (isActive('extra3')) {
-    lines = 31.5
-  }
-
-  /* font shall never get smaller than minfont */
-  fsize = h / lines
-  if (fsize < minfont) {
-    fsize = minfont
-    const of = Math.round(lines - (h / fsize) - 1)
-    if (overflow !== of) {
-      overflow = of
-      doUpdate = 13
-    }
   } else {
-    overflow = 0
+    lines = 27
   }
 
   /* toolbars should grow/shrink with less magnification */
@@ -168,13 +151,22 @@ function adaptUI (keep) {
   document.getElementById('playpack').style.fontSize = bsize + 'px'
   document.getElementById('viewtabs').style.fontSize = bsize + 'px'
 
-  /* factor to fill gap between buttonbars */
-  var screw = 4.3 /* number of 'lines' the buttonbars take */
-  /* the formula looks weird but has been modified to make sure the divisor
-     stays large so the division results do not suffer too much precision loss
-   */
-  fac = ((lines * fsize) * fsize) / (((lines - screw) * fsize) + screw * bsize)
-  document.body.style.fontSize = fac + 'px'
+  /* subtract button bars from the total height */
+  h = h - (4 * bsize)
+
+  fsize = h / lines
+  var of = 0
+  /* font shall never get smaller than minfont */
+  if (fsize < minfont) {
+    fsize = minfont
+    of = Math.round(lines - (h / fsize) - 1)
+  }
+  if (overflow !== of) {
+    overflow = of
+    doUpdate = 1
+  }
+
+  document.body.style.fontSize = fsize + 'px'
 
   /* nothing scrolls elsewhere */
   if (!maintab) {

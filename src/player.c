@@ -201,6 +201,7 @@ void setStream( const char* stream, const char *name ) {
 	control->current=addPLDummy( control->current, "<waiting for info>" );
 	control->current=addPLDummy( control->current, name );
 	control->current=control->current->next;
+	notifyChange(MPCOMM_TITLES);
 	if( endsWith( stream, ".m3u" ) ||
 			endsWith( stream, ".pls" ) ) {
 		addMessage( 1, "Remote playlist.." );
@@ -268,7 +269,7 @@ static void sendplay( int fdset ) {
 		/* We have switched */
 		control->mpmode &= ~PM_SWITCH;
 	}
-
+	notifyChange(MPCOMM_TITLES);
 	addMessage( 2, "CMD: %s", line );
 }
 
@@ -320,7 +321,7 @@ void *setProfile( void *arg ) {
 			control->root=dbGetMusic( );
 		}
 
-		/* announce switching */
+		/* change mode */
 		control->mpmode=PM_DATABASE|PM_SWITCH;
 
 		if( active > control->profiles ) {
@@ -364,6 +365,7 @@ void *setProfile( void *arg ) {
 		plCheck( 0 );
 
 		addMessage( 1, "Profile set to %s.", profile->name );
+		notifyChange(MPCOMM_CONFIG);
 		if( control->argument != NULL ) {
 			/* do not free, the string has become the new profile entry! */
 			control->argument=NULL;
@@ -541,7 +543,7 @@ static int playResults( mpcmd_t range, const char *arg, const int insert ) {
 				res=res->next;
 			}
 
-			notifyChange(MPCOMM_FULLSTAT);
+			notifyChange(MPCOMM_TITLES);
 			return config->found->tnum;
 		}
 
@@ -562,7 +564,7 @@ static int playResults( mpcmd_t range, const char *arg, const int insert ) {
 			config->current=pos;
 		}
 
-		notifyChange(MPCOMM_FULLSTAT);
+		notifyChange(MPCOMM_TITLES);
 		return 1;
 	}
 
@@ -848,6 +850,13 @@ void *reader( void *arg ) {
 							break;
 						}
 
+						/* all three must be right for the title to change */
+						if( (control->status==mpc_start) ||
+								(control->command==mpc_start) ||
+								(control->mpmode&PM_SWITCH) ) {
+							break;
+						}
+
 						/* this is bad! */
 						if( control->current->title == NULL ) {
 							addMessage(0, "No current title!");
@@ -897,6 +906,9 @@ void *reader( void *arg ) {
 						}
 						/* we're playing a playlist */
 						else if( control->current != NULL ){
+							if( control->mpmode&PM_SWITCH ) {
+								order=0;
+							}
 							addMessage( 2, "Title change on player %i", fdset );
 							if( ( order == 1 ) && ( control->fade == 0 ) ) {
 								playCount( control->current->title, skipped );
@@ -1121,7 +1133,7 @@ void *reader( void *arg ) {
 		case mpc_fav:
 			if( (title != NULL ) && asyncTest() ) {
 				handleRangeCmd( title, control->command );
-				notifyChange(MPCOMM_FULLSTAT);
+				notifyChange(MPCOMM_TITLES);
 			}
 			break;
 
@@ -1148,9 +1160,10 @@ void *reader( void *arg ) {
 				else {
 					profile=atoi( control->argument );
 					if( ( profile != 0 ) && ( profile != control->active ) ) {
-						/* full stop current title/channel */
+						/* switching channels started */
+						control->mpmode|=PM_SWITCH;
+						/* do not try to play the next title */
 						order=0;
-						dowrite( p_command[fdset][1], "STOP\n", 6 );
 						/* reload database when switching from favplay to 'forget'
 						   playcount changes */
 						if( getFavplay() ) {
@@ -1437,7 +1450,7 @@ void *reader( void *arg ) {
 				else {
 					moveTitleByIndex( atoi( control->argument ), 0 );
 				}
-				notifyChange(MPCOMM_FULLSTAT);
+				notifyChange(MPCOMM_TITLES);
 
 				sfree( &(control->argument) );
 			}

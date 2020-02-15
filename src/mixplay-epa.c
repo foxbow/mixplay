@@ -34,7 +34,7 @@ int main( int argc, char **argv ){
 	}
 
 	while ( cmd != mpc_quit ) {
-		jo=getStatus(fd, MPCOMM_FULLSTAT);
+		jo=getStatus(fd, MPCOMM_TITLES);
 		if( jsonPeek(jo, "type") == json_error ) {
 			cmd=mpc_quit;
 		}

@@ -45,6 +45,8 @@ static mpplaylist_t *titleToPlaylist( mptitle_t *title, mpplaylist_t *pl ) {
 /**
  * parse arguments given to the application
  * also handles playing of a single file, a directory, a playlist or an URL
+ * this is also called after initialization, so the PM_SWITCH flag does
+ * actually make sense here.
  */
 int setArgument( const char *arg ) {
 	mptitle_t *title=NULL;

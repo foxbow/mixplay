@@ -33,7 +33,7 @@ static int drawAll(int fd) {
 	}
 	else {
 		state=jsonGetInt(jo,"status");
-		if(jsonGetInt(jo, "type") & MPCOMM_FULLSTAT) {
+		if(jsonGetInt(jo, "type") & MPCOMM_TITLES) {
 			jsonGetTitle(jo, "current", &title);
 			snprintf(current, MAXPATHLEN, "%s", title.display );
 			if( strcmp(current, last) != 0 ) {
