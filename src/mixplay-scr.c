@@ -20,7 +20,6 @@ static int displayPower( int on ) {
 
 	dpy = XOpenDisplay(disp);    /*  Open display and check for success */
  	if (dpy == NULL) {
-		fail(F_FAIL, "Unable to open display");
 		return -1;
 	}
 
@@ -37,7 +36,7 @@ static int displayPower( int on ) {
 		}
 	}
 	else {
-		fail(F_FAIL,"No DPMS support!");
+		rv=-2;
 	}
 	XCloseDisplay(dpy);
 	return rv;
@@ -54,7 +53,6 @@ static int getDisplayState() {
 
 	dpy = XOpenDisplay(disp);
 	if (dpy == NULL) {
-		fail(F_FAIL, "Unable to open display");
 		return -1;
 	}
 
@@ -69,8 +67,7 @@ static int getDisplayState() {
 		}
 	}
 	else {
-		fail(F_FAIL,"No DPMS support!");
-		rv=-1;
+		rv=-2;
 	}
 	XCloseDisplay(dpy);
 	return rv;
@@ -85,7 +82,7 @@ int main(){
 	int dstate=getDisplayState();
 
 	sstate=dstate;
-	if( sstate == -1 ) {
+	if( sstate < 0 ) {
 		fail(F_FAIL, "Cannot access DPMS!");
 	}
 
@@ -109,7 +106,7 @@ int main(){
 		fail( errno, "Could not demonize!" );
 	}
 
-	while ( state != mpc_stop ) {
+	while ( state != (mpc_idle+1) ) {
 		jo=getStatus(-1, MPCOMM_STAT);
 		if( jsonPeek(jo, "type") == json_error ) {
 			state=mpc_idle;

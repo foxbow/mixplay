@@ -192,6 +192,7 @@ int getConnection( void ) {
 		close(fd);
 		return -3;
 	}
+	free(reply);
 
 	return fd;
 }
