@@ -623,10 +623,6 @@ void activity( int v, const char *msg, ... ) {
 	if ( _ftrpos % 500 == 0 ) {
 		/* update the UI to follow activity */
 		notifyChange(MPCOMM_TITLES);
-	}
-
-	if ( _ftrpos % 1000 == 0 ) {
-		addMessage( v, "%s", _curact );
 		_ftrpos=0;
 	}
 
