@@ -912,6 +912,7 @@ void *reader( void *arg ) {
 							addMessage( 2, "Title change on player %i", fdset );
 							if( ( order == 1 ) && ( control->fade == 0 ) ) {
 								playCount( control->current->title, skipped );
+								skipped=0;
 							}
 
 							if( order < 0 ) {
@@ -1093,6 +1094,9 @@ void *reader( void *arg ) {
 					sfree(&(control->argument));
 				}
 				skipped=1;
+				if( control->fade ) {
+					playCount(control->current->title, skipped);
+				}
 				dowrite( p_command[fdset][1], "STOP\n", 6 );
 			}
 			break;

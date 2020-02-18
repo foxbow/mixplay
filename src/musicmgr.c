@@ -211,21 +211,25 @@ static mpplaylist_t *remFromPL( mpplaylist_t *pltitle ) {
 void playCount( mptitle_t *title, int skip ) {
 	/* playcount only makes sense with a title list */
 	if( getConfig()->mpmode & PM_STREAM ) {
+		addMessage(1,"No skip on streams!");
 		return;
 	}
 
 	/* not marked = searchplay, does not count
 	   just marked dnp? someone else may like it though */
 	if ( !(title->flags&MP_MARK ) || (title->flags&MP_DNP)) {
+		addMessage(1,"%s is dnp or not marked!", title->display);
 		return;
 	}
 
 	if (skip) {
+		addMessage(1,"%s was skipped (%i)!", title->display, title->skipcount);
 		title->skipcount++;
-		if( title->skipcount > getConfig()->skipdnp ) {
+		if( title->skipcount >= getConfig()->skipdnp ) {
 			/* prepare resurrection */
 			title->skipcount=0;
 			/* three strikes and you're out */
+			addMessage(0,"Marked %s as DNP for skipping!", title->display);
 			handleRangeCmd( title, (mpcmd_t)(mpc_display|mpc_dnp) );
 		}
 		dbMarkDirty();

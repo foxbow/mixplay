@@ -16,6 +16,7 @@ body {
 	flex-direction: column;
 	height: 100%;
 	width: 100%;
+	scrollbar-color: blue darkblue;
 }
 
 body.busy {
@@ -43,7 +44,17 @@ div#black {
 
 div[id^='extra'].active {
 	flex: 1;
-	overflow: hidden;
+	overflow-x: hidden;
+}
+
+/* no scrollbars at all */
+div#extra0 {
+	overflow-y: hidden;
+}
+
+/* allow scrolling and add padding for the playpack */
+div#extra1, div#extra2, div#extra3 {
+	margin-bottom: 2em;
 }
 
 div#volume {
