@@ -1613,7 +1613,6 @@ void dumpInfo( mptitle_t *root, int smooth ) {
 
 	while( pl <= maxplayed ) {
 		unsigned int pcount=0;
-		unsigned int dnpcnt=0;
 		unsigned int favcnt=0;
 		unsigned int markcnt=0;
 		char line[MAXPATHLEN];
@@ -1621,9 +1620,8 @@ void dumpInfo( mptitle_t *root, int smooth ) {
 		do {
 			if( ( getFavplay() && current->favpcount == pl ) ||
 					(!getFavplay() && current->playcount == pl )) {
-				pcount++;
-				if( current->flags & MP_DNP ) {
-					dnpcnt++;
+				if( !(current->flags & MP_DNP) ) {
+					pcount++;
 				}
 				if( current->flags & MP_FAV ) {
 					favcnt++;
@@ -1650,7 +1648,7 @@ void dumpInfo( mptitle_t *root, int smooth ) {
 			maxplayed--;
 		}
 		/* normal output and forward to next count */
-		else {
+		else if (pcount > 0) {
 			switch( pl ) {
 			case 0:
 				sprintf( line, "Never played\t%i", pcount);
@@ -1676,8 +1674,8 @@ void dumpInfo( mptitle_t *root, int smooth ) {
 					addMessage( 0, "%s (allfavs)", line );
 				}
 			}
-			pl++;
 		}
+		pl++;
 	} /* while pl < maxplay */
 
 	addMessage( 0, "%4i\tfavourites", fav );
