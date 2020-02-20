@@ -850,10 +850,8 @@ void *reader( void *arg ) {
 							break;
 						}
 
-						/* all three must be right for the title to change */
-						if( (control->status==mpc_start) ||
-								(control->command==mpc_start) ||
-								(control->mpmode&PM_SWITCH) ) {
+						/* Is the player initializing or changing profiles */
+						if( !playerIsActive() ) {
 							break;
 						}
 
@@ -1093,9 +1091,11 @@ void *reader( void *arg ) {
 					order=atoi(control->argument);
 					sfree(&(control->argument));
 				}
-				skipped=1;
 				if( control->fade ) {
-					playCount(control->current->title, skipped);
+					playCount(control->current->title, 1);
+				}
+				else {
+					skipped=1;
 				}
 				dowrite( p_command[fdset][1], "STOP\n", 6 );
 			}

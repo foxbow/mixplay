@@ -596,7 +596,17 @@ int incVerbosity() {
 	return _cconfig->verbosity;
 }
 
-static int _ftrpos=0;
+/* returns true if the config is in a well defined state */
+int playerIsActive( void ) {
+	mpconfig_t *control=getConfig();
+	return( (control->status != mpc_start) &&
+					(control->command != mpc_start) &&
+					!(control->mpmode & PM_SWITCH) &&
+					control->current &&
+					control->current->title );
+}
+
+static unsigned _ftrpos=0;
 #define MP_ACTLEN 75
 static char _curact[MP_ACTLEN]="";
 
@@ -618,12 +628,21 @@ void activity( int v, const char *msg, ... ) {
 		_curact[i]=' ';
 	}
 	_curact[MP_ACTLEN-1]=0;
+	/* _ftrpos is unsigned so an overflow does not cause issues later */
 	++_ftrpos;
 
+	/* update the UI to follow activity */
 	if ( _ftrpos % 500 == 0 ) {
-		/* update the UI to follow activity */
-		notifyChange(MPCOMM_TITLES);
-		_ftrpos=0;
+		/* on startup change title info to show on main view */
+		if( !playerIsActive() ) {
+			strtcpy( getConfig()->current->title->title, _curact, NAMELEN );
+			strtcpy( getConfig()->current->title->display, _curact, MAXPATHLEN );
+			notifyChange(MPCOMM_TITLES);
+		}
+		/* add a message for dbinfo et.al. */
+		else if( _ftrpos % 1000 == 0 ){
+			addMessage(0, "%s", _curact);
+		}
 	}
 
 	if ( ( v < getDebug() ) && ( _ftrpos % 100 == 0 ) ){
