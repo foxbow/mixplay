@@ -601,9 +601,7 @@ int playerIsActive( void ) {
 	mpconfig_t *control=getConfig();
 	return( (control->status != mpc_start) &&
 					(control->command != mpc_start) &&
-					!(control->mpmode & PM_SWITCH) &&
-					control->current &&
-					control->current->title );
+					!(control->mpmode & PM_SWITCH) );
 }
 
 static unsigned _ftrpos=0;
@@ -633,15 +631,13 @@ void activity( int v, const char *msg, ... ) {
 
 	/* update the UI to follow activity */
 	if ( _ftrpos % 500 == 0 ) {
-		/* on startup change title info to show on main view */
+		/* fetch title info - see jsonAddTitle() */
 		if( !playerIsActive() ) {
-			strtcpy( getConfig()->current->title->title, _curact, NAMELEN );
-			strtcpy( getConfig()->current->title->display, _curact, MAXPATHLEN );
 			notifyChange(MPCOMM_TITLES);
 		}
 		/* add a message for dbinfo et.al. */
 		else if( _ftrpos % 1000 == 0 ){
-			addMessage(0, "%s", _curact);
+			addMessage(v, "%s", _curact);
 		}
 	}
 
