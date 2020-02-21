@@ -1378,6 +1378,7 @@ function blockSpace (event) {
 }
 
 function handleKey (event) {
+  var prevent = 1
   /* only do this if the main or playlist view is visible! */
   if (!isPlay()) {
     return
@@ -1415,10 +1416,14 @@ function handleKey (event) {
       pwSendCMD('Mark doublets?', 0x0b)
       break
     default:
+      prevent = 0
       console.log('Pressed: ' + event.key)
       return
   }
-  event.preventDefault()
+  /* stop propagation if the event was handled here */
+  if (prevent) {
+    event.preventDefault()
+  }
 }
 
 /**
@@ -1518,7 +1523,13 @@ function initializeUI () {
     addTouch('extra', i)
     addTouch('dnpfav', i)
   }
-  document.body.addEventListener('wheel', volWheel, { passive: false })
+
+  var e = document.getElementById('viewtabs')
+  e.addEventListener('wheel', volWheel, { passive: false })
+  e = document.getElementById('extra0')
+  e.addEventListener('wheel', volWheel, { passive: false })
+  e = document.getElementById('playpack')
+  e.addEventListener('wheel', volWheel, { passive: false })
   document.body.addEventListener('keypress', handleKey)
   document.body.addEventListener('keyup', blockSpace)
   /* set initial tab and sizes */
