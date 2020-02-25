@@ -1511,6 +1511,16 @@ function clocktime () {
   setElement('time', '&nbsp;' + line + min + '&nbsp;')
   setTimeout(function () { clocktime() }, 5000)
 }
+
+function addVolWheel (id) {
+  const e = document.getElementById(id)
+  if (e) {
+    e.addEventListener('wheel', volWheel, { passive: false })
+  } else {
+    console.log('Element ' + id + ' does not exist!')
+  }
+}
+
 /*
  * start the UI update thread loops
  */
@@ -1523,13 +1533,9 @@ function initializeUI () {
     addTouch('extra', i)
     addTouch('dnpfav', i)
   }
-
-  var e = document.getElementById('viewtabs')
-  e.addEventListener('wheel', volWheel, { passive: false })
-  e = document.getElementById('extra0')
-  e.addEventListener('wheel', volWheel, { passive: false })
-  e = document.getElementById('playpack')
-  e.addEventListener('wheel', volWheel, { passive: false })
+  addVolWheel('viewtabs')
+  addVolWheel('extra0')
+  addVolWheel('playpack')
   document.body.addEventListener('keypress', handleKey)
   document.body.addEventListener('keyup', blockSpace)
   /* set initial tab and sizes */
