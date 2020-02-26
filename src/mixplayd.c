@@ -161,6 +161,7 @@ int main( int argc, char **argv ) {
 	struct timeval tv;
 	int hidfd=-1;
 	int rv=0;
+	int res=0;
 
 	/* first of all check if there isn't already another instance running */
 	if( access( PIDPATH, F_OK ) == 0 ) {
@@ -170,8 +171,12 @@ int main( int argc, char **argv ) {
 			addError(errno);
 			return -1;
 		}
-		fscanf( pidlog, "%i", &rv );
+		res = fscanf( pidlog, "%i", &rv );
 		fclose(pidlog);
+		if( res != 1 ) {
+			addMessage(0, "Could not read PID from %s!", PIDPATH);
+			return -1;
+		}
 		/* does the pid exist? */
 		if(!kill(rv,0) && !errno) {
 			addMessage( 0, "Mixplayd is already running!" );

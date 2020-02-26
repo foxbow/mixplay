@@ -104,7 +104,6 @@ function adaptUI (keep) {
   var lines
   var minfont = 14
   var h = window.innerHeight
-  var w = window.innerWidth
   var i
   var fsize
   var bsize
@@ -1548,4 +1547,19 @@ function initializeUI () {
   scrollToggle()
   /* start clock */
   clocktime()
+  /* everything below is to silence unused function warnings */
+  if (!document.body) {
+    dummy()
+  }
+}
+
+/* these listeners are added in the HTML code */
+function dummy () {
+  initializeUI()
+  switchUI()
+  download()
+  isEnter()
+  newActive()
+  loadURL()
+  toggleSearch()
 }
