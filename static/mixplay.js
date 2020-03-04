@@ -22,7 +22,7 @@ var toval = 500
 var idletime = 0
 var idlesleep = 0
 var currentPop = ''
-const landscape = (window.screen.height < window.screen.width)
+var debug = 0
 
 function setBody (cname) {
   if (document.body.className === '') {
@@ -107,10 +107,11 @@ function adaptUI (keep) {
   var i
   var fsize
   var bsize
+  const portrait = (h > window.innerWidth * 1.2)
 
   /* decide on default view if needed */
   if ((keep === -1) || (!keep && isPlay())) {
-    if (window.innerWidth < h) {
+    if (portrait) {
       switchView(1)
       switchTabByRef('dnpfav', 0)
     } else {
@@ -122,7 +123,7 @@ function adaptUI (keep) {
   enableElement('uiextra', maintab)
 
   /* try to keep text readable on landscape screens */
-  if (landscape) {
+  if (!portrait) {
     minfont = 20
   }
 
@@ -141,7 +142,7 @@ function adaptUI (keep) {
     }
     minfont = 12
   } else {
-    lines = 27
+    lines = 28
   }
 
   /* toolbars should grow/shrink with less magnification */
@@ -718,6 +719,29 @@ function tabify (parent, name, list, maxlines) {
   }
 }
 
+/* add play- favplay- and skipcount when debug is enabled */
+function countPrefix (title) {
+  var prefix = '['
+  if (!debug || isstream) {
+    return ''
+  }
+  if (!favplay) {
+    prefix += title.playcount + '/'
+  }
+  if (title.flags & 1) {
+    prefix += title.favpcount + '/'
+  } else {
+    prefix += 'x/'
+  }
+  prefix += title.skipcount + ']'
+  if (!(title.flags & 8)) {
+    prefix += '*'
+  } else {
+    prefix += ' '
+  }
+  return prefix
+}
+
 function fullUpdate (data) {
   var choices = []
   var e = document.getElementById('dnpfav0')
@@ -739,11 +763,8 @@ function fullUpdate (data) {
       setElement('prev', data.prev[0].artist + ' - ' + data.prev[0].title)
     }
     for (var i = Math.min(maxprev, data.prev.length - 1); i >= 0; i--) {
-      var titleline = ''
+      var titleline = countPrefix(data.prev[i])
       var cline
-      if (!isstream && (data.prev[i].playcount >= 0)) {
-        titleline += '[' + data.prev[i].playcount + '/' + data.prev[i].skipcount + '] '
-      }
       if (data.prev[i].artist.length > 0) {
         titleline += data.prev[i].artist + ' - '
       }
@@ -770,10 +791,7 @@ function fullUpdate (data) {
   setElement('title', data.current.title)
   setElement('artist', data.current.artist)
   setElement('album', data.current.album)
-  titleline = ''
-  if (!isstream && (data.current.playcount >= 0)) {
-    titleline += '[' + data.current.playcount + '/' + data.current.skipcount + '] '
-  }
+  titleline = countPrefix(data.current)
   if (data.current.artist.length > 0) {
     titleline += data.current.artist + ' - '
   }
@@ -800,10 +818,7 @@ function fullUpdate (data) {
       setElement('next', data.next[0].artist + ' - ' + data.next[0].title)
     }
     for (i = 0; i < Math.min(data.next.length, maxnext); i++) {
-      titleline = ''
-      if (!isstream && (data.next[i].playcount >= 0)) {
-        titleline = '[' + data.next[i].playcount + '/' + data.next[i].skipcount + '] '
-      }
+      titleline = countPrefix(data.next[i])
       if (data.next[i].artist.length > 0) {
         titleline += data.next[i].artist + ' - '
       }
@@ -1413,6 +1428,10 @@ function handleKey (event) {
       break
     case 'D':
       pwSendCMD('Mark doublets?', 0x0b)
+      break
+    case 'G':
+      debug = !debug
+      doUpdate = 1
       break
     default:
       prevent = 0

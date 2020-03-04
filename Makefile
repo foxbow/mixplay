@@ -12,11 +12,11 @@ OBJS=$(addprefix $(OBJDIR)/,mpserver.o utils.o musicmgr.o database.o \
 	mpflirc.o)
 
 CLOBJS=$(addprefix $(OBJDIR)/,utils.o msgbuf.o config.o json.o mpclient.o)
-HCLOBJS=$(CLOBJS) $(addprefix $(OBJDIR)/,mphid.o)
+HCOBJS=$(CLOBJS) $(addprefix $(OBJDIR)/,mphid.o)
 
-SCLLIBS=-lX11 -lXext -lpthread
+SCLIBS=-lX11 -lXext -lpthread
 
-EPOBJS=$(addprefix $(ODBJDIR)/,mpepa.o epasupp.o mpclient.o)
+EPOBJS=$(CLOBJS) $(addprefix $(ODBJDIR)/,mpepa.o epasupp.o mpclient.o)
 EPLIBS=-lwiringPi
 
 LIBS=-lmpg123 -lpthread -lm
@@ -70,11 +70,14 @@ clients: bin/mixplay-hid bin/mixplay-scr
 bin/mixplayd: $(OBJDIR)/mixplayd.o $(OBJS)
 	$(CC) $^ -o $@ $(LIBS)
 
-bin/mixplay-hid: $(OBJDIR)/mixplay-hid.o $(HCLOBJS)
+bin/mixplay-hid: $(OBJDIR)/mixplay-hid.o $(HCOBJS)
 	$(CC) $^ -o $@ $(LIBS)
 
 bin/mixplay-scr: $(OBJDIR)/mixplay-scr.o $(CLOBJS)
-	$(CC) $^ -o $@ $(SCLLIBS)
+	$(CC) $^ -o $@ $(SCLIBS)
+
+bin/mixplay-epa: $(OBJDIR)/mixplay-epa.o $(EPOBJS)
+	$(CC) $^ -o $@ $(EPLIBS)
 
 bin/mprcinit: $(OBJDIR)/mprcinit.o $(OBJS)
 	$(CC) $^ -o $@ $(LIBS)
