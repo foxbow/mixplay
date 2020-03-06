@@ -11,11 +11,11 @@
 /* do not return more than 100 titles */
 #define MAXSEARCH 100
 
-#define MP_FAV  1	/* Favourite */
-#define MP_DNP  2	/* do not play */
-/* #define MP_CNTD  has been counted */
-#define MP_MARK 8	/* is currently in the playlist */
-#define MP_ALL  31
+#define MP_FAV   1	/* Favourite */
+#define MP_DNP   2	/* do not play */
+#define MP_RSVRD 4  /* unused */
+#define MP_MARK  8	/* was added normally to the playlist */
+#define MP_ALL   31
 
 typedef struct mptitle_s mptitle_t ;
 struct mptitle_s {

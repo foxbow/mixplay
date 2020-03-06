@@ -721,23 +721,23 @@ function tabify (parent, name, list, maxlines) {
 
 /* add play- favplay- and skipcount when debug is enabled */
 function countPrefix (title) {
-  var prefix = '['
-  if (!debug || isstream) {
-    return ''
-  }
-  if (!favplay) {
-    prefix += title.playcount + '/'
-  }
-  if (title.flags & 1) {
+  var prefix = ''
+  if (debug && !isstream) {
+    prefix += '['
+    if (!favplay) {
+      prefix += title.playcount + '/'
+    }
     prefix += title.favpcount + '/'
-  } else {
-    prefix += 'x/'
-  }
-  prefix += title.skipcount + ']'
-  if (!(title.flags & 8)) {
-    prefix += '*'
-  } else {
-    prefix += ' '
+    prefix += title.skipcount + ']'
+    if (!(title.flags & 8)) {
+      /* added through search */
+      prefix += '*'
+    } else if (title.flags & 1) {
+      /* favourite */
+      prefix += '+'
+    } else {
+      prefix += '-'
+    }
   }
   return prefix
 }
