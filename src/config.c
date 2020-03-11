@@ -490,6 +490,8 @@ void freeConfigContents() {
 
 	sfree( (char **)&(_cconfig->channel) );
 
+	sfree( (char **)&(_cconfig->password) );
+
 	msgBuffDiscard( _cconfig->msg );
 }
 
