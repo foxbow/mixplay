@@ -1291,7 +1291,9 @@ void jsonDiscard( jsonObject *jo ) {
 		free( jo->key );
 		jo->key=NULL;
 		/* free value if it's a string, other complex values have been freed */
-		if( ( jo->type == json_string ) &&
+		if((( jo->type == json_string ) ||
+				( jo->type == json_number ) ||
+				( jo->type == json_error )) &&
 				( jo->val != NULL ) ) {
 			free( jo->val );
 			jo->val=NULL;
