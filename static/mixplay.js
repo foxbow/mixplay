@@ -355,6 +355,11 @@ function sendCMDArg (cmd, arg) {
     return
   }
 
+  if (cmd === -1) {
+    download(arg)
+    return
+  }
+
   /* replay, prev and next don't make sense on stream */
   if (isstream && ((cmd === 0x02) || (cmd === 0x03) || (cmd === 0x05))) {
     return
@@ -571,7 +576,7 @@ function clickable (text, cmd, arg, ident) {
       currentPop = ''
     }
   }
-  reply.innerHTML = text
+  reply.innerHTML = '&nbsp;' + text
   return reply
 }
 
@@ -623,7 +628,7 @@ function popselect (choice, arg, text, drag) {
       for (i = 0; i < num; i++) {
         if (i !== 0) {
           select = document.createElement('b')
-          select.innerText = ' / '
+          select.innerText = ' /'
           popspan.appendChild(select)
         }
         select = clickable(choice[i][0], choice[i][1], arg, ident)
@@ -775,9 +780,9 @@ function fullUpdate (data) {
         cline.innerHTML = data.prev[i].title
       } else {
         choices = []
-        choices.push(['DNP', 0x080a])
+        choices.push(['&#x2620;', 0x080a])
         if (!(data.prev[i].flags & 1)) {
-          choices.push(['FAV', 0x0809])
+          choices.push(['&#x2665;', 0x0809])
         }
         choices.push(['Replay', 0x0011])
         cline = popselect(choices,
@@ -829,11 +834,11 @@ function fullUpdate (data) {
         cline.innerHTML = titleline
       } else {
         choices = []
-        choices.push(['DNP', 0x080a])
+        choices.push(['&#x2620;', 0x080a])
         if (!(data.next[i].flags & 1)) {
-          choices.push(['FAV', 0x0809])
+          choices.push(['&#x2665;', 0x0809])
         }
-        choices.push(['Remove', 0x001c])
+        choices.push(['X', 0x001c])
         cline = popselect(choices,
           data.next[i].key, titleline, 3)
       }
@@ -869,12 +874,12 @@ function searchUpdate (data) {
     switchTabByRef('search', 2)
     for (i = 0; i < data.albums.length; i++) {
       choices = []
-      choices.push(['Search', 0x0413])
+      choices.push(['&#x26b2;', 0x0413])
       if ((!favplay) || (favplay && data.fpcurrent)) {
-        choices.push(['FAV', 0x0409])
+        choices.push(['&#x2665;', 0x0409])
       }
       if ((!favplay) || (favplay && !data.fpcurrent)) {
-        choices.push(['DNP', 0x040a])
+        choices.push(['&#x2620;', 0x040a])
       }
 
       items[i] = popselect(choices,
@@ -896,12 +901,12 @@ function searchUpdate (data) {
     switchTabByRef('search', 1)
     for (i = 0; i < data.artists.length; i++) {
       choices = []
-      choices.push(['Search', 0x0213])
+      choices.push(['&#x26b2;', 0x0213])
       if ((!favplay) || (favplay && data.fpcurrent)) {
-        choices.push(['FAV', 0x0209])
+        choices.push(['&#x2665;', 0x0209])
       }
       if ((!favplay) || (favplay && !data.fpcurrent)) {
-        choices.push(['DNP', 0x020a])
+        choices.push(['&#x2620;', 0x020a])
       }
       items[i] = popselect(choices,
         data.artists[i],
@@ -922,26 +927,26 @@ function searchUpdate (data) {
     switchTabByRef('search', 0)
     choices = []
     if ((!favplay) || (favplay && data.fpcurrent)) {
-      choices.push(['FAV', 0x0809])
+      choices.push(['&#x2665;', 0x0809])
     }
     if ((!favplay) || (favplay && !data.fpcurrent)) {
-      choices.push(['DNP', 0x080a])
-      choices.push(['Insert', 0x080c])
-      choices.push(['Append', 0x0814])
+      choices.push(['&#x2620;', 0x080a])
+      choices.push(['&#x276f;', 0x080c])
+      choices.push(['&#x276f;&#x276f;', 0x0814])
     }
-
     items[0] = popselect(choices, 0, 'All results', 0)
 
     for (i = 0; i < data.titles.length; i++) {
       choices = []
       if ((!favplay) || (favplay && data.fpcurrent)) {
-        choices.push(['FAV', 0x0809])
+        choices.push(['&#x2665;', 0x0809])
       }
       if ((!favplay) || (favplay && !data.fpcurrent)) {
-        choices.push(['DNP', 0x080a])
-        choices.push(['Insert', 0x080c])
-        choices.push(['Append', 0x0814])
+        choices.push(['&#x2620;', 0x080a])
+        choices.push(['&#x276f;', 0x080c])
+        choices.push(['&#x276f;&#x276f;', 0x0814])
       }
+      choices.push(['DL', -1])
       items[i + 1] = popselect(choices,
         data.titles[i].key,
         data.titles[i].artist + ' - ' + data.titles[i].title, 0)
@@ -1356,8 +1361,8 @@ function newActive () {
  * download a title by key(0=current)
  */
 function download (key) {
-  if (window.confirm('Download ' + document.getElementById('title').innerHTML + ' ?')) {
-    window.location = '/title/' + key
+  if (window.confirm('Download title?')) {
+    window.location = '/mpctrl/title/' + key
   }
 }
 
