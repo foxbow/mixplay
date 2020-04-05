@@ -874,12 +874,12 @@ function searchUpdate (data) {
     switchTabByRef('search', 2)
     for (i = 0; i < data.albums.length; i++) {
       choices = []
-      choices.push(['&#x26b2;', 0x0413])
+      choices.push(['&#x26b2;', 0x0413]) // search
       if ((!favplay) || (favplay && data.fpcurrent)) {
-        choices.push(['&#x2665;', 0x0409])
+        choices.push(['&#x2665;', 0x0409]) // fav
       }
       if ((!favplay) || (favplay && !data.fpcurrent)) {
-        choices.push(['&#x2620;', 0x040a])
+        choices.push(['&#x2620;', 0x040a]) // dnp
       }
 
       items[i] = popselect(choices,
@@ -901,12 +901,12 @@ function searchUpdate (data) {
     switchTabByRef('search', 1)
     for (i = 0; i < data.artists.length; i++) {
       choices = []
-      choices.push(['&#x26b2;', 0x0213])
+      choices.push(['&#x26b2;', 0x0213]) // search
       if ((!favplay) || (favplay && data.fpcurrent)) {
-        choices.push(['&#x2665;', 0x0209])
+        choices.push(['&#x2665;', 0x0209]) // fav
       }
       if ((!favplay) || (favplay && !data.fpcurrent)) {
-        choices.push(['&#x2620;', 0x020a])
+        choices.push(['&#x2620;', 0x020a]) // dnp
       }
       items[i] = popselect(choices,
         data.artists[i],
@@ -927,26 +927,26 @@ function searchUpdate (data) {
     switchTabByRef('search', 0)
     choices = []
     if ((!favplay) || (favplay && data.fpcurrent)) {
-      choices.push(['&#x2665;', 0x0809])
+      choices.push(['&#x2665;', 0x0809]) // fav
     }
     if ((!favplay) || (favplay && !data.fpcurrent)) {
-      choices.push(['&#x2620;', 0x080a])
-      choices.push(['&#x276f;', 0x080c])
-      choices.push(['&#x276f;&#x276f;', 0x0814])
+      choices.push(['&#x2620;', 0x080a]) // dnp
+      choices.push(['&#x276f;', 0x080c]) // next
+      choices.push(['&#x276f;&#x276f;', 0x0814]) // append
     }
     items[0] = popselect(choices, 0, 'All results', 0)
 
     for (i = 0; i < data.titles.length; i++) {
       choices = []
       if ((!favplay) || (favplay && data.fpcurrent)) {
-        choices.push(['&#x2665;', 0x0809])
+        choices.push(['&#x2665;', 0x0809]) // fav
       }
       if ((!favplay) || (favplay && !data.fpcurrent)) {
-        choices.push(['&#x2620;', 0x080a])
-        choices.push(['&#x276f;', 0x080c])
-        choices.push(['&#x276f;&#x276f;', 0x0814])
+        choices.push(['&#x2620;', 0x080a]) // dnp
+        choices.push(['&#x276f;', 0x080c]) // next
+        choices.push(['&#x276f;&#x276f;', 0x0814]) // append
       }
-      choices.push(['DL', -1])
+      choices.push(['&#x1f4be;', -1]) // download
       items[i + 1] = popselect(choices,
         data.titles[i].key,
         data.titles[i].artist + ' - ' + data.titles[i].title, 0)

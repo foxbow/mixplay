@@ -148,9 +148,10 @@ static void *clientHandler(void *args ) {
 	unsigned int flen;
 	int fullstat=MPCOMM_STAT;
 	int nextstat=MPCOMM_STAT;
-	int okreply=-1;
+	int okreply=1;
 	int rawcmd;
 	int index=0;
+	int tc=0;
 	mptitle_t *title=NULL;
 	struct stat sbuf;
 	/* for search polling */
@@ -175,7 +176,15 @@ static void *clientHandler(void *args ) {
 
 		to.tv_sec=1;
 		to.tv_usec=0;
-		select( FD_SETSIZE, &fds, NULL, NULL, &to );
+		if( select( FD_SETSIZE, &fds, NULL, NULL, &to ) == -1) {
+			if( tc++ > 10 ) {
+				addMessage(0, "Reaping dead connection (%i)", sock);
+				running&=~CL_RUN;
+			}
+		}
+		else {
+			tc=0;
+		}
 		if( FD_ISSET( sock, &fds ) ) {
 			memset( commdata, 0, commsize );
 			recvd=0;
