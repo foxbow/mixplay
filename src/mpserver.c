@@ -176,7 +176,7 @@ static void *clientHandler(void *args ) {
 
 		to.tv_sec=1;
 		to.tv_usec=0;
-		if( select( FD_SETSIZE, &fds, NULL, NULL, &to ) == -1) {
+		if( select( FD_SETSIZE, &fds, NULL, NULL, &to ) < 1) {
 			if( tc++ > 10 ) {
 				addMessage(0, "Reaping dead connection (%i)", sock);
 				running&=~CL_RUN;
