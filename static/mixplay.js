@@ -1323,7 +1323,8 @@ function loadURL () {
   if ((document.location.protocol !== 'https:') &&
       (typeof window.orientation !== 'undefined')) {
     loadURL2('')
-  } else if (typeof navigator.clipboard.readText !== 'function') {
+  } else if ((!navigator.clipboard) ||
+      (typeof navigator.clipboard.readText !== 'function')) {
     loadURL2('')
   } else {
     navigator.clipboard.readText().then(function (clipText) {
