@@ -406,6 +406,25 @@ static int getDirs( const char *cd, struct dirent ***dirlist ) {
 }
 
 /*
+ * matches term with pattern in search.
+ */
+static int isMatch( const char *term, const char *pat, const mpcmd_t range ) {
+	char loterm[MAXPATHLEN];
+
+	if( MPC_ISFUZZY(range) ){
+		return patMatch( term, pat);
+	}
+
+	if( MPC_ISSUBSTR(range) ) {
+		strltcpy( loterm, term, MAXPATHLEN );
+		return ( strstr( loterm, pat ) != NULL );
+	}
+
+	strltcpy( loterm, term, MAXPATHLEN );
+	return ( strcmp( loterm, pat ) == 0 );
+}
+
+/*
  * checks if a title entry 'title' matches the search term 'pat'
  * the test is driven by the first two characters in the
  * search term. The first character gives the range (taLgd(p))
@@ -417,37 +436,36 @@ static int getDirs( const char *cd, struct dirent ***dirlist ) {
  */
 static int matchTitle( mptitle_t *title, const char* pat ) {
 	int fuzzy=0;
-	char loname[MAXPATHLEN+1];
 	int res=0;
 
 	if( ( '=' == pat[1] ) || ( '*' == pat[1] ) ) {
 		if( '*' == pat[1] ) {
-			fuzzy=1;
+			fuzzy=mpc_fuzzy;
 		}
 
 		switch( pat[0] ) {
 		case 't':
-			strltcpy( loname, title->title, MAXPATHLEN );
+			res=isMatch( title->title, pat+2, fuzzy );
 			break;
 
 		case 'a':
-			strltcpy( loname, title->artist, MAXPATHLEN );
+			res=isMatch( title->artist, pat+2, fuzzy );
 			break;
 
 		case 'l':
-			strltcpy( loname, title->album, MAXPATHLEN );
+			res=isMatch( title->album, pat+2, fuzzy );
 			break;
 
 		case 'g':
-			strltcpy( loname, title->genre, MAXPATHLEN );
+			res=isMatch( title->genre, pat+2, fuzzy );
 			break;
 
 		case 'd':
-			strltcpy( loname, title->display, MAXPATHLEN );
+			res=isMatch( title->display, pat+2, fuzzy );
 			break;
 
 		case 'p': /* @obsolete! */
-			strltcpy( loname, title->path, MAXPATHLEN );
+			res=isMatch( title->path, pat+2, fuzzy );
 			break;
 
 		default:
@@ -456,33 +474,11 @@ static int matchTitle( mptitle_t *title, const char* pat ) {
 		}
 	}
 	else {
-		strltcpy( loname, title->display, MAXPATHLEN );
-	}
-
-	if( fuzzy ) {
-		res=patMatch( loname, pat+2 );
-	}
-	else {
-		res=( strcmp( loname, pat+2 ) == 0 );
+		addMessage(0, "Pattern without range: %s", pat);
+		res=isMatch( title->display, pat, fuzzy );
 	}
 
 	return res;
-}
-
-/*
- * matches term with pattern in search, this does a substring match
- * as opposed to fav/dnp handling
- */
-static int isMatch( const char *term, const char *pat, const int fuzzy ) {
-	char loterm[MAXPATHLEN];
-
-	if( fuzzy ){
-		return patMatch( term, pat);
-	}
-	else {
-		strltcpy( loterm, term, MAXPATHLEN );
-		return ( strstr( loterm, pat ) != NULL );
-	}
 }
 
 /**
@@ -533,14 +529,14 @@ int search( const char *pat, const mpcmd_t range ) {
 		if( ( runner->flags & MP_DNP ) == dnp ) {
 			/* check for searchrange and pattern */
 			if( ( ( MPC_ISTITLE(range) &&
-					isMatch( runner->title, pat, MPC_ISFUZZY(range) ) ) ||
+					isMatch( runner->title, pat, range) ) ||
 					( MPC_ISDISPLAY( range ) &&
-					isMatch( runner->display, pat, MPC_ISFUZZY(range) ) ) ) &&
+					isMatch( runner->display, pat, range ) ) ) &&
 					( cnt++ < MAXSEARCH ) ) {
 				found = (mpcmd_t)(found | mpc_title);
 			}
 			if( MPC_ISARTIST(range) &&
-					isMatch( runner->artist, pat, MPC_ISFUZZY(range) ) ) {
+					isMatch( runner->artist, pat, range ) ) {
 				if( MPC_EQARTIST(range) ) {
 					found = (mpcmd_t)(found | mpc_artist);
 				}
@@ -555,7 +551,7 @@ int search( const char *pat, const mpcmd_t range ) {
 			/* if we search for artists, also add the artist's albums */
 			if( ( MPC_EQARTIST(range) && MPC_EQARTIST(found) ) ||
 					( MPC_ISALBUM( range ) &&
-					isMatch( runner->album, pat, MPC_ISFUZZY(range) ) ) ) {
+					isMatch( runner->album, pat, range ) ) ) {
 				if (MPC_EQALBUM(range)) {
 					found = (mpcmd_t)(found | mpc_album);
 				}

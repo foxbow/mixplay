@@ -34,9 +34,11 @@ demon version of the player. Communicates via HTTP/GET and JSON replies with cli
 # Developer info
 The communication is wrapped in simple HTTP requests and JSON replies. The command structure looks as follows
 
-cmd = 00MR RRRR CCCC CCCC
+cmd = 0MSR RRRR CCCC CCCC
 
 ### M - the 'mix' flag for playlists and the 'fuzzy' flag for searching and marking
+
+### S - 'substring' marker for search.
 
 ### R -  the range:
 * 0x01 - title

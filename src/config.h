@@ -52,13 +52,14 @@ typedef enum {
 	mpc_mute,
 	mpc_favplay,       /* 30 */
 	mpc_idle,
-	mpc_title=1<<8,
-	mpc_artist=1<<9,
-	mpc_album=1<<10,
-	mpc_display=1<<11,
-	mpc_genre=1<<12,
-	mpc_fuzzy=1<<13,
-	mpc_mix=1<<13
+	mpc_title=1<<8,    /* 0x0100 */
+	mpc_artist=1<<9,   /* 0x0200 */
+	mpc_album=1<<10,   /* 0x0400 */
+	mpc_display=1<<11, /* 0x0800 */
+	mpc_genre=1<<12,   /* 0x1000 */
+	mpc_substr=1<<13,  /* 0x2000 */
+	mpc_fuzzy=1<<14,   /* 0x4000 */
+	mpc_mix=1<<14      /* 0x4000 */
 } mpcmd_t;
 
 #include "musicmgr.h"
@@ -96,6 +97,8 @@ const char *_mprccmdstrings[MPRC_NUM];
 #define MPC_EQGENRE(x) (MPC_RANGE(x)==mpc_genre)
 #define MPC_EQDISPLAY(x) (MPC_RANGE(x)==mpc_display)
 #define MPC_ISSHUFFLE(x) ( x & mpc_mix )
+/* shall it be a substring */
+#define MPC_ISSUBSTR(x) (x & mpc_substr )
 /* shall it be fuzzy */
 #define MPC_ISFUZZY(x) (x & mpc_fuzzy )
 
