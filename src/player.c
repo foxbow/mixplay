@@ -365,7 +365,6 @@ void *setProfile( void *arg ) {
 		plCheck( 0 );
 
 		addMessage( 1, "Profile set to %s.", profile->name );
-		notifyChange(MPCOMM_CONFIG);
 		if( control->argument != NULL ) {
 			/* do not free, the string has become the new profile entry! */
 			control->argument=NULL;
@@ -1042,6 +1041,7 @@ void *reader( void *arg ) {
 				control->status=mpc_start;
 				sendplay( p_command[fdset][1] );
 			}
+			notifyChange(MPCOMM_CONFIG);
 			break;
 
 		case mpc_play:

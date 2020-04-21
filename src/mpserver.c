@@ -177,14 +177,14 @@ static void *clientHandler(void *args ) {
 		to.tv_sec=1;
 		to.tv_usec=0;
 		if( select( FD_SETSIZE, &fds, NULL, NULL, &to ) < 1) {
-			/* A client may close a socket but we may not necessarily notice it.
+			/* A client can close a socket but we may not necessarily notice it.
 				 So if the select 'fails' ten times in a row, we consider the
 				 connection dead and clean it up. Usually this translates to 10
 				 seconds of idle, but may also mean 10 signal interruptions. But
 				 rather restart a thread once too often than have it unterminated
 				 until process death.
 				 SO_KEEPALIVE and getsockopt() could probably make sure but both
-				 may introduce deadlocks so we're using the dump approach here */
+				 may introduce deadlocks so we're using the dumb approach here */
 			if( tc++ > 10 ) {
 				addMessage(1, "Reaping dead connection (%i)", sock);
 				running&=~CL_RUN;

@@ -344,7 +344,7 @@ function addText (text) {
  */
 function sendCMDArg (cmd, arg) {
   var xmlhttp = new window.XMLHttpRequest()
-  var code = Number(cmd).toString(16)
+  var code
   var e
   var text
   cmd = Number(cmd)
@@ -391,6 +391,12 @@ function sendCMDArg (cmd, arg) {
 
   /* all these commands have a progress */
   switch (cmd & 0x00ff) {
+    case 0x14: /* mpc_remprof */
+      if (!window.confirm('Remove ' + arg + '?')) {
+        activecmd = -1
+        return
+      }
+      break
     case 0x13: /* mpc_search */
       if (cmdtosend === '') {
         e = document.getElementById('search0')
