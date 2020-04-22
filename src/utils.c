@@ -2,7 +2,6 @@
  * collection of all-purpose utility functions
  */
 #include <errno.h>
-#include <stdio.h>
 #include <ctype.h>
 #include <stdarg.h>
 #include <unistd.h>
@@ -10,7 +9,6 @@
 #include <pthread.h>
 #include <termios.h>
 #include <assert.h>
-#include <string.h>
 #include <linux/input.h>
 
 #include "utils.h"
@@ -88,6 +86,35 @@ char *strip( char *buff, const char *text, const size_t maxlen ) {
 	}
 
 	return buff;
+}
+
+/* returns a line of text from the FILE
+ * The line is read until EOF or \n and then returned. The returned string
+ * must be free()d. If no data is available the function returns NULL */
+char *fetchline( FILE *fp ) {
+	char *line=falloc( 256, 1 );
+	char *rv=NULL;
+	int len=0;
+	int size=255;
+	int c;
+
+	c=fgetc(fp);
+	while( (c != EOF) && (c != (int)'\n' ) ) {
+		if( len == size ) {
+			size=size+256;
+			line=frealloc(line, size);
+		}
+		line[len++]=(char)c;
+		line[len]=0;
+		c=fgetc(fp);
+	}
+
+	if( len > 0 ) {
+		rv=strdup(line);
+	}
+	free(line);
+
+	return rv;
 }
 
 /**

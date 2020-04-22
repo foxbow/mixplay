@@ -4,6 +4,7 @@
 /* Default values */
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #define ONOFF(x) (x)?"ON":"OFF"
 
@@ -39,6 +40,7 @@ int endsWith( const char *text, const char *suffix );
 int startsWith( const char *text, const char *prefix );
 int isURL( const char *uri );
 int isDir( const char *path );
+char *fetchline( FILE *fp );
 int readline( char *line, size_t len, int fd );
 char *abspath( char *path, const char *basedir, const size_t len );
 void *falloc( size_t num, size_t size );

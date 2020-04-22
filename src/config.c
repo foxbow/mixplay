@@ -217,7 +217,7 @@ static int scancodes( char *input, int *codes ) {
  */
 mpconfig_t *readConfig( void ) {
 	char	conffile[MAXPATHLEN+1]; /*  = "mixplay.conf"; */
-	char	line[MAXPATHLEN+1];
+	char	*line;
 	char	*pos;
 	char	*home=NULL;
 	FILE	*fp;
@@ -268,14 +268,18 @@ mpconfig_t *readConfig( void ) {
 
 	if( NULL != fp ) {
 		do {
-			if( fgets( line, MAXPATHLEN, fp ) == NULL ) {
+			if( (line=fetchline(fp) ) == NULL ) {
 				continue;
 			}
-			if( line[0]=='#' ) continue;
+			if( line[0]=='#' ) {
+				free(line);
+				continue;
+			}
 			pos=strchr( line, '=' );
-			if( ( NULL == pos ) || ( strlen( ++pos ) == 0 ) ) continue;
-			/* cut off trailing \n */
-			line[strlen(line)-1]=0;
+			if( ( NULL == pos ) || ( strlen( ++pos ) == 0 ) ) {
+				free(line);
+				continue;
+			}
 
 			if( strstr( line, "musicdir=" ) == line ) {
 				/* make sure that musicdir ends with a '/' */
@@ -336,6 +340,7 @@ mpconfig_t *readConfig( void ) {
 					fail( F_FAIL, "Wrong number of RC codes!");
 				}
 			}
+			free(line);
 		}
 		while( !feof( fp ) );
 
