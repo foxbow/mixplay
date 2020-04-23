@@ -1233,7 +1233,6 @@ function updateConfig (data) {
       choices = []
       if (i !== (active - 1)) {
         choices.push(['Play', 0x06])
-      } else {
         if (i !== 0) {
           choices.push(['Remove', 0x18])
         }

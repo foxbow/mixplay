@@ -365,6 +365,7 @@ void *setProfile( void *arg ) {
 		plCheck( 0 );
 
 		addMessage( 1, "Profile set to %s.", profile->name );
+		notifyChange( MPCOMM_CONFIG );
 		if( control->argument != NULL ) {
 			/* do not free, the string has become the new profile entry! */
 			control->argument=NULL;
@@ -475,12 +476,11 @@ static void *plSetProfile( void *arg ) {
 	mpconfig_t *control=getConfig();
 	pthread_mutex_t *lock=(pthread_mutex_t *) arg;
 
-	/* control->status=mpc_start; */
 	if( control->dbname[0] == 0 ) {
 		readConfig( );
 	}
 	setProfile(NULL);
-	pthread_mutex_unlock( lock );;
+	pthread_mutex_unlock( lock );
 	return NULL;
 }
 
