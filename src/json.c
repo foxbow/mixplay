@@ -297,7 +297,7 @@ static int jsonParseNum( char *json, char **val ) {
 				}
 				else {
 					/* We found a non-number */
-					*val=strdup("");
+					*val=strdup("*");
 					return -1;
 				}
 			}
@@ -337,7 +337,7 @@ static int jsonParseNum( char *json, char **val ) {
 			}
 			else {
 				/* number format error */
-				*val=strdup("");
+				*val=strdup("*");
 				return -1;
 			}
 			break;
@@ -345,7 +345,7 @@ static int jsonParseNum( char *json, char **val ) {
 		i++;
 	}
 
-	*val=strdup("");
+	*val=strdup("*");
 	return -1;
 }
 

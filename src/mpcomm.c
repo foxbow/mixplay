@@ -125,7 +125,7 @@ static jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mpplaylist_t 
 
 	jo=jsonInitArr( jo, key );
 	while( pl != NULL ) {
-		jsonTitle=jsonAddTitle( NULL, "", pl );
+		jsonTitle=jsonAddTitle( NULL, "title", pl );
 		jsonAddArrElement( jo, jsonTitle, json_object );
 		if( dir < 0 ) {
 			pl=pl->prev;
