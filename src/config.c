@@ -604,11 +604,11 @@ int incVerbosity() {
 }
 
 /* returns true if the config is in a well defined state */
-int playerIsActive( void ) {
+int playerIsInactive( void ) {
 	mpconfig_t *control=getConfig();
-	return( (control->status != mpc_start) &&
-					(control->command != mpc_start) &&
-					!(control->mpmode & PM_SWITCH) );
+	return( (control->status == mpc_start) ||
+					(control->command == mpc_start) ||
+					(control->mpmode & PM_SWITCH) );
 }
 
 static unsigned _ftrpos=0;
@@ -639,7 +639,7 @@ void activity( int v, const char *msg, ... ) {
 	/* update the UI to follow activity */
 	if ( _ftrpos % 500 == 0 ) {
 		/* fetch title info - see jsonAddTitle() */
-		if( !playerIsActive() ) {
+		if( playerIsInactive() ) {
 			notifyChange(MPCOMM_TITLES);
 		}
 		/* add a message for dbinfo et.al. */

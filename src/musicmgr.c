@@ -1350,10 +1350,9 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 				valid=0;
 				activity( 1, "Playcountskipping" );
 				/* simply pick a new title at random to avoid edge cases */
-				/* runner=skipTitles( runner, rand()%num ); */
-				/* revert to old handling */
+				runner=skipTitles( runner, rand()%num );
 				/* TODO check if this is better or worse.. */
-				runner=skipTitles( runner, 1 );
+				/* runner=skipTitles( runner, 1 ); */
 
 				if( runner == guard ) {
 					pcount++;	/* allow more replays */

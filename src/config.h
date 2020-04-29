@@ -220,7 +220,7 @@ mpplaylist_t *wipePlaylist( mpplaylist_t *pl );
 mptitle_t *wipeTitles( mptitle_t *root );
 marklist_t *wipeList( marklist_t *root );
 int checkPasswd();
-int playerIsActive( void );
+int playerIsInactive( void );
 void blockSigint();
 
 #endif /* _CONFIG_H_ */
