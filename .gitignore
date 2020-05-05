@@ -2,7 +2,7 @@
 cov-int
 
 # Generated headers and dependencies
-build/*
+build/[!R]*
 *.d
 *.Td
 
@@ -62,5 +62,3 @@ core
 
 # Logfiles
 *.log
-/mpplayer_js.h
-/mpplayer_html.h

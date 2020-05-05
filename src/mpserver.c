@@ -53,7 +53,7 @@ static int filePost( int sock, const char *fname ) {
 		close(fd);
 	}
 	else {
-		addMessage( -1, "%s not found!", fname );
+		addMessage( 0, "%s not found!", fname );
 	}
 	pthread_mutex_unlock(&_sendlock);
 	return 0;
@@ -185,7 +185,7 @@ static void *clientHandler(void *args ) {
 				 until process death.
 				 SO_KEEPALIVE and getsockopt() could probably make sure but both
 				 may introduce deadlocks so we're using the dumb approach here */
-			if( tc++ > 10 ) {
+			if( ++tc > 9 ) {
 				addMessage(1, "Reaping dead connection (%i)", sock);
 				running&=~CL_RUN;
 			}
@@ -459,11 +459,11 @@ static void *clientHandler(void *args ) {
 			} /* switch(retval) */
 		} /* if fd_isset */
 
-		if( running && ( config->status != mpc_start ) ) {
+		if( running ) {
 			memset( commdata, 0, commsize );
 			switch( state ) {
 			case 1: /* get update */
-				/* an update client! Good, that one should get status updates too! */
+				/* a new update client! Good, that one should get status updates too! */
 				if( running == CL_RUN ) {
 					addMessage( 1, "Update Handler (%p/%i) initialized", (void *)&nextstat, sock );
 					addNotifyHook( &mps_notify, &nextstat );
@@ -479,6 +479,7 @@ static void *clientHandler(void *args ) {
 				/* only look at the search state if this is the searcher */
 				if( (running&CL_SRC) && (config->found->state != mpsearch_idle) ) {
 					fullstat |= MPCOMM_RESULT;
+					/* wait until the search is done */
  					while( config->found->state == mpsearch_busy ) {
 						nanosleep( &ts, NULL );
 					}
@@ -615,7 +616,7 @@ static void *clientHandler(void *args ) {
 					running&=~CL_SRC;
 				}
 			}
-		} /* if running & !mpc_start */
+		} /* if running */
 		if( config->status == mpc_quit ) {
 			addMessage(0,"stopping handler");
 			running&=~CL_RUN;
