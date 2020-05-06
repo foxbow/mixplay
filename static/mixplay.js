@@ -766,6 +766,7 @@ function fullUpdate (data) {
   wipeElements(e)
   document.title = data.current.artist + ' - ' + data.current.title
 
+  /* previous titles */
   if (data.prev.length > 0) {
     if (isstream) {
     /* only the stream title */
@@ -790,7 +791,8 @@ function fullUpdate (data) {
         if (!(data.prev[i].flags & 1)) {
           choices.push(['&#x2665;', 0x0809])
         }
-        choices.push(['Replay', 0x0011])
+        choices.push(['&#x25B6;', 0x0011]) // re-play
+        choices.push(['&#x1f4be;', -1]) // download
         cline = popselect(choices,
           data.prev[i].key, titleline, 1)
       }
@@ -799,28 +801,39 @@ function fullUpdate (data) {
   } else {
     setElement('prev', '')
   }
+
+  /* current title */
   setElement('title', data.current.title)
   setElement('artist', data.current.artist)
   setElement('album', data.current.album)
+
+  /* update current title in the playlist */
   titleline = countPrefix(data.current)
   if (data.current.artist.length > 0) {
     titleline += data.current.artist + ' - '
   }
   titleline += data.current.title
-  cline = document.createElement('p')
-  cline.id = 'ctitle'
-  cline.innerHTML = '&#x25B6; ' + titleline
-  cline.onclick = function () { sendCMD(0x00) }
-  if (!isstream) {
-    cline.ondrop = function (ev) {
-      sendCMDArg(0x11, ev.dataTransfer.getData('title'))
-      enableElement(ev.dataTransfer.getData('element'), 0)
+  if (isstream) {
+    cline = document.createElement('p')
+    cline.id = 'ctitle'
+    cline.className = 'nopopselect'
+    cline.innerHTML = '&#x25B6; ' + titleline
+    cline.onclick = function () { sendCMD(0x00) }
+  } else {
+    /* this should become a popup instead pause/download */
+    choices = []
+    choices.push(['&#x2620;', 0x080a]) /* DNP */
+    if (!(data.current.flags & 1)) {
+      choices.push(['&#x2665;', 0x0809]) /* FAV */
     }
-    cline.ondragover = function (ev) {
-      ev.preventDefault()
-    }
+    choices.push(['&#x1f4be;', -1]) // download
+    cline = popselect(choices,
+      data.current.key, '\u25B6 ' + titleline, 2)
+    cline.className = 'ctitle'
   }
   e.appendChild(cline)
+
+  /* next titles */
   if (data.next.length > 0) {
     if (data.next[0].artist === '') {
       /* only the stream title */
@@ -845,6 +858,7 @@ function fullUpdate (data) {
           choices.push(['&#x2665;', 0x0809])
         }
         choices.push(['X', 0x001c])
+        choices.push(['&#x1f4be;', -1]) // download
         cline = popselect(choices,
           data.next[i].key, titleline, 3)
       }
@@ -1370,6 +1384,7 @@ function download (key) {
   if (window.confirm('Download title?')) {
     window.location = '/mpctrl/title/' + key
   }
+  doUpdate |= 1
 }
 
 /**

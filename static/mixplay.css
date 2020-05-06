@@ -92,8 +92,12 @@ button:hover {
 	cursor: pointer;
 }
 
+p.ctitle {
+	cursor: copy;
+}
+
 p#ctitle:hover {
-	cursor: pointer;
+	cursor: copy;
 }
 
 .popup:hover {
