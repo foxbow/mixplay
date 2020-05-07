@@ -92,10 +92,6 @@ button:hover {
 	cursor: pointer;
 }
 
-p.ctitle {
-	cursor: copy;
-}
-
 p#ctitle:hover {
 	cursor: copy;
 }
@@ -332,6 +328,15 @@ p.nopopselect {
 	border: none;
 	background: none;
 	cursor: default;
+}
+
+/* popup line for the current title */
+p.ctitle {
+	position: relative;
+	display: block;
+	cursor: copy;
+	border: none;
+	background: none;
 }
 
 .popup {
