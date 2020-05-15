@@ -222,21 +222,24 @@ void playCount( mptitle_t *title, int skip ) {
 		return;
 	}
 
-	if (skip) {
-		addMessage(1,"%s was skipped (%i)!", title->display, title->skipcount);
-		title->skipcount++;
-		if( title->skipcount >= getConfig()->skipdnp ) {
-			/* prepare resurrection */
-			title->skipcount=0;
-			/* three strikes and you're out */
-			addMessage(0,"Marked %s as DNP for skipping!", title->display);
-			handleRangeCmd( title, (mpcmd_t)(mpc_display|mpc_dnp) );
+	/* skipcount only happens on database play */
+	if(getConfig()->mpmode & PM_DATABASE) {
+		if (skip) {
+			addMessage(1,"%s was skipped (%i)!", title->display, title->skipcount);
+			title->skipcount++;
+			if( title->skipcount >= getConfig()->skipdnp ) {
+				/* prepare resurrection */
+				title->skipcount=0;
+				/* three strikes and you're out */
+				addMessage(0,"Marked %s as DNP for skipping!", title->display);
+				handleRangeCmd( title, (mpcmd_t)(mpc_display|mpc_dnp) );
+			}
+			dbMarkDirty();
 		}
-		dbMarkDirty();
-	}
-	else if (title->skipcount > 0) {
-		title->skipcount--;
-		dbMarkDirty();
+		else if (title->skipcount > 0) {
+			title->skipcount--;
+			dbMarkDirty();
+		}
 	}
 
 	if( getFavplay() ||

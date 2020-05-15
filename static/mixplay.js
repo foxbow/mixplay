@@ -391,7 +391,7 @@ function sendCMDArg (cmd, arg) {
 
   /* all these commands have a progress */
   switch (cmd & 0x00ff) {
-    case 0x14: /* mpc_remprof */
+    case 0x18: /* mpc_remprof */
       if (!window.confirm('Remove ' + arg + '?')) {
         activecmd = -1
         return
