@@ -16,7 +16,6 @@
 #include <errno.h>
 #include <assert.h>
 #include <sys/stat.h>
-#include <getopt.h>
 #include <unistd.h>
 #include <syslog.h>
 #include <signal.h>

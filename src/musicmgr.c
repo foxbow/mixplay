@@ -495,7 +495,6 @@ int search( const char *pat, const mpcmd_t range ) {
 	mptitle_t *runner=root;
 	searchresults_t *res=getConfig()->found;
 	unsigned int i=0;
-	unsigned cnt=0;
 	unsigned dnp=0;
 	mpcmd_t found=mpc_play;
 	char *lopat;
@@ -526,16 +525,15 @@ int search( const char *pat, const mpcmd_t range ) {
 	}
 
 	do {
-		activity( 1, "searching" );
+		activity( 1, "searching for %s", lopat );
 		/* dnp XNOR MP_DNP */
-		found = mpc_play;
+		found = 0;
 		if( ( runner->flags & MP_DNP ) == dnp ) {
 			/* check for searchrange and pattern */
 			if( ( ( MPC_ISTITLE(range) &&
 					isMatch( runner->title, pat, range) ) ||
 					( MPC_ISDISPLAY( range ) &&
-					isMatch( runner->display, pat, range ) ) ) &&
-					( cnt++ < MAXSEARCH ) ) {
+					isMatch( runner->display, pat, range ) ) ) ) {
 				found = (mpcmd_t)(found | mpc_title);
 			}
 			if( MPC_ISARTIST(range) &&
@@ -576,9 +574,8 @@ int search( const char *pat, const mpcmd_t range ) {
 				}
 			}
 			/* add title (too)? */
-			if (found) {
+			if (found && ( res->tnum++ < MAXSEARCH ) ) {
 				res->titles=appendToPL( runner, res->titles, 0 );
-				res->tnum++;
 			}
 		}
 		runner=runner->next;
@@ -588,7 +585,7 @@ int search( const char *pat, const mpcmd_t range ) {
 	res->state=mpsearch_done;
 
 	free(lopat);
-	return (cnt>MAXSEARCH)?-1:(int)cnt;
+	return((res->tnum > MAXSEARCH)?-1:(int)res->tnum);
 }
 
 /**
