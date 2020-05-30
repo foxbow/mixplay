@@ -1144,11 +1144,7 @@ function playerUpdate (data) {
 
   if (data.msg !== '') {
     if (data.msg.startsWith('ALERT:')) {
-      if (data.msg.startsWith('ALERT:Done.')) {
-        addText(data.msg.substring(6))
-      } else {
-        window.alert(data.msg.substring(6))
-      }
+      addText('* ' + data.msg.substring(6))
     } else {
       addText(data.msg)
     }
