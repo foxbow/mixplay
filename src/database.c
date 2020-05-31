@@ -309,7 +309,10 @@ int dbCheckExist( void ) {
 	}
 	while( ( runner != NULL ) && ( root != runner ) );
 
-	if( num > 0 ) {
+	if( runner == NULL ) {
+		getConfig()->root=NULL;
+	}
+	else if( num > 0 ) {
 		dbMarkDirty();
 	}
 
