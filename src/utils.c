@@ -72,7 +72,7 @@ char *strip( char *buff, const char *text, const size_t maxlen ) {
 	}
 
 	/* Cut off leading spaces and special chars */
-	while( ( tpos < len ) && ( isspace( text[tpos] ) ) ) {
+	while( ( tpos < len ) && ( (unsigned char)text[tpos] < 32 ) ) {
 		tpos++;
 	}
 
@@ -80,7 +80,7 @@ char *strip( char *buff, const char *text, const size_t maxlen ) {
 	strtcpy( buff, text+tpos, len+1 );
 
 	/* Cut off trailing spaces and special chars */
-	while( ( len > 0 ) && ( iscntrl( buff[len] ) || isspace( buff[len] ) ) ) {
+	while( ( len > 0 ) && ( (unsigned char)text[tpos] < 32 ) ) {
 		buff[len]=0;
 		len--;
 	}

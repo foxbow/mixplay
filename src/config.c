@@ -284,9 +284,10 @@ mpconfig_t *readConfig( void ) {
 				/* make sure that musicdir ends with a '/' */
 				if( line[strlen(line)-1] != '/' ) {
 					line[strlen(line)] = '/';
+					line[strlen(line)+1] = 0;
 				}
 
-				_cconfig->musicdir=(char*)falloc( strlen(pos)+1, 1 );
+				_cconfig->musicdir=strdup(pos);
 				strip( _cconfig->musicdir, pos, strlen(pos) );
 			}
 			if( strstr( line, "password=" ) == line ) {
