@@ -283,8 +283,7 @@ mpconfig_t *readConfig( void ) {
 			if( strstr( line, "musicdir=" ) == line ) {
 				/* make sure that musicdir ends with a '/' */
 				if( line[strlen(line)-1] != '/' ) {
-					line[strlen(line)] = '/';
-					line[strlen(line)+1] = 0;
+					strtcat( line, "/", strlen(line)+1 );
 				}
 
 				_cconfig->musicdir=strdup(pos);
@@ -372,7 +371,7 @@ void writeConfig( const char *musicpath ) {
 	if( musicpath != NULL ) {
 		_cconfig->musicdir=(char*)falloc( strlen(musicpath)+2, sizeof( char ) );
 		strip( _cconfig->musicdir, musicpath, strlen(musicpath)+1 );
-		if( _cconfig->musicdir[strlen(_cconfig->musicdir)] != '/' ) {
+		if( _cconfig->musicdir[strlen(_cconfig->musicdir)-1] != '/' ) {
 			strtcat( _cconfig->musicdir, "/", strlen(musicpath)+2 );
 		}
 	}
