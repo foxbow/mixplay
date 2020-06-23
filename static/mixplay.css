@@ -365,3 +365,28 @@ p.ctitle {
 	border: none;
 	background: none;
 }
+
+div#textkbd {
+	display: none;
+	text-align: center;
+	background-image: radial-gradient( circle at 90% -30%, black, darkblue 2%, lightblue 100%);
+	padding: 5px;
+}
+
+button.kbdkey {
+	font-size: 1.2em;
+	margin: 0.2em;
+	width: 1.5em;
+}
+
+button.kbdfnkey {
+	font-size: 1.2em;
+	margin: 0.2em;
+	width: 3em;
+}
+
+button.kbdspace {
+	font-size: 1.2em;
+	margin: 0.2em;
+	width: 6em;
+}

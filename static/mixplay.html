@@ -92,10 +92,14 @@
     <div id='extra3' class='inactive' >
       <em>Search:</em>
       <button id='searchmode' onclick='toggleSearch()'>Current titles</button><br/>
-      <input  id='text' type='text' onkeydown='isEnter(event,0x2713)'><br>
-      <button id='search' onclick='sendArg(0x2713)'>Search</button>
-      <button id='fuzzy'  onclick='sendArg(0x4713)'>Fuzzy</button>
-      <br/>
+      <div>
+        <button id='textkbdtoggle'>&#x2328;</button>
+        <input  id='text' type='text' onkeydown='isEnter(event,0x2713)'><br>
+        <button id='search' onclick='sendArg(0x2713)'>Search</button>
+        <button id='fuzzy'  onclick='sendArg(0x4713)'>Fuzzy</button>
+        </br>
+        <div id='textkbd'></div>
+      </div>
       <button id='csearch0' class='active'   onclick='switchTab(this)'>&#x2630; Titles</button>
       <button id='csearch1' class='inactive' onclick='switchTab(this)'>&#x2630; Artists</button>
       <button id='csearch2' class='inactive' onclick='switchTab(this)'>&#x2630; Albums</button>

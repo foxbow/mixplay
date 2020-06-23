@@ -23,6 +23,115 @@ var idletime = 0
 var idlesleep = 0
 var currentPop = ''
 var debug = 0
+const layout = ['qwertzuiop', 'asdfghjkl', 'yxcvbnm', 'C BO']
+var kbddiv
+
+function sendKey (id, key) {
+  const e = document.getElementById(id)
+  if (!e) {
+    window.alert('Element ' + id + ' does not exist!?')
+  }
+  var text = e.value
+  switch (key) {
+    case 'B': // backspace
+      if (text.length > 0) {
+        e.value = text.substr(0, text.length - 1)
+      }
+      break
+    case 'C': // clear
+      e.value = ''
+      break
+    case 'O': // Okay/return
+      // should never happen
+      break
+    case 'X': // cancel
+      toggleKbd(id)
+      break
+    default:
+      e.value = text + key
+  }
+}
+
+function createKbdKey (id, name, key) {
+  var btn = document.createElement('button')
+  btn.innerHTML = name
+  btn.className = 'kbdkey'
+  if (key.length === 1) {
+    btn.onclick = function () { sendKey(id, key) }
+  } else {
+    btn.onclick = function () {
+      toggleKbd(id)
+      key()
+    }
+  }
+  if (key === ' ') {
+    btn.className = 'kbdspace'
+  } else if (key !== name) {
+    btn.className = 'kbdfnkey'
+  }
+  return btn
+}
+
+function initKbdDiv (id, ok) {
+  var e = document.getElementById(id + 'kbd')
+  var row, col, btnrow, btn
+  e = document.getElementById(id + 'kbdtoggle')
+  if (!e) {
+    window.alert('No keyboard button for ' + id + ' !')
+  }
+  e.onclick = function () { toggleKbd(id) }
+  e = document.getElementById(id + 'kbd')
+  if (!e) {
+    window.alert('No keyboard div for ' + id + ' !')
+  }
+  wipeElements(e)
+  for (row = 0; row < layout.length; row++) {
+    btnrow = document.createElement('div')
+    btnrow.className = 'kbdrow'
+    for (col = 0; col < layout[row].length; col++) {
+      switch (layout[row].charAt(col)) {
+        case 'B':
+          btn = createKbdKey(id, '<-', 'B')
+          btnrow.appendChild(btn)
+          break
+        case 'C':
+          btn = createKbdKey(id, 'Clean', 'C')
+          break
+        case 'O':
+          btn = createKbdKey(id, 'OK', ok)
+          break
+        case 'X':
+          btn = createKbdKey(id, 'Cancel', 'X')
+          break
+        case ' ':
+          btn = createKbdKey(id, '&nbsp;', ' ')
+          break
+        default:
+          btn = createKbdKey(id, layout[row].charAt(col), layout[row].charAt(col))
+      }
+      btnrow.appendChild(btn)
+    }
+    e.appendChild(btnrow)
+  }
+  kbddiv = e
+}
+
+function toggleKbd (id) {
+  const e = document.getElementById(id)
+  if (!e) {
+    window.alert('No element ' + id + ' !')
+    return
+  }
+  if (!kbddiv) {
+    window.alert('Keyboard was not initialized!')
+    return
+  }
+  if (kbddiv.style.display === 'inline-block') {
+    kbddiv.style.display = 'none'
+  } else {
+    kbddiv.style.display = 'inline-block'
+  }
+}
 
 function setBody (cname) {
   if (document.body.className === '') {
@@ -1588,6 +1697,8 @@ function initializeUI () {
   scrollToggle()
   /* start clock */
   clocktime()
+  /* attach virtual keyboard */
+  initKbdDiv('text', function () { sendArg(0x2713) })
   /* everything below is to silence unused function warnings */
   if (!document.body) {
     dummy()
