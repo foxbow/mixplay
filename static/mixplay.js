@@ -23,14 +23,13 @@ var idletime = 0
 var idlesleep = 0
 var currentPop = ''
 var debug = 0
-const layout = ['qwertzuiop', 'asdfghjkl', 'yxcvbnm', 'C BO']
+const layout = ['1234567890', 'qwertzuiop', 'asdfghjkl\'', 'yxcvbnm-', 'XC BO']
 var kbddiv
+var kbdcurrent
+var kbdokay = function () {}
 
-function sendKey (id, key) {
-  const e = document.getElementById(id)
-  if (!e) {
-    window.alert('Element ' + id + ' does not exist!?')
-  }
+function sendKey (key) {
+  const e = document.getElementById('kbdtext')
   var text = e.value
   switch (key) {
     case 'B': // backspace
@@ -45,24 +44,24 @@ function sendKey (id, key) {
       // should never happen
       break
     case 'X': // cancel
-      toggleKbd(id)
+      toggleKbd('', '')
       break
     default:
       e.value = text + key
   }
 }
 
-function createKbdKey (id, name, key) {
+function createKbdKey (name, key) {
   var btn = document.createElement('button')
   btn.innerHTML = name
   btn.className = 'kbdkey'
-  if (key.length === 1) {
-    btn.onclick = function () { sendKey(id, key) }
-  } else {
+  if (key.length === 0) {
     btn.onclick = function () {
-      toggleKbd(id)
-      key()
+      toggleKbd(kbdcurrent.id, '')
+      kbdokay()
     }
+  } else {
+    btn.onclick = function () { sendKey(key) }
   }
   if (key === ' ') {
     btn.className = 'kbdspace'
@@ -72,42 +71,40 @@ function createKbdKey (id, name, key) {
   return btn
 }
 
-function initKbdDiv (id, ok) {
-  var e = document.getElementById(id + 'kbd')
+function initKbdDiv () {
   var row, col, btnrow, btn
-  e = document.getElementById(id + 'kbdtoggle')
+  const e = document.getElementById('textkbd')
   if (!e) {
-    window.alert('No keyboard button for ' + id + ' !')
-  }
-  e.onclick = function () { toggleKbd(id) }
-  e = document.getElementById(id + 'kbd')
-  if (!e) {
-    window.alert('No keyboard div for ' + id + ' !')
+    window.alert('No keyboard div!')
   }
   wipeElements(e)
+  btn = document.createElement('input')
+  btn.type = 'text'
+  btn.id = 'kbdtext'
+  e.appendChild(btn)
   for (row = 0; row < layout.length; row++) {
     btnrow = document.createElement('div')
     btnrow.className = 'kbdrow'
     for (col = 0; col < layout[row].length; col++) {
       switch (layout[row].charAt(col)) {
         case 'B':
-          btn = createKbdKey(id, '<-', 'B')
+          btn = createKbdKey('<-', 'B')
           btnrow.appendChild(btn)
           break
         case 'C':
-          btn = createKbdKey(id, 'Clean', 'C')
+          btn = createKbdKey('Clean', 'C')
           break
         case 'O':
-          btn = createKbdKey(id, 'OK', ok)
+          btn = createKbdKey('OK', '')
           break
         case 'X':
-          btn = createKbdKey(id, 'Cancel', 'X')
+          btn = createKbdKey('Cancel', 'X')
           break
         case ' ':
-          btn = createKbdKey(id, '&nbsp;', ' ')
+          btn = createKbdKey('&nbsp;', ' ')
           break
         default:
-          btn = createKbdKey(id, layout[row].charAt(col), layout[row].charAt(col))
+          btn = createKbdKey(layout[row].charAt(col), layout[row].charAt(col))
       }
       btnrow.appendChild(btn)
     }
@@ -116,20 +113,28 @@ function initKbdDiv (id, ok) {
   kbddiv = e
 }
 
-function toggleKbd (id) {
-  const e = document.getElementById(id)
-  if (!e) {
-    window.alert('No element ' + id + ' !')
-    return
-  }
+function toggleKbd (id, ok) {
+  /* the target textfield */
+  var e
   if (!kbddiv) {
     window.alert('Keyboard was not initialized!')
     return
   }
-  if (kbddiv.style.display === 'inline-block') {
-    kbddiv.style.display = 'none'
+  if (id.length > 0) {
+    e = document.getElementById(id)
+  }
+  /* the keyboard textfield */
+  const t = document.getElementById('kbdtext')
+  if (kbddiv.className === 'hide') {
+    kbddiv.className = ''
+    t.value = e.value
+    kbdcurrent = e
+    kbdokay = ok
   } else {
-    kbddiv.style.display = 'inline-block'
+    if (id.length > 0) {
+      e.value = t.value
+    }
+    kbddiv.className = 'hide'
   }
 }
 
@@ -170,7 +175,7 @@ function toggleSearch () {
 }
 
 /*
- * check if a long text needs to be scrolled and then scroll into the
+ * check if a long text needs to be eolled and then scroll into the
  * proper direction
  */
 function scrollToggle () {
@@ -1698,7 +1703,7 @@ function initializeUI () {
   /* start clock */
   clocktime()
   /* attach virtual keyboard */
-  initKbdDiv('text', function () { sendArg(0x2713) })
+  initKbdDiv()
   /* everything below is to silence unused function warnings */
   if (!document.body) {
     dummy()

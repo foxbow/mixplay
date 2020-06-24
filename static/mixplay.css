@@ -31,12 +31,22 @@ body.disconnect {
 }
 
 body.pause {
-	color: #667;
+	color: #888;
+	background-image: radial-gradient( circle at 90% -30%, white, #888 2%, black 100%);
 }
 
 div#black {
 	background-color: black;
 	color: #444;
+	position: absolute;
+	height: 100%;
+	width: 100%;
+}
+
+div#textkbd {
+	text-align: center;
+	background-image: radial-gradient( circle at 90% -30%, black, darkblue 2%, lightblue 100%);
+	padding: 5px;
 	position: absolute;
 	height: 100%;
 	width: 100%;
@@ -364,13 +374,6 @@ p.ctitle {
 	margin-bottom: 0.2em;
 	border: none;
 	background: none;
-}
-
-div#textkbd {
-	display: none;
-	text-align: center;
-	background-image: radial-gradient( circle at 90% -30%, black, darkblue 2%, lightblue 100%);
-	padding: 5px;
 }
 
 button.kbdkey {
