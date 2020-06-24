@@ -239,15 +239,11 @@ static int jsonDecodeInto( const char *val, char *ret, size_t len ) {
  */
 static char *jsonDecode( const char *val ) {
 	size_t len=0;
-	unsigned ip=0;
 	char *ret=NULL;
 
-	/* guess length of target string */
-	for( ip=0; ip<strlen(val); ip++ ) {
-		if( val[ip] != '\\' ) len++;
-	}
-
+	len=strlen(val);
 	ret=(char*)calloc( len+1, 1 );
+
 	assert( ret != NULL );
 
 	jsonDecodeInto( val, ret, len+1 );
@@ -270,7 +266,7 @@ static jsonObject *jsonInit( void ) {
 }
 
 /*
- * parses a number into an int value
+ * parses a number
  * we allow leading zeroes, even if JSON forbids that
  */
 static int jsonParseNum( char *json, char **val ) {
@@ -293,21 +289,26 @@ static int jsonParseNum( char *json, char **val ) {
 				break;
 			default:
 				if( isdigit( json[i]) ) {
-					state=1;
+					state=2;
 				}
 				else {
 					/* We found a non-number */
-					*val=strdup("*");
+					*val=strdup("*0");
 					return -1;
 				}
 			}
 			break;
-		case 1: /* prefix digits */
-			if( !isdigit( json[i] ) ) {
+		case 1: /* we need at least one number */
+			if( isdigit( json[i] ) ) {
 				state=2;
 			}
+			else {
+				/* We found a non-number */
+				*val=strdup("*1");
+				return -1;
+			}
 			break;
-		case 2:
+		case 2: /* digits, . or e */
 			switch( json[i] ) {
 			case '.':
 				state=3;
@@ -317,27 +318,29 @@ static int jsonParseNum( char *json, char **val ) {
 				state=4;
 				break;
 			default:
-				strncpy(buf,start,i-1);
-				buf[i]=0;
-				*val=strdup(buf);
-				return i-1;
+				if( !isdigit(json[i]) ) {
+					strncpy(buf,start,i);
+					buf[i]=0;
+					*val=strdup(buf);
+					return i;
+				}
 			}
 			break;
-		case 3:
+		case 3: /* add numbers until the end */
 			if( !isdigit( json[i] ) ) {
-				strncpy(buf,start,i-1);
+				strncpy(buf,start,i);
 				buf[i]=0;
 				*val=strdup(buf);
-				return i-1;
+				return i;
 			}
 			break;
-		case 4:
+		case 4: /* +/- or number */
 			if( isdigit( json[i] ) || ( json[i]=='+' ) || ( json[i]=='-' ) ) {
 				state=3;
 			}
 			else {
-				/* number format error */
-				*val=strdup("*");
+				/* exponent format error */
+				*val=strdup("*2");
 				return -1;
 			}
 			break;
@@ -345,7 +348,8 @@ static int jsonParseNum( char *json, char **val ) {
 		i++;
 	}
 
-	*val=strdup("*");
+	/* json string ends on a number! */
+	*val=strdup("*3");
 	return -1;
 }
 
@@ -508,8 +512,13 @@ static int jsonParseValue( char *json, jsonObject *jo ) {
 	default:
 		if( isdigit( json[jpos] ) || json[jpos]=='-' ) {
 			jo->type=json_number;
-			/* tricky to notify an error here.. */
-			jpos+=jsonParseNum( &json[jpos], (char **)&(jo->val) );
+			rv=jsonParseNum( json+jpos, (char **)&(jo->val) );
+			if( rv < 0 ) {
+				jsonFail(jo, "Could not parse Number at %i", jpos);
+				jsonFail(jo, "%s", json);
+				return -1;
+			}
+			jpos+=rv;
 			return jpos;
 		}
 		else {
@@ -599,6 +608,7 @@ static int jsonParseArray( char *json, jsonObject **jo ) {
 	int state=0;
 	int len=strlen(json);
 	int index=0;
+	int rv=0;
 	jsonObject **current=jo;
 
 	while( jpos < len ) {
@@ -614,7 +624,11 @@ static int jsonParseArray( char *json, jsonObject **jo ) {
 				*current=jsonInit();
 				assert( *current!=NULL );
 				index=setIndex( *current, index );
-				jpos+=jsonParseValue( json+jpos, *current );
+				rv=jsonParseValue( json+jpos, *current );
+				if( rv < 0 ) {
+					return -1;
+				}
+				jpos+=rv;
 				state=1;
 				break;
 			case ' ':
@@ -639,7 +653,11 @@ static int jsonParseArray( char *json, jsonObject **jo ) {
 				assert((*current)->next != NULL );
 				current=&((*current)->next);
 				index=setIndex( *current, index );
-				jpos+=jsonParseValue( json+jpos, *current );
+				rv=jsonParseValue( json+jpos, *current );
+				if( rv < 0 ) {
+					return -1;
+				}
+				jpos+=rv;
 				break;
 			default:
 				jsonParseFail( *jo, __func__, json, jpos, state );
@@ -1153,7 +1171,11 @@ jsonObject *jsonInitArr( jsonObject *jo, const char *key ) {
  */
 jsonObject *jsonRead( char *json ) {
 	jsonObject *jo=NULL;
-	jsonParseObject( json, &jo );
+	if( jsonParseObject( json, &jo ) < 0 ) {
+#ifdef DEBUG
+		printf("%s\n", jsonToString(jo));
+#endif
+	}
 	return jo;
 }
 
@@ -1276,7 +1298,7 @@ char *jsonToString( jsonObject *jo ) {
 /**
  * cleans up a tree of json objects.
  */
-void jsonDiscard( jsonObject *jo ) {
+jsonObject *jsonDiscard( jsonObject *jo ) {
 	jsonObject *pos=jo;
 
 	while( jo != NULL ) {
@@ -1302,4 +1324,5 @@ void jsonDiscard( jsonObject *jo ) {
 
 		jo=pos;
 	}
+	return NULL;
 }

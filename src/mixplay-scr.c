@@ -88,7 +88,7 @@ int main(){
 
 	/* todo parameters: timeout, host, port */
 
-	jo=getStatus(-1, MPCOMM_CONFIG);
+	jo=getStatus(NULL, MPCOMM_CONFIG);
 	if( jsonPeek(jo, "type") == json_error ) {
 		fail(F_FAIL, "Server cannot be reached!");
 	}
@@ -107,7 +107,7 @@ int main(){
 	}
 
 	while ( state != (mpc_idle+1) ) {
-		jo=getStatus(-1, MPCOMM_STAT);
+		jo=getStatus(NULL, MPCOMM_STAT);
 		if( jsonPeek(jo, "type") == json_error ) {
 			state=mpc_idle;
 		}

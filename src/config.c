@@ -220,6 +220,7 @@ mpconfig_t *readConfig( void ) {
 	char	*pos;
 	char	*home=NULL;
 	FILE	*fp;
+	int		i;
 
 	home=getenv("HOME");
 	if( home == NULL ) {
@@ -259,6 +260,7 @@ mpconfig_t *readConfig( void ) {
 	_cconfig->streamURL=NULL;
 	_cconfig->rcdev=NULL;
 	_cconfig->mpmode=PM_NONE;
+	for (i=0; i<MAXCLIENT; i++) _cconfig->client[i]=0;
 
 	snprintf( _cconfig->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", home );
 
@@ -923,4 +925,22 @@ int checkPasswd() {
 	}
 	addMessage( -1, "Wrong password!" );
 	return 0;
+}
+
+int getFreeClient( void ) {
+	int i;
+	for (i=0; i<MAXCLIENT; i++) {
+		if (getConfig()->client[i] == 0) {
+			getConfig()->client[i]=1;
+			return i;
+		}
+	}
+	addMessage(-1, "Out ofd clients!");
+	return -1;
+}
+
+void freeClient( int client ) {
+	if( (client > 0) && (client < MAXCLIENT) ) {
+		getConfig()->client[client]=0;
+	}
 }

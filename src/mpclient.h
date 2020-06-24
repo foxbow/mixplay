@@ -5,12 +5,18 @@
 /* so that MPCOMM_ macros are available */
 #include "mpcomm.h"
 
+typedef struct {
+	int fd;
+	int clientid;
+} clientInfo;
+
 int setMPPort( int port );
 int setMPHost( const char *host );
-int getConnection( void );
-int sendCMD(int usefd, mpcmd_t cmd);
+clientInfo *getConnection( void );
+
+int sendCMD(clientInfo *usefd, mpcmd_t cmd);
 int getCurrentTitle(char *title, unsigned tlen);
-jsonObject *getStatus(int usefd, int flags);
+jsonObject *getStatus(clientInfo *usefd, int flags);
 int jsonGetTitle( jsonObject *jo, const char *key, mptitle_t *title );
 
 #endif

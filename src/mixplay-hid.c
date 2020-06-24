@@ -13,7 +13,7 @@
 
 char last[MAXPATHLEN+1]="";
 
-static int drawAll(int fd) {
+static int drawAll(clientInfo *ci) {
 	jsonObject *jo=NULL;
 	char *text=NULL;
 	mptitle_t title;
@@ -21,7 +21,7 @@ static int drawAll(int fd) {
 	int rv;
 	int state;
 
-	jo=getStatus(fd, MPCOMM_STAT);
+	jo=getStatus(ci, MPCOMM_STAT);
 	text=jsonGetError(jo);
 	if(text != NULL) {
 		fail(F_FAIL, "JSON Error! %s", text);
@@ -52,6 +52,7 @@ int main( int argc, char **argv ){
 	char c=0;
 	int running=1;
 	int fd=0;
+	clientInfo *ci;
 	mpcmd_t cmd=mpc_idle;
 
 	if( readConfig() == NULL ) {
@@ -67,8 +68,8 @@ int main( int argc, char **argv ){
 		setMPHost(argv[1]);
 	}
 	else {
-		fd = getConnection( );
-		if( fd < 0 ) {
+		ci = getConnection( );
+		if( ci == NULL ) {
 			fail(errno, "Could not connect to server!");
 		}
 	}
@@ -84,9 +85,9 @@ int main( int argc, char **argv ){
 		}
 		else if( cmd != mpc_idle ) {
 			hidPrintline("Sent: %s", mpcString(cmd)+4);
-			sendCMD(fd, cmd);
+			sendCMD(ci, cmd);
 		}
-		drawAll(fd);
+		drawAll(ci);
 	}
 	puts("");
 	close(fd);

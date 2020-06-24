@@ -27,6 +27,7 @@ const layout = ['1234567890', 'qwertzuiop', 'asdfghjkl\'', 'yxcvbnm-', 'XC BO']
 var kbddiv
 var kbdcurrent
 var kbdokay = function () {}
+var clientid = -1
 
 function sendKey (key) {
   const e = document.getElementById('kbdtext')
@@ -92,13 +93,13 @@ function initKbdDiv () {
           btnrow.appendChild(btn)
           break
         case 'C':
-          btn = createKbdKey('Clean', 'C')
+          btn = createKbdKey('CLR', 'C')
           break
         case 'O':
           btn = createKbdKey('OK', '')
           break
         case 'X':
-          btn = createKbdKey('Cancel', 'X')
+          btn = createKbdKey('ESC', 'X')
           break
         case ' ':
           btn = createKbdKey('&nbsp;', ' ')
@@ -485,7 +486,7 @@ function sendCMDArg (cmd, arg) {
     if (activecmd !== -1) {
       return
     }
-    activecmd = Number(cmd)
+    activecmd = cmd
     /* give visual feedback that the command is being progressed */
     setBody('busy')
   }
@@ -496,7 +497,7 @@ function sendCMDArg (cmd, arg) {
 
   /* clear title results after add all */
   if ((arg === '0') &&
-     ((code === '080c') || (code === '0814'))) {
+     ((cmd === 0x080c) || (cmd === 0x0814))) {
     e = document.getElementById('search0')
     text = document.createElement('em')
     text.innerHTML = '.. done ..'
@@ -532,7 +533,7 @@ function sendCMDArg (cmd, arg) {
     case 0x0b: /* mpc_doublets */
     case 0x12: /* mpc_dbinfo */
       if (cmdtosend === '') {
-        cmdtosend = code
+        cmdtosend = cmd
         argtosend = arg
       } else {
         window.alert('Busy, sorry.')
@@ -578,11 +579,10 @@ function sendCMDArg (cmd, arg) {
     }
   }
 
-  if (arg !== '') {
-    xmlhttp.open('POST', '/mpctrl/cmd/' + code + '?' + arg, true)
-  } else {
-    xmlhttp.open('POST', '/mpctrl/cmd/' + code, true)
-  }
+  var json = JSON.stringify({ cmd: cmd, arg: arg, clientid: clientid })
+  console.log('req: ' + json)
+
+  xmlhttp.open('POST', '/mpctrl/cmd?' + json)
   xmlhttp.send()
 }
 
@@ -1192,6 +1192,12 @@ function playerUpdate (data) {
     }
   }
 
+  if (clientid === -1) {
+    clientid = data.clientid
+  } else if (clientid !== data.clientid) {
+    addText('* we (' + clientid + ') got a reply for ' + data.clientid + '!')
+  }
+
   favplay = data.mpfavplay
   if (favplay) {
     if (!data.fpcurrent) {
@@ -1271,6 +1277,7 @@ function playerUpdate (data) {
  */
 function updateUI () {
   var xmlhttp = new window.XMLHttpRequest()
+  var json
 
   xmlhttp.onreadystatechange = function () {
     var data
@@ -1325,18 +1332,19 @@ function updateUI () {
 
   if (cmdtosend !== '') {
     /* snchronous command */
-    if (argtosend !== '') {
-      xmlhttp.open('POST', '/mpctrl/cmd/' + cmdtosend + '?' + argtosend, true)
-    } else {
-      xmlhttp.open('POST', '/mpctrl/cmd/' + cmdtosend, true)
-    }
+    json = JSON.stringify({ cmd: cmdtosend, arg: argtosend, clientid: clientid })
+    console.log('areq: ' + json)
+    xmlhttp.open('POST', '/mpctrl/cmd?' + json)
     cmdtosend = ''
     argtosend = ''
-  } else if (doUpdate <= 0) {
-    xmlhttp.open('GET', '/mpctrl/status', true)
   } else {
-    xmlhttp.open('GET', '/mpctrl/status?' + doUpdate, true)
-    doUpdate = 0
+    if (doUpdate >= 0) {
+      json = JSON.stringify({ cmd: doUpdate, clientid: clientid })
+      doUpdate = 0
+    } else {
+      json = JSON.stringify({ cmd: 0, clientid: -1 })
+    }
+    xmlhttp.open('GET', '/mpctrl/status?' + json, true)
   }
   xmlhttp.send()
 }

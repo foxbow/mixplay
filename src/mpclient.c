@@ -55,25 +55,26 @@ int setMPHost( const char *host ) {
 
 /* send a get request to the server and return the reply as a string
    which MUST be free'd after use! */
-static char *sendRequest( int usefd, const char *path ) {
+static char *sendRequest( clientInfo* usefd, const char *path ) {
 	char *req;
 	char *reply=NULL;
 	char *rdata=NULL;
 	char *pos;
 	size_t rlen=0;
 	size_t clen=0;
-	int fd=-1;
 	fd_set fds;
 	struct timeval	to;
+	clientInfo *ci;
 
-	if( usefd == -1 ) {
-		fd=getConnection( );
-		if( fd < 0 ) {
+	if( usefd == NULL ) {
+		ci=getConnection( );
+		if( ci->fd < 0 ) {
+			free(ci);
 			return NULL;
 		}
 	}
 	else {
-		fd = usefd;
+		ci = usefd;
 	}
 
 	req = (char *)falloc( 1, 13 + strlen(path) + 3 + 1 );
@@ -86,23 +87,24 @@ static char *sendRequest( int usefd, const char *path ) {
 	strtcat( req, path, strlen(path) );
 	strtcat( req, " \015\012", 2 );
 
-	if( send( fd, req, strlen(req), 0 ) == -1 ) {
+	if( send( ci->fd, req, strlen(req), 0 ) == -1 ) {
 		free(req);
-		if( usefd == -1 ) {
-			close(fd);
+		if( usefd == NULL ) {
+			close(ci->fd);
+			free(ci);
 		}
 		return NULL;
 	}
 	free(req);
 
 	FD_ZERO( &fds );
-	FD_SET( fd, &fds );
+	FD_SET( ci->fd, &fds );
 	to.tv_sec=1;
 	to.tv_usec=0;
 	if( select( FD_SETSIZE, &fds, NULL, NULL, &to ) > 0 ) {
-		if( FD_ISSET(fd, &fds) ) {
+		if( FD_ISSET(ci->fd, &fds) ) {
 			reply = (char*)falloc(512,1);
-			while( recv( fd, reply+rlen, 512, MSG_DONTWAIT ) == 512 ) {
+			while( recv( ci->fd, reply+rlen, 512, MSG_DONTWAIT ) == 512 ) {
 				rlen = rlen+512;
 				reply = (char*)frealloc( reply, rlen+512 );
 			}
@@ -119,8 +121,9 @@ static char *sendRequest( int usefd, const char *path ) {
 		return NULL;
 	}
 
-	if( usefd == -1 ) {
-		close(fd);
+	if( usefd == NULL ) {
+		close(ci->fd);
+		free(ci);
 	}
 
 	if( strstr( reply, "HTTP/1.1 200" ) == reply ) {
@@ -168,14 +171,15 @@ static char *sendRequest( int usefd, const char *path ) {
 	 on error and the socket on success.
 	 also registers an update handler for good measure..
 */
-int getConnection( void ) {
+clientInfo *getConnection( void ) {
 	struct sockaddr_in server;
 	int fd;
-	char *reply;
+	clientInfo *ci;
+	jsonObject *jo=NULL;
 
 	fd=socket(AF_INET, SOCK_STREAM, 0);
 	if( fd == -1 ) {
-		return -1;
+		return NULL;
 	}
 
 	memset( &server, 0, sizeof(server) );
@@ -184,17 +188,23 @@ int getConnection( void ) {
 	server.sin_port = htons(_mpport);
 	if( connect(fd, (struct sockaddr*)&server, sizeof(server)) == -1 ) {
 		close(fd);
-		return -2;
+		return NULL;
 	}
 
-	reply=sendRequest( fd, "status" );
-	if( reply == NULL ) {
+	ci=(clientInfo*)calloc(1, sizeof(clientInfo));
+	ci->fd=fd;
+	ci->clientid=-1;
+
+	jo=getStatus( ci, 0 );
+	if( jo == NULL ) {
 		close(fd);
-		return -3;
+		free(ci);
+		return NULL;
 	}
-	free(reply);
 
-	return fd;
+	ci->clientid=jsonGetInt(jo, "clientid");
+	jo=jsonDiscard(jo);
+	return ci;
 }
 
 /* send a command to mixplayd.
@@ -203,15 +213,21 @@ int getConnection( void ) {
 	  0 - server busy
 	 -1 - failure on send
 */
-int sendCMD( int usefd, mpcmd_t cmd){
+int sendCMD( clientInfo *usefd, mpcmd_t cmd){
 	char req[1024];
 	char *reply;
+	jsonObject *jo=NULL;
 
 	if( cmd == mpc_idle ) {
 		return 1;
 	}
 
-	snprintf( req, 1023, "cmd/%04x x\015\012", cmd );
+	jo = jsonAddInt( jo, "cmd", cmd);
+	jo = jsonAddInt( jo, "clientid", usefd->clientid);
+	reply = jsonToString(jo);
+	jo = jsonDiscard(jo);
+	snprintf( req, 1023, "cmd?%s x\015\012", reply );
+	free(reply);
 	reply=sendRequest(usefd, req);
 	if( reply == NULL ) {
 		return -1;
@@ -229,7 +245,7 @@ int sendCMD( int usefd, mpcmd_t cmd){
 int getCurrentTitle( char *title, unsigned tlen ) {
 	char *line;
 
-	line = sendRequest(-1, "title/info" );
+	line = sendRequest( NULL, "title/info" );
 	if( line == NULL ) {
 		return -1;
 	}
@@ -245,24 +261,32 @@ int getCurrentTitle( char *title, unsigned tlen ) {
  * or a single json_integer object with the HTTP status code or
  * -1 on a fatal error
  */
-jsonObject *getStatus(int usefd, int flags) {
+jsonObject *getStatus(clientInfo *usefd, int flags) {
 	char *reply;
-	char req[20];
+	char req[1024];
 	jsonObject *jo=NULL;
 
-	if (flags || (usefd == -1)) {
-		sprintf(req, "status?%i", flags%15);
-		reply = sendRequest(usefd, req);
+	jo=jsonAddInt( jo, "cmd", flags%15 );
+	if (usefd == NULL) {
+		jo=jsonAddInt( jo, "clientid", 0 );
+	} else {
+		jo=jsonAddInt( jo, "clientid", usefd->clientid );
 	}
-	else {
-		reply = sendRequest(usefd, "status");
-	}
+	reply = jsonToString(jo);
+	jo = jsonDiscard(jo);
+	sprintf(req, "status?%s", reply);
+	free(reply);
+	reply = sendRequest(usefd, req);
+
 	if ( reply != NULL ) {
 		if(strlen(reply) < 4 ) {
 			jo=jsonAddInt(NULL, "error", atoi(reply));
 		}
 		else {
 			jo=jsonRead(reply);
+			if( usefd && (usefd->clientid == -1)) {
+				usefd->clientid = jsonGetInt(jo, "clientid");
+			}
 		}
 		free(reply);
 	}

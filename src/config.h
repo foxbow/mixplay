@@ -14,6 +14,7 @@
 #include "msgbuf.h"
 
 #define MP_MSGLEN 512
+#define MAXCLIENT 100
 
 /*
  * commands and states
@@ -165,6 +166,7 @@ typedef struct {
 	unsigned retry:1;					/* wait for socket */
 	char *rcdev;							/* device by-id of the remote control */
 	int rccodes[MPRC_NUM];		/* command codes for the remote */
+	unsigned client[MAXCLIENT];		/* glabal clientID marker */
 } mpconfig_t;
 
 /* message request types */
@@ -223,4 +225,6 @@ int checkPasswd();
 int playerIsInactive( void );
 void blockSigint();
 
+int getFreeClient( void );
+void freeClient( int );
 #endif /* _CONFIG_H_ */

@@ -11,6 +11,12 @@
 /* basic communication block size */
 #define MP_BLKSIZE 512
 
+typedef struct {
+	int cmd;
+	char *arg;
+	int clientid;
+} mpReqInfo;
+
 int startServer( );
 
 #endif /* _MPSERVER_H_ */

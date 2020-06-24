@@ -64,5 +64,5 @@ int jsonAddArrElement( jsonObject *jo, void *element, jsonType type );
 jsonObject *jsonRead( char *json );
 char *jsonToString( jsonObject *jo );
 
-void jsonDiscard( jsonObject *jo );
+jsonObject *jsonDiscard( jsonObject *jo );
 #endif /* _JSON_H_ */

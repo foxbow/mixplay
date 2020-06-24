@@ -49,6 +49,3 @@ cmd = 0MSR RRRR CCCC CCCC
 * 0x1f - idle / max command*
 
 args are set with the '?' operator.
-Examples:
-* set the volume to 50%: <server>:<port>/cmd/0015?50
-* search for a title named like 'lov hurs': <server>:<port>/cmd/1113?lov+hurs

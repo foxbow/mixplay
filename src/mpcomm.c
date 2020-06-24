@@ -202,7 +202,7 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 	jsonAddInt( jo, "mpmode", data->mpmode );
 	jsonAddBool( jo, "mpfavplay", getFavplay() );
 	jsonAddBool( jo, "fpcurrent", data->fpcurrent );
-
+  jsonAddInt( jo, "clientid", clientid );
 	/* broadcast */
 	if( _curclient == -1 ) {
 		if( *count < data->msg->count ) {

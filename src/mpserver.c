@@ -111,6 +111,35 @@ static void mps_notify( void *arg ) {
 	addMessage( 1, "Notification %p/%i", arg, *(int*)arg );
 }
 
+static int fillReqInfo( mpReqInfo *info, char *line) {
+	jsonObject *jo = NULL;
+	char *jsonLine = calloc(strlen(line),1);
+	int rc = 0;
+	strdec( jsonLine, line );
+	addMessage( 2, "received request: %s", jsonLine );
+	jo = jsonRead( jsonLine );
+	free( jsonLine );
+	if( jsonPeek(jo, "cmd") == json_error ) {
+		rc = 1;
+	}
+	else {
+		info->cmd=jsonGetInt(jo, "cmd");
+		sfree(&(info->arg));
+		if( jsonPeek(jo, "arg") == json_string ) {
+			info->arg=jsonGetStr(jo, "arg");
+			if(strlen(info->arg) == 0) {
+				sfree(&(info->arg));
+			}
+		}
+		info->clientid=jsonGetInt(jo, "clientid");
+		addMessage(1,"cmd: %i", info->cmd);
+		addMessage(1,"arg: %s", info->arg?info->arg:"(NULL)");
+		addMessage(1,"cid: %i", info->clientid);
+	}
+	jsonDiscard(jo);
+	return rc;
+}
+
 static size_t serviceUnavailable( char *commdata ) {
 	sprintf( commdata, "HTTP/1.1 503 Service Unavailable\015\012Content-Length: 0\015\012\015\012" );
 	return strlen(commdata);
@@ -136,7 +165,7 @@ static void *clientHandler(void *args ) {
 	mpconfig_t *config;
 	unsigned long clmsg;
 	int state=0;
-	char *pos, *end, *arg, *argument;
+	char *pos, *end, *arg;
 	mpcmd_t cmd=mpc_idle;
 	static const char *mtype;
 	char line[MAXPATHLEN]="";
@@ -149,7 +178,6 @@ static void *clientHandler(void *args ) {
 	int fullstat=MPCOMM_STAT;
 	int nextstat=MPCOMM_STAT;
 	int okreply=1;
-	int rawcmd;
 	int index=0;
 	int tc=0;
 	mptitle_t *title=NULL;
@@ -160,6 +188,9 @@ static void *clientHandler(void *args ) {
 	ts.tv_sec=0;
 	char *manifest=NULL;
 	unsigned method=0;
+	mpReqInfo reqInfo = {0, NULL, 0};
+	int clientid=0;
+
 	commdata=(char*)falloc( commsize, sizeof( char ) );
 	sock=*(int*)args;
 	free( args );
@@ -241,6 +272,21 @@ static void *clientHandler(void *args ) {
 					end=strchr( pos, ' ' );
 					if( end != NULL ) {
 						*(end+1)=0;
+						/* has an argument? */
+						arg=strchr( pos, '?' );
+						if( arg != NULL ) {
+							*arg=0;
+							arg++;
+							if(fillReqInfo(&reqInfo, arg)) {
+								addMessage( 1, "Malformed arguments: %s", arg);
+								method=-1;
+							}
+						}
+					}
+					if((reqInfo.clientid > 0) &&
+							(clientid > 0) &&
+							(clientid != reqInfo.clientid)) {
+						addMessage(0, "Client %i on client %i's handler!?", reqInfo.clientid, clientid);
 					}
 					/* This must not be an else due to the following elses */
 					if( end == NULL ) {
@@ -250,12 +296,6 @@ static void *clientHandler(void *args ) {
 					/* control command */
 					else if ( strstr( pos, "/mpctrl/")) {
 						pos=pos+strlen("/mpctrl");
-						/* has an argument and/or msgcount been set? */
-						arg=strchr( pos, '?' );
-						if( arg != NULL ) {
-							*arg=0;
-							arg++;
-						}
 					}
 					/* everything else is treated like a GET <path> */
 					else {
@@ -264,16 +304,22 @@ static void *clientHandler(void *args ) {
 				}
 				switch(method) {
 					case 1: /* GET mpcmd */
-						if( strstr( pos, "/status " ) == pos ) {
+						if( strcmp( pos, "/status" ) == 0 ) {
 							state=1;
-						}
-						else if( strcmp( pos, "/status" ) == 0 ) {
-							state=1;
-							fullstat|=atoi(arg);
-							if( !( running&CL_UPD ) ) {
+							fullstat|=reqInfo.cmd;
+							if( reqInfo.clientid == 0 ) {
 								/* one shot */
 								running=CL_ONE;
 							}
+							if( reqInfo.clientid == -1 ) {
+								/* a new update client! Good, that one should get status updates too! */
+								reqInfo.clientid=getFreeClient();
+								addMessage( 1, "Update Handler (%p/%i) initialized", (void *)&nextstat, reqInfo.clientid );
+								addNotifyHook( &mps_notify, &nextstat );
+								nextstat|=MPCOMM_TITLES;
+								running|=CL_UPD;
+							}
+							clientid=reqInfo.clientid;
 							addMessage(2,"Statusrequest: %i", fullstat);
 						}
 						else if( strstr( pos, "/title/" ) == pos ) {
@@ -310,36 +356,17 @@ static void *clientHandler(void *args ) {
 						}
 						break;
 					case 2: /* POST */
-						if( strstr( pos, "/cmd/" ) == pos ) {
+						if( strstr( pos, "/cmd" ) == pos ) {
 							state = 2;
-							addMessage( 2, "received cmd: %s", pos );
-							pos+=5;
-							rawcmd=strtol( pos, &pos, 16 );
-							if( rawcmd == -1 ) {
-								addMessage( 1, "Illegal command %s", pos );
-								cmd=mpc_idle;
-							}
-							else {
-								cmd=(mpcmd_t)rawcmd;
-								addMessage( 1, "Got command 0x%04x - %s", cmd, mpcString(cmd) );
-							}
-							if( arg != NULL ) {
-								pos=arg;
-								argument=(char*)falloc( strlen( pos )+2, sizeof( char ) );
-								strdec( argument, pos );
-								addMessage( 1, "Decoded arg: %s", argument );
-							}
-							else {
-								argument = NULL;
-							}
-
+							cmd=(mpcmd_t)reqInfo.cmd;
+							addMessage( 1, "Got command 0x%04x - %s", cmd, mpcString(cmd) );
 							/* search is synchronous */
 							if( MPC_CMD(cmd) == mpc_search ) {
-								if( setCurClient(sock) == sock ) {
+								if( setCurClient(clientid) == clientid ) {
 									/* this client cannot already search! */
 									assert( getConfig()->found->state == mpsearch_idle );
 									getConfig()->found->state=mpsearch_busy;
-									setCommand(cmd, argument);
+									setCommand(cmd,reqInfo.arg?strdup(reqInfo.arg):NULL);
 									running|=CL_SRC;
 									state=1;
 								} else {
@@ -463,13 +490,6 @@ static void *clientHandler(void *args ) {
 			memset( commdata, 0, commsize );
 			switch( state ) {
 			case 1: /* get update */
-				/* a new update client! Good, that one should get status updates too! */
-				if( running == CL_RUN ) {
-					addMessage( 1, "Update Handler (%p/%i) initialized", (void *)&nextstat, sock );
-					addNotifyHook( &mps_notify, &nextstat );
-					nextstat|=MPCOMM_TITLES;
-					running|=CL_UPD;
-				}
 				/* add flags that have been set outside */
 				if( nextstat != MPCOMM_STAT ) {
 					addMessage( 2, "Notification %p/%i applied", (void*)&nextstat, nextstat );
@@ -484,7 +504,7 @@ static void *clientHandler(void *args ) {
 						nanosleep( &ts, NULL );
 					}
 				}
-				jsonLine=serializeStatus( &clmsg, sock, fullstat );
+				jsonLine=serializeStatus( &clmsg, clientid, fullstat );
 				if( jsonLine != NULL ) {
 					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012", (int)strlen(jsonLine) );
 					while( (ssize_t)( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
@@ -508,14 +528,14 @@ static void *clientHandler(void *args ) {
 					/* check commands that lock the reply channel */
 					if( ( cmd == mpc_dbinfo ) || ( cmd == mpc_dbclean) ||
 							( cmd == mpc_doublets ) ){
-						if( setCurClient( sock ) == -1 ) {
+						if( setCurClient( clientid ) == -1 ) {
 							addMessage( 1, "%s was blocked!", mpcString(cmd) );
 							len=serviceUnavailable( commdata );
 							break;
 						}
 						clmsg=config->msg->count;
 					}
-					setCommand(cmd,argument);
+					setCommand(cmd,reqInfo.arg?strdup(reqInfo.arg):NULL);
 				}
 				if( okreply ) {
 					sprintf( commdata, "HTTP/1.1 204 No Content\015\012\015\012" );
@@ -609,7 +629,7 @@ static void *clientHandler(void *args ) {
 					/* not progressEnd() as that sends a confusing 'Done.' and it is
 					   certain here that the flow is in the correct context as search
 						 is synchronous */
-					unlockClient(sock);
+					unlockClient(clientid);
 					/* clear result flag */
 					fullstat&=~MPCOMM_RESULT;
 					/* done searching */
@@ -621,17 +641,20 @@ static void *clientHandler(void *args ) {
 			addMessage(0,"stopping handler");
 			running&=~CL_RUN;
 		}
-
+		reqInfo.cmd=0;
+		sfree(&(reqInfo.arg));
+		reqInfo.clientid=0;
 	} while( running & CL_RUN );
 
 	if( running & CL_UPD ) {
 		removeNotifyHook( &mps_notify, &nextstat );
-		addMessage( 1, "Update Handler (%p=%i/%i) terminates", (void *)&nextstat, nextstat, sock );
+		freeClient(clientid);
+		addMessage( 1, "Update Handler (%p=%i/%i) terminates", (void *)&nextstat, nextstat, clientid );
 	}
 
 	addMessage( 2, "Client handler exited" );
-	if( isCurClient(sock) ){
-		unlockClient( sock );
+	if( isCurClient(clientid) ){
+		unlockClient(clientid);
 	}
 	if( running & CL_SRC ) {
 		config->found->state = mpsearch_idle;
