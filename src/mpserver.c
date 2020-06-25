@@ -252,7 +252,7 @@ static void *clientHandler(void *args ) {
 				}
 				end=strchr( commdata, ' ' );
 				if( end == NULL ) {
-					addMessage( 1, "Malformed request %s", pos );
+					addMessage( 1, "Malformed request %s", commdata );
 					method=-1;
 				}
 				else {
@@ -265,6 +265,7 @@ static void *clientHandler(void *args ) {
 						method=2;
 					}
 					else {
+						addMessage(0,"malformed: %s", commdata);
 						method=0;
 					}
 				}
@@ -283,9 +284,23 @@ static void *clientHandler(void *args ) {
 							}
 						}
 					}
-					if((reqInfo.clientid > 0) &&
-							(clientid > 0) &&
-							(clientid != reqInfo.clientid)) {
+					// known client send a request
+					if(reqInfo.clientid > 0) {
+						// but the handler is free
+						if (clientid == 0) {
+							// is the original handler still active?
+							if (trylockClient(reqInfo.clientid) == 0) {
+								// yes, one shot request for this client
+								running=CL_ONE;
+							}
+							clientid=reqInfo.clientid;
+						}
+					}
+					if((reqInfo.clientid == 0) && (clientid > 0)){
+						reqInfo.clientid=clientid;
+					}
+					if( (reqInfo.clientid != -1 ) &&
+							(clientid != reqInfo.clientid) ) {
 						addMessage(0, "Client %i on client %i's handler!?", reqInfo.clientid, clientid);
 					}
 					/* This must not be an else due to the following elses */

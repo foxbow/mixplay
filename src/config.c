@@ -944,3 +944,14 @@ void freeClient( int client ) {
 		getConfig()->client[client]=0;
 	}
 }
+
+int trylockClient( int client ) {
+	if( (client > 0) && (client < MAXCLIENT) ) {
+		if( getConfig()->client[client] == 0 ) {
+			getConfig()->client[client]=1;
+			return 1;
+		}
+		return 0;
+	}
+	return -1;
+}

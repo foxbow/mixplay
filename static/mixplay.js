@@ -1195,7 +1195,7 @@ function playerUpdate (data) {
   if (clientid === -1) {
     clientid = data.clientid
   } else if (clientid !== data.clientid) {
-    addText('* we (' + clientid + ') got a reply for ' + data.clientid + '!')
+    addText('+ we (' + clientid + ') got a reply for ' + data.clientid + '!')
   }
 
   favplay = data.mpfavplay
@@ -1342,7 +1342,8 @@ function updateUI () {
       json = JSON.stringify({ cmd: doUpdate, clientid: clientid })
       doUpdate = 0
     } else {
-      json = JSON.stringify({ cmd: 0, clientid: -1 })
+      clientid = -1
+      json = JSON.stringify({ cmd: 0, clientid: clientid })
     }
     xmlhttp.open('GET', '/mpctrl/status?' + json, true)
   }

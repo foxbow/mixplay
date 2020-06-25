@@ -86,7 +86,7 @@ static char *sendRequest( clientInfo* usefd, const char *path ) {
 		strcpy( req, "GET /mpctrl/" );
 	}
 	strtcat( req, path, rlen );
-	strtcat( req, " \015\012", rlen );
+	strtcat( req, " http\015\012", rlen );
 
 	if( send( ci->fd, req, strlen(req), 0 ) == -1 ) {
 		free(req);

@@ -227,4 +227,6 @@ void blockSigint();
 
 int getFreeClient( void );
 void freeClient( int );
+int trylockClient( int );
+
 #endif /* _CONFIG_H_ */
