@@ -68,7 +68,7 @@ int main( int argc, char **argv ){
 		setMPHost(argv[1]);
 	}
 	else {
-		ci = getConnection( );
+		ci = getConnection(1);
 		if( ci == NULL ) {
 			fail(errno, "Could not connect to server!");
 		}
@@ -89,6 +89,7 @@ int main( int argc, char **argv ){
 		}
 		drawAll(ci);
 	}
+	free(ci);
 	puts("");
 	close(fd);
 }

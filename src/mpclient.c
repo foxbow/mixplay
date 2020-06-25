@@ -67,7 +67,7 @@ static char *sendRequest( clientInfo* usefd, const char *path ) {
 	clientInfo *ci;
 
 	if( usefd == NULL ) {
-		ci=getConnection( );
+		ci=getConnection(0);
 		if( ci->fd < 0 ) {
 			free(ci);
 			return NULL;
@@ -86,7 +86,7 @@ static char *sendRequest( clientInfo* usefd, const char *path ) {
 		strcpy( req, "GET /mpctrl/" );
 	}
 	strtcat( req, path, rlen );
-	strtcat( req, " \015\012", 2 );
+	strtcat( req, " \015\012", rlen );
 
 	if( send( ci->fd, req, strlen(req), 0 ) == -1 ) {
 		free(req);
@@ -173,7 +173,7 @@ static char *sendRequest( clientInfo* usefd, const char *path ) {
 	 on error and the socket on success.
 	 also registers an update handler for good measure..
 */
-clientInfo *getConnection( void ) {
+clientInfo *getConnection( int keep ) {
 	struct sockaddr_in server;
 	int fd;
 	clientInfo *ci;
@@ -195,7 +195,11 @@ clientInfo *getConnection( void ) {
 
 	ci=(clientInfo*)calloc(1, sizeof(clientInfo));
 	ci->fd=fd;
-	ci->clientid=-1;
+	if (keep) {
+		ci->clientid=-1;
+	} else {
+		ci->clientid=0;
+	}
 
 	jo=getStatus( ci, 0 );
 	if( jo == NULL ) {

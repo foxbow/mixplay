@@ -132,9 +132,9 @@ static int fillReqInfo( mpReqInfo *info, char *line) {
 			}
 		}
 		info->clientid=jsonGetInt(jo, "clientid");
-		addMessage(1,"cmd: %i", info->cmd);
-		addMessage(1,"arg: %s", info->arg?info->arg:"(NULL)");
-		addMessage(1,"cid: %i", info->clientid);
+		addMessage(2,"cmd: %i", info->cmd);
+		addMessage(2,"arg: %s", info->arg?info->arg:"(NULL)");
+		addMessage(2,"cid: %i", info->clientid);
 	}
 	jsonDiscard(jo);
 	return rc;
@@ -318,8 +318,8 @@ static void *clientHandler(void *args ) {
 								addNotifyHook( &mps_notify, &nextstat );
 								nextstat|=MPCOMM_TITLES;
 								running|=CL_UPD;
+								clientid=reqInfo.clientid;
 							}
-							clientid=reqInfo.clientid;
 							addMessage(2,"Statusrequest: %i", fullstat);
 						}
 						else if( strstr( pos, "/title/" ) == pos ) {
