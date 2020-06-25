@@ -24,7 +24,7 @@ static char _mphost[16]="127.0.0.1";
 void fail( const int error, const char* msg, ... ) {
 	va_list args;
 	fprintf( stdout, "\n" );
-	printf("mixplay-hid: ");
+	printf("mpclient: ");
 	va_start( args, msg );
 	vfprintf( stdout, msg, args );
 	va_end( args );
@@ -77,14 +77,15 @@ static char *sendRequest( clientInfo* usefd, const char *path ) {
 		ci = usefd;
 	}
 
-	req = (char *)falloc( 1, 13 + strlen(path) + 3 + 1 );
+	rlen = 13 + strlen(path) + 3 + 1;
+	req = (char *)falloc( 1, rlen );
 	if( strstr( path, "cmd" ) == path ) {
 		strcpy( req, "POST /mpctrl/" );
 	}
 	else {
 		strcpy( req, "GET /mpctrl/" );
 	}
-	strtcat( req, path, strlen(path) );
+	strtcat( req, path, rlen );
 	strtcat( req, " \015\012", 2 );
 
 	if( send( ci->fd, req, strlen(req), 0 ) == -1 ) {
@@ -104,6 +105,7 @@ static char *sendRequest( clientInfo* usefd, const char *path ) {
 	if( select( FD_SETSIZE, &fds, NULL, NULL, &to ) > 0 ) {
 		if( FD_ISSET(ci->fd, &fds) ) {
 			reply = (char*)falloc(512,1);
+			rlen=0;
 			while( recv( ci->fd, reply+rlen, 512, MSG_DONTWAIT ) == 512 ) {
 				rlen = rlen+512;
 				reply = (char*)frealloc( reply, rlen+512 );
@@ -222,8 +224,8 @@ int sendCMD( clientInfo *usefd, mpcmd_t cmd){
 		return 1;
 	}
 
-	jo = jsonAddInt( jo, "cmd", cmd);
-	jo = jsonAddInt( jo, "clientid", usefd->clientid);
+	jo = jsonAddInt( NULL, "cmd", cmd);
+	jsonAddInt( jo, "clientid", usefd->clientid);
 	reply = jsonToString(jo);
 	jo = jsonDiscard(jo);
 	snprintf( req, 1023, "cmd?%s x\015\012", reply );
@@ -266,11 +268,11 @@ jsonObject *getStatus(clientInfo *usefd, int flags) {
 	char req[1024];
 	jsonObject *jo=NULL;
 
-	jo=jsonAddInt( jo, "cmd", flags%15 );
+	jo=jsonAddInt( NULL, "cmd", flags%15 );
 	if (usefd == NULL) {
-		jo=jsonAddInt( jo, "clientid", 0 );
+		jsonAddInt( jo, "clientid", 0 );
 	} else {
-		jo=jsonAddInt( jo, "clientid", usefd->clientid );
+		jsonAddInt( jo, "clientid", usefd->clientid );
 	}
 	reply = jsonToString(jo);
 	jo = jsonDiscard(jo);
