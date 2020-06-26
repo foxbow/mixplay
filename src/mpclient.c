@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <assert.h>
+#include <errno.h>
 
 #include "mpclient.h"
 #include "utils.h"
@@ -62,6 +63,7 @@ static char *sendRequest( clientInfo* usefd, const char *path ) {
 	char *pos;
 	size_t rlen=0;
 	size_t clen=0;
+	int rv=0;
 	fd_set fds;
 	struct timeval	to;
 	clientInfo *ci;
@@ -70,6 +72,7 @@ static char *sendRequest( clientInfo* usefd, const char *path ) {
 		ci=getConnection(0);
 		if( ci->fd < 0 ) {
 			free(ci);
+			printf("C: could not open connection (%i)\n", ci->fd);
 			return NULL;
 		}
 	}
@@ -77,7 +80,7 @@ static char *sendRequest( clientInfo* usefd, const char *path ) {
 		ci = usefd;
 	}
 
-	rlen = 13 + strlen(path) + 3 + 1;
+	rlen = 13 + strlen(path) + 6 + 1;
 	req = (char *)falloc( 1, rlen );
 	if( strstr( path, "cmd" ) == path ) {
 		strcpy( req, "POST /mpctrl/" );
@@ -88,14 +91,20 @@ static char *sendRequest( clientInfo* usefd, const char *path ) {
 	strtcat( req, path, rlen );
 	strtcat( req, " http\015\012", rlen );
 
-	if( send( ci->fd, req, strlen(req), 0 ) == -1 ) {
-		free(req);
-		if( usefd == NULL ) {
-			close(ci->fd);
-			free(ci);
+	clen = 0;
+	do {
+		rv = send( ci->fd, req+clen, rlen-clen, 0 );
+		if( rv < 1 ) {
+			printf("Could not send request! (%s)\n", strerror(errno));
+			free(req);
+			if( usefd == NULL ) {
+				close(ci->fd);
+				free(ci);
+			}
+			return NULL;
 		}
-		return NULL;
-	}
+		clen += rv;
+	} while( clen < rlen );
 	free(req);
 
 	FD_ZERO( &fds );
@@ -137,6 +146,7 @@ static char *sendRequest( clientInfo* usefd, const char *path ) {
 			/* content length larger than received data */
 			if( clen > rlen ) {
 				free(reply);
+				printf("Content length mismatch!\n");
 				return NULL;
 			}
 
@@ -167,11 +177,11 @@ static char *sendRequest( clientInfo* usefd, const char *path ) {
 }
 
 /* open a connection to the server.
-   returns:
+   returns a valid ci with ci->fd being
 	 -1 : No socket available
 	 -2 : unable to connect to server
 	 on error and the socket on success.
-	 also registers an update handler for good measure..
+	 also registers an update handler when keep is non null.
 */
 clientInfo *getConnection( int keep ) {
 	struct sockaddr_in server;
@@ -180,17 +190,15 @@ clientInfo *getConnection( int keep ) {
 	jsonObject *jo=NULL;
 
 	fd=socket(AF_INET, SOCK_STREAM, 0);
-	if( fd == -1 ) {
-		return NULL;
-	}
-
-	memset( &server, 0, sizeof(server) );
-	server.sin_family = AF_INET;
-	server.sin_addr.s_addr = inet_addr(_mphost);
-	server.sin_port = htons(_mpport);
-	if( connect(fd, (struct sockaddr*)&server, sizeof(server)) == -1 ) {
-		close(fd);
-		return NULL;
+	if( fd > 0 ) {
+		memset( &server, 0, sizeof(server) );
+		server.sin_family = AF_INET;
+		server.sin_addr.s_addr = inet_addr(_mphost);
+		server.sin_port = htons(_mpport);
+		if( connect(fd, (struct sockaddr*)&server, sizeof(server)) == -1 ) {
+			close(fd);
+			fd=-2;
+		}
 	}
 
 	ci=(clientInfo*)calloc(1, sizeof(clientInfo));
@@ -201,15 +209,18 @@ clientInfo *getConnection( int keep ) {
 		ci->clientid=0;
 	}
 
-	jo=getStatus( ci, 0 );
-	if( jo == NULL ) {
-		close(fd);
-		free(ci);
-		return NULL;
+	if(( fd > 0 ) && (keep)) {
+		jo=getStatus( ci, 0 );
+		if( jo == NULL ) {
+			close(fd);
+			ci->fd=-3;
+		}
+		else {
+			ci->clientid=jsonGetInt(jo, "clientid");
+			jo=jsonDiscard(jo);
+		}
 	}
 
-	ci->clientid=jsonGetInt(jo, "clientid");
-	jo=jsonDiscard(jo);
 	return ci;
 }
 

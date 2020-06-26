@@ -69,8 +69,8 @@ int main( int argc, char **argv ){
 	}
 	else {
 		ci = getConnection(1);
-		if( ci == NULL ) {
-			fail(errno, "Could not connect to server!");
+		if( ci->fd < 0 ) {
+			fail(errno, "Could not connect to server (%i)!", ci->fd);
 		}
 	}
 	hidPrintline( "Mixplay HID demo\n");

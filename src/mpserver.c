@@ -239,7 +239,11 @@ static void *clientHandler(void *args ) {
 				running&=~CL_RUN;
 				break;
 			case 0:
-				addMessage( 1, "Client disconnected");
+				if(recvd == 0) {
+					addMessage( 1, "Client disconnected");
+				} else {
+					addMessage( 1, "Truncated request: %s", commdata);
+				}
 				running&=~CL_RUN;
 				break;
 			default:
