@@ -932,7 +932,7 @@ int getFreeClient( void ) {
 	for (i=0; i<MAXCLIENT; i++) {
 		if (getConfig()->client[i] == 0) {
 			getConfig()->client[i]=1;
-			return i;
+			return i+1;
 		}
 	}
 	addMessage(-1, "Out ofd clients!");
@@ -940,13 +940,15 @@ int getFreeClient( void ) {
 }
 
 void freeClient( int client ) {
-	if( (client > 0) && (client < MAXCLIENT) ) {
+	client--;
+	if( (client >= 0) && (client < MAXCLIENT) ) {
 		getConfig()->client[client]=0;
 	}
 }
 
 int trylockClient( int client ) {
-	if( (client > 0) && (client < MAXCLIENT) ) {
+	client--;
+	if( (client >= 0) && (client < MAXCLIENT) ) {
 		if( getConfig()->client[client] == 0 ) {
 			getConfig()->client[client]=1;
 			return 1;
