@@ -41,7 +41,6 @@ struct _mpfunc_t {
 /* callback hooks */
 static _mpfunc *_pfunc=NULL;
 static _mpfunc *_ufunc=NULL;
-static _mpfunc *_nfunc=NULL;
 
 static const char *mpccommand[] = {
 		"mpc_play",
@@ -256,11 +255,11 @@ mpconfig_t *readConfig( void ) {
 	_cconfig->changed=0;
 	_cconfig->isDaemon=0;
 	_cconfig->fpcurrent=1;
-	_cconfig->retry=0;
 	_cconfig->streamURL=NULL;
 	_cconfig->rcdev=NULL;
 	_cconfig->mpmode=PM_NONE;
 	for (i=0; i<MAXCLIENT; i++) _cconfig->client[i]=0;
+	for (i=0; i<MAXCLIENT; i++) _cconfig->notify[i]=MPCOMM_STAT;
 
 	snprintf( _cconfig->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", home );
 
@@ -680,6 +679,7 @@ static void addHook( void (*func)( void* ), void *arg, _mpfunc **list ) {
 	pthread_mutex_unlock(&_cblock);
 }
 
+#if 0
 static void removeHook( void (*func)( void* ), void *arg, _mpfunc **list ) {
 	_mpfunc *pos=*list;
 	_mpfunc *pre=NULL;
@@ -712,6 +712,7 @@ static void removeHook( void (*func)( void* ), void *arg, _mpfunc **list ) {
 
 	pthread_mutex_unlock(&_cblock);
 }
+#endif
 
 /*
  * stub implementations
@@ -750,31 +751,18 @@ void addProgressHook( void (*func)( void * ), void *id ){
 /**
  * register an update function, called on minor updates like playtime
  */
- void addUpdateHook( void (*func)( ) ){
- 	addHook( func, NULL, &_ufunc );
- }
-
-/**
- * register a notification function, called when title/playlist has changed
- */
-void addNotifyHook( void (*func)( void * ), void *arg ){
-	addHook( func, arg, &_nfunc );
-}
-
-void removeNotifyHook( void (*func)( void * ), void *arg ) {
-	removeHook( func, arg, &_nfunc );
+void addUpdateHook( void (*func)( ) ){
+	addHook( func, NULL, &_ufunc );
 }
 
 /**
  * notify all clients that a bigger update is needed
  */
 void notifyChange(int state) {
-	_mpfunc *pos=_nfunc;
+	int i;
 	pthread_mutex_lock(&_cblock);
-	while( pos != NULL ) {
-		*((int*)pos->arg)|=state;
-		pos->func(pos->arg);
-		pos=pos->next;
+	for (i=0;i<MAXCLIENT;i++) {
+		getConfig()->notify[i] |= state;
 	}
 	pthread_mutex_unlock(&_cblock);
 }
@@ -956,4 +944,26 @@ int trylockClient( int client ) {
 		return 0;
 	}
 	return -1;
+}
+
+int getNotify( int client ) {
+	client--;
+	if( (client >= 0) && (client < MAXCLIENT) ) {
+		return getConfig()->notify[client];
+	}
+	return -1;
+}
+
+void setNotify( int client, int state ) {
+	client--;
+	if( (client >= 0) && (client < MAXCLIENT) ) {
+		getConfig()->notify[client]=state;
+	}
+}
+
+void addNotify( int client, int state ) {
+	client--;
+	if( (client >= 0) && (client < MAXCLIENT) ) {
+		getConfig()->notify[client]|=state;
+	}
 }

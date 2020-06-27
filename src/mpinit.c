@@ -19,7 +19,6 @@ static void printUsage( char *name ) {
 	printf( " -h : print help\n" );
 	printf( " -p <port> : set port [2347]\n" );
 	printf( " -m : force mix on playlist\n" );
-	printf( " -r : retry opening port\n");
 	printf( " -W': write changed config (used with -r,-l,-h,-p)\n" );
 	printf( " resource: resource to play\n" );
 	printf( "		   URL, directory, mp3 file, playlist\n" );
@@ -138,7 +137,7 @@ int getArgs( int argc, char ** argv ){
 
 	/* parse command line options */
 	/* using unsigned char c to work around getopt quirk on ARM */
-	while ( ( c = getopt( argc, argv, "vVfdFh:p:rWm" ) ) != -1 ) {
+	while ( ( c = getopt( argc, argv, "vVfdFh:p:Wm" ) ) != -1 ) {
 		switch ( c ) {
 		case 'v': /* increase debug message level to display */
 			incVerbosity();
@@ -150,7 +149,6 @@ int getArgs( int argc, char ** argv ){
 
 		case 'd': /* increase debug message level to display on console */
 			incDebug();
-			config->retry=1;
 			break;
 
 		case 'f': /* single channel - disable fading */
@@ -176,10 +174,6 @@ int getArgs( int argc, char ** argv ){
 
 		case 'm':
 			config->mpmix=1;
-			break;
-
-		case 'r':
-			config->retry=1;
 			break;
 
 		case '?':

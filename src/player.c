@@ -377,6 +377,8 @@ void *setProfile( void *arg ) {
 		addMessage( 1, "Start play" );
 		control->command=mpc_start;
 	}
+	/* make sure that progress messages are removed */
+	notifyChange( MPCOMM_TITLES );
 	addMessage( 2, "End Thread: setProfile()" );
 	return arg;
 }

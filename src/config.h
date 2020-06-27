@@ -163,10 +163,10 @@ typedef struct {
 	unsigned inUI:1;					/* flag to show if the UI is active */
 	unsigned changed:1;
 	unsigned list:1;					/* remote playlist */
-	unsigned retry:1;					/* wait for socket */
 	char *rcdev;							/* device by-id of the remote control */
 	int rccodes[MPRC_NUM];		/* command codes for the remote */
 	unsigned client[MAXCLIENT];		/* glabal clientID marker */
+	unsigned notify[MAXCLIENT];		/* next state per client */
 } mpconfig_t;
 
 /* message request types */
@@ -208,11 +208,8 @@ void updateUI( void );
 
 void notifyChange(int state);
 
-void addNotifyHook( void (*)( void *), void *arg );
 void addProgressHook( void (*)( void * ), void *id );
 void addUpdateHook( void (*)( ) );
-
-void removeNotifyHook( void (*)( void *), void *arg );
 
 const char *mpcString( mpcmd_t rawcmd );
 mpcmd_t mpcCommand( const char *val );
@@ -228,5 +225,9 @@ void blockSigint();
 int getFreeClient( void );
 void freeClient( int );
 int trylockClient( int );
+
+int getNotify( int );
+void setNotify( int, int );
+void addNotify( int, int );
 
 #endif /* _CONFIG_H_ */

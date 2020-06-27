@@ -106,11 +106,6 @@ static char *strdec( char *target, const char *src ) {
 	return target;
 }
 
-/* this is just a dummy function .. */
-static void mps_notify( void *arg ) {
-	addMessage( 1, "Notification %p/%i", arg, *(int*)arg );
-}
-
 static int fillReqInfo( mpReqInfo *info, char *line) {
 	jsonObject *jo = NULL;
 	char *jsonLine = calloc(strlen(line),1);
@@ -176,7 +171,6 @@ static void *clientHandler(void *args ) {
 	static const unsigned char *fdata;
 	unsigned int flen;
 	int fullstat=MPCOMM_STAT;
-	int nextstat=MPCOMM_STAT;
 	int okreply=1;
 	int index=0;
 	int tc=0;
@@ -333,11 +327,10 @@ static void *clientHandler(void *args ) {
 							if( reqInfo.clientid == -1 ) {
 								/* a new update client! Good, that one should get status updates too! */
 								reqInfo.clientid=getFreeClient();
-								addMessage( 1, "Update Handler (%p/%i) initialized", (void *)&nextstat, reqInfo.clientid );
-								addNotifyHook( &mps_notify, &nextstat );
-								nextstat|=MPCOMM_TITLES;
 								running|=CL_UPD;
 								clientid=reqInfo.clientid;
+								addNotify(clientid, MPCOMM_TITLES);
+								addMessage( 1, "Update Handler for %i initialized", clientid );
 							}
 							addMessage(2,"Statusrequest: %i", fullstat);
 						}
@@ -510,10 +503,10 @@ static void *clientHandler(void *args ) {
 			switch( state ) {
 			case 1: /* get update */
 				/* add flags that have been set outside */
-				if( nextstat != MPCOMM_STAT ) {
-					addMessage( 2, "Notification %p/%i applied", (void*)&nextstat, nextstat );
-					fullstat |= nextstat;
-					nextstat=MPCOMM_STAT;
+				if( getNotify(clientid) != MPCOMM_STAT ) {
+					addMessage( 2, "Notification %i for client %i applied", getNotify(clientid), clientid );
+					fullstat |= getNotify(clientid);
+					setNotify( clientid, MPCOMM_STAT );
 				}
 				/* only look at the search state if this is the searcher */
 				if( (running&CL_SRC) && (config->found->state != mpsearch_idle) ) {
@@ -666,9 +659,8 @@ static void *clientHandler(void *args ) {
 	} while( running & CL_RUN );
 
 	if( running & CL_UPD ) {
-		removeNotifyHook( &mps_notify, &nextstat );
 		freeClient(clientid);
-		addMessage( 1, "Update Handler (%p=%i/%i) terminates", (void *)&nextstat, nextstat, clientid );
+		addMessage( 1, "Update Handler (%i for client %i) terminates", getNotify(clientid), clientid );
 	}
 
 	addMessage( 2, "Client handler exited" );
@@ -779,7 +771,7 @@ int startServer( ) {
 	server.sin_port = htons( control->port );
 
 	while ( bind(mainsocket,(struct sockaddr *)&server , sizeof(server)) < 0) {
-		if( (control->retry) && (errno == 98) && (rcnt < 4) ) {
+		if( (errno == 98) && (rcnt < 4) ) {
 			/* this commonly takes a minute so try three times to reconnect if the
 			   socket is still blocked, then something is really wrong */
 			rcnt++;
