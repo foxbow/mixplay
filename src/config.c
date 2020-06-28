@@ -943,6 +943,7 @@ int trylockClient( int client ) {
 		}
 		return 0;
 	}
+	addMessage(1, "Client id %i out of range!", client+1);
 	return -1;
 }
 

@@ -282,26 +282,53 @@ static void *clientHandler(void *args ) {
 							}
 						}
 					}
-					// known client send a request
+
+					/* known client send a request */
 					if(reqInfo.clientid > 0) {
-						// but the handler is free
+						/* but the handler is free */
 						if (clientid == 0) {
-							// is the original handler still active?
-							if (trylockClient(reqInfo.clientid) == 0) {
-								// yes, one shot request for this client
-								running=CL_ONE;
+							/* is the original handler still active? */
+							if (trylockClient(reqInfo.clientid)) {
+								/* No, become new update handler */
+								running|=CL_UPD;
+								addMessage( 1, "Resurrect Update Handler for %i", reqInfo.clientid );
 							}
 							clientid=reqInfo.clientid;
 						}
 					}
+
+					if( reqInfo.clientid == -1 ) {
+						if( clientid == 0 ) {
+							/* a new update client! Good, that one should get status updates too! */
+							reqInfo.clientid=getFreeClient();
+							running|=CL_UPD;
+							clientid=reqInfo.clientid;
+							addNotify(clientid, MPCOMM_TITLES);
+							addMessage( 1, "Update Handler for client %i initialized", clientid );
+						} else {
+							/* hopefully just a race condition ... */
+							addMessage( 2, "Duplicate ID request for client %i", clientid);
+							reqInfo.clientid = clientid;
+						}
+					}
+
+					/* Avoid turning update handlers into one-shot handlers */
 					if((reqInfo.clientid == 0) && (clientid > 0)){
+						addMessage( 2, "Clientless request coming in on socket for client %i", clientid);
 						reqInfo.clientid=clientid;
 					}
-					if( (reqInfo.clientid != -1 ) &&
+
+					/* Client mix-up? */
+					if( (reqInfo.clientid > 0 ) &&
 							(clientid != reqInfo.clientid) ) {
 						addMessage(0, "Client %i on client %i's handler!?", reqInfo.clientid, clientid);
 					}
-					/* This must not be an else due to the following elses */
+
+					if( clientid == 0 ) {
+						addMessage(1, "One shot request");
+						running=CL_ONE;
+					}
+
 					if( end == NULL ) {
 						addMessage( 1, "Malformed request %s", pos );
 						method=-1;
@@ -320,18 +347,6 @@ static void *clientHandler(void *args ) {
 						if( strcmp( pos, "/status" ) == 0 ) {
 							state=1;
 							fullstat|=reqInfo.cmd;
-							if( reqInfo.clientid == 0 ) {
-								/* one shot */
-								running=CL_ONE;
-							}
-							if( reqInfo.clientid == -1 ) {
-								/* a new update client! Good, that one should get status updates too! */
-								reqInfo.clientid=getFreeClient();
-								running|=CL_UPD;
-								clientid=reqInfo.clientid;
-								addNotify(clientid, MPCOMM_TITLES);
-								addMessage( 1, "Update Handler for %i initialized", clientid );
-							}
 							addMessage(2,"Statusrequest: %i", fullstat);
 						}
 						else if( strstr( pos, "/title/" ) == pos ) {
@@ -471,7 +486,6 @@ static void *clientHandler(void *args ) {
 							/* ignore for now */
 							send( sock, "HTTP/1.1 204 No Content\015\012\015\012", 28, 0 );
 							state=0;
-							running&=~CL_RUN;
 						}
 						else {
 							addMessage( 1, "Illegal get %s", pos );
@@ -584,7 +598,6 @@ static void *clientHandler(void *args ) {
 					pthread_mutex_unlock(&_sendlock);
 				}
 				len=0;
-				running&=~CL_RUN;
 				break;
 
 			case 6: /* get config should be unreachable */
@@ -596,7 +609,6 @@ static void *clientHandler(void *args ) {
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
 						(int)strlen(VERSION), VERSION );
 				len=strlen(commdata);
-				running&=~CL_RUN;
 				break;
 				/* todo: attachment or inline? */
 
@@ -608,7 +620,6 @@ static void *clientHandler(void *args ) {
 				filePost( sock, fullpath(title->path) );
 				title=NULL;
 				len=0;
-				running&=~CL_RUN;
 				break;
 
 			case 9: /* return "artist - title" line */
@@ -616,7 +627,6 @@ static void *clientHandler(void *args ) {
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
 						(int)strlen(line), line );
 				len=strlen(commdata);
-				running&=~CL_RUN;
 				break;
 
 			default:
@@ -659,8 +669,12 @@ static void *clientHandler(void *args ) {
 	} while( running & CL_RUN );
 
 	if( running & CL_UPD ) {
-		freeClient(clientid);
-		addMessage( 1, "Update Handler (%i for client %i) terminates", getNotify(clientid), clientid );
+		if( clientid > 0 ) {
+			addMessage( 1, "Update Handler (client %i) terminates", clientid );
+			freeClient(clientid);
+		} else {
+			addMessage( 0, "Update Handler for client 0 ?!" );
+		}
 	}
 
 	addMessage( 2, "Client handler exited" );

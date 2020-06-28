@@ -1192,10 +1192,9 @@ function playerUpdate (data) {
     }
   }
 
-  if (clientid === -1) {
+  if (clientid !== data.clientid) {
     clientid = data.clientid
-  } else if (clientid !== data.clientid) {
-    addText('+ we (' + clientid + ') got a reply for ' + data.clientid + '!')
+    addText('Client ID: ' + clientid)
   }
 
   favplay = data.mpfavplay
