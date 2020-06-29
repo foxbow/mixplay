@@ -158,7 +158,6 @@ static void *clientHandler(void *args ) {
 	char *jsonLine=NULL;
 	fd_set fds;
 	mpconfig_t *config;
-	unsigned long clmsg;
 	int state=0;
 	char *pos, *end, *arg;
 	mpcmd_t cmd=mpc_idle;
@@ -189,7 +188,6 @@ static void *clientHandler(void *args ) {
 	free( args );
 
 	config = getConfig();
-	clmsg = msgBufGetLastRead(config->msg);
 
 	/* this one may terminate all willy nilly */
 	pthread_detach(pthread_self());
@@ -297,6 +295,7 @@ static void *clientHandler(void *args ) {
 								/* No, become new update handler */
 								running|=CL_UPD;
 								clientid=reqInfo.clientid;
+								initMsgCnt(clientid);
 								addMessage( 1, "Resurrect Update Handler for %i", reqInfo.clientid );
 							}
 							/* weird, check later if this is an update request */
@@ -542,7 +541,7 @@ static void *clientHandler(void *args ) {
 						nanosleep( &ts, NULL );
 					}
 				}
-				jsonLine=serializeStatus( &clmsg, clientid, fullstat );
+				jsonLine=serializeStatus( clientid, fullstat );
 				if( jsonLine != NULL ) {
 					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012", (int)strlen(jsonLine) );
 					while( (ssize_t)( strlen(jsonLine) + strlen(commdata) + 8 ) > commsize ) {
@@ -571,7 +570,6 @@ static void *clientHandler(void *args ) {
 							len=serviceUnavailable( commdata );
 							break;
 						}
-						clmsg=config->msg->count;
 					}
 					setCommand(cmd,reqInfo.arg?strdup(reqInfo.arg):NULL);
 				}
@@ -660,9 +658,6 @@ static void *clientHandler(void *args ) {
 				}
 				if( fullstat & MPCOMM_RESULT ) {
 					config->found->state=mpsearch_idle;
-					/* not progressEnd() as that sends a confusing 'Done.' and it is
-					   certain here that the flow is in the correct context as search
-						 is synchronous */
 					unlockClient(clientid);
 					/* clear result flag */
 					fullstat&=~MPCOMM_RESULT;

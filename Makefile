@@ -11,7 +11,9 @@ OBJS=$(addprefix $(OBJDIR)/,mpserver.o utils.o musicmgr.o database.o \
   config.o mpcomm.o json.o msgbuf.o mpinit.o mphid.o mpgutils.o player.o \
 	mpflirc.o)
 
-CLOBJS=$(addprefix $(OBJDIR)/,utils.o msgbuf.o config.o json.o mpclient.o)
+CLOBJS=$(addprefix $(OBJDIR)/,utils.o msgbuf.o config.o json.o mpclient.o \
+  mpcomm.o )
+
 HCOBJS=$(CLOBJS) $(addprefix $(OBJDIR)/,mphid.o)
 
 SCLIBS=-lX11 -lXext -lpthread

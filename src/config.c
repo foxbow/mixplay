@@ -23,6 +23,7 @@
 #include "utils.h"
 #include "config.h"
 #include "musicmgr.h"
+#include "mpcomm.h"
 
 static pthread_mutex_t _addmsglock=PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t _cblock=PTHREAD_MUTEX_INITIALIZER;
@@ -39,7 +40,6 @@ struct _mpfunc_t {
 };
 
 /* callback hooks */
-static _mpfunc *_pfunc=NULL;
 static _mpfunc *_ufunc=NULL;
 
 static const char *mpccommand[] = {
@@ -558,7 +558,7 @@ void addMessage( int v, const char *msg, ... ) {
 		if( v <= getVerbosity() ) {
 			if( _cconfig->inUI ) {
 				if( v < getDebug() ) {
-					fprintf( stderr, "\rd%i %s\n", v, line );
+					fprintf( stderr, "\r%2i/%2i %s\n", v, getCurClient(), line );
 				}
 				/* not just a message but something important so add the ALERT:
 				   prefix for the clients */
@@ -569,7 +569,7 @@ void addMessage( int v, const char *msg, ... ) {
 				}
 				msgBuffAdd( _cconfig->msg, line );
 			}
-			else {
+			else if (getCurClient() == -1) {
 				printf( "\r%s\n", line );
 			}
 		}
@@ -713,40 +713,6 @@ static void removeHook( void (*func)( void* ), void *arg, _mpfunc **list ) {
 	pthread_mutex_unlock(&_cblock);
 }
 #endif
-
-/*
- * stub implementations
- */
-void progressStart( const char* msg, ... ) {
-	va_list args;
-	char *line;
-
-	line=(char*)falloc( 512, 1 );
-
-	va_start( args, msg );
-	vsnprintf( line, 512, msg, args );
-	va_end( args );
-
-	addMessage( 0, "%s", line );
-	invokeHooks(_pfunc);
-
-	free( line );
-}
-
-/**
- * end a progress display
- */
-void progressEnd( void ) {
-	addMessage( -1, "Done." );
-}
-
-/**
- * register a progress function.
- * Not used yet, may replace setCurClient()
- */
-void addProgressHook( void (*func)( void * ), void *id ){
-	addHook( func, id, &_pfunc );
-}
 
 /**
  * register an update function, called on minor updates like playtime
@@ -966,5 +932,34 @@ void addNotify( int client, int state ) {
 	client--;
 	if( (client >= 0) && (client < MAXCLIENT) ) {
 		getConfig()->notify[client]|=state;
+	}
+}
+
+unsigned long getMsgCnt( int client ) {
+	client--;
+	if( (client >= 0) && (client < MAXCLIENT) ) {
+		return getConfig()->msgcnt[client];
+	}
+	return 0;
+}
+
+void setMsgCnt( int client, unsigned long count ) {
+	client--;
+	if( (client >= 0) && (client < MAXCLIENT) ) {
+		getConfig()->msgcnt[client]=count;
+	}
+}
+
+void incMsgCnt( int client ) {
+	client--;
+	if( (client >= 0) && (client < MAXCLIENT) ) {
+		getConfig()->msgcnt[client]++;
+	}
+}
+
+void initMsgCnt( int client ) {
+	client--;
+	if( (client >= 0) && (client < MAXCLIENT) ) {
+		getConfig()->msgcnt[client]=msgBufGetLastRead(getConfig()->msg);
 	}
 }

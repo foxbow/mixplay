@@ -1,5 +1,6 @@
 #include "msgbuf.h"
 #include "utils.h"
+#include "mpcomm.h"
 
 /*
  * initialize a message ringbuffer
@@ -21,22 +22,22 @@ msgbuf_t *msgBuffInit() {
  * returns the current message number
  */
 unsigned long msgBuffAdd( msgbuf_t *msgbuf, char *line ) {
-	char *myline;
-	myline=(char*)falloc( strlen(line)+1, 1 );
-	strcpy( myline, line );
+	clmessage *msg=falloc(1, sizeof(clmessage));
+	msg->msg=strdup(line);
+	msg->cid=getCurClient();
 	pthread_mutex_lock( msgbuf->msgLock );
 	/* overflow? */
 	if( msgbuf->lines == MSGNUM ) {
 		/* discard oldest (current) message */
 		free(msgbuf->msg[msgbuf->current]);
 		/* replace with new message */
-		msgbuf->msg[msgbuf->current]=myline;
+		msgbuf->msg[msgbuf->current]=msg;
 		/* bump current message to the next oldest */
 		msgbuf->current=(msgbuf->current+1)%MSGNUM;
 	}
 	else {
 		/* current+lines points to the next free buffer */
-		msgbuf->msg[(msgbuf->current+msgbuf->lines)%MSGNUM]=myline;
+		msgbuf->msg[(msgbuf->current+msgbuf->lines)%MSGNUM]=msg;
 		msgbuf->lines++;
 	}
 	msgbuf->count++;
@@ -52,8 +53,8 @@ unsigned long msgBuffAdd( msgbuf_t *msgbuf, char *line ) {
  * returns the current message and removes it from the buffer
  * Return pointer must be free'd after use!
  */
-char *msgBuffGet( msgbuf_t *msgbuf ) {
-	char *retval = NULL;
+clmessage *msgBuffGet( msgbuf_t *msgbuf ) {
+	clmessage *retval = NULL;
 	pthread_mutex_lock( msgbuf->msgLock );
 	if( msgbuf->lines > 0 ) {
 		retval=msgbuf->msg[msgbuf->current];
@@ -72,8 +73,8 @@ char *msgBuffGet( msgbuf_t *msgbuf ) {
  * Return pointer MUST NOT be free'd after use!
  * Caveat: Returns "" if no messages are available
  */
-const char *msgBuffPeek( msgbuf_t *msgbuf, unsigned long msgno ) {
-	const char *retval = "";
+const clmessage *msgBuffPeek( msgbuf_t *msgbuf, unsigned long msgno ) {
+	const clmessage *retval = NULL;
 	int pos;
 
 	pthread_mutex_lock( msgbuf->msgLock );
@@ -110,11 +111,11 @@ char *msgBuffAll( msgbuf_t *msgbuf ) {
 	pthread_mutex_lock( msgbuf->msgLock );
 	for( i=0; i<msgbuf->lines; i++ ) {
 		lineno=(i+msgbuf->current)%MSGNUM;
-		while( strlen(buff)+strlen(msgbuf->msg[lineno]) >= len ) {
+		while( strlen(buff)+strlen(msgbuf->msg[lineno]->msg) >= len ) {
 			len=len+256;
 			buff=(char*)frealloc( buff, len );
 		}
-		strcat( buff, msgbuf->msg[lineno] );
+		strcat( buff, msgbuf->msg[lineno]->msg );
 		strcat( buff, "\n" );
 	}
 	msgbuf->unread=0;
@@ -132,8 +133,9 @@ unsigned long msgBufGetLastRead( msgbuf_t *msgbuf ) {
  * empties the message buffer
  */
 void msgBuffClear( msgbuf_t *msgbuf ) {
-	char *line;
+	clmessage *line;
 	while( ( line=msgBuffGet( msgbuf ) ) != NULL ) {
+		free( line->msg );
 		free( line );
 	}
 	msgbuf->lines=0;

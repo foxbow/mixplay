@@ -167,6 +167,7 @@ typedef struct {
 	int rccodes[MPRC_NUM];		/* command codes for the remote */
 	unsigned client[MAXCLIENT];		/* glabal clientID marker */
 	unsigned notify[MAXCLIENT];		/* next state per client */
+	unsigned long msgcnt[MAXCLIENT];
 } mpconfig_t;
 
 /* message request types */
@@ -202,8 +203,6 @@ void addMessage( int v, const char *msg, ... ) __attribute__((__format__(__print
 char *getCurrentActivity( void );
 void activity( int v, const char *msg, ... ) __attribute__((__format__(__printf__, 2, 3)));
 
-void progressStart( const char *msg, ... ) __attribute__((__format__(__printf__, 1, 2)));
-void progressEnd( void );
 void updateUI( void );
 
 void notifyChange(int state);
@@ -229,5 +228,10 @@ int trylockClient( int );
 int getNotify( int );
 void setNotify( int, int );
 void addNotify( int, int );
+
+unsigned long getMsgCnt( int );
+void setMsgCnt( int, unsigned long );
+void incMsgCnt( int );
+void initMsgCnt( int );
 
 #endif /* _CONFIG_H_ */

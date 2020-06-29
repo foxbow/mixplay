@@ -84,7 +84,7 @@ static void s_updateHook( ) {
 	mpconfig_t *data=getConfig();
 	if( _curmsg < data->msg->count ) {
 		if( data->isDaemon ) {
-			syslog( LOG_NOTICE, "%s", msgBuffPeek( data->msg, _curmsg ) );
+			syslog( LOG_NOTICE, "%s", msgBuffPeek( data->msg, _curmsg )->msg );
 		}
 		_curmsg++;
 	}

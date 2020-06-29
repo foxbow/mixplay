@@ -20,6 +20,7 @@
 #include "player.h"
 #include "config.h"
 #include "mpinit.h"
+#include "mpcomm.h"
 
 static pthread_mutex_t _pcmdlock=PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t _asynclock=PTHREAD_MUTEX_INITIALIZER;
@@ -392,7 +393,7 @@ static void *plCheckDoublets( void *arg ) {
 	pthread_mutex_t *lock=(pthread_mutex_t *) arg;
 	int i;
 
-	progressStart( "Checking for doublets.." );
+	addMessage(0,  "Checking for doublets.." );
 	/* update database with current playcount etc */
 	if( control->dbDirty > 0 ) {
 		dbWrite( );
@@ -407,7 +408,7 @@ static void *plCheckDoublets( void *arg ) {
 	else {
 		addMessage( 0, "No doublets found" );
 	}
-	progressEnd( );
+	unlockClient(-1);
 	pthread_mutex_unlock( lock );
 	return NULL;
 }
@@ -416,7 +417,7 @@ static void *plDbClean( void *arg ) {
 	mpconfig_t *control=getConfig();
 	pthread_mutex_t *lock=(pthread_mutex_t *) arg;
 	int i;
-	progressStart( "Database Cleanup" );
+	addMessage(0,  "Database Cleanup" );
 
 	/* update database with current playcount etc */
 	if( control->dbDirty ) {
@@ -445,7 +446,7 @@ static void *plDbClean( void *arg ) {
 		addMessage( 0, "No titles to be added" );
 	}
 
-	progressEnd( );
+	unlockClient(-1);
 	pthread_mutex_unlock( lock );;
 	return NULL;
 }
@@ -454,10 +455,10 @@ static void *plDbFix( void *arg ) {
 	mpconfig_t *control=getConfig();
 	pthread_mutex_t *lock=(pthread_mutex_t *) arg;
 
-	progressStart( "Database smooth" );
+	addMessage(0,  "Database smooth" );
 	addMessage( 0, "Music dir: %s", control->musicdir );
 	dumpInfo( control->root, 1 );
-	progressEnd();
+	unlockClient(-1);
 	pthread_mutex_unlock( lock );;
 	return NULL;
 }
@@ -466,10 +467,10 @@ static void *plDbInfo( void *arg ) {
 	mpconfig_t *control=getConfig();
 	pthread_mutex_t *lock=(pthread_mutex_t *) arg;
 
-	progressStart( "Database Info" );
+	addMessage(0,  "Database Info" );
 	addMessage( 0, "Music dir: %s", control->musicdir );
 	dumpInfo( control->root, 0 );
-	progressEnd();
+	unlockClient(-1);
 	pthread_mutex_unlock( lock );;
 	return NULL;
 }

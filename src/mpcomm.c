@@ -31,11 +31,11 @@ static int _curclient=-1;
 int setCurClient( int client ) {
 	if( pthread_mutex_trylock( &_clientlock ) == EBUSY ) {
 		if( _curclient == client ) {
-			addMessage( 2, "Client %i is already locked!", client );
+			addMessage( 1, "Client %i is already locked!", client );
 			return client;
 		}
 		else {
-			addMessage( 2, "Client %i is blocked by %i!", client, _curclient );
+			addMessage( 1, "Client %i is blocked by %i!", client, _curclient );
 		}
 		return -1;
 	}
@@ -48,6 +48,10 @@ int isCurClient( int client ) {
 	return( _curclient == client );
 }
 
+int getCurClient() {
+	return _curclient;
+}
+
 /*
  * sends all next messages to every client and allows other clients
  * to lock the messages
@@ -55,6 +59,12 @@ int isCurClient( int client ) {
  * call to avoid a deadlock.
  */
 void unlockClient( int client ) {
+	/* a little nasty but needed to end progress when it's unknown which client
+	   is the current one */
+	if( client == -1 ) {
+		client = _curclient;
+	}
+
 	if( client == _curclient ) {
 		_curclient=-1;
 		addMessage( 1, "Unlocking %i", client );
@@ -151,13 +161,14 @@ static jsonObject *jsonAddList( jsonObject *jo, const char *key, marklist_t *lis
  * put data to be sent over into the buff
  * adds messages only if any are available for the client
 **/
-char *serializeStatus( unsigned long *count, int clientid, int type ) {
+char *serializeStatus( int clientid, int type ) {
 	mpconfig_t *data=getConfig();
 	jsonObject *jo=NULL;
 	mpplaylist_t *current=data->current;
 	char *rv=NULL;
 	char *err=NULL;
-	const char *msgline;
+	const clmessage *msg=NULL;
+	char *msgline=NULL;
 
 	jo=jsonAddInt( jo, "type", type );
 
@@ -204,39 +215,25 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 	jsonAddBool( jo, "fpcurrent", data->fpcurrent );
   jsonAddInt( jo, "clientid", clientid );
 	/* broadcast */
-	if( _curclient == -1 ) {
-		if( *count < data->msg->count ) {
-			jsonAddStr( jo, "msg", msgBuffPeek( data->msg, *count ) );
-			*count=(*count)+1;
-		}
-		else {
-			jsonAddStr( jo, "msg", "" );
-		}
-	}
-	/* direct send */
-	else if( clientid == _curclient ) {
-		if( *count < data->msg->count ) {
-			/* alerts are disruptive */
-			msgline=msgBuffPeek( data->msg, *count );
-			if( strstr( msgline, "ALERT:" ) == msgline ) {
-				unlockClient( clientid );
+
+	if( clientid > 0 ) {
+		if( getMsgCnt(clientid) < data->msg->count ) {
+			msg=msgBuffPeek( data->msg, getMsgCnt(clientid) );
+			incMsgCnt(clientid);
+			if( (msg->cid == clientid) || (msg->cid == -1) ) {
+				msgline=msg->msg;
+				if( strstr( msg->msg, "ALERT:" ) == msg->msg ) {
+					unlockClient( clientid );
+				}
 			}
-			jsonAddStr( jo, "msg", msgline );
-			(*count)++;
-		}
-		else {
-			jsonAddStr( jo, "msg", "" );
 		}
 	}
-	/* not for the current client */
-	else {
-		(*count)=getConfig()->msg->count;
-		jsonAddStr( jo, "msg", "" );
-	}
+
+	jsonAddStr( jo, "msg", msgline?msgline:"" );
 
 	err=jsonGetError(jo);
 	if( err != NULL ) {
-		addMessage(1,"%s",err);
+		addMessage(-1,"%s",err);
 		sfree(&err);
 		jsonDiscard(jo);
 		return NULL;
@@ -245,7 +242,7 @@ char *serializeStatus( unsigned long *count, int clientid, int type ) {
 	rv=jsonToString( jo );
 	err=jsonGetError(jo);
 	if( err != NULL ) {
-		addMessage(1,"%s",err);
+		addMessage(-1,"%s",err);
 		sfree(&rv);
 		sfree(&err);
 		jsonDiscard(jo);
