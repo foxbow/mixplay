@@ -186,6 +186,7 @@ static char *sendRequest( clientInfo* usefd, const char *path ) {
 clientInfo *getConnection( int keep ) {
 	struct sockaddr_in server;
 	int fd;
+	int cid=0;
 	clientInfo *ci;
 	jsonObject *jo=NULL;
 
@@ -216,7 +217,10 @@ clientInfo *getConnection( int keep ) {
 			ci->fd=-3;
 		}
 		else {
-			ci->clientid=jsonGetInt(jo, "clientid");
+			cid=jsonGetInt(jo, "clientid");
+			if( cid > 0) {
+				ci->clientid=cid;
+			}
 			jo=jsonDiscard(jo);
 		}
 	}

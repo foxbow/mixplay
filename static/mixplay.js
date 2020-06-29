@@ -1192,7 +1192,7 @@ function playerUpdate (data) {
     }
   }
 
-  if (clientid !== data.clientid) {
+  if ((data.clientid > 0) && (clientid !== data.clientid)) {
     clientid = data.clientid
     addText('Client ID: ' + clientid)
   }

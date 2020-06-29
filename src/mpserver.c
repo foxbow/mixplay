@@ -173,7 +173,6 @@ static void *clientHandler(void *args ) {
 	int fullstat=MPCOMM_STAT;
 	int okreply=1;
 	int index=0;
-	int tc=0;
 	mptitle_t *title=NULL;
 	struct stat sbuf;
 	/* for search polling */
@@ -199,25 +198,31 @@ static void *clientHandler(void *args ) {
 		FD_ZERO( &fds );
 		FD_SET( sock, &fds );
 
-		to.tv_sec=1;
+		to.tv_sec=5;
 		to.tv_usec=0;
 		if( select( FD_SETSIZE, &fds, NULL, NULL, &to ) < 1) {
-			/* A client can close a socket but we may not necessarily notice it.
-				 So if the select 'fails' ten times in a row, we consider the
-				 connection dead and clean it up. Usually this translates to 10
-				 seconds of idle, but may also mean 10 signal interruptions. But
-				 rather restart a thread once too often than have it unterminated
-				 until process death.
-				 SO_KEEPALIVE and getsockopt() could probably make sure but both
-				 may introduce deadlocks so we're using the dumb approach here */
-			if( ++tc > 9 ) {
-				addMessage(1, "Reaping dead connection (%i)", sock);
-				running&=~CL_RUN;
+			switch(errno) {
+				case EINTR:
+					addMessage(1, "select(%i): Interrupt", clientid);
+				break;
+				case EBADF:
+					addMessage(1, "select(%i): Dead Socket", clientid);
+					running&=~CL_RUN;
+				break;
+				case EINVAL:
+					addMessage(1, "Invalid fds on %i", clientid);
+					running&=~CL_RUN;
+				break;
+				case ENOMEM:
+					addMessage(1, "select(%i): No memory", clientid);
+					running&=~CL_RUN;
+				break;
+				default:
+					addMessage(1, "Reaping dead connection (%i)", clientid );
+					running&=~CL_RUN;
 			}
 		}
-		else {
-			tc=0;
-		}
+
 		if( FD_ISSET( sock, &fds ) ) {
 			memset( commdata, 0, commsize );
 			recvd=0;
@@ -291,9 +296,10 @@ static void *clientHandler(void *args ) {
 							if (trylockClient(reqInfo.clientid)) {
 								/* No, become new update handler */
 								running|=CL_UPD;
+								clientid=reqInfo.clientid;
 								addMessage( 1, "Resurrect Update Handler for %i", reqInfo.clientid );
 							}
-							clientid=reqInfo.clientid;
+							/* weird, check later if this is an update request */
 						}
 					}
 
@@ -318,15 +324,12 @@ static void *clientHandler(void *args ) {
 						reqInfo.clientid=clientid;
 					}
 
-					/* Client mix-up? */
-					if( (reqInfo.clientid > 0 ) &&
-							(clientid != reqInfo.clientid) ) {
-						addMessage(0, "Client %i on client %i's handler!?", reqInfo.clientid, clientid);
-					}
-
 					if( clientid == 0 ) {
 						addMessage(1, "One shot request");
 						running=CL_ONE;
+					} else if( (reqInfo.clientid > 0 ) &&
+										(clientid != reqInfo.clientid) ) {
+						addMessage(0, "Client %i on client %i's handler!?", reqInfo.clientid, clientid);
 					}
 
 					if( end == NULL ) {
@@ -348,6 +351,15 @@ static void *clientHandler(void *args ) {
 							state=1;
 							fullstat|=reqInfo.cmd;
 							addMessage(2,"Statusrequest: %i", fullstat);
+							/* a new update client came in with a clientid that is in-use */
+							if( clientid == 0 ) {
+								clientid=getFreeClient();
+								addMessage( 1, "Update Handler for client %i switched to %i",
+										reqInfo.clientid, clientid );
+								running=CL_RUN|CL_UPD;
+								reqInfo.clientid=clientid;
+								addNotify(clientid, MPCOMM_TITLES);
+							}
 						}
 						else if( strstr( pos, "/title/" ) == pos ) {
 							pos+=7;
