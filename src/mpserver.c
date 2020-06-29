@@ -295,7 +295,8 @@ static void *clientHandler(void *args ) {
 								/* No, become new update handler */
 								running|=CL_UPD;
 								clientid=reqInfo.clientid;
-								initMsgCnt(clientid);
+								/* no initMsgCnt(clientid); as this may still be correct */
+								addNotify(clientid, MPCOMM_TITLES);
 								addMessage( 1, "Resurrect Update Handler for %i", reqInfo.clientid );
 							}
 							/* weird, check later if this is an update request */
@@ -308,11 +309,12 @@ static void *clientHandler(void *args ) {
 							reqInfo.clientid=getFreeClient();
 							running|=CL_UPD;
 							clientid=reqInfo.clientid;
+							initMsgCnt(clientid);
 							addNotify(clientid, MPCOMM_TITLES);
 							addMessage( 1, "Update Handler for client %i initialized", clientid );
 						} else {
 							/* hopefully just a race condition ... */
-							addMessage( 2, "Duplicate ID request for client %i", clientid);
+							addMessage( 1, "Duplicate ID request for client %i", clientid);
 							reqInfo.clientid = clientid;
 						}
 					}
@@ -357,6 +359,7 @@ static void *clientHandler(void *args ) {
 										reqInfo.clientid, clientid );
 								running=CL_RUN|CL_UPD;
 								reqInfo.clientid=clientid;
+								initMsgCnt(clientid);
 								addNotify(clientid, MPCOMM_TITLES);
 							}
 						}

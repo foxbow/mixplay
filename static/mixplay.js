@@ -430,7 +430,7 @@ function addText (text) {
   var line = ''
   var numlines = 10
   var b = document.getElementById('cextra2')
-  if (b.className === 'inactive') {
+  if ((text.charAt(0) !== '+') && (b.className === 'inactive')) {
     b.className = 'alert'
   }
 
@@ -1194,7 +1194,7 @@ function playerUpdate (data) {
 
   if ((data.clientid > 0) && (clientid !== data.clientid)) {
     clientid = data.clientid
-    addText('Client ID: ' + clientid)
+    addText('+Client ID: ' + clientid)
   }
 
   favplay = data.mpfavplay
