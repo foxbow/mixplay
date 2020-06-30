@@ -579,8 +579,8 @@ function sendCMDArg (cmd, arg) {
     }
   }
 
-  var json = JSON.stringify({ cmd: cmd, arg: arg, clientid: clientid })
-  console.log('req: ' + json)
+  /* cmds are one-shots, so clientid is 0 */
+  var json = JSON.stringify({ cmd: cmd, arg: arg, clientid: 0 })
 
   xmlhttp.open('POST', '/mpctrl/cmd?' + json)
   xmlhttp.send()
@@ -1332,7 +1332,9 @@ function updateUI () {
   if (cmdtosend !== '') {
     /* snchronous command */
     json = JSON.stringify({ cmd: cmdtosend, arg: argtosend, clientid: clientid })
-    console.log('areq: ' + json)
+    if (debug) {
+      console.log('areq: ' + json)
+    }
     xmlhttp.open('POST', '/mpctrl/cmd?' + json)
     cmdtosend = ''
     argtosend = ''
