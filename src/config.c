@@ -624,32 +624,30 @@ void activity( int v, const char *msg, ... ) {
 	int pos=0;
 	int i;
 	va_list args;
+	char newact[MP_ACTLEN]="";
 
 	va_start( args, msg );
-	vsnprintf( _curact, MP_ACTLEN, msg, args );
+	vsnprintf( newact, MP_ACTLEN, msg, args );
 	va_end( args );
 
-	for( i=strlen(_curact); i < (MP_ACTLEN-1); i++ ){
-		_curact[i]=' ';
+	for( i=strlen(newact); i < (MP_ACTLEN-1); i++ ){
+		newact[i]=' ';
 	}
 	_curact[MP_ACTLEN-1]=0;
 	/* _ftrpos is unsigned so an overflow does not cause issues later */
 	++_ftrpos;
 
-	/* update the UI to follow activity */
-	if ( _ftrpos % 500 == 0 ) {
-		/* fetch title info - see jsonAddTitle() */
+	/* add a message for dbinfo et.al. */
+	if(strcmp(newact, _curact)) {
+		strcpy(_curact, newact);
+		/* All notifications so far sucked one way or the other.. */
 		if( playerIsInactive() ) {
-			notifyChange(MPCOMM_TITLES);
-		}
-		/* add a message for dbinfo et.al. */
-		else if( _ftrpos % 1000 == 0 ){
-			addMessage(v, "%s", _curact);
+			addMessage(v, "%s", newact);
 		}
 	}
 
 	if ( ( v < getDebug() ) && ( _ftrpos % 100 == 0 ) ){
-		printf( "%c %s\r", roller[pos], _curact );
+		printf( "%c %s\r", roller[pos], newact );
 		fflush( stdout );
 		pos=(pos+1)%4;
 	}

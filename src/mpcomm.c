@@ -103,12 +103,7 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplayli
 		val=jsonAddInt( NULL, "key", title->key );
 		jsonAddStr( val, "artist", title->artist );
 		jsonAddStr( val, "album", title->album );
-		if(playerIsInactive()) {
-			jsonAddStr( val, "title", getCurrentActivity() );
-		}
-		else {
-			jsonAddStr( val, "title", title->title );
-		}
+		jsonAddStr( val, "title", title->title );
 		jsonAddInt( val, "flags", title->flags );
 		jsonAddStr( val, "genre", title->genre );
 		jsonAddInt( val, "favpcount", title->favpcount );

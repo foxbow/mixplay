@@ -581,6 +581,9 @@ function sendCMDArg (cmd, arg) {
 
   /* cmds are one-shots, so clientid is 0 */
   var json = JSON.stringify({ cmd: cmd, arg: arg, clientid: 0 })
+  if (debug) {
+    console.log('oreq: ' + json)
+  }
 
   xmlhttp.open('POST', '/mpctrl/cmd?' + json)
   xmlhttp.send()
@@ -1264,6 +1267,7 @@ function playerUpdate (data) {
   if (data.msg !== '') {
     if (data.msg.startsWith('ALERT:')) {
       addText('* ' + data.msg.substring(6))
+      switchView(2)
     } else {
       addText(data.msg)
     }
@@ -1341,10 +1345,16 @@ function updateUI () {
   } else {
     if (doUpdate >= 0) {
       json = JSON.stringify({ cmd: doUpdate, clientid: clientid })
+      if (debug) {
+        console.log('ureq: ' + json)
+      }
       doUpdate = 0
     } else {
       clientid = -1
       json = JSON.stringify({ cmd: 0, clientid: clientid })
+      if (debug) {
+        console.log('rreq: ' + json)
+      }
     }
     xmlhttp.open('GET', '/mpctrl/status?' + json, true)
   }
