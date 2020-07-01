@@ -203,6 +203,7 @@ char *serializeStatus( int clientid, int type ) {
 		jsonAddStrs( jo, "stream", data->stream, data->streams );
 		jsonAddStrs( jo, "sname", data->sname, data->streams );
 		jsonAddInt( jo, "sleepto", data->sleepto );
+		jsonAddInt( jo, "debug", getDebug() );
 	}
 	jsonAddInt( jo, "active", data->active );
 	jsonAddInt( jo, "playtime", data->playtime );

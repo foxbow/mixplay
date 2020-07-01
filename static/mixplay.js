@@ -1193,8 +1193,10 @@ function playerUpdate (data) {
   }
 
   if ((data.clientid > 0) && (clientid !== data.clientid)) {
+    if (debug) {
+      addText('Client ID from ' + clientid + ' to ' + data.clientid)
+    }
     clientid = data.clientid
-    addText('+Client ID: ' + clientid)
   }
 
   favplay = data.mpfavplay
@@ -1409,6 +1411,10 @@ function updateConfig (data) {
     setElement('active', 'No active profile/channel')
   }
   idlesleep = data.sleepto * 1000
+
+  if (data.debug && !debug) {
+    toggleDebug()
+  }
 }
 
 /*
@@ -1535,6 +1541,17 @@ function blockSpace (event) {
   }
 }
 
+function toggleDebug () {
+  debug = !debug
+  if (debug) {
+    addText('ClientID: ' + clientid)
+    setElement('debug', 'Disable Debug')
+  } else {
+    setElement('debug', 'Enable Debug')
+  }
+  doUpdate = 1
+}
+
 function handleKey (event) {
   var prevent = 1
   /* only do this if the main or playlist view is visible! */
@@ -1574,8 +1591,7 @@ function handleKey (event) {
       pwSendCMD('Mark doublets?', 0x0b)
       break
     case 'G':
-      debug = !debug
-      doUpdate = 1
+      toggleDebug()
       break
     default:
       prevent = 0
