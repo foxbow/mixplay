@@ -28,6 +28,7 @@ var kbddiv
 var kbdcurrent
 var kbdokay = function () {}
 var clientid = -1
+var upactive = 1
 
 function sendKey (key) {
   const e = document.getElementById('kbdtext')
@@ -1284,6 +1285,7 @@ function updateUI () {
   var xmlhttp = new window.XMLHttpRequest()
   var json
 
+  upactive = 0
   xmlhttp.onreadystatechange = function () {
     var data
     if (xmlhttp.readyState === 4) {
@@ -1331,7 +1333,12 @@ function updateUI () {
       if (doUpdate < 0) {
         document.body.className = 'disconnect'
       }
-      setTimeout(function () { updateUI() }, toval)
+      if (!upactive) {
+        upactive = 1
+        setTimeout(function () { updateUI() }, toval)
+      } else {
+        addText('Too many updates!')
+      }
     }
   }
 

@@ -298,10 +298,11 @@ static void *clientHandler(void *args ) {
 								/* no initMsgCnt(clientid); as this may still be correct */
 								addNotify(clientid, MPCOMM_TITLES);
 								addMessage( 1, "Resurrect Update Handler for %i", reqInfo.clientid );
+							} else {
+								/* treat as one-shot for now */
+								running = CL_ONE;
+								addMessage( 1, "Temporary one-shot for %i", reqInfo.clientid );
 							}
-							/* treat as one-shot for now */
-							running = CL_ONE;
-							addMessage( 1, "Temporary one-shot for %i", reqInfo.clientid );
 						}
 					}
 
