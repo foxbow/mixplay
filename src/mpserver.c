@@ -290,16 +290,18 @@ static void *clientHandler(void *args ) {
 					if(reqInfo.clientid > 0) {
 						/* but the handler is free */
 						if (clientid == 0) {
+							clientid=reqInfo.clientid;
 							/* is the original handler still active? */
 							if (trylockClient(reqInfo.clientid)) {
 								/* No, become new update handler */
 								running|=CL_UPD;
-								clientid=reqInfo.clientid;
 								/* no initMsgCnt(clientid); as this may still be correct */
 								addNotify(clientid, MPCOMM_TITLES);
 								addMessage( 1, "Resurrect Update Handler for %i", reqInfo.clientid );
 							}
-							/* weird, check later if this is an update request */
+							/* treat as one-shot for now */
+							running = CL_ONE;
+							addMessage( 1, "Temporary one-shot for %i", reqInfo.clientid );
 						}
 					}
 
@@ -352,16 +354,6 @@ static void *clientHandler(void *args ) {
 							state=1;
 							fullstat|=reqInfo.cmd;
 							addMessage(2,"Statusrequest: %i", fullstat);
-							/* a new update client came in with a clientid that is in-use */
-							if( clientid == 0 ) {
-								clientid=getFreeClient();
-								addMessage( 1, "Update Handler for client %i switched to %i",
-										reqInfo.clientid, clientid );
-								running=CL_RUN|CL_UPD;
-								reqInfo.clientid=clientid;
-								initMsgCnt(clientid);
-								addNotify(clientid, MPCOMM_TITLES);
-							}
 						}
 						else if( strstr( pos, "/title/" ) == pos ) {
 							pos+=7;

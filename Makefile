@@ -18,17 +18,8 @@ HCOBJS=$(CLOBJS) $(addprefix $(OBJDIR)/,mphid.o)
 
 SCLIBS=-lX11 -lXext -lpthread
 
-EPOBJS=$(CLOBJS) $(addprefix $(ODBJDIR)/,mpepa.o epasupp.o mpclient.o)
-EPLIBS=-lwiringPi
-
 LIBS=-lmpg123 -lpthread -lm
 REFS=alsa
-
-# build with 2.7" ePaper support ?
-#ifeq ("$(shell dpkg -l wiringpi 2> /dev/null > /dev/null; echo $$?)","0")
-#else
-#$(info WiringPi is not installed, disabling ePaper support )
-#endif
 
 # Install globally when called as root
 ifeq ("$(shell id -un)","root")
@@ -42,16 +33,17 @@ endif
 LIBS+=$(shell pkg-config --libs $(REFS))
 CCFLAGS+=$(shell pkg-config --cflags $(REFS))
 
-all: $(OBJDIR)/dep.d bin/mixplayd bin/mprcinit bin/mixplay-hid
+all: server clients
 
-coverity: $(OBJDIR)/dep.d bin/mixplayd bin/mprcinit bin/mixplay-hid bin/mixplay-scr
+server: $(OBJDIR)/dep.d bin/mixplayd bin/mprcinit
+
+clients: $(OBJDIR)/dep.d bin/mixplay-hid bin/mixplay-scr
 
 clean:
-	rm -f $(OBJDIR)/*
+	rm -f $(OBJDIR)/[!R]*
 	rm -f bin/mixplayd
 	rm -f bin/mixplay-*
 	rm -f bin/mprcinit
-	touch $(OBJDIR)/KEEPDIR
 
 distclean: clean
 	rm -f static/*~
@@ -60,6 +52,8 @@ distclean: clean
 	rm -f $(SRCDIR)/mixplayd_*.h
 	rm -f $(SRCDIR)/mpplayer_*.h
 	rm -f $(SRCDIR)/*~
+	rm -rf cov-int
+	rm -rf *cov.tgz
 	rm -f mixplayd
 	rm -f mixplay-hid
 	rm -f mprcinit
@@ -77,9 +71,6 @@ bin/mixplay-hid: $(OBJDIR)/mixplay-hid.o $(HCOBJS)
 
 bin/mixplay-scr: $(OBJDIR)/mixplay-scr.o $(CLOBJS)
 	$(CC) $^ -o $@ $(SCLIBS)
-
-bin/mixplay-epa: $(OBJDIR)/mixplay-epa.o $(EPOBJS)
-	$(CC) $^ -o $@ $(EPLIBS)
 
 bin/mprcinit: $(OBJDIR)/mprcinit.o $(OBJS)
 	$(CC) $^ -o $@ $(LIBS)
