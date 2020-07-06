@@ -129,15 +129,18 @@ static jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mpplaylist_t 
 	jsonObject *jsonTitle=NULL;
 
 	jo=jsonInitArr( jo, key );
-	while( pl != NULL ) {
-		jsonTitle=jsonAddTitle( NULL, "title", pl );
-		jsonAddArrElement( jo, jsonTitle, json_object );
-		if( dir < 0 ) {
-			pl=pl->prev;
+	if( pthread_mutex_trylock( &(getConfig()->pllock) ) != EBUSY ) {
+		while( pl != NULL ) {
+			jsonTitle=jsonAddTitle( NULL, "title", pl );
+			jsonAddArrElement( jo, jsonTitle, json_object );
+			if( dir < 0 ) {
+				pl=pl->prev;
+			}
+			else {
+				pl=pl->next;
+			}
 		}
-		else {
-			pl=pl->next;
-		}
+		pthread_mutex_unlock( &(getConfig()->pllock) );
 	}
 
 	return jo;

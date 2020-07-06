@@ -168,6 +168,7 @@ typedef struct {
 	unsigned client[MAXCLIENT];		/* glabal clientID marker */
 	unsigned notify[MAXCLIENT];		/* next state per client */
 	unsigned long msgcnt[MAXCLIENT];
+	pthread_mutex_t pllock;
 } mpconfig_t;
 
 /* message request types */

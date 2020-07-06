@@ -20,8 +20,6 @@
 #include "mpgutils.h"
 #include "utils.h"
 
-static pthread_mutex_t _pllock=PTHREAD_MUTEX_INITIALIZER;
-
 static char ARTIST_SAMPLER[]="Various";
 /*
  * checks if pat has a matching in text. If text is shorter than pat then
@@ -707,7 +705,7 @@ void applyLists( int clean ) {
 	mpconfig_t *control=getConfig();
 	mptitle_t *title = control->root;
 
-	pthread_mutex_lock( &_pllock );
+	pthread_mutex_lock( &(getConfig()->pllock) );
 	if( clean ) {
 		do {
 			title->flags&=~(MP_FAV|MP_DNP);
@@ -717,7 +715,7 @@ void applyLists( int clean ) {
 	applyFAVlist( control->favlist, getFavplay() );
 	applyDNPlist( control->dbllist );
 	applyDNPlist( control->dnplist );
-	pthread_mutex_unlock( &_pllock );
+	pthread_mutex_unlock( &(getConfig()->pllock) );
 	notifyChange(MPCOMM_LISTS);
 }
 
@@ -1242,6 +1240,18 @@ static mptitle_t *skipTitles( mptitle_t *current, long num ) {
 	return current;
 }
 
+static char flagToChar( int flag ) {
+	if( flag & MP_DNP ) {
+		return 'D';
+	} else if( flag & MP_FAV ) {
+		return 'F';
+	} else if( flag & MP_MARK ) {
+		return '+';
+	} else {
+		return '-';
+	}
+}
+
 /**
  * adds a new title to the current playlist
  *
@@ -1369,9 +1379,9 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 		}
 	} /* while( valid != 3 ) */
 
-	addMessage( 1, "[+] (%i/%i/%3s) %5d %s",
+	addMessage( 1, "[+] (%i/%i/%c) %5d %s",
 			(runner->flags&MP_FAV)?runner->favpcount:runner->playcount, pcount,
-			ONOFF( runner->flags&MP_FAV ), runner->key, runner->display );
+			flagToChar( runner->flags ), runner->key, runner->display );
 
 	/* count again in case this is a favourite */
 	return appendToPL( runner, pl, -1 );
@@ -1420,7 +1430,7 @@ void plCheck( int del ) {
 		cnt=0;
 		pl=getConfig()->current;
 		/* make sure the playlist is not modifid elsewhere right now */
-		pthread_mutex_lock( &_pllock );
+		pthread_mutex_lock( &(getConfig()->pllock) );
 
 		/* rewind to the start of the list */
 		if ( del != 0 ) {
@@ -1465,7 +1475,7 @@ void plCheck( int del ) {
 				pl=pl->next;
 			}
 		}
-		pthread_mutex_unlock( &_pllock );
+		pthread_mutex_unlock( &(getConfig()->pllock) );
 
 		/* Done cleaning, now start pruning */
 		/* truncate playlist title history to 10 titles */

@@ -6,16 +6,9 @@
 #include <string.h>
 #include <stdio.h>
 
-#define ONOFF(x) (x)?"ON":"OFF"
-
 #define F_FAIL -1
 
-#ifndef MAX
-#define MAX(x,y) ((x)>(y)?(x):(y))
-#endif
-#ifndef MIN
-#define MIN(x,y) ((x)<(y)?(x):(y))
-#endif
+#define MIN(a,b) (((a)<(b))?(a):(b))
 
 #define MAXPATHLEN 256
 

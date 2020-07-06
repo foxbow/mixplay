@@ -1431,7 +1431,7 @@ function updateConfig (data) {
   }
   idlesleep = data.sleepto * 1000
 
-  if (data.debug && !debug) {
+  if ((data.debug > 1) && !debug) {
     toggleDebug()
   }
 }

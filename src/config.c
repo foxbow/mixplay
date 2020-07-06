@@ -260,6 +260,7 @@ mpconfig_t *readConfig( void ) {
 	_cconfig->mpmode=PM_NONE;
 	for (i=0; i<MAXCLIENT; i++) _cconfig->client[i]=0;
 	for (i=0; i<MAXCLIENT; i++) _cconfig->notify[i]=MPCOMM_STAT;
+	pthread_mutex_init ( &(_cconfig->pllock), NULL );
 
 	snprintf( _cconfig->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", home );
 
@@ -804,6 +805,7 @@ mpplaylist_t *wipePlaylist( mpplaylist_t *pl ) {
 		pl=pl->prev;
 	}
 
+	pthread_mutex_lock( &(getConfig()->pllock) );
 	while( pl != NULL ){
 		next=pl->next;
 		if( getConfig()->root == NULL ) {
@@ -812,6 +814,7 @@ mpplaylist_t *wipePlaylist( mpplaylist_t *pl ) {
 		free(pl);
 		pl=next;
 	}
+	pthread_mutex_unlock( &(getConfig()->pllock) );
 
 	return NULL;
 }
@@ -823,6 +826,11 @@ mpplaylist_t *wipePlaylist( mpplaylist_t *pl ) {
 marklist_t *wipeList( marklist_t *root ) {
 	marklist_t *runner=root;
 
+	if( root == NULL ) {
+		return NULL;
+	}
+
+	pthread_mutex_lock( &(getConfig()->pllock) );
 	if( NULL != root ) {
 		while( runner != NULL ) {
 			root=runner->next;
@@ -830,6 +838,7 @@ marklist_t *wipeList( marklist_t *root ) {
 			runner=root;
 		}
 	}
+	pthread_mutex_unlock( &(getConfig()->pllock) );
 
 	return NULL;
 }
