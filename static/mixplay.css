@@ -31,8 +31,7 @@ body.disconnect {
 }
 
 body.pause {
-	color: #bbb;
-	background-image: radial-gradient( circle at 90% -30%, white, #444 10%, black 100%);
+	color: #844;
 }
 
 div#black {
