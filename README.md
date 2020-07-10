@@ -1,3 +1,5 @@
+![mixplay main screen](mixplay_main.png)
+
 # mixplayd
 This is the manager and player that can run headless and will just play the shuffled Music content.
 

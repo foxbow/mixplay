@@ -74,16 +74,20 @@ function createKbdKey (name, key) {
 }
 
 function initKbdDiv () {
-  var row, col, btnrow, btn
+  var row, col, btnrow, btn, element
   const e = document.getElementById('textkbd')
   if (!e) {
     window.alert('No keyboard div!')
   }
   wipeElements(e)
+  element = document.createElement('label')
+  element.innerHTML = 'Text: '
+  element.id = 'kbdhead'
   btn = document.createElement('input')
   btn.type = 'text'
   btn.id = 'kbdtext'
-  e.appendChild(btn)
+  element.appendChild(btn)
+  e.appendChild(element)
   for (row = 0; row < layout.length; row++) {
     btnrow = document.createElement('div')
     btnrow.className = 'kbdrow'
