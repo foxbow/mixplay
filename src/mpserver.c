@@ -654,6 +654,9 @@ static void *clientHandler(void *args ) {
 				}
 				if( fullstat & MPCOMM_RESULT ) {
 					config->found->state=mpsearch_idle;
+					if(clientid == 0) {
+						addMessage(0, "Search reply goes to one-shot!");
+					}
 					unlockClient(clientid);
 					/* clear result flag */
 					fullstat&=~MPCOMM_RESULT;
@@ -682,6 +685,7 @@ static void *clientHandler(void *args ) {
 
 	addMessage( 2, "Client handler exited" );
 	if( isCurClient(clientid) ){
+		addMessage(1, "Unlocking client %i", clientid );
 		unlockClient(clientid);
 	}
 	if( running & CL_SRC ) {

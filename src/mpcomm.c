@@ -221,9 +221,6 @@ char *serializeStatus( int clientid, int type ) {
 			incMsgCnt(clientid);
 			if( (msg->cid == clientid) || (msg->cid == -1) ) {
 				msgline=msg->msg;
-				if( strstr( msg->msg, "ALERT:" ) == msg->msg ) {
-					unlockClient( clientid );
-				}
 			}
 		}
 	}

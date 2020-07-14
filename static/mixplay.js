@@ -1710,6 +1710,7 @@ function clocktime () {
   if (hrs < 10) line = '0' + line
   if (min < 10) line = line + '0'
   setElement('time', '&nbsp;' + line + min + '&nbsp;')
+  setElement('black', line + min)
   setTimeout(function () { clocktime() }, 5000)
 }
 
