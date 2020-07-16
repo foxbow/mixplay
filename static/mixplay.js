@@ -1712,6 +1712,8 @@ function clocktime () {
   if (min < 10) line = line + '0'
   setElement('time', '&nbsp;' + line + min + '&nbsp;')
   setElement('idleclock', line + min)
+
+  setElement('idledate', now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))
   setTimeout(function () { clocktime() }, 5000)
 }
 
