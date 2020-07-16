@@ -925,7 +925,7 @@ int getNotify( int client ) {
 	if( (client >= 0) && (client < MAXCLIENT) ) {
 		return getConfig()->notify[client];
 	}
-	return -1;
+	return 0;
 }
 
 void setNotify( int client, int state ) {
