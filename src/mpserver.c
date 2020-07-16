@@ -353,7 +353,7 @@ static void *clientHandler(void *args ) {
 					case 1: /* GET mpcmd */
 						if( strcmp( pos, "/status" ) == 0 ) {
 							state=1;
-							fullstat|=reqInfo.cmd;
+							fullstat|=(reqInfo.cmd & ~MPCOMM_RESULT);
 							addMessage(2,"Statusrequest: %i", fullstat);
 						}
 						else if( strstr( pos, "/title/" ) == pos ) {
