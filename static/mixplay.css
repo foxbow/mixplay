@@ -31,8 +31,9 @@ body.disconnect {
 }
 
 body.pause {
-	background-image: radial-gradient( circle at 90% -30%, grey, darkgrey 2%, black 100%);
-	color: #844;
+	background: #000;
+	background-image: radial-gradient( circle at 90% -30%, #888, darkblue 2%, black 100%);
+	color: #556;
 }
 
 div#black {
@@ -43,6 +44,14 @@ div#black {
 	width: 100%;
 	text-align: center;
 	font-size: 8em;
+}
+
+div#idleclock {
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 div#textkbd {

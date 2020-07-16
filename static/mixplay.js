@@ -20,7 +20,7 @@ var swipest = []
 var overflow = 0
 var toval = 500
 var idletime = 0
-var idlesleep = 0
+var idlesleep = 10000 /* milliseconds until the clock shows up */
 var currentPop = ''
 var debug = 0
 const layout = ['1234567890', 'qwertzuiop', 'asdfghjkl\'', 'yxcvbnm-', 'XC BO']
@@ -1254,7 +1254,7 @@ function playerUpdate (data) {
     setBody('pause')
     if (idlesleep > 0) {
       if (idletime < idlesleep) {
-        idletime = idletime + toval
+        idletime += toval
       } else {
         power(0)
       }
@@ -1433,7 +1433,7 @@ function updateConfig (data) {
   } else {
     setElement('active', 'No active profile/channel')
   }
-  idlesleep = data.sleepto * 1000
+  /*  idlesleep = data.sleepto * 1000 */
 
   if ((data.debug > 1) && !debug) {
     toggleDebug()
@@ -1706,11 +1706,12 @@ function clocktime () {
   const now = new Date()
   const min = now.getMinutes()
   const hrs = now.getHours()
+
   var line = hrs + ':'
   if (hrs < 10) line = '0' + line
   if (min < 10) line = line + '0'
   setElement('time', '&nbsp;' + line + min + '&nbsp;')
-  setElement('black', line + min)
+  setElement('idleclock', line + min)
   setTimeout(function () { clocktime() }, 5000)
 }
 
@@ -1740,6 +1741,7 @@ function initializeUI () {
   addVolWheel('playpack')
   document.body.addEventListener('keypress', handleKey)
   document.body.addEventListener('keyup', blockSpace)
+  document.body.addEventListener('click', function () { power(1) })
   /* set initial tab and sizes */
   adaptUI(0)
   /* initialize scrolltext */
