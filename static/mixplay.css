@@ -52,6 +52,7 @@ div#idleclock {
   left: 50%;
   transform: translate(-50%, -40%);
 	font-size: 7em;
+	width: 100%;
 }
 
 div#idledate {
@@ -61,6 +62,7 @@ div#idledate {
   left: 50%;
   transform: translate(-50%);
 	font-size: 1.2em;
+	width: 100%;
 }
 
 div#textkbd {
