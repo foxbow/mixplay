@@ -218,9 +218,11 @@ char *serializeStatus( int clientid, int type ) {
 	if( clientid > 0 ) {
 		if( getMsgCnt(clientid) < data->msg->count ) {
 			msg=msgBuffPeek( data->msg, getMsgCnt(clientid) );
-			incMsgCnt(clientid);
-			if( (msg->cid == clientid) || (msg->cid == -1) ) {
-				msgline=msg->msg;
+			if( msg != NULL ) {
+				incMsgCnt(clientid);
+				if( (msg->cid == clientid) || (msg->cid == -1) ) {
+					msgline=msg->msg;
+				}
 			}
 		}
 	}

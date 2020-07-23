@@ -493,9 +493,7 @@ void freeConfigContents() {
 	_cconfig->streams=0;
 	sfree( (char **)&(_cconfig->stream) );
 	sfree( (char **)&(_cconfig->sname) );
-
 	sfree( (char **)&(_cconfig->channel) );
-
 	sfree( (char **)&(_cconfig->password) );
 
 	msgBuffDiscard( _cconfig->msg );
@@ -643,7 +641,7 @@ void activity( int v, const char *msg, ... ) {
 		strcpy(_curact, newact);
 		/* All notifications so far sucked one way or the other.. */
 		if( playerIsInactive() ) {
-			addMessage(v, "%s", newact);
+			addMessage(v, "ACT:%s", newact);
 		}
 	}
 

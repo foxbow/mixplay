@@ -516,7 +516,7 @@ int dbNameCheck( void ) {
 
 	currentEntry=root;
 	while( currentEntry->next != root ) {
-		activity( 1, "Namechecking - %i", count );
+		activity( 1, "Namechecking" );
 		if( !(currentEntry->flags & MP_MARK) ) {
 			runner=currentEntry->next;
 			do {

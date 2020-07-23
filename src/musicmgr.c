@@ -1548,8 +1548,7 @@ mptitle_t *recurse( char *curdir, mptitle_t *files ) {
 	}
 
 	for( i=0; i<num; i++ ) {
-		activity( 0, "Scanning %s",
-				strrchr(curdir, '/') ? strrchr(curdir, '/') : curdir );
+		activity( 0, "Scanning" );
 		sprintf( dirbuff, "%s/%s", curdir, entry[i]->d_name );
 		files=insertTitle( files, dirbuff );
 		free( entry[i] );

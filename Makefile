@@ -4,8 +4,8 @@ SRCDIR=src
 OBJDIR=build
 
 CCFLAGS+=-DVERSION=\"$(VERSION)\"
-CCFLAGS+=-std=gnu99 -Wall -Wextra -pedantic -Werror -I . -g
-#CCFLAGS+=-std=gnu99 -Wall -Wextra -Werror -pedantic -I . -O2
+CCFLAGS+=-std=gnu11 -Wall -Wextra -pedantic -Werror -I . -g
+#CCFLAGS+=-std=gnu11 -Wall -Wextra -Werror -pedantic -I . -O2
 
 OBJS=$(addprefix $(OBJDIR)/,mpserver.o utils.o musicmgr.o database.o \
   config.o mpcomm.o json.o msgbuf.o mpinit.o mphid.o mpgutils.o player.o \
