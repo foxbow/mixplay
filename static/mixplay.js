@@ -1274,7 +1274,6 @@ function playerUpdate (data) {
   if (data.msg !== '') {
     if (data.msg.startsWith('ALERT:')) {
       addText('* ' + data.msg.substring(6))
-      switchView(2)
     } else if (data.msg.startsWith('ACT:')) {
       setElement('title', '..' + data.msg.substring(4) + '..')
       adaptUI(1)

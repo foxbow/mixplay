@@ -26,5 +26,8 @@ _CAVEAT_: this *will* touch all files and *may* even destroy the collection!
 ### mpflirc.sh
 depends on 'flirc_util' to let a FLIRC adapter learn keys from a new remote control. This will just get FLIRC to recognize the keypresses but does nt mean the mixplay knows about this. 'mprcinit' is still needed to connect mixplay and FLIRC. This is not needed if the FLIRC adapter already 'knows' the remote.
 
+### mpstream.sh
+depends on 'VLC' and will stream the current audio on port 2348. This is very experimental and suffers a lack of tagging as well as several seconds lag. But it works for now..
+
 ### valgrind.sh
 depends on 'valgrind' to run a memory check on mixplay running in simple debug mode.
