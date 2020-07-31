@@ -44,6 +44,7 @@ int setMPPort( int port ) {
 	return 0;
 }
 
+/* this is misleading! host is an IP address.. */
 int setMPHost( const char *host ) {
 	if( strlen(host) > 16 ) {
 		return -1;
@@ -62,6 +63,7 @@ static char *sendRequest( clientInfo* usefd, const char *path ) {
 	char *rdata=NULL;
 	char *pos;
 	size_t rlen=0;
+	size_t ilen=0;
 	size_t clen=0;
 	int rv=0;
 	fd_set fds;
@@ -113,17 +115,17 @@ static char *sendRequest( clientInfo* usefd, const char *path ) {
 	to.tv_usec=0;
 	if( select( FD_SETSIZE, &fds, NULL, NULL, &to ) > 0 ) {
 		if( FD_ISSET(ci->fd, &fds) ) {
-			reply = (char*)falloc(512,1);
 			rlen=0;
-			while( recv( ci->fd, reply+rlen, 512, MSG_DONTWAIT ) == 512 ) {
-				rlen = rlen+512;
+			do {
 				reply = (char*)frealloc( reply, rlen+512 );
-			}
-			rlen=rlen+512;
-			/* force terminate reply */
-			reply[rlen-1] = 0;
+				ilen=recv( ci->fd, reply+rlen, 512, MSG_DONTWAIT );
+				rlen = rlen+ilen;
+			} while (ilen == 512);
+			/* force 0 termination of string */
+			reply[rlen] = 0;
 		}
 		else {
+			/* no data */
 			return NULL;
 		}
 	}
@@ -145,33 +147,28 @@ static char *sendRequest( clientInfo* usefd, const char *path ) {
 
 			/* content length larger than received data */
 			if( clen > rlen ) {
-				free(reply);
 				printf("Content length mismatch!\n");
-				return NULL;
 			}
-
-			if( clen != 0 ) {
-				/* add terminating NUL */
-				clen=clen+1;
-
+			else {
 				pos = strstr(pos, "\015\012\015\012" );
 				if( pos != NULL ) {
 					pos+=4;
-
-					rdata=(char*)falloc(1, clen);
-					strtcpy( rdata, pos, clen );
+					rdata=strdup(pos);
 				}
 			}
+			free(reply);
 		}
 	}
 	else if( strstr( reply, "HTTP/1.") == reply ) {
+		/* just copy status number */
 		rdata=(char*)falloc(1,4);
 		strtcpy(rdata, reply+9, 3);
+		free(reply);
 	}
 	else {
-		rdata=strdup(reply);
+		/* raw reply without HTTP header */
+		rdata=reply;
 	}
-	free(reply);
 
 	return rdata;
 }

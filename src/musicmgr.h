@@ -11,6 +11,7 @@
 /* do not return more than 100 titles */
 #define MAXSEARCH 100
 
+/* flags */
 #define MP_FAV   1	/* Favourite */
 #define MP_DNP   2	/* do not play */
 #define MP_RSVRD 4  /* unused */
@@ -19,18 +20,18 @@
 
 typedef struct mptitle_s mptitle_t ;
 struct mptitle_s {
-	char path[MAXPATHLEN];		/* path on the filesystem to the file */
-	char artist[NAMELEN];		/* Artist info */
-	char title[NAMELEN];		/* Title info (from mp3) */
-	char album[NAMELEN];		/* Album info (from mp3) */
-	unsigned playcount;		/* play counter */
-	unsigned favpcount;		/* transient favplaycount */
-	unsigned skipcount;		/* skip counter */
+	char path[MAXPATHLEN]; /* path on the filesystem to the file */
+	char artist[NAMELEN];  /* Artist info */
+	char title[NAMELEN];   /* Title info (from mp3) */
+	char album[NAMELEN];   /* Album info (from mp3) */
+	unsigned playcount;    /* play counter */
+	unsigned favpcount;    /* transient favplaycount */
+	unsigned skipcount;    /* skip counter */
 	char genre[NAMELEN];
-	unsigned key;			/* DB key/index  - internal */
-	char display[MAXPATHLEN];	/* Title display - internal */
-	unsigned flags;			/* 1=favourite   - internal */
-	mptitle_t *prev;				/* database pointer */
+	unsigned key;             /* DB key/index  - internal */
+	char display[MAXPATHLEN]; /* Title display - internal */
+	unsigned flags;           /* FAV/DNP       - internal */
+	mptitle_t *prev;          /* database pointers */
 	mptitle_t *next;
 };
 

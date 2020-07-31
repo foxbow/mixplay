@@ -374,15 +374,11 @@ static int plsel( const struct dirent *entry ) {
  * alphabetical
  */
 static int tsort( const struct dirent **d1, const struct dirent **d2 ) {
-	int v1, v2;
-	v1= atoi( ( *d1 )->d_name );
-	v2= atoi( ( *d2 )->d_name );
-
-	if( ( v1 > 0 ) && ( v2 > 0 ) && ( v1 - v2 != 0 ) ) {
-		return( v1-v2 );
+	int res=atoi( (*d1)->d_name )-atoi((*d2)->d_name);
+	if ( res == 0 ) {
+		res=strcasecmp((*d1)->d_name, (*d2)->d_name);
 	}
-
-	return strcasecmp( ( *d1 )->d_name, ( *d2 )->d_name );
+	return res;
 }
 
 /**
@@ -408,6 +404,7 @@ static int getDirs( const char *cd, struct dirent ***dirlist ) {
 
 /*
  * matches term with pattern in search.
+ * range is only used to mark fuzzy searches!
  */
 static int isMatch( const char *term, const char *pat, const mpcmd_t range ) {
 	char loterm[MAXPATHLEN];
@@ -548,7 +545,7 @@ int search( const char *pat, const mpcmd_t range ) {
 				}
 			}
 			/* if we search for artists, also add the artist's albums */
-			if( ( MPC_EQARTIST(range) && MPC_EQARTIST(found) ) ||
+			if( ( MPC_EQARTIST(range) && MPC_ISARTIST(found) ) ||
 					( MPC_ISALBUM( range ) &&
 					isMatch( runner->album, pat, range ) ) ) {
 				if (MPC_EQALBUM(range)) {

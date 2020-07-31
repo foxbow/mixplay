@@ -110,7 +110,7 @@ static void _debugHidUpdateHook() {
 	/* has the title changed? */
 	if ( ( title != NULL ) && ( strcmp( title, _lasttitle ) != 0 ) ) {
 		strtcpy( _lasttitle, title, MAXPATHLEN );
-		hidPrintline("Now playing: %s",title);
+		hidPrintline( "%s", title );
 	}
 
 	/* has the status changed? */
@@ -124,7 +124,7 @@ static void _debugHidUpdateHook() {
 				hidPrintline("[PLAY]");
 				break;
 			default:
-				/* ignored */
+				hidPrintline("[%s]", mpcString(_last));
 				break;
 		}
 	}

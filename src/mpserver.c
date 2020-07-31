@@ -310,6 +310,11 @@ static void *clientHandler(void *args ) {
 						if( clientid == 0 ) {
 							/* a new update client! Good, that one should get status updates too! */
 							reqInfo.clientid=getFreeClient();
+							if(reqInfo.clientid == -1) {
+								/* no client - no service */
+								state=4;
+								break;
+							}
 							running|=CL_UPD;
 							clientid=reqInfo.clientid;
 							initMsgCnt(clientid);

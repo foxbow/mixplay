@@ -43,38 +43,38 @@ struct _mpfunc_t {
 static _mpfunc *_ufunc=NULL;
 
 static const char *mpccommand[] = {
-		"mpc_play",
-		"mpc_stop",
-		"mpc_prev",
-		"mpc_next",
-		"mpc_start",
-		"mpc_repl",
-		"mpc_profile",
-		"mpc_quit",
-		"mpc_dbclean",
-		"mpc_fav",
-		"mpc_dnp",
-		"mpc_doublets",
-		"mpc_insert",
-		"mpc_ivol",
-		"mpc_dvol",
-		"mpc_bskip",
-		"mpc_fskip",
-		"mpc_move",
-		"mpc_dbinfo",
-		"mpc_search",
-		"mpc_append",
-		"mpc_setvol",
-		"mpc_newprof",
-		"mpc_path",
-		"mpc_remprof",
-		"mpc_edit",
-		"mpc_deldnp",
-		"mpc_delfav",
-		"mpc_remove",
-		"mpc_mute",
-		"mpc_favplay",
-		"mpc_idle"
+	"mpc_play",
+	"mpc_stop",
+	"mpc_prev",
+	"mpc_next",
+	"mpc_start",
+	"mpc_repl",
+	"mpc_profile",
+	"mpc_quit",
+	"mpc_dbclean",
+	"mpc_fav",
+	"mpc_dnp",
+	"mpc_doublets",
+	"mpc_insert",
+	"mpc_ivol",
+	"mpc_dvol",
+	"mpc_bskip",
+	"mpc_fskip",
+	"mpc_move",
+	"mpc_dbinfo",
+	"mpc_search",
+	"mpc_append",
+	"mpc_setvol",
+	"mpc_newprof",
+	"mpc_path",
+	"mpc_remprof",
+	"mpc_edit",
+	"mpc_deldnp",
+	"mpc_delfav",
+	"mpc_remove",
+	"mpc_mute",
+	"mpc_favplay",
+	"mpc_idle"
 };
 
 static void invokeHooks( _mpfunc *hooks ){
@@ -243,7 +243,6 @@ mpconfig_t *readConfig( void ) {
 	_cconfig->command=mpc_idle;
 	_cconfig->dbname=(char*)falloc( MAXPATHLEN+1, 1 );
 	_cconfig->password=strdup("mixplay");
-	_cconfig->verbosity=0;
 	_cconfig->skipdnp=3;
 	_cconfig->sleepto=0;
 	_cconfig->debug=0;
@@ -554,11 +553,9 @@ void addMessage( int v, const char *msg, ... ) {
 		fprintf( stderr, "* %s\n", line );
 	}
 	else {
-		if( v <= getVerbosity() ) {
+		if( v <= 1 ) {
+			/* normal status messages */
 			if( _cconfig->inUI ) {
-				if( v < getDebug() ) {
-					fprintf( stderr, "\r%2i/%2i %s\n", v, getCurClient(), line );
-				}
 				/* not just a message but something important so add the ALERT:
 				   prefix for the clients */
 				if( v == -1 ) {
@@ -568,12 +565,9 @@ void addMessage( int v, const char *msg, ... ) {
 				}
 				msgBuffAdd( _cconfig->msg, line );
 			}
-			else if (getCurClient() == -1) {
-				printf( "\r%s\n", line );
-			}
 		}
-		else if( v < getDebug() ) {
-			fprintf( stderr, "\rD%i %s\n", v, line );
+		if( v < getDebug() ) {
+			fprintf( stderr, "\r%i %s\n", v, line );
 		}
 	}
 
@@ -589,17 +583,6 @@ void incDebug( void ) {
 int getDebug( void ) {
 	assert( _cconfig != NULL );
 	return _cconfig->debug;
-}
-
-int getVerbosity( void ) {
-	assert( _cconfig != NULL );
-	return _cconfig->verbosity;
-}
-
-int incVerbosity() {
-	assert( _cconfig != NULL );
-	_cconfig->verbosity++;
-	return _cconfig->verbosity;
 }
 
 /* returns true if the config is in a well defined state */
@@ -739,6 +722,7 @@ void updateUI() {
 
 /*
  * returns a pointer to a string containing a full absolute path to the file
+ * CAVEAT: This is not thread safe at all!
  */
 char *fullpath( const char *file ) {
 	static char pbuff[MAXPATHLEN+1];
@@ -894,7 +878,9 @@ int getFreeClient( void ) {
 			return i+1;
 		}
 	}
-	addMessage(-1, "Out ofd clients!");
+	/* hopefully this will never happen otherwise someone may DOS the player
+	   and spam the clients with pop-ups.. */
+	addMessage(-1, "Out of clients!");
 	return -1;
 }
 

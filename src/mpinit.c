@@ -11,7 +11,6 @@
  */
 static void printUsage( char *name ) {
 	printf( "USAGE: %s [args] [resource]\n", name );
-	printf( " -v : increase debug message level to display in app\n" );
 	printf( " -V : print curent build ID\n" );
 	printf( " -d : increase debug message level to display on console\n" );
 	printf( " -f : single channel - disable fading\n" );
@@ -139,9 +138,6 @@ int getArgs( int argc, char ** argv ){
 	/* using unsigned char c to work around getopt quirk on ARM */
 	while ( ( c = getopt( argc, argv, "vVfdFh:p:Wm" ) ) != -1 ) {
 		switch ( c ) {
-		case 'v': /* increase debug message level to display */
-			incVerbosity();
-			break;
 
 		case 'V':
 			printf("%s version %s\n", argv[0], VERSION );

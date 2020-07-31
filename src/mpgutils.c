@@ -225,7 +225,7 @@ static const char *getGenre( const unsigned char num ) {
 }
 
 /*
- * helper to filter out lines that consists only of spaces
+ * helper to filter out lines that consist only of spaces
  */
 static size_t txtlen( const char *line ) {
 	size_t ret=0;

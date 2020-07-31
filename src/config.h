@@ -145,7 +145,6 @@ typedef struct {
 	unsigned skipdnp;				/* how many skips mean dnp? */
 	int volume;					/* current volume [0..100] */
 	char *channel;				/* the name of the ALSA master channel */
-	int verbosity;
 	int debug;
 	char *streamURL;
 	msgbuf_t *msg;		/* generic message buffer */
@@ -196,8 +195,6 @@ void freeProfile( profile_t *profile );
 
 void incDebug( void );
 int getDebug( void );
-int getVerbosity( void );
-int incVerbosity( void );
 void addMessage( int v, const char *msg, ... ) __attribute__((__format__(__printf__, 2, 3)));
 #define addError(x) addMessage( 0, "%i - %s", x, strerror(x) );
 
