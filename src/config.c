@@ -553,7 +553,7 @@ void addMessage( int v, const char *msg, ... ) {
 		fprintf( stderr, "* %s\n", line );
 	}
 	else {
-		if( v <= 1 ) {
+		if( v < 1 ) {
 			/* normal status messages */
 			if( _cconfig->inUI ) {
 				/* not just a message but something important so add the ALERT:
