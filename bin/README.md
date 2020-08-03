@@ -31,3 +31,6 @@ depends on 'VLC' and will stream the current audio on port 2348. This is very ex
 
 ### valgrind.sh
 depends on 'valgrind' to run a memory check on mixplay running in simple debug mode.
+
+### coverity.sh
+creates an archive to use with coverity.

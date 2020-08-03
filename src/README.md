@@ -1,7 +1,7 @@
 # Developer info
 The communication is wrapped in simple HTTP requests and JSON replies. The command structure looks as follows
 
-cmd = 0MSR RRRR CCCC CCCC
+cmd = 0MSR RRRR 000C CCCC
 
 ### M - the 'mix' flag for playlists and the 'fuzzy' flag for searching and marking
 

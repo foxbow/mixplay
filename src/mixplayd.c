@@ -116,17 +116,7 @@ static void _debugHidUpdateHook() {
 	/* has the status changed? */
 	if( getConfig()->status != _last ) {
 		_last=getConfig()->status;
-		switch(_last) {
-			case mpc_idle:
-				hidPrintline("[PAUSE]");
-				break;
-			case mpc_play:
-				hidPrintline("[PLAY]");
-				break;
-			default:
-				hidPrintline("[%s]", mpcString(_last));
-				break;
-		}
+		hidPrintline("[%s]", mpcString(_last));
 	}
 }
 

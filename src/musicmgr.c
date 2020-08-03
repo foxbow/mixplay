@@ -20,7 +20,9 @@
 #include "mpgutils.h"
 #include "utils.h"
 
+/* Not a #define as we need the reference later */
 static char ARTIST_SAMPLER[]="Various";
+
 /*
  * checks if pat has a matching in text. If text is shorter than pat then
  * the test fails.
@@ -425,7 +427,7 @@ static int isMatch( const char *term, const char *pat, const mpcmd_t range ) {
 /*
  * checks if a title entry 'title' matches the search term 'pat'
  * the test is driven by the first two characters in the
- * search term. The first character gives the range (taLgd(p))
+ * search term. The first character gives the range (talgd(p))
  * the second character notes if the search should be
  * exact or fuzzy (=*)
  *

@@ -14,7 +14,8 @@
 #include "utils.h"
 
 /*
- * like strncpy but len is the max len of the target string, not the number of bytes to copy.
+ * like strncpy but len is the max len of the target string, not the number of
+ * bytes to copy.
  * Also the target string is always terminated with a 0 byte
  */
 size_t strtcpy( char *t,const  char *s, size_t l ) {
@@ -24,7 +25,8 @@ size_t strtcpy( char *t,const  char *s, size_t l ) {
 }
 
 /*
- * like strncat but len is the max len of the target string, not the number of bytes to copy.
+ * like strncat but len is the max len of the target string, not the number of
+ * bytes to copy.
  */
 size_t strtcat( char *t, const char *s, size_t l ) {
 	l=MIN( strlen(t)+strlen(s), l-1 )-strlen(t);
@@ -244,7 +246,7 @@ int strltcpy( char *dest, const char *src, const size_t len ) {
 }
 
 /**
- * works like strncat but turns every character to lowercase
+ * works like strtcat but turns every character to lowercase
  */
 int strltcat( char *dest, const char *src, const size_t len ) {
 	strtcat( dest, src, len );
@@ -459,7 +461,7 @@ int getEventCode( int *code, int fd, unsigned timeout, int repeat ) {
 		to.tv_usec=(timeout-(to.tv_sec * 1000))*1000;
 
 		select( FD_SETSIZE, &fds, NULL, NULL, &to );
-		/* timeout */
+		/* timeout or signal.. */
 		if( !FD_ISSET( fd, &fds ) ) {
 			return -1;
 		}

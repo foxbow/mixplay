@@ -170,7 +170,6 @@ static void *clientHandler(void *args ) {
 	static const unsigned char *fdata;
 	unsigned int flen;
 	int fullstat=MPCOMM_STAT;
-	int okreply=1;
 	int index=0;
 	mptitle_t *title=NULL;
 	struct stat sbuf;
@@ -247,10 +246,6 @@ static void *clientHandler(void *args ) {
 				method=0;
 				toLower( commdata );
 				addMessage(3, "%s", commdata);
-				/* don't send empty replies for non-web clients */
-				if( strstr( commdata, "xmixplay: 1" ) != NULL ) {
-					okreply=0;
-				}
 				end=strchr( commdata, ' ' );
 				if( end == NULL ) {
 					addMessage( 1, "Malformed request %s", commdata );
@@ -575,13 +570,8 @@ static void *clientHandler(void *args ) {
 					}
 					setCommand(cmd,reqInfo.arg?strdup(reqInfo.arg):NULL);
 				}
-				if( okreply ) {
-					sprintf( commdata, "HTTP/1.1 204 No Content\015\012\015\012" );
-					len=strlen( commdata );
-				}
-				else {
-					addMessage(1, "No reply for %i", cmd);
-				}
+				sprintf( commdata, "HTTP/1.1 204 No Content\015\012\015\012" );
+				len=strlen( commdata );
 				break;
 
 			case 3: /* unknown command */
