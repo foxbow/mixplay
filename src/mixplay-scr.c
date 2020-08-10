@@ -75,7 +75,7 @@ static int getDisplayState() {
 
 int main(){
 	jsonObject *jo=NULL;
-	int to=0;
+	int to=-6;
 	int timer=0;
 	mpcmd_t state=mpc_idle;
 	int sstate;
@@ -86,25 +86,27 @@ int main(){
 		fail(F_FAIL, "Cannot access DPMS!");
 	}
 
-	/* todo parameters: timeout, host, port */
+	if( daemon( 1, 0 ) != 0 ) {
+		fail( errno, "Could not demonize!" );
+	}
 
-	jo=getStatus(NULL, MPCOMM_CONFIG);
-	if( jsonPeek(jo, "type") == json_error ) {
-		fail(F_FAIL, "Server cannot be reached!");
+	/* todo parameters: timeout, host, port */
+	while ( to < 0 ) {
+		sleep(5);
+		jo=getStatus(NULL, MPCOMM_CONFIG);
+		if( jsonPeek(jo, "type") == json_error ) {
+			to++;
+		}
+		else {
+			to=jsonGetInt(jo,"sleepto");
+		}
+		jsonDiscard(jo);
 	}
-	else {
-		to=jsonGetInt(jo,"sleepto");
-	}
-	jsonDiscard(jo);
 
 	if( to == 0 ) {
 		fail(F_FAIL, "No timeout set, disabling screensaver!");
 	}
 	timer=to;
-
-	if( daemon( 1, 0 ) != 0 ) {
-		fail( errno, "Could not demonize!" );
-	}
 
 	while ( state != (mpc_idle+1) ) {
 		jo=getStatus(NULL, MPCOMM_STAT);

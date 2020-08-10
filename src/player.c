@@ -718,7 +718,7 @@ void *reader( void *arg ) {
 						if( outvol > 0 ) {
 							outvol--;
 							snprintf( line, MAXPATHLEN, "volume %i\n", outvol );
-							dowrite( p_command[fdset?0:1][1], line, strlen( line ) ) ;
+							dowrite( p_command[fdset?0:1][1], line, strlen( line ) );
 						}
 						break;
 					}

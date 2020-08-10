@@ -555,15 +555,15 @@ void addMessage( int v, const char *msg, ... ) {
 	else {
 		if( v < 1 ) {
 			/* normal status messages */
+			if( v == -1 ) {
+				memmove( line+6, line, MP_MSGLEN-6 );
+				memcpy( line, "ALERT:", 6 );
+				line[MP_MSGLEN]=0;
+			}
 			if( _cconfig->inUI ) {
-				/* not just a message but something important so add the ALERT:
-				   prefix for the clients */
-				if( v == -1 ) {
-					memmove( line+6, line, MP_MSGLEN-6 );
-					memcpy( line, "ALERT:", 6 );
-					line[MP_MSGLEN]=0;
-				}
 				msgBuffAdd( _cconfig->msg, line );
+			} else {
+				fprintf( stderr, "\r%s\n", line );
 			}
 		}
 		if( v < getDebug() ) {
