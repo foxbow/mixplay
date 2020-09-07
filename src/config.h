@@ -15,6 +15,7 @@
 
 #define MP_MSGLEN 512
 #define MAXCLIENT 100
+#define STREAM_TIMEOUT 9
 
 /*
  * commands and states
@@ -168,6 +169,7 @@ typedef struct {
 	unsigned notify[MAXCLIENT];		/* next state per client */
 	unsigned long msgcnt[MAXCLIENT];
 	pthread_mutex_t pllock;
+	unsigned watchdog;
 } mpconfig_t;
 
 /* message request types */

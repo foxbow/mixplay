@@ -283,7 +283,7 @@ function adaptUI (keep) {
   }
   if (overflow !== of) {
     overflow = of
-    doUpdate = 1
+    doUpdate |= 1
   }
 
   document.body.style.fontSize = fsize + 'px'
@@ -1232,7 +1232,7 @@ function playerUpdate (data) {
 
   if (active !== data.active) {
     if ((active !== 0) && (!data.type & 8)) {
-      doUpdate = 8
+      doUpdate |= 8
     }
     active = data.active
   }
@@ -1574,7 +1574,7 @@ function toggleDebug () {
   } else {
     setElement('debug', 'Enable Debug')
   }
-  doUpdate = 1
+  doUpdate |= 1
 }
 
 function handleKey (event) {

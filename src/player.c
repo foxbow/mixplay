@@ -14,6 +14,7 @@
 #include <alsa/asoundlib.h>
 #include <unistd.h>
 #include <math.h>
+#include <sys/wait.h>
 
 #include "utils.h"
 #include "database.h"
@@ -314,7 +315,7 @@ void *setProfile( void *arg ) {
 	/* profile selected */
 	else if( cactive > 0 ){
 		active=cactive-1;
-		addMessage(1,"= Playmode=%u",control->mpmode);
+		addMessage(1,"Playmode=%u",control->mpmode);
 
 		/* only load database if it has not yet been used */
 		if( !(control->mpmode & PM_DATABASE) ) {
@@ -688,6 +689,50 @@ void *reader( void *arg ) {
 		to.tv_usec=0; /* 1/10 second */
 		i=select( FD_SETSIZE, &fds, NULL, NULL, &to );
 		update=0;
+
+		/**
+		 * status is mpc_play but we did not get any updates from either player
+		 * after ten times we decide all hope is lost and we take the hard way out
+		 *
+		 * this may happen when a stream is played and the network connection
+		 * changes - most likely due to a DSL reconnect.
+		 */
+		if( (i == 0) &&
+				(control->mpmode & PM_STREAM) &&
+				(control->status == mpc_play) ) {
+			control->watchdog++;
+			if ( control->watchdog > STREAM_TIMEOUT ) {
+				addMessage(-1, "Stream player froze!");
+				control->status=mpc_idle;
+				/* ask nicely first.. */
+				for( i=0; i<=control->fade; i++) {
+					addMessage(1, "Stopping player %li", i);
+					dowrite( p_command[i][1], "QUIT\n", 5 );
+					close( p_command[i][1] );
+					close( p_status[i][0] );
+					sleep(1);
+					if( waitpid( pid[i], NULL, WNOHANG|WCONTINUED ) != pid[i] ) {
+						addMessage(1, "Terminating player %li", i);
+						kill( pid[i], SIGTERM );
+						sleep(1);
+						if( waitpid( pid[i], NULL, WNOHANG|WCONTINUED ) != pid[i] ) {
+							addMessage(1, "Killing player %li", i);
+							kill( pid[i], SIGKILL );
+							sleep(1);
+							if( waitpid( pid[i], NULL, WNOHANG|WCONTINUED ) != pid[i] ) {
+								addMessage(-1, "Could not get rid of %i!", pid[i]);
+							}
+						}
+					}
+				}
+
+				addMessage(1, "Stopping reader");
+				return NULL;
+			}
+		}
+		else {
+			control->watchdog=0;
+		}
 
 		/* drain inactive player */
 		if( control->fade && FD_ISSET( p_status[fdset?0:1][0], &fds ) ) {
@@ -1493,7 +1538,7 @@ void *reader( void *arg ) {
 	}
 
 	/* stop player(s) gracefully */
-	for( i=0; i<control->fade; i++) {
+	for( i=0; i<=control->fade; i++) {
 		dowrite( p_command[i][1], "QUIT\n", 5 );
 	}
 	addMessage( 0, "Players stopped" );

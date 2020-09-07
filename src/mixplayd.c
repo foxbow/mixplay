@@ -121,7 +121,7 @@ static void _debugHidUpdateHook() {
 }
 
 /* the most simple HID implementation for -d */
-static void debugHID( ) {
+static void *debugHID( ) {
 	int c;
 	mpconfig_t *config=getConfig();
 	mpcmd_t cmd;
@@ -143,6 +143,7 @@ static void debugHID( ) {
 			setCommand(cmd, NULL);
 		}
 	}
+	return NULL;
 }
 
 int main( int argc, char **argv ) {
@@ -152,6 +153,7 @@ int main( int argc, char **argv ) {
 	int hidfd=-1;
 	int rv=0;
 	int res=0;
+	pthread_t hidtid=0;
 
 	/* first of all check if there isn't already another instance running */
 	if( access( PIDPATH, F_OK ) == 0 ) {
@@ -258,10 +260,28 @@ int main( int argc, char **argv ) {
 
 		if( getDebug() ) {
 			addUpdateHook( &_debugHidUpdateHook );
-			debugHID();
+			pthread_create( &hidtid, NULL, debugHID, NULL );
 		}
+		/**
+		 * wait for the reader thread to terminate. If it terminated due to the
+		 * watchdog, restart it and wait again, otherwise commence shutdown.
+		 */
+		do {
+			addMessage(1, "Waiting for reader to stop");
+			pthread_join( control->rtid, NULL );
+			addMessage(1, "Reader stopped");
+			if( control->watchdog > STREAM_TIMEOUT ) {
+				addMessage(-1, "Restarting reader");
+				pthread_create( &control->rtid, NULL, reader, NULL );
+			}
+		} while (control->watchdog > STREAM_TIMEOUT );
+		addMessage(1, "Waiting for server to stop");
 		pthread_join( control->stid, NULL );
-		pthread_join( control->rtid, NULL );
+		if( hidtid > 0) {
+			addMessage(1, "Waiting for HID to stop");
+			pthread_join( hidtid, NULL );
+		}
+		addMessage(1, "Server stopped");
 		control->inUI=0;
 		if( control->changed ) {
 			writeConfig( NULL );
