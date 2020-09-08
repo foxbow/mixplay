@@ -1122,7 +1122,17 @@ void *reader( void *arg ) {
 			break;
 
 		case mpc_prev:
-			if( asyncTest() ) {
+			/* This /may/ make sense on streamlists but so far a stream has no
+			 * previous or next title */
+			if( control->mpmode & PM_STREAM ) {
+				break;
+			}
+			if( control->playtime > 2 ) {
+				dowrite( p_command[fdset][1], "JUMP 0\n", 8 );
+				control->percent=0;
+				control->playtime=0;
+			}
+			else if( asyncTest() ) {
 				order=-1;
 				if( control->argument != NULL ) {
 					order=-atoi(control->argument);
@@ -1133,6 +1143,11 @@ void *reader( void *arg ) {
 			break;
 
 		case mpc_next:
+			/* This /may/ make sense on streamlists but so far a stream has no
+			 * previous or next title */
+			if( control->mpmode & PM_STREAM ) {
+				break;
+			}
 			if( ( control->current != NULL ) && asyncTest() ) {
 				order=1;
 				if( control->argument != NULL ) {
