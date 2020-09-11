@@ -161,7 +161,6 @@ typedef struct {
 	unsigned fade:1;					/* controls fading between titles */
 	unsigned isDaemon:1;
 	unsigned inUI:1;					/* flag to show if the UI is active */
-	unsigned changed:1;
 	unsigned list:1;					/* remote playlist */
 	char *rcdev;							/* device by-id of the remote control */
 	int rccodes[MPRC_NUM];		/* command codes for the remote */

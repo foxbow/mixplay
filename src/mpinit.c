@@ -132,7 +132,7 @@ int setArgument( const char *arg ) {
  */
 int getArgs( int argc, char ** argv ){
 	mpconfig_t *config=getConfig();
-	int c;
+	int c, changed=0;
 
 	/* parse command line options */
 	/* using unsigned char c to work around getopt quirk on ARM */
@@ -165,7 +165,7 @@ int getArgs( int argc, char ** argv ){
 			break;
 
 		case 'W':
-			config->changed=1;
+			changed=1;
 			break;
 
 		case 'm':
@@ -194,7 +194,7 @@ int getArgs( int argc, char ** argv ){
 		return setArgument( argv[optind] );
 	}
 
-	if( config->changed ) {
+	if( changed ) {
 		writeConfig( NULL );
 	}
 	return 0;

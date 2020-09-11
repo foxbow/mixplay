@@ -283,9 +283,6 @@ int main( int argc, char **argv ) {
 		}
 		addMessage(1, "Server stopped");
 		control->inUI=0;
-		if( control->changed ) {
-			writeConfig( NULL );
-		}
 		addMessage( 0, "Player terminated gracefully" );
 	}
 

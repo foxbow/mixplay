@@ -1243,7 +1243,7 @@ void *reader( void *arg ) {
 							dbWrite( );
 						}
 						control->active=profile;
-						control->changed = 1;
+						writeConfig(NULL);
 						asyncRun( plSetProfile );
 						order=1;
 					}
@@ -1493,7 +1493,7 @@ void *reader( void *arg ) {
 						addMessage( 1, "Enabling Favplay");
 					}
 
-					control->changed=1;
+					writeConfig(NULL);
 					applyLists( 1 );
 
 					control->current=wipePlaylist( control->current );

@@ -251,7 +251,6 @@ mpconfig_t *readConfig( void ) {
 	_cconfig->msg->lines=0;
 	_cconfig->msg->current=0;
 	_cconfig->port=MP_PORT;
-	_cconfig->changed=0;
 	_cconfig->isDaemon=0;
 	_cconfig->fpcurrent=1;
 	_cconfig->streamURL=NULL;
@@ -436,7 +435,6 @@ void writeConfig( const char *musicpath ) {
 		}
 		fprintf( fp, "\n" );
 		fclose( fp );
-		_cconfig->changed=0;
 	}
 	else {
 		fail( errno, "Could not open %s", conffile );
