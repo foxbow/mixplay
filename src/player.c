@@ -706,17 +706,17 @@ void *reader( void *arg ) {
 				control->status=mpc_idle;
 				/* ask nicely first.. */
 				for( i=0; i<=control->fade; i++) {
-					addMessage(1, "Stopping player %li", i);
+					addMessage(1, "Stopping player %" PRId64, i);
 					dowrite( p_command[i][1], "QUIT\n", 5 );
 					close( p_command[i][1] );
 					close( p_status[i][0] );
 					sleep(1);
 					if( waitpid( pid[i], NULL, WNOHANG|WCONTINUED ) != pid[i] ) {
-						addMessage(1, "Terminating player %li", i);
+						addMessage(1, "Terminating player %" PRId64, i);
 						kill( pid[i], SIGTERM );
 						sleep(1);
 						if( waitpid( pid[i], NULL, WNOHANG|WCONTINUED ) != pid[i] ) {
-							addMessage(1, "Killing player %li", i);
+							addMessage(1, "Killing player %" PRId64, i);
 							kill( pid[i], SIGKILL );
 							sleep(1);
 							if( waitpid( pid[i], NULL, WNOHANG|WCONTINUED ) != pid[i] ) {
