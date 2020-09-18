@@ -236,13 +236,12 @@ void setCommand( mpcmd_t cmd, char *arg ) {
 	else {
 		/* someone did not clean up! */
 		if( getConfig()->argument != NULL ) {
-			addMessage( 0, "Leftover %s - ignoring %s!",
+			addMessage( 0, "Wiping leftover %s on %s!",
 					getConfig()->argument, mpcString(cmd) );
+			sfree(&(getConfig()->argument));
 		}
-		else {
-			getConfig()->command=cmd;
-			getConfig()->argument=arg;
-		}
+		getConfig()->command=cmd;
+		getConfig()->argument=arg;
 	}
 }
 

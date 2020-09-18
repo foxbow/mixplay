@@ -140,8 +140,8 @@ static int utfDecode( const char* in, char *out ) {
 	}
 
 	for(i=0; i<4; i++) {
-		unicode=unicode*16;
-		unicode=unicode+hexval(in[i]);
+		unicode=unicode << 4;
+		unicode=unicode + hexval(in[i]);
 	}
 
 	/* one byte - easy! */
@@ -175,7 +175,7 @@ static int utfDecode( const char* in, char *out ) {
 }
 
 /*
- * todo proper handling of \uXXXX
+ * todo proper testing of \uXXXX
  */
 static int jsonDecodeInto( const char *val, char *ret, size_t len ) {
 	unsigned ip=0;

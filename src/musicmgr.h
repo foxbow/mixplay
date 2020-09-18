@@ -83,7 +83,7 @@ mptitle_t *loadPlaylist( const char *path );
 mptitle_t *insertTitle( mptitle_t *base, const char *path );
 int search( const char *pat, const mpcmd_t range );
 
-void moveTitleByIndex( unsigned from, unsigned after );
+void moveTitleByIndex( unsigned from, unsigned before );
 
 void playCount( mptitle_t *title, int skip );
 void applyLists( int clean );

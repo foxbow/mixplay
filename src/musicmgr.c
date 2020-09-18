@@ -893,7 +893,7 @@ int delFromList( const mpcmd_t cmd, const char *line ) {
 static void movePLEntry( mpplaylist_t *entry, mpplaylist_t *pos ) {
 
 	if( ( entry == NULL ) || ( pos == NULL ) ||
-			(pos == entry) || ( pos->next == entry ) ) {
+			(pos == entry) || ( pos->prev == entry ) ) {
 		return;
 	}
 
@@ -906,12 +906,12 @@ static void movePLEntry( mpplaylist_t *entry, mpplaylist_t *pos ) {
 	}
 
 	/* Insert entry into new position */
-	entry->prev=pos;
-	entry->next=pos->next;
-	if( pos->next != NULL ) {
-		pos->next->prev=entry;
+	entry->next=pos;
+	entry->prev=pos->prev;
+	if( pos->prev != NULL ) {
+		pos->prev->next=entry;
 	}
-	pos->next=entry;
+	pos->prev=entry;
 
 	/* we tinkered the playlist, an update would be nice */
 	notifyChange(MPCOMM_TITLES);
@@ -957,11 +957,11 @@ static mpplaylist_t *getPLEntry( mptitle_t *title, int range ) {
  * if after is NULL the current title is chosen as title to
  * insert after.
  */
-void moveTitle( mptitle_t *from, mptitle_t *after ) {
+static void moveTitle( mptitle_t *from, mptitle_t *before ) {
 	mpplaylist_t *frompos=NULL;
 	mpplaylist_t *topos=NULL;
 
-	if ( ( from == NULL ) || ( from == after ) ) {
+	if ( ( from == NULL ) || ( from == before ) ) {
 		return;
 	}
 
@@ -975,11 +975,11 @@ void moveTitle( mptitle_t *from, mptitle_t *after ) {
 		frompos=getPLEntry( from, 1 );
 	}
 
-	if( after == NULL ) {
+	if( before == NULL ) {
 		topos=getConfig()->current;
 	}
 	else {
-		topos=getPLEntry( after, 3 );
+		topos=getPLEntry( before, 3 );
 	}
 
 	if( topos == NULL ) {
@@ -1002,11 +1002,11 @@ void moveTitle( mptitle_t *from, mptitle_t *after ) {
  * title and target are given as indices, like they would return
  * from the client.
  */
-void moveTitleByIndex( unsigned from, unsigned after ) {
+void moveTitleByIndex( unsigned from, unsigned before ) {
 	mptitle_t *frompos=NULL;
 	mptitle_t *topos=NULL;
 
-	if ( ( from == 0 ) || ( from == after ) ) {
+	if ( ( from == 0 ) || ( from == before ) ) {
 		return;
 	}
 
@@ -1016,8 +1016,8 @@ void moveTitleByIndex( unsigned from, unsigned after ) {
 		return;
 	}
 
-	if( after != 0 ) {
-		topos = getTitleByIndex( after );
+	if( before != 0 ) {
+		topos = getTitleByIndex( before );
 		if ( topos == NULL ) {
 			addMessage(0, "No target with index %u", from);
 			return;

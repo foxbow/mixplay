@@ -36,6 +36,21 @@
 #include "build/mixplayd_png.h"
 #include "build/manifest_json.h"
 
+/* the kind of request that came in */
+typedef enum {
+	req_none = 0,
+	req_update,
+	req_command,
+	req_unknown,
+	req_noservice,
+	req_file,
+	req_config,
+	req_version,
+	req_mp3,
+	req_current
+} httpstate;
+
+/* lock for fname, flen, fdata and mtype */
 static pthread_mutex_t _sendlock=PTHREAD_MUTEX_INITIALIZER;
 
 /**
@@ -55,7 +70,6 @@ static int filePost( int sock, const char *fname ) {
 	else {
 		addMessage( 0, "%s not found!", fname );
 	}
-	pthread_mutex_unlock(&_sendlock);
 	return 0;
 }
 
@@ -158,7 +172,7 @@ static void *clientHandler(void *args ) {
 	char *jsonLine=NULL;
 	fd_set fds;
 	mpconfig_t *config;
-	int state=0;
+	httpstate state=req_none;
 	char *pos, *end, *arg;
 	mpcmd_t cmd=mpc_idle;
 	static const char *mtype;
@@ -307,7 +321,7 @@ static void *clientHandler(void *args ) {
 							reqInfo.clientid=getFreeClient();
 							if(reqInfo.clientid == -1) {
 								/* no client - no service */
-								state=4;
+								state=req_noservice;
 								break;
 							}
 							running|=CL_UPD;
@@ -352,7 +366,7 @@ static void *clientHandler(void *args ) {
 				switch(method) {
 					case 1: /* GET mpcmd */
 						if( strcmp( pos, "/status" ) == 0 ) {
-							state=1;
+							state=req_update;
 							/* make sure no one asks for searchresults */
 							fullstat|=(reqInfo.cmd & ~MPCOMM_RESULT);
 							addMessage(2,"Statusrequest: %i", fullstat);
@@ -368,31 +382,31 @@ static void *clientHandler(void *args ) {
 							}
 
 							if( strstr( pos, "info " ) == pos ) {
-								state=9;
+								state=req_current;
 							}
 							else if( title != NULL ) {
 								pthread_mutex_lock(&_sendlock);
 								fname=title->path;
-								state=8;
+								state=req_mp3;
 							}
 							else {
 								send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
-								state=0;
+								state=req_none;
 								running&=~CL_RUN;
 							}
 						}
 						else if( strstr( pos, "/version " ) == pos ) {
-								state=7;
+								state=req_version;
 						}
 						else {
 							send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
-							state=0;
+							state=req_none;
 							running&=~CL_RUN;
 						}
 						break;
 					case 2: /* POST */
 						if( strstr( pos, "/cmd" ) == pos ) {
-							state = 2;
+							state = req_command;
 							cmd=(mpcmd_t)reqInfo.cmd;
 							addMessage( 1, "Got command 0x%04x - %s", cmd, mpcString(cmd) );
 							/* search is synchronous */
@@ -403,19 +417,20 @@ static void *clientHandler(void *args ) {
 									getConfig()->found->state=mpsearch_busy;
 									setCommand(cmd,reqInfo.arg?strdup(reqInfo.arg):NULL);
 									running|=CL_SRC;
-									state=1;
+									state=req_update;
 								} else {
-									state=4;
+									state=req_noservice;
 								}
 							}
 						}
 						else { /* unresolvable POST request */
 							send(sock , "HTTP/1.0 406 Not Acceptable\015\012\015\012", 31, 0);
-							state=0;
+							state=req_none;
 							running&=~CL_RUN;
 						}
 						break;
 					case 3: /* get file */
+						state=req_file;
 						if( ( strstr( pos, "/ ") == pos ) ||
 								( strstr( pos, "/index.html " ) == pos ) ) {
 							pthread_mutex_lock(&_sendlock);
@@ -423,7 +438,6 @@ static void *clientHandler(void *args ) {
 							fdata=static_mixplay_html;
 							flen=static_mixplay_html_len;
 							mtype="text/html; charset=utf-8";
-							state=5;
 						}
 						else if( ( strstr( pos, "/rc " ) == pos ) ||
 								( strstr( pos, "/rc.html " ) == pos )  ) {
@@ -432,7 +446,6 @@ static void *clientHandler(void *args ) {
 							fdata=static_mprc_html;
 							flen=static_mprc_html_len;
 							mtype="text/html; charset=utf-8";
-							state=5;
 						}
 						else if( strstr( pos, "/mixplay.css " ) == pos ) {
 							pthread_mutex_lock(&_sendlock);
@@ -440,7 +453,6 @@ static void *clientHandler(void *args ) {
 							fdata=static_mixplay_css;
 							flen=static_mixplay_css_len;
 							mtype="text/css; charset=utf-8";
-							state=5;
 						}
 						else if( strstr( pos, "/mixplay.js " ) == pos ) {
 							pthread_mutex_lock(&_sendlock);
@@ -448,7 +460,6 @@ static void *clientHandler(void *args ) {
 							fdata=static_mixplay_js;
 							flen=static_mixplay_js_len;
 							mtype="application/javascript; charset=utf-8";
-							state=5;
 						}
 						else if( strstr( pos, "/mixplay.svg " ) == pos ) {
 							pthread_mutex_lock(&_sendlock);
@@ -456,7 +467,6 @@ static void *clientHandler(void *args ) {
 							fdata=static_mixplay_svg;
 							flen=static_mixplay_svg_len;
 							mtype="image/svg+xml";
-							state=5;
 						}
 						else if( strstr( pos, "/mixplay.png " ) == pos ) {
 							pthread_mutex_lock(&_sendlock);
@@ -464,7 +474,6 @@ static void *clientHandler(void *args ) {
 							fdata=static_mixplay_png;
 							flen=static_mixplay_png_len;
 							mtype="image/png";
-							state=5;
 						}
 						else if( strstr( pos, "/mpplayer.html " ) == pos ) {
 							pthread_mutex_lock(&_sendlock);
@@ -472,7 +481,6 @@ static void *clientHandler(void *args ) {
 							fdata=static_mpplayer_html;
 							flen=static_mpplayer_html_len;
 							mtype="text/html; charset=utf-8";
-							state=5;
 						}
 						else if( strstr( pos, "/mpplayer.js " ) == pos ) {
 							pthread_mutex_lock(&_sendlock);
@@ -480,7 +488,6 @@ static void *clientHandler(void *args ) {
 							fdata=static_mpplayer_js;
 							flen=static_mpplayer_js_len;
 							mtype="application/javascript; charset=utf-8";
-							state=5;
 						}
 						else if( strstr( pos, "/manifest.json ") == pos ) {
 							pthread_mutex_lock(&_sendlock);
@@ -488,33 +495,33 @@ static void *clientHandler(void *args ) {
 							fdata=static_manifest_json;
 							flen=static_manifest_json_len;
 							mtype="application/manifest+json; charset=utf-8";
-							state=5;
 						}
 						else if( strstr( pos, "/favicon.ico " ) == pos ) {
 							/* ignore for now */
 							send( sock, "HTTP/1.1 204 No Content\015\012\015\012", 28, 0 );
-							state=0;
+							state=req_none;
 						}
 						else {
 							addMessage( 1, "Illegal get %s", pos );
 							send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
-							state=0;
+							state=req_none;
 							running&=~CL_RUN;
 						}
 						break;
 					case -1:
 						addMessage( 1, "Illegal method %s", commdata );
 						send(sock , "HTTP/1.0 405 Method Not Allowed\015\012\015\012", 35, 0);
-						state=0;
+						state=req_none;
 						running&=~CL_RUN;
 						break;
 					case -2: /* generic file not found */
 						send(sock , "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
-						state=0;
+						state=req_none;
 						running&=~CL_RUN;
 						break;
 					default:
 						addMessage(0,"Unknown method %i!", method);
+						state=req_none;
 						break;
 				} /* switch(method) */
 			} /* switch(retval) */
@@ -523,7 +530,11 @@ static void *clientHandler(void *args ) {
 		if( running ) {
 			memset( commdata, 0, commsize );
 			switch( state ) {
-			case 1: /* get update */
+			case req_none:
+				len=0;
+				break;
+
+			case req_update: /* get update */
 				/* add flags that have been set outside */
 				if( getNotify(clientid) != MPCOMM_STAT ) {
 					addMessage( 2, "Notification %i for client %i applied", getNotify(clientid), clientid );
@@ -557,7 +568,7 @@ static void *clientHandler(void *args ) {
 				}
 				break;
 
-			case 2: /* set command */
+			case req_command: /* set command */
 				if(  MPC_CMD(cmd) < mpc_idle ) {
 					/* check commands that lock the reply channel */
 					if( ( cmd == mpc_dbinfo ) || ( cmd == mpc_dbclean) ||
@@ -574,16 +585,16 @@ static void *clientHandler(void *args ) {
 				len=strlen( commdata );
 				break;
 
-			case 3: /* unknown command */
+			case req_unknown: /* unknown command */
 				sprintf( commdata, "HTTP/1.1 501 Not Implemented\015\012\015\012" );
 				len=strlen( commdata );
 				break;
 
-			case 4: /* service unavailable */
+			case req_noservice: /* service unavailable */
 				len=serviceUnavailable( commdata );
 				break;
 
-			case 5: /* send file */
+			case req_file: /* send file */
 				if( getDebug() && (stat(fname,&sbuf) == 0 )) {
 					flen=sbuf.st_size;
 					sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012Content-Length: %i;\015\012\015\012", mtype, flen );
@@ -595,26 +606,25 @@ static void *clientHandler(void *args ) {
 					send(sock , commdata, strlen(commdata), 0);
 					len=0;
 					while( len < flen ) {
-						len+=send( sock, &fdata[len], flen-len, 0 );
+						len+=send( sock, fdata+len, flen-len, 0 );
 					}
-					pthread_mutex_unlock(&_sendlock);
 				}
+				pthread_mutex_unlock(&_sendlock);
 				len=0;
 				break;
 
-			case 6: /* get config should be unreachable */
+			case req_config: /* get config should be unreachable */
 				addMessage(-1,"Get config is deprecated!");
 				len=serviceUnavailable( commdata );
 				break;
 
-			case 7: /* get current build version */
+			case req_version: /* get current build version */
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
 						(int)strlen(VERSION), VERSION );
 				len=strlen(commdata);
 				break;
-				/* todo: attachment or inline? */
 
-			case 8: /* send mp3 */
+			case req_mp3: /* send mp3 */
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: audio/mpeg;\015\012"
 						"Content-Disposition: attachment; filename=\"%s.mp3\"\015\012\015\012", title->display );
 				send(sock , commdata, strlen(commdata), 0);
@@ -624,15 +634,13 @@ static void *clientHandler(void *args ) {
 				len=0;
 				break;
 
-			case 9: /* return "artist - title" line */
+			case req_current: /* return "artist - title" line */
 				snprintf( line, MAXPATHLEN, "%s - %s", title->artist, title->title );
 				sprintf( commdata, "HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
 						(int)strlen(line), line );
 				len=strlen(commdata);
 				break;
 
-			default:
-				len=0;
 			}
 			state=0;
 

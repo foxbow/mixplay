@@ -459,6 +459,7 @@ function addText (text) {
   e.innerHTML = line
 }
 
+var moveline = ''
 /*
  * send a command with optional argument to the server
  */
@@ -467,18 +468,26 @@ function sendCMDArg (cmd, arg) {
   var code
   var e
   var text
-  cmd = Number(cmd)
-  code = Number(cmd).toString(16)
 
   /* do not send commands if we know that we are offline */
   if (doUpdate < 0) {
     return
   }
 
-  if (cmd === -1) {
+  /* dirty trick to recognize a move... */
+  if (cmd === 'move') {
+    moveline = 'start'
+    console.log('Start move')
+    return
+  }
+
+  if (cmd === 'download') {
     download(arg)
     return
   }
+
+  cmd = Number(cmd)
+  code = Number(cmd).toString(16)
 
   /* replay, prev and next don't make sense on stream */
   if (isstream && ((cmd === 0x02) || (cmd === 0x03) || (cmd === 0x05))) {
@@ -644,7 +653,7 @@ function enableElement (e, i) {
 /**
  * wrapper to create a popup with a FAV/DNP line
  */
-function getPattern (choice, cmd, line) {
+function getPattern (choice, cmd, line, lineid) {
   var text = ''
   switch (line.charAt(0)) {
     case 't':
@@ -679,22 +688,23 @@ function getPattern (choice, cmd, line) {
       break
   }
   text += line.substring(2)
-  return popselect([[choice, cmd]], line, text, 0)
+  return popselect([[choice, cmd]], line, text, 0, lineid)
 }
 
 /* creates a selection in a popselect popup */
-function clickable (text, cmd, arg, ident) {
+function clickable (text, cmd, arg, id) {
   var reply = document.createElement('em')
   reply.className = 'clickline'
   reply.setAttribute('data-arg', arg)
   reply.setAttribute('data-cmd', cmd)
   reply.onclick = function () {
-    const popup = document.getElementById('popup' + ident)
+    const popup = document.getElementById('popup' + id)
     if (popup) {
       const dcmd = this.getAttribute('data-cmd')
-      if (dcmd !== -1) {
-        sendCMDArg(dcmd, this.getAttribute('data-arg'))
-        const line = document.getElementById('line' + ident)
+      sendCMDArg(dcmd, this.getAttribute('data-arg'))
+      // Hide the line on mpcmds
+      if (dcmd > 0) {
+        const line = document.getElementById('line' + id)
         /* line may be gone as sendcmd() already cleaned up search view */
         if (line) {
           line.className = 'hide'
@@ -716,50 +726,86 @@ function setParentFontSize (ident, size) {
 }
 
 function togglePopup (ident) {
-  const popup = document.getElementById('popup' + ident)
-  if (popup !== null) {
-    popup.classList.toggle('show')
-  }
-  if (currentPop === '') {
-    currentPop = ident
-    setParentFontSize(ident, '1.5em')
-  } else {
-    if (currentPop === ident) {
-      setParentFontSize(ident, '')
-      currentPop = ''
-    } else {
-      togglePopup(currentPop)
-      currentPop = ident
-      setParentFontSize(ident, '1.5em')
+  if (moveline !== '') {
+    const line = document.getElementById('line' + ident)
+    if (!line) {
+      document.log('line' + ident + 'is gone')
+      doUpdate |= 1
+      return
     }
+    const tnum = line.getAttribute('data-tnum')
+    if (moveline === 'start') {
+      // initial drop on itself starts the actual move and closes the popup
+      moveline = tnum
+      line.style.color = 'red'
+    } else if ((!tnum) || (moveline === tnum)) {
+      // illegal Target, trigger refresh
+      doUpdate |= 1
+      moveline = ''
+      return
+    } else {
+      // good target initiate move
+      line.style.color = 'green'
+      sendCMDArg(0x11, moveline + '/' + tnum)
+      moveline = ''
+      return
+    }
+  }
+
+  const popup = document.getElementById('popup' + ident)
+  if (!popup) {
+    console.log('Unknown popup "popup' + ident + '"!')
+    return
+  }
+
+  if (!popup.classList.toggle('show')) {
+    // Just closed the popup
+    setParentFontSize(ident, '')
+    currentPop = ''
+  } else {
+    // Opened the popup
+    setParentFontSize(ident, '1.5em')
+    if ((currentPop !== '') && (currentPop !== ident)) {
+      // Clean up other popup
+      const oldpop = document.getElementById('popup' + currentPop)
+      if (!oldpop) {
+        console.log('Unknown popup "popup' + currentPop + '"!')
+      } else {
+        oldpop.classList.remove('show')
+        setParentFontSize(currentPop, '')
+      }
+    }
+    currentPop = ident
   }
 }
 
 /* returns a <div> with text that when clicked presents the choices */
-function popselect (choice, arg, text, drag) {
-  const num = choice.length
+function popselect (choice, arg, text, drag, id) {
   var i
   var select
   var reply = document.createElement('p')
+  if (drag & 1) {
+    choice.push(['&#x2195;', 'move']) // move
+  }
+  const num = choice.length
   reply.innerText = text
   if (num > 0) {
     reply.className = 'popselect'
-    const ident = choice[0][1] + '' + arg
-    reply.id = 'line' + ident
-    reply.onclick = function () { togglePopup(ident) }
+    reply.id = 'line' + id
+    reply.onclick = function () { togglePopup(id) }
     var popspan = document.createElement('span')
     popspan.className = 'popup'
-    if (document.getElementById('popup' + ident)) {
-      console.log('popup' + ident + ' already exists!')
+    if (document.getElementById('popup' + id)) {
+      console.log('popup' + id + ' already exists!')
     } else {
-      popspan.id = 'popup' + ident
+      popspan.id = 'popup' + id
       for (i = 0; i < num; i++) {
         if (i !== 0) {
           select = document.createElement('b')
           select.innerText = ' /'
           popspan.appendChild(select)
         }
-        select = clickable(choice[i][0], choice[i][1], arg, ident)
+        select = clickable(choice[i][0], choice[i][1], arg, id)
         popspan.appendChild(select)
       }
       select = document.createElement('b')
@@ -784,6 +830,7 @@ function popselect (choice, arg, text, drag) {
     }
     /* element is drop target */
     if (drag & 2) {
+      reply.setAttribute('data-tnum', arg)
       reply.ondrop = function (e) {
         const source = parseInt(e.dataTransfer.getData('title'))
         if (source !== arg) {
@@ -884,6 +931,8 @@ function fullUpdate (data) {
   if (isstream) {
     maxnext = 15
   }
+  var lineid = 1000
+
   /* display at least one next title */
   wipeElements(e)
   document.title = data.current.artist + ' - ' + data.current.title
@@ -914,9 +963,9 @@ function fullUpdate (data) {
           choices.push(['&#x2665;', 0x0809])
         }
         choices.push(['&#x25B6;', 0x0011]) // re-play
-        choices.push(['&#x1f4be;', -1]) // download
+        choices.push(['&#x1f4be;', 'download'])
         cline = popselect(choices,
-          data.prev[i].key, titleline, 1)
+          data.prev[i].key, titleline, 1, lineid++)
       }
       e.appendChild(cline)
     }
@@ -942,15 +991,14 @@ function fullUpdate (data) {
     cline.innerHTML = '&#x25B6; ' + titleline
     cline.onclick = function () { sendCMD(0x00) }
   } else {
-    /* this should become a popup instead pause/download */
     choices = []
     choices.push(['&#x2620;', 0x080a]) /* DNP */
     if (!(data.current.flags & 1)) {
       choices.push(['&#x2665;', 0x0809]) /* FAV */
     }
-    choices.push(['&#x1f4be;', -1]) // download
+    choices.push(['&#x1f4be;', 'download']) // download
     cline = popselect(choices,
-      data.current.key, '\u25B6 ' + titleline, 2)
+      data.current.key, '\u25B6 ' + titleline, 0, lineid++)
     cline.className = 'ctitle'
   }
   e.appendChild(cline)
@@ -980,9 +1028,9 @@ function fullUpdate (data) {
           choices.push(['&#x2665;', 0x0809])
         }
         choices.push(['X', 0x001c])
-        choices.push(['&#x1f4be;', -1]) // download
+        choices.push(['&#x1f4be;', 'download']) // download
         cline = popselect(choices,
-          data.next[i].key, titleline, 3)
+          data.next[i].key, titleline, 3, lineid++)
       }
       e.appendChild(cline)
     }
@@ -1011,6 +1059,7 @@ function searchUpdate (data) {
   var items = []
   var choices = []
   var i
+  var lineid = 2000
   if (data.albums.length > 0) {
     enableElement('csearch2', 1)
     switchTabByRef('search', 2)
@@ -1026,7 +1075,7 @@ function searchUpdate (data) {
 
       items[i] = popselect(choices,
         data.albums[i],
-        data.albart[i] + ' - ' + data.albums[i], 0)
+        data.albart[i] + ' - ' + data.albums[i], 0, lineid++)
     }
   } else {
     enableElement('csearch2', 0)
@@ -1052,7 +1101,7 @@ function searchUpdate (data) {
       }
       items[i] = popselect(choices,
         data.artists[i],
-        data.artists[i], 0)
+        data.artists[i], 0, lineid++)
     }
   } else {
     enableElement('csearch1', 0)
@@ -1076,7 +1125,7 @@ function searchUpdate (data) {
       choices.push(['&#x276f;', 0x080c]) // next
       choices.push(['&#x276f;&#x276f;', 0x0814]) // append
     }
-    items[0] = popselect(choices, 0, 'All results', 0)
+    items[0] = popselect(choices, 0, 'All results', 0, lineid++)
 
     for (i = 0; i < data.titles.length; i++) {
       choices = []
@@ -1088,10 +1137,10 @@ function searchUpdate (data) {
         choices.push(['&#x276f;', 0x080c]) // next
         choices.push(['&#x276f;&#x276f;', 0x0814]) // append
       }
-      choices.push(['&#x1f4be;', -1]) // download
+      choices.push(['&#x1f4be;', 'download'])
       items[i + 1] = popselect(choices,
         data.titles[i].key,
-        data.titles[i].artist + ' - ' + data.titles[i].title, 0)
+        data.titles[i].artist + ' - ' + data.titles[i].title, 0, lineid++)
     }
   } else {
     enableElement('csearch0', 0)
@@ -1106,12 +1155,13 @@ function dnpfavUpdate (data) {
   wipeElements(e)
   var items = []
   var i
+  var lineid = 3000
   if (data.dnplist.length === 0) {
     items[0] = document.createElement('em')
     items[0].innerHTML = 'No DNPs yet'
   } else {
     for (i = 0; i < data.dnplist.length; i++) {
-      items[i] = getPattern('Remove', 0x001a, data.dnplist[i])
+      items[i] = getPattern('Remove', 0x001a, data.dnplist[i], lineid++)
     }
   }
   tabify(e, 'dlist', items, 16)
@@ -1124,7 +1174,7 @@ function dnpfavUpdate (data) {
     items[0].innerHTML = 'No favourites yet'
   } else {
     for (i = 0; i < data.favlist.length; i++) {
-      items[i] = getPattern('Remove', 0x001b, data.favlist[i])
+      items[i] = getPattern('Remove', 0x001b, data.favlist[i], lineid++)
     }
   }
   tabify(e, 'flist', items, 16)
@@ -1381,6 +1431,7 @@ function updateConfig (data) {
   var items = []
   var choices = []
   var i
+  var lineid = 4000
   /* set profile list */
   e = document.getElementById('profiles')
   wipeElements(e)
@@ -1397,7 +1448,7 @@ function updateConfig (data) {
         }
       }
       items[i] = popselect(choices, i + 1,
-        data.profile[i], 0)
+        data.profile[i], 0, lineid++)
     }
   }
   tabify(e, 'prolist', items, 7)
@@ -1416,7 +1467,7 @@ function updateConfig (data) {
         choices.push(['Remove', 0x18])
       }
       items[i] = popselect(choices, -(i + 1),
-        data.sname[i], 0)
+        data.sname[i], 0, lineid++)
     }
   }
   tabify(e, 'chanlist', items, 7)
