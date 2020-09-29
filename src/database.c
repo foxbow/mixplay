@@ -605,6 +605,7 @@ int dbNameCheck( void ) {
 		addMessage( 0, "Check rmlist.sh in config dir" );
 	}
 	fclose( fp );
+	wipeTitles(root);
 
 	return count;
 }

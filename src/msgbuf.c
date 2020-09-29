@@ -29,6 +29,7 @@ unsigned long msgBuffAdd( msgbuf_t *msgbuf, char *line ) {
 	/* overflow? */
 	if( msgbuf->lines == MSGNUM ) {
 		/* discard oldest (current) message */
+		free(msgbuf->msg[msgbuf->current]->msg);
 		free(msgbuf->msg[msgbuf->current]);
 		/* replace with new message */
 		msgbuf->msg[msgbuf->current]=msg;

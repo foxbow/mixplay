@@ -33,6 +33,11 @@ endif
 LIBS+=$(shell pkg-config --libs $(REFS))
 CCFLAGS+=$(shell pkg-config --cflags $(REFS))
 
+# enable sanitation
+#CCFLAGS+=-fsanitize=undefined,address
+#LIBS+=-lubsan -lasan
+#SCLIBS+=-lubsan -lasan
+
 all: server clients
 
 server: $(OBJDIR)/dep.d bin/mixplayd bin/mprcinit
