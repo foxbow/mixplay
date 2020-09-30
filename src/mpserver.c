@@ -631,6 +631,7 @@ static void *clientHandler(void *args ) {
 				line[0]=0;
 				filePost( sock, fullpath(title->path) );
 				title=NULL;
+				pthread_mutex_unlock(&_sendlock);
 				len=0;
 				break;
 

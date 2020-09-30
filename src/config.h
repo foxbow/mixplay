@@ -149,7 +149,6 @@ typedef struct {
 	int debug;
 	char *streamURL;
 	msgbuf_t *msg;		/* generic message buffer */
-	void *data;					/* extended data for gmixplay */
 	int  port;
 	unsigned mpmode;						/* playmode, see PM_* */
 	unsigned sleepto;			/* idle timeout for clients */
@@ -167,7 +166,6 @@ typedef struct {
 	unsigned client[MAXCLIENT];		/* glabal clientID marker */
 	unsigned notify[MAXCLIENT];		/* next state per client */
 	unsigned long msgcnt[MAXCLIENT];
-	pthread_mutex_t pllock;
 	unsigned watchdog;
 } mpconfig_t;
 
@@ -232,5 +230,9 @@ unsigned long getMsgCnt( int );
 void setMsgCnt( int, unsigned long );
 void incMsgCnt( int );
 void initMsgCnt( int );
+
+void lockPlaylist( void );
+void unlockPlaylist( void );
+int trylockPlaylist( void );
 
 #endif /* _CONFIG_H_ */

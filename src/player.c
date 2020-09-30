@@ -24,6 +24,7 @@
 #include "mpcomm.h"
 
 static pthread_mutex_t _pcmdlock=PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t  _pcmdcond=PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t _asynclock=PTHREAD_MUTEX_INITIALIZER;
 
 /**
@@ -144,7 +145,6 @@ static long controlVolume( long volume, int absolute ) {
 	if( retval < 0 ) retval=0;
 	if( retval > 100 ) retval=100;
 	snd_mixer_selem_set_playback_volume_all(_elem, ( retval * max ) / 100);
-
 	config->volume=retval;
 	return retval;
 }
@@ -220,8 +220,7 @@ void setStream( const char* stream, const char *name ) {
 
 /**
  * sends a command to the player
- * also makes sure that commands are queued
- * TODO: consider setting an argument here too
+ * also makes sure that commands are not overwritten
  */
 void setCommand( mpcmd_t cmd, char *arg ) {
 	if( cmd == mpc_idle ) {
@@ -229,20 +228,19 @@ void setCommand( mpcmd_t cmd, char *arg ) {
 	}
 
 	pthread_mutex_lock( &_pcmdlock );
-	/* mixplay is stopping, unlock and return */
-	if( getConfig()->status == mpc_quit ) {
-		pthread_mutex_unlock( &_pcmdlock );
+
+	while (getConfig()->command != mpc_idle) {
+		pthread_cond_wait( &_pcmdcond, &_pcmdlock );
 	}
-	else {
-		/* someone did not clean up! */
-		if( getConfig()->argument != NULL ) {
-			addMessage( 0, "Wiping leftover %s on %s!",
-					getConfig()->argument, mpcString(cmd) );
-			sfree(&(getConfig()->argument));
-		}
-		getConfig()->command=cmd;
-		getConfig()->argument=arg;
+	/* someone did not clean up! */
+	if( getConfig()->argument != NULL ) {
+		addMessage( 0, "Wiping leftover %s on %s!",
+				getConfig()->argument, mpcString(cmd) );
+		sfree(&(getConfig()->argument));
 	}
+	getConfig()->command=cmd;
+	getConfig()->argument=arg;
+	pthread_mutex_unlock( &_pcmdlock );
 }
 
 /**
@@ -377,6 +375,7 @@ void *setProfile( void *arg ) {
 	if( pthread_mutex_trylock( &_pcmdlock ) != EBUSY ) {
 		addMessage( 1, "Start play" );
 		control->command=mpc_start;
+		pthread_mutex_unlock( &_pcmdlock );
 	}
 	/* make sure that progress messages are removed */
 	notifyChange( MPCOMM_TITLES );
@@ -1039,22 +1038,7 @@ void *reader( void *arg ) {
 			}
 		} /* fgets() > 0 */
 
-		/*
-		 * check if a command is set and read that command until it is not mpc_idle
-		 * this is a very unlikely race condition that _pcmdlock is locked and
-		 * the command is not yet set but it may happen and we want to make sure no
-		 * command is dropped.
-		 */
-		if ( pthread_mutex_trylock( &_pcmdlock ) == EBUSY ) {
-			while( control->command == mpc_idle ) {
-				addMessage( 1, "Idling on command read" );
-			}
-			addMessage( 1, "Status: %s, CMD: %s / %04x", mpcString(control->status),
-					mpcString(control->command), control->command );
-		}
-		else {
-			control->command=mpc_idle;
-		}
+		pthread_mutex_lock( &_pcmdlock );
 		cmd=MPC_CMD(control->command);
 
 		/* get the target title for fav and dnp commands */
@@ -1537,6 +1521,7 @@ void *reader( void *arg ) {
 		}
 
 		control->command=mpc_idle;
+		pthread_cond_signal( &_pcmdcond );
 		pthread_mutex_unlock( &_pcmdlock );
 
 		/* notify UI that something has changed */

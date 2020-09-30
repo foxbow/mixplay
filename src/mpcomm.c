@@ -129,7 +129,7 @@ static jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mpplaylist_t 
 	jsonObject *jsonTitle=NULL;
 
 	jo=jsonInitArr( jo, key );
-	if( pthread_mutex_trylock( &(getConfig()->pllock) ) != EBUSY ) {
+	if( trylockPlaylist() != EBUSY ) {
 		while( pl != NULL ) {
 			jsonTitle=jsonAddTitle( NULL, "title", pl );
 			jsonAddArrElement( jo, jsonTitle, json_object );
@@ -140,7 +140,7 @@ static jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mpplaylist_t 
 				pl=pl->next;
 			}
 		}
-		pthread_mutex_unlock( &(getConfig()->pllock) );
+		unlockPlaylist();
 	}
 
 	return jo;

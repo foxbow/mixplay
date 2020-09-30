@@ -28,18 +28,9 @@ static unsigned long _curmsg=0;
 /**
  * TODO: create a dedicated signal handler thread.
  **/
-static void sigint(int signo){
-	char *pass;
-	pass=strdup(getConfig()->password);
-
-	addMessage( 0, "External quit on signal %i!", signo );
-	if( getConfig()->command == mpc_quit ) {
-		addMessage( 0, "Forced exit!!" );
-		unlink(PIDPATH);
-		exit(1);
-	}
-	/* try nicely first */
-	setCommand( mpc_quit, pass );
+static void sigint(__attribute__((unused)) int signo){
+	unlink(PIDPATH);
+	abort();
 }
 
 /*
@@ -250,8 +241,6 @@ int main( int argc, char **argv ) {
 	addUpdateHook( &s_updateHook );
 
 	if( initAll( ) == 0 ){
-		control->inUI=1;
-
 		/* flirc handler */
 		hidfd=initFLIRC();
 		if( hidfd != -1 ) {

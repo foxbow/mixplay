@@ -704,7 +704,7 @@ void applyLists( int clean ) {
 	mpconfig_t *control=getConfig();
 	mptitle_t *title = control->root;
 
-	pthread_mutex_lock( &(getConfig()->pllock) );
+	lockPlaylist();
 	if( clean ) {
 		do {
 			title->flags&=~(MP_FAV|MP_DNP);
@@ -714,7 +714,7 @@ void applyLists( int clean ) {
 	applyFAVlist( control->favlist, getFavplay() );
 	applyDNPlist( control->dbllist );
 	applyDNPlist( control->dnplist );
-	pthread_mutex_unlock( &(getConfig()->pllock) );
+	unlockPlaylist();
 	notifyChange(MPCOMM_LISTS);
 }
 
@@ -1429,7 +1429,7 @@ void plCheck( int del ) {
 		cnt=0;
 		pl=getConfig()->current;
 		/* make sure the playlist is not modifid elsewhere right now */
-		pthread_mutex_lock( &(getConfig()->pllock) );
+		lockPlaylist();
 
 		/* rewind to the start of the list */
 		if ( del != 0 ) {
@@ -1474,7 +1474,7 @@ void plCheck( int del ) {
 				pl=pl->next;
 			}
 		}
-		pthread_mutex_unlock( &(getConfig()->pllock) );
+		unlockPlaylist();
 
 		/* Done cleaning, now start pruning */
 		/* truncate playlist title history to 10 titles */

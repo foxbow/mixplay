@@ -25,6 +25,10 @@
 #include "musicmgr.h"
 #include "mpcomm.h"
 
+static pthread_mutex_t pllock=PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t conflock=PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t  confinit=PTHREAD_COND_INITIALIZER;
+
 static pthread_mutex_t _addmsglock=PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t _cblock=PTHREAD_MUTEX_INITIALIZER;
 static mpconfig_t *_cconfig=NULL;
@@ -77,6 +81,18 @@ static const char *mpccommand[] = {
 	"idle"
 };
 
+void lockPlaylist( void ) {
+	pthread_mutex_lock( &pllock );
+}
+
+void unlockPlaylist( void ) {
+	pthread_mutex_unlock( &pllock );
+}
+
+int trylockPlaylist( void ) {
+	return pthread_mutex_trylock( &pllock );
+}
+
 static void invokeHooks( _mpfunc *hooks ){
 	_mpfunc *pos=hooks;
 	pthread_mutex_lock(&_cblock);
@@ -120,7 +136,11 @@ mpcmd_t mpcCommand( const char *name ) {
  * returns the current configuration
  */
 mpconfig_t *getConfig() {
-	assert( _cconfig != NULL );
+	pthread_mutex_lock(&conflock);
+	if( _cconfig == NULL ) {
+		pthread_cond_wait( &confinit, &conflock );
+	}
+	pthread_mutex_unlock(&conflock);
 	return _cconfig;
 }
 
@@ -225,6 +245,7 @@ mpconfig_t *readConfig( void ) {
 	if( home == NULL ) {
 		fail( F_FAIL, "Cannot get HOME!" );
 	}
+	pthread_mutex_lock( &conflock );
 
 	if( _cconfig == NULL ) {
 		_cconfig=(mpconfig_t*)falloc( 1, sizeof( mpconfig_t ) );
@@ -258,7 +279,6 @@ mpconfig_t *readConfig( void ) {
 	_cconfig->mpmode=PM_NONE;
 	for (i=0; i<MAXCLIENT; i++) _cconfig->client[i]=0;
 	for (i=0; i<MAXCLIENT; i++) _cconfig->notify[i]=MPCOMM_STAT;
-	pthread_mutex_init ( &(_cconfig->pllock), NULL );
 
 	snprintf( _cconfig->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", home );
 
@@ -344,6 +364,9 @@ mpconfig_t *readConfig( void ) {
 		while( !feof( fp ) );
 
 		fclose(fp);
+		pthread_cond_signal(&confinit);
+		pthread_mutex_unlock(&conflock);
+
 		return _cconfig;
 	}
 
@@ -585,10 +608,12 @@ int getDebug( void ) {
 
 /* returns true if the config is in a well defined state */
 int playerIsInactive( void ) {
+	int res = 0;
 	mpconfig_t *control=getConfig();
-	return( (control->status == mpc_start) ||
-					(control->command == mpc_start) ||
-					(control->mpmode & PM_SWITCH) );
+	res = (control->status == mpc_start) ||
+				(control->command == mpc_start) ||
+				(control->mpmode & PM_SWITCH);
+	return res;
 }
 
 static unsigned _ftrpos=0;
@@ -785,7 +810,7 @@ mpplaylist_t *wipePlaylist( mpplaylist_t *pl ) {
 		pl=pl->prev;
 	}
 
-	pthread_mutex_lock( &(getConfig()->pllock) );
+	lockPlaylist();
 	while( pl != NULL ){
 		next=pl->next;
 		if( getConfig()->root == NULL ) {
@@ -794,7 +819,7 @@ mpplaylist_t *wipePlaylist( mpplaylist_t *pl ) {
 		free(pl);
 		pl=next;
 	}
-	pthread_mutex_unlock( &(getConfig()->pllock) );
+	unlockPlaylist();
 
 	return NULL;
 }
@@ -810,7 +835,7 @@ marklist_t *wipeList( marklist_t *root ) {
 		return NULL;
 	}
 
-	pthread_mutex_lock( &(getConfig()->pllock) );
+	lockPlaylist();
 	if( NULL != root ) {
 		while( runner != NULL ) {
 			root=runner->next;
@@ -818,7 +843,7 @@ marklist_t *wipeList( marklist_t *root ) {
 			runner=root;
 		}
 	}
-	pthread_mutex_unlock( &(getConfig()->pllock) );
+	unlockPlaylist();
 
 	return NULL;
 }
