@@ -34,10 +34,12 @@ static pthread_mutex_t _asynclock=PTHREAD_MUTEX_INITIALIZER;
 static int asyncTest() {
 	int ret=0;
 
-	addMessage( 1, "Async test" );
 	if( pthread_mutex_trylock( &_asynclock ) != EBUSY ) {
-		pthread_mutex_unlock( &_asynclock );
+		addMessage(1, "Player is trylocked");
 		ret=1;
+	}
+	else {
+		addMessage(0, "Player is already locked!");
 	}
 	return ret;
 }
@@ -446,7 +448,7 @@ static void *plDbClean( void *arg ) {
 	}
 
 	unlockClient(-1);
-	pthread_mutex_unlock( lock );;
+	pthread_mutex_unlock( lock );
 	return NULL;
 }
 
@@ -458,7 +460,7 @@ static void *plDbFix( void *arg ) {
 	addMessage( 0, "Music dir: %s", control->musicdir );
 	dumpInfo( control->root, 1 );
 	unlockClient(-1);
-	pthread_mutex_unlock( lock );;
+	pthread_mutex_unlock( lock );
 	return NULL;
 }
 
@@ -470,7 +472,7 @@ static void *plDbInfo( void *arg ) {
 	addMessage( 0, "Music dir: %s", control->musicdir );
 	dumpInfo( control->root, 0 );
 	unlockClient(-1);
-	pthread_mutex_unlock( lock );;
+	pthread_mutex_unlock( lock );
 	return NULL;
 }
 
@@ -492,14 +494,10 @@ static void *plSetProfile( void *arg ) {
  */
 static void asyncRun( void *cmd(void *) ) {
 	pthread_t pid;
-	if( pthread_mutex_trylock( &_asynclock ) == EBUSY ) {
-		addMessage( -1, "Sorry, still blocked!" );
+	if( pthread_create( &pid, NULL, cmd, &_asynclock ) < 0) {
+		addMessage( 0, "Could not create async thread!" );
 	}
-	else {
-		if( pthread_create( &pid, NULL, cmd, &_asynclock ) < 0) {
-			addMessage( 0, "Could not create async thread!" );
-		}
-	}
+	pthread_mutex_unlock( &_asynclock );
 }
 
 /**
@@ -1122,6 +1120,7 @@ void *reader( void *arg ) {
 					sfree(&(control->argument));
 				}
 				dowrite( p_command[fdset][1], "STOP\n", 6 );
+				pthread_mutex_unlock( &_asynclock );
 			}
 			break;
 
@@ -1144,6 +1143,7 @@ void *reader( void *arg ) {
 					skipped=1;
 				}
 				dowrite( p_command[fdset][1], "STOP\n", 6 );
+				pthread_mutex_unlock( &_asynclock );
 			}
 			break;
 
@@ -1165,6 +1165,7 @@ void *reader( void *arg ) {
 			if( asyncTest() ) {
 				order=0;
 				dowrite( p_command[fdset][1], "STOP\n", 6 );
+				pthread_mutex_unlock( &_asynclock );
 			}
 			break;
 
@@ -1177,6 +1178,7 @@ void *reader( void *arg ) {
 					order=0;
 					dowrite( p_command[fdset][1], "STOP\n", 6 );
 				}
+				pthread_mutex_unlock( &_asynclock );
 			}
 			break;
 
@@ -1184,6 +1186,7 @@ void *reader( void *arg ) {
 			if( (title != NULL ) && asyncTest() ) {
 				handleRangeCmd( title, control->command );
 				notifyChange(MPCOMM_TITLES);
+				pthread_mutex_unlock( &_asynclock );
 			}
 			break;
 
@@ -1198,6 +1201,7 @@ void *reader( void *arg ) {
 			 * mcp_quit MUST make sure that the main app terminates as well ! */
 			if( asyncTest() && checkPasswd()) {
 				control->status=mpc_quit;
+				pthread_mutex_unlock( &_asynclock );
 			}
 			sfree(&(control->argument));
 			break;
@@ -1232,6 +1236,7 @@ void *reader( void *arg ) {
 					}
 					sfree(&(control->argument));
 				}
+				pthread_mutex_unlock( &_asynclock );
 			}
 			break;
 
@@ -1260,6 +1265,7 @@ void *reader( void *arg ) {
 					writeConfig( NULL );
 					control->argument=NULL;
 				}
+				pthread_mutex_unlock( &_asynclock );
 			}
 			break;
 
@@ -1316,6 +1322,7 @@ void *reader( void *arg ) {
 					} else {
 						addMessage( -1, "Cannot remove empty profile!" );
 					}
+					pthread_mutex_unlock( &_asynclock );
 				}
 				sfree(&(control->argument));
 			}
@@ -1341,6 +1348,7 @@ void *reader( void *arg ) {
 					}
 					sfree( &(control->argument) );
 				}
+				pthread_mutex_unlock( &_asynclock );
 			}
 			break;
 
@@ -1399,9 +1407,7 @@ void *reader( void *arg ) {
 					}
 					addMessage( 1, "Results sent!");
 				}
-			}
-			else {
-				addMessage( 1, "search async locked!");
+				pthread_mutex_unlock( &_asynclock );
 			}
 			sfree( &(control->argument) );
 			break;
@@ -1486,6 +1492,7 @@ void *reader( void *arg ) {
 				else {
 					addMessage( 0, "Favplay only works in database mode!");
 				}
+				pthread_mutex_unlock( &_asynclock );
 			}
 			break;
 
