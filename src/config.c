@@ -883,16 +883,6 @@ void blockSigint() {
 	}
 }
 
-int checkPasswd() {
-	if( getConfig()->argument != NULL ) {
-		if( strcmp( getConfig()->password, getConfig()->argument ) == 0 ) {
-			return 1;
-		}
-	}
-	addMessage( -1, "Wrong password!" );
-	return 0;
-}
-
 int getFreeClient( void ) {
 	int i;
 	for (i=0; i<MAXCLIENT; i++) {

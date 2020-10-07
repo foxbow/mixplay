@@ -419,12 +419,13 @@ function switchView (element) {
 /*
  * stop the server
  */
-function pwSendCMD (msg, cmd) {
-  var reply = window.prompt(msg)
+function pwSendCMD (cmd) {
+  var reply = document.getElementById('pass').value
   if ((reply !== null) && (reply !== '')) {
     sendCMDArg(cmd, reply)
-  } else if (cmd === 0x12) {
-    sendCMD(cmd)
+  } else {
+    /* this is worth an alert as someone messed with the flow */
+    window.alert('No password set!')
   }
 }
 
@@ -1040,7 +1041,6 @@ function fullUpdate (data) {
 
   if (!isstream) {
     enableElement('fav', !(data.current.flags & 1))
-    setElement('download', 'Download ' + document.title)
   }
 
   adaptUI(1)
@@ -1233,9 +1233,9 @@ function playerUpdate (data) {
     enableElement('cdnpfav1', !isstream)
     enableElement('cdnpfav2', !isstream)
     enableElement('cdnpfav3', !isstream)
-    enableElement('download', !isstream)
     enableElement('rescan', !isstream)
     enableElement('dbinfo', !isstream)
+    enableElement('playcnt', !isstream)
     enableElement('doublet', !isstream)
     enableElement('fav', !isstream)
   }
@@ -1598,6 +1598,21 @@ function isEnter (event, cmd) {
   }
 }
 
+function checkPass (event = null) {
+  if ((event === null) || (event.keyCode === 13)) {
+    const pwd = document.getElementById('pass').value
+    console.log('pass = ' + pwd)
+    enableElement('admin', (pwd !== ''))
+    enableElement('login', (pwd === ''))
+    return false
+  }
+}
+
+function clearPass () {
+  document.getElementById('pass').value = ''
+  checkPass(null)
+}
+
 function switchUI () {
   smallUI = !smallUI
   if (smallUI) {
@@ -1661,10 +1676,7 @@ function handleKey (event) {
       sendCMD(0x0e)
       break
     case 'Q':
-      pwSendCMD('Really stop the server?', 0x07)
-      break
-    case 'D':
-      pwSendCMD('Mark doublets?', 0x0b)
+      pwSendCMD(0x07)
       break
     case 'G':
       toggleDebug()
@@ -1824,4 +1836,5 @@ function dummy () {
   newActive()
   loadURL()
   toggleSearch()
+  clearPass()
 }

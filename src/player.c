@@ -44,6 +44,22 @@ static int asyncTest() {
 	return ret;
 }
 
+static int checkPasswd( void ) {
+	char *pass=getConfig()->argument;
+	if( pthread_mutex_trylock( &_asynclock ) != EBUSY ) {
+		addMessage(0, "Player was not locked!");
+	}
+	if( pass && !strcmp( getConfig()->password, pass )) {
+		return 1;
+	}
+	addMessage(1, "Unlocking player after wrong password");
+	pthread_mutex_unlock( &_asynclock );
+	/* TODO this may be potentially dangerous! */
+	unlockClient(-1);
+	addMessage( -1, "Wrong password!" );
+	return 0;
+}
+
 static snd_mixer_t *_handle=NULL;
 static snd_mixer_elem_t *_elem=NULL;
 

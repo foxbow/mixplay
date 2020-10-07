@@ -71,11 +71,18 @@
       <button id='ctools2' class='inactive' onclick='switchTab(this)'>&#x2630; Channels</button>
       <div id='tools0' class='active'>
         <p id='active'>No active profile/channel</p>
-        <p id='download' class='active' onclick='download(0)'>Download Title</p>
-        <button id='rescan'  onclick='pwSendCMD("Rescan music directory?",0x08)'>Rescan</button>
-        <button id='dbinfo'  onclick='pwSendCMD("Fix playcount spread?",0x12)'>Playcount</button>
-        <button id='doublet' onclick='pwSendCMD("Mark double titles?",0x0b)'>Doublets</button>
-        <button id='debug'   onclick='toggleDebug()'>Enable Debug</button>
+        <p id='login' class='show'>Admin:
+          <button onclick='toggleKbd("pass", function () {checkPass()})'>&#x2328;</button>
+          <input  id='pass' type='password' onkeydown='checkPass(event)'><br>
+        </p>
+        <p id='admin' class='hide'>
+          <button id='dbinfo'  onclick='sendCMD(0x12)'>Playcount</button>
+          <button id='playcnt'  onclick='pwSendCMD(0x12)'>Fix playcount</button>
+          <button id='rescan'  onclick='pwSendCMD(0x08)'>Rescan</button>
+          <button id='doublet' onclick='pwSendCMD(0x0b)'>Doublets</button>
+          <button id='debug'   onclick='toggleDebug()'>Debug</button><br>
+          <button id='logout'  onclick='clearPass()'>Logout</button>
+        </p>
         <div id='messages'></div>
       </div>
       <div id='tools1' class='inactive'>

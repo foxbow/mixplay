@@ -82,22 +82,25 @@ const char *_mprccmdstrings[MPRC_NUM];
 
 /*
  * qualifiers for mpc_dnp, mpc_fav and mpc_(long)search
- * 000F RRRR CCCC CCCC
+ * 0FSR RRRR 000C CCCC
  */
 /* extract raw command */
 #define MPC_CMD(x)   (mpcmd_t)((int)x&0x00ff)
 /* determine range */
 #define MPC_RANGE(x) (mpcmd_t)((int)x&0xff00)
+/* check for set range */
 #define MPC_ISTITLE(x) (x & mpc_title)
 #define MPC_ISARTIST(x) (x & mpc_artist)
 #define MPC_ISALBUM(x) ( x & mpc_album)
 #define MPC_ISGENRE(x) ( x & mpc_genre)
 #define MPC_ISDISPLAY(x) ( x & mpc_display)
+/* check for exact range */
 #define MPC_EQTITLE(x) (MPC_RANGE(x)==mpc_title)
 #define MPC_EQARTIST(x) (MPC_RANGE(x)==mpc_artist)
 #define MPC_EQALBUM(x) (MPC_RANGE(x)==mpc_album)
 #define MPC_EQGENRE(x) (MPC_RANGE(x)==mpc_genre)
 #define MPC_EQDISPLAY(x) (MPC_RANGE(x)==mpc_display)
+/* shuffle enabled? */
 #define MPC_ISSHUFFLE(x) ( x & mpc_mix )
 /* shall it be a substring */
 #define MPC_ISSUBSTR(x) (x & mpc_substr )
@@ -214,7 +217,6 @@ char *fullpath( const char *file );
 mpplaylist_t *wipePlaylist( mpplaylist_t *pl );
 mptitle_t *wipeTitles( mptitle_t *root );
 marklist_t *wipeList( marklist_t *root );
-int checkPasswd();
 int playerIsInactive( void );
 void blockSigint();
 
