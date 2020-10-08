@@ -1598,19 +1598,15 @@ function isEnter (event, cmd) {
   }
 }
 
-function checkPass (event = null) {
-  if ((event === null) || (event.keyCode === 13)) {
-    const pwd = document.getElementById('pass').value
-    console.log('pass = ' + pwd)
-    enableElement('admin', (pwd !== ''))
-    enableElement('login', (pwd === ''))
-    return false
-  }
+function checkPass () {
+  const pwd = document.getElementById('pass').value
+  enableElement('admin', (pwd !== ''))
+  enableElement('login', (pwd === ''))
 }
 
 function clearPass () {
   document.getElementById('pass').value = ''
-  checkPass(null)
+  checkPass()
 }
 
 function switchUI () {
