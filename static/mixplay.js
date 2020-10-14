@@ -73,6 +73,15 @@ function createKbdKey (name, key) {
   return btn
 }
 
+function kbdRealkey (event) {
+  if (event.keyCode === 13) {
+    toggleKbd(kbdcurrent.id, '')
+    kbdokay()
+    return false
+  }
+  return true
+}
+
 function initKbdDiv () {
   var row, col, btnrow, btn, element
   const e = document.getElementById('textkbd')
@@ -86,6 +95,7 @@ function initKbdDiv () {
   btn = document.createElement('input')
   btn.type = 'text'
   btn.id = 'kbdtext'
+  btn.addEventListener('keypress', kbdRealkey)
   element.appendChild(btn)
   e.appendChild(element)
   for (row = 0; row < layout.length; row++) {
@@ -223,6 +233,7 @@ function adaptUI (keep) {
   /* Number of lines in sub-tabs */
   var lines
   var minfont = 14
+  var maxfont = 30
   var h = window.innerHeight
   var i
   var fsize
@@ -265,9 +276,19 @@ function adaptUI (keep) {
     lines = 28
   }
 
-  /* toolbars should grow/shrink with less magnification */
+  /* toolbars should grow/shrink with own magnification */
+  /* try to have at leat 20 characters of the minimal font */
   bsize = Math.max(window.innerWidth, 20 * minfont)
-  bsize = Math.min(bsize / 20, 30)
+
+  /* scale the upper font size boundary for the toolbars */
+  if (h <= 200) {
+    maxfont = minfont
+  }
+  if ((h > 200) && (h < 500)) {
+    maxfont = minfont + ((h - 200) / (300 / (maxfont - minfont)))
+  }
+
+  bsize = Math.min(bsize / 20, maxfont)
   document.getElementById('playpack').style.fontSize = bsize + 'px'
   document.getElementById('viewtabs').style.fontSize = bsize + 'px'
 

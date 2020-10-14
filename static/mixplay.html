@@ -75,15 +75,15 @@
           <button onclick='toggleKbd("pass", function () {checkPass()})'>Login</button>
           <input  id='pass' type='text' style='display:none;'><br>
         </p>
-        <p id='admin' class='hide'>
+        <div id='admin' class='hide'>
           <button id='dbinfo'  onclick='sendCMD(0x12)'>Playcount</button>
           <button id='playcnt'  onclick='pwSendCMD(0x12)'>Fix playcount</button>
           <button id='rescan'  onclick='pwSendCMD(0x08)'>Rescan</button>
           <button id='doublet' onclick='pwSendCMD(0x0b)'>Doublets</button>
           <button id='quit'    onclick='pwSendCMD(0x07)'>QUIT</button>
-          <button id='debug'   onclick='toggleDebug()'>Debug</button><br>
+          <button id='debug'   onclick='toggleDebug()'>Debug</button>
           <button id='logout'  onclick='clearPass()'>Logout</button>
-        </p>
+        </div>
         <div id='messages'></div>
       </div>
       <div id='tools1' class='inactive'>
