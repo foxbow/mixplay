@@ -240,6 +240,15 @@ function adaptUI (keep) {
   var bsize
   const portrait = (h > window.innerWidth * 1.2)
 
+  /* lots of magic numbers here: the formula is:
+   * lines_to_display - ( pixels_available / pixels_per_line )
+   */
+  const of = Math.max(Math.ceil(22 - (window.innerHeight / (minfont * 1.45))), 0)
+  if (overflow !== of) {
+    overflow = of
+    doUpdate |= 13
+  }
+
   /* decide on default view if needed */
   if ((keep === -1) || (!keep && isPlay())) {
     if (portrait) {
@@ -252,11 +261,6 @@ function adaptUI (keep) {
 
   const maintab = isActive('extra0')
   enableElement('uiextra', maintab)
-
-  /* try to keep text readable on landscape screens */
-  if (!portrait) {
-    minfont = 20
-  }
 
   /* maintab scales to width too */
   if (maintab) {
@@ -296,15 +300,9 @@ function adaptUI (keep) {
   h = h - (4 * bsize)
 
   fsize = h / lines
-  var of = 0
   /* font shall never get smaller than minfont */
   if (fsize < minfont) {
     fsize = minfont
-    of = Math.round(lines - (h / fsize) - 1)
-  }
-  if (overflow !== of) {
-    overflow = of
-    doUpdate |= 1
   }
 
   document.body.style.fontSize = fsize + 'px'
@@ -810,7 +808,7 @@ function popselect (choice, arg, text, drag, id) {
     choice.push(['&#x2195;', 'move']) // move
   }
   const num = choice.length
-  reply.innerText = text
+  reply.innerHTML = text
   if (num > 0) {
     reply.className = 'popselect'
     reply.id = 'line' + id
@@ -831,7 +829,7 @@ function popselect (choice, arg, text, drag, id) {
         popspan.appendChild(select)
       }
       select = document.createElement('b')
-      select.innerText = '\u2000\u274E'
+      select.innerHTML = '\u2000\u274E'
       popspan.appendChild(select)
       reply.appendChild(popspan)
     }
@@ -1020,7 +1018,7 @@ function fullUpdate (data) {
     }
     choices.push(['&#x1f4be;', 'download']) // download
     cline = popselect(choices,
-      data.current.key, '\u25B6 ' + titleline, 0, lineid++)
+      data.current.key, '&#x25B6; ' + titleline, 0, lineid++)
     cline.className = 'ctitle'
   }
   e.appendChild(cline)
@@ -1103,7 +1101,7 @@ function searchUpdate (data) {
     items[0] = document.createElement('em')
     items[0].innerHTML = 'No albums found!'
   }
-  tabify(e, 'lres', items, 12)
+  tabify(e, 'lres', items, 14)
 
   e = document.getElementById('search1')
   wipeElements(e)
@@ -1129,7 +1127,7 @@ function searchUpdate (data) {
     items[0] = document.createElement('em')
     items[0].innerHTML = 'No artists found!'
   }
-  tabify(e, 'ares', items, 12)
+  tabify(e, 'ares', items, 14)
 
   e = document.getElementById('search0')
   items = []
@@ -1168,7 +1166,7 @@ function searchUpdate (data) {
     items[0] = document.createElement('em')
     items[0].innerHTML = 'Found ' + data.artists.length + ' artists and ' + data.albums.length + ' albums'
   }
-  tabify(e, 'tres', items, 12)
+  tabify(e, 'tres', items, 14)
 }
 
 function dnpfavUpdate (data) {
@@ -1330,7 +1328,7 @@ function playerUpdate (data) {
         power(0)
       }
     }
-    document.getElementById('play').innerHTML = '\u25B6'
+    document.getElementById('play').innerHTML = '&#x25B6;'
   }
 
   if (data.volume > 0) {
@@ -1453,6 +1451,7 @@ function updateConfig (data) {
   var choices = []
   var i
   var lineid = 4000
+  var name
   /* set profile list */
   e = document.getElementById('profiles')
   wipeElements(e)
@@ -1461,18 +1460,21 @@ function updateConfig (data) {
     items[0].innerHTML = 'No profiles?'
   } else {
     for (i = 0; i < data.profile.length; i++) {
+      name = data.profile[i]
       choices = []
       if (i !== (active - 1)) {
         choices.push(['Play', 0x06])
         if (i !== 0) {
           choices.push(['Remove', 0x18])
         }
+      } else {
+        name = '&#x25B6; ' + name
       }
       items[i] = popselect(choices, i + 1,
-        data.profile[i], 0, lineid++)
+        name, 0, lineid++)
     }
   }
-  tabify(e, 'prolist', items, 7)
+  tabify(e, 'prolist', items, 13)
 
   e = document.getElementById('channels')
   items = []
@@ -1482,16 +1484,19 @@ function updateConfig (data) {
     items[0].innerHTML = 'No channels'
   } else {
     for (i = 0; i < data.sname.length; i++) {
+      name = data.sname[i]
       choices = []
       if (i !== -(active + 1)) {
         choices.push(['Play', 0x06])
         choices.push(['Remove', 0x18])
+      } else {
+        name = '&#x25B6; ' + name
       }
       items[i] = popselect(choices, -(i + 1),
         data.sname[i], 0, lineid++)
     }
   }
-  tabify(e, 'chanlist', items, 7)
+  tabify(e, 'chanlist', items, 13)
 
   if (active > 0) {
     if (favplay) {

@@ -65,7 +65,7 @@ void fail( const int error, const char* msg, ... ) {
 	pthread_join( getConfig()->stid, NULL );
 	pthread_join( getConfig()->rtid, NULL );
 
-	exit( error );
+	abort();
 }
 
 /**
@@ -162,7 +162,10 @@ int main( int argc, char **argv ) {
 		}
 		/* does the pid exist? */
 		if(!kill(rv,0) && !errno) {
-			addMessage( 0, "Mixplayd is already running!" );
+			/* a process is using the PID. It's highly likely that this is in fact
+			 * the mixplayd that created the pidfile but there is a chance that
+			 * some other process recycled the PID after a reboot or something */
+			addMessage( 0, "Mixplayd (PID: %i) is already running!", rv );
 			return -1;
 		}
 		addMessage( 0, "Found stale pidfile, you may want to check for a core!" );
