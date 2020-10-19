@@ -1414,7 +1414,7 @@ void *reader( void *arg ) {
 				}
 				else {
 					if ( search( control->argument, MPC_RANGE(control->command) ) == -1 ) {
-						addMessage( -1, "Too many titles found!" );
+						addMessage( 0, "Too many titles found!" );
 					}
 					/* todo: a signal/unblock would be nicer here */
 					addMessage( 1, "Waiting for results..");

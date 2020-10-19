@@ -232,13 +232,18 @@ function isPlay () {
 function adaptUI (keep) {
   /* Number of lines in sub-tabs */
   var lines
-  var minfont = 14
+  var minfont = 12
   var maxfont = 30
   var h = window.innerHeight
   var i
   var fsize
   var bsize
   const portrait = (h > window.innerWidth * 1.2)
+
+  /* cludge to keep stuff readable on non-aliasing displays */
+  if (!portrait) {
+    minfont = 18
+  }
 
   /* lots of magic numbers here: the formula is:
    * lines_to_display - ( pixels_available / pixels_per_line )
@@ -275,7 +280,6 @@ function adaptUI (keep) {
     if (isstream) {
       lines = lines - 2
     }
-    minfont = 12
   } else {
     lines = 28
   }
@@ -1101,7 +1105,7 @@ function searchUpdate (data) {
     items[0] = document.createElement('em')
     items[0].innerHTML = 'No albums found!'
   }
-  tabify(e, 'lres', items, 14)
+  tabify(e, 'lres', items, 13)
 
   e = document.getElementById('search1')
   wipeElements(e)
@@ -1127,7 +1131,7 @@ function searchUpdate (data) {
     items[0] = document.createElement('em')
     items[0].innerHTML = 'No artists found!'
   }
-  tabify(e, 'ares', items, 14)
+  tabify(e, 'ares', items, 13)
 
   e = document.getElementById('search0')
   items = []
@@ -1166,7 +1170,7 @@ function searchUpdate (data) {
     items[0] = document.createElement('em')
     items[0].innerHTML = 'Found ' + data.artists.length + ' artists and ' + data.albums.length + ' albums'
   }
-  tabify(e, 'tres', items, 14)
+  tabify(e, 'tres', items, 13)
 }
 
 function dnpfavUpdate (data) {
@@ -1183,7 +1187,7 @@ function dnpfavUpdate (data) {
       items[i] = getPattern('Remove', 0x001a, data.dnplist[i], lineid++)
     }
   }
-  tabify(e, 'dlist', items, 16)
+  tabify(e, 'dlist', items, 15)
 
   e = document.getElementById('dnpfav2')
   wipeElements(e)
@@ -1196,7 +1200,7 @@ function dnpfavUpdate (data) {
       items[i] = getPattern('Remove', 0x001b, data.favlist[i], lineid++)
     }
   }
-  tabify(e, 'flist', items, 16)
+  tabify(e, 'flist', items, 15)
 
   e = document.getElementById('dnpfav3')
   wipeElements(e)
@@ -1211,7 +1215,7 @@ function dnpfavUpdate (data) {
       items[i].innerHTML = data.dbllist[i]
     }
   }
-  tabify(e, 'llist', items, 16)
+  tabify(e, 'llist', items, 15)
 }
 
 function secsToTime (secs) {
@@ -1474,7 +1478,7 @@ function updateConfig (data) {
         name, 0, lineid++)
     }
   }
-  tabify(e, 'prolist', items, 13)
+  tabify(e, 'prolist', items, 11)
 
   e = document.getElementById('channels')
   items = []
@@ -1496,7 +1500,7 @@ function updateConfig (data) {
         data.sname[i], 0, lineid++)
     }
   }
-  tabify(e, 'chanlist', items, 13)
+  tabify(e, 'chanlist', items, 11)
 
   if (active > 0) {
     if (favplay) {

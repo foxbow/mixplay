@@ -8,8 +8,8 @@
 /* Directory access */
 
 #define NAMELEN 64
-/* do not return more than 100 titles */
-#define MAXSEARCH 100
+/* do not return more than 50 titles */
+#define MAXSEARCH 50
 
 /* flags */
 #define MP_FAV   1	/* Favourite */
