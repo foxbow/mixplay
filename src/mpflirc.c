@@ -1,7 +1,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <stropts.h>
 #include <linux/input.h>
 #include <stdio.h>
 #include <errno.h>
