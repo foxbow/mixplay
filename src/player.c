@@ -585,6 +585,38 @@ static int playResults( mpcmd_t range, const char *arg, const int insert ) {
 	return 0;
 }
 
+static void killPlayers(pid_t	pid[2], int p_command[2][2], int p_status[2][2]) {
+	uint64_t i;
+	mpconfig_t  *control=getConfig();
+
+	/* ask nicely first.. */
+	for( i=0; i<=control->fade; i++) {
+		addMessage(1, "Stopping player %" PRId64, i);
+		dowrite( p_command[i][1], "QUIT\n", 5 );
+		close( p_command[i][1] );
+		close( p_status[i][0] );
+		sleep(1);
+		if( waitpid( pid[i], NULL, WNOHANG|WCONTINUED ) != pid[i] ) {
+			addMessage(1, "Terminating player %" PRId64, i);
+			kill( pid[i], SIGTERM );
+			sleep(1);
+			if( waitpid( pid[i], NULL, WNOHANG|WCONTINUED ) != pid[i] ) {
+				addMessage(1, "Killing player %" PRId64, i);
+				kill( pid[i], SIGKILL );
+				sleep(1);
+				if( waitpid( pid[i], NULL, WNOHANG|WCONTINUED ) != pid[i] ) {
+					addMessage(-1, "Could not get rid of %i!", pid[i]);
+				}
+			}
+		}
+	}
+	if (control->mpmode & PM_SWITCH) {
+		control->active=oactive;
+	}
+	control->status=mpc_idle;
+
+}
+
 /**
  * the main control thread function that acts as an interface between the
  * player processes and the UI. It checks the control->command value for
@@ -714,32 +746,7 @@ void *reader( void *arg ) {
 			control->watchdog++;
 			if ( control->watchdog > STREAM_TIMEOUT ) {
 				addMessage(-1, "Stream player froze!");
-				/* ask nicely first.. */
-				for( i=0; i<=control->fade; i++) {
-					addMessage(1, "Stopping player %" PRId64, i);
-					dowrite( p_command[i][1], "QUIT\n", 5 );
-					close( p_command[i][1] );
-					close( p_status[i][0] );
-					sleep(1);
-					if( waitpid( pid[i], NULL, WNOHANG|WCONTINUED ) != pid[i] ) {
-						addMessage(1, "Terminating player %" PRId64, i);
-						kill( pid[i], SIGTERM );
-						sleep(1);
-						if( waitpid( pid[i], NULL, WNOHANG|WCONTINUED ) != pid[i] ) {
-							addMessage(1, "Killing player %" PRId64, i);
-							kill( pid[i], SIGKILL );
-							sleep(1);
-							if( waitpid( pid[i], NULL, WNOHANG|WCONTINUED ) != pid[i] ) {
-								addMessage(-1, "Could not get rid of %i!", pid[i]);
-							}
-						}
-					}
-				}
-				if (control->mpmode & PM_SWITCH) {
-					control->active=oactive;
-				}
-				control->status=mpc_idle;
-
+				killPlayers(pid, p_command, p_status);
 				addMessage(1, "Stopping reader");
 				return NULL;
 			}
@@ -1014,7 +1021,7 @@ void *reader( void *arg ) {
 						break;
 
 					case 2:  /* PLAY */
-						if((control->status == mpc_start) || 
+						if((control->status == mpc_start) ||
 								(control->mpmode & PM_SWITCH)) {
 							addMessage(  1, "Playing profile #%i", control->active );
 							control->mpmode &= ~PM_SWITCH;
@@ -1044,8 +1051,13 @@ void *reader( void *arg ) {
 								control->current->title->display,
 								fullpath(control->current->title->path) );
 					}
-					strcpy(control->current->title->title, "No music");
+					killPlayers(pid, p_command, p_status);
+					addMessage(1, "Stopping reader");
+					strcpy(control->current->title->title, "Restarting");
 					control->status=mpc_idle;
+					/* make sure that the player gets restarted */
+					control->watchdog = STREAM_TIMEOUT+1;
+					return NULL;
 					break;
 
 				default:
@@ -1567,9 +1579,7 @@ void *reader( void *arg ) {
 	}
 
 	/* stop player(s) gracefully */
-	for( i=0; i<=control->fade; i++) {
-		dowrite( p_command[i][1], "QUIT\n", 5 );
-	}
+	killPlayers( pid, p_command, p_status);
 	addMessage( 0, "Players stopped" );
 	closeAudio();
 
