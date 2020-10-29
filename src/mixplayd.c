@@ -22,6 +22,7 @@
 #include "mpinit.h"
 #include "mphid.h"
 #include "mpflirc.h"
+#include "mpserver.h"
 
 static unsigned long _curmsg=0;
 
@@ -243,7 +244,7 @@ int main( int argc, char **argv ) {
 
 	addUpdateHook( &s_updateHook );
 
-	if( initAll( ) == 0 ){
+	if( !startServer() && !initAll() ) {
 		/* flirc handler */
 		hidfd=initFLIRC();
 		if( hidfd != -1 ) {
@@ -264,7 +265,7 @@ int main( int argc, char **argv ) {
 			addMessage(1, "Reader stopped");
 			if( control->watchdog > STREAM_TIMEOUT ) {
 				addMessage(-1, "Restarting reader");
-				pthread_create( &control->rtid, NULL, reader, NULL );
+				initAll();
 			}
 		} while (control->watchdog > STREAM_TIMEOUT );
 		addMessage(1, "Waiting for server to stop");

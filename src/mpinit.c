@@ -206,18 +206,13 @@ int getArgs( int argc, char ** argv ){
  *
  * this will also start the communication thread is remote=2
  */
-int initAll( ) {
+int initAll() {
 	mpconfig_t *control;
 	pthread_t tid;
 	struct timespec ts;
 	control=getConfig();
 	ts.tv_sec=0;
 	ts.tv_nsec=250000;
-
-	/* start the comm server */
-	if( startServer() != 0 ) {
-		return -1;
-	}
 
 	/* start the actual player */
 	pthread_create( &control->rtid, NULL, reader, NULL );

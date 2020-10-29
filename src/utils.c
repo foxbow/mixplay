@@ -213,14 +213,20 @@ int isMusic( const char *name ) {
 
 /**
  * Check if the given string is an URL
- * We just allow http/s
+ * We just allow http/s and no parameters
  */
 int isURL( const char *uri ) {
-	if( startsWith( uri, "http://" ) || startsWith( uri, "https://" ) ) {
-		return 1;
+	if( !startsWith( uri, "http://" ) && !startsWith( uri, "https://" ) ) {
+		return 0;
+	}
+	if( strchr( uri, '?') != NULL ) {
+		return 0;
+	}
+	if( strchr( uri, '&') != NULL ) {
+		return 0;
 	}
 
-	return 0;
+	return 1;
 }
 
 /*

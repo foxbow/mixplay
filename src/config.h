@@ -89,11 +89,11 @@ const char *_mprccmdstrings[MPRC_NUM];
 /* determine range */
 #define MPC_RANGE(x) (mpcmd_t)((int)x&0xff00)
 /* check for set range */
-#define MPC_ISTITLE(x) (x & mpc_title)
-#define MPC_ISARTIST(x) (x & mpc_artist)
-#define MPC_ISALBUM(x) ( x & mpc_album)
-#define MPC_ISGENRE(x) ( x & mpc_genre)
-#define MPC_ISDISPLAY(x) ( x & mpc_display)
+#define MPC_ISTITLE(x) ((x) & mpc_title)
+#define MPC_ISARTIST(x) ((x) & mpc_artist)
+#define MPC_ISALBUM(x) ((x) & mpc_album)
+#define MPC_ISGENRE(x) ((x) & mpc_genre)
+#define MPC_ISDISPLAY(x) ((x) & mpc_display)
 /* check for exact range */
 #define MPC_EQTITLE(x) (MPC_RANGE(x)==mpc_title)
 #define MPC_EQARTIST(x) (MPC_RANGE(x)==mpc_artist)

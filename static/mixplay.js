@@ -238,7 +238,7 @@ function adaptUI (keep) {
   var i
   var fsize
   var bsize
-  const portrait = (h > window.innerWidth * 1.2)
+  const portrait = (h > window.innerWidth * 1.3)
 
   /* cludge to keep stuff readable on non-aliasing displays */
   if (!portrait) {
@@ -1323,7 +1323,7 @@ function playerUpdate (data) {
     clearBody('pause')
     power(1)
     document.getElementById('play').innerHTML = '||'
-  } else {
+  } else if (!data.mpmode & 8) {
     setBody('pause')
     if (idlesleep > 0) {
       if (idletime < idlesleep) {
@@ -1536,6 +1536,16 @@ function sendArg (cmd) {
   }
 }
 
+function checkURL (url) {
+  if (url.toLowerCase().startsWith('http') &&
+     !url.endsWith('/') &&
+     (url.indexOf('?') === -1) &&
+     (url.indexOf('&') === -1)) {
+    return true
+  }
+  return false
+}
+
 function loadURL2 (url) {
   if (!url) {
     console.log('loadURL() returned an invalid value!')
@@ -1544,7 +1554,7 @@ function loadURL2 (url) {
   const parts = url.split('/')
 
   /* check result from clipboard */
-  if (url.toLowerCase().startsWith('http') && !url.endsWith('/')) {
+  if (checkURL(url)) {
     if (!window.confirm('Load ' + parts[parts.length - 1] + '?')) {
       url = window.prompt('Enter Address to load')
     }
@@ -1553,7 +1563,7 @@ function loadURL2 (url) {
   }
 
   if (url) {
-    if (url.toLowerCase().startsWith('http')) {
+    if (checkURL(url)) {
       sendCMDArg(0x17, url)
       return
     }

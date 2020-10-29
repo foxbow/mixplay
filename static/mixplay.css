@@ -20,8 +20,8 @@ body {
 }
 
 body.busy {
-	background-color: #8f8;
-	background-image: radial-gradient( circle at 90% -30%, white, darkgreen 2%, black 100%);
+	background-color: #ff8;
+	background-image: radial-gradient( circle at 90% -30%, white, green 2%, black 100%);
 }
 
 body.disconnect {

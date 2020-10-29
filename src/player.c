@@ -261,6 +261,8 @@ void setCommand( mpcmd_t cmd, char *arg ) {
 	pthread_mutex_unlock( &_pcmdlock );
 }
 
+static int64_t oactive=1;
+
 /**
  * make mpeg123 play the given title
  */
@@ -282,12 +284,8 @@ static void sendplay( int fdset ) {
 	if ( dowrite( fdset, line, MAXPATHLEN+6 ) == -1 ) {
 		fail( errno, "Could not write\n%s", line );
 	}
-	if( control->status == mpc_start ) {
-		/* We have switched */
-		control->mpmode &= ~PM_SWITCH;
-	}
 	notifyChange(MPCOMM_TITLES);
-	addMessage( 2, "CMD: %s", line );
+	addMessage( 1, "CMD: %s", line );
 }
 
 /**
@@ -711,11 +709,11 @@ void *reader( void *arg ) {
 		 */
 		if( (i == 0) &&
 				(control->mpmode & PM_STREAM) &&
-				(control->status == mpc_play) ) {
+				((control->status == mpc_start) ||
+				 (control->mpmode & PM_SWITCH))) {
 			control->watchdog++;
 			if ( control->watchdog > STREAM_TIMEOUT ) {
 				addMessage(-1, "Stream player froze!");
-				control->status=mpc_idle;
 				/* ask nicely first.. */
 				for( i=0; i<=control->fade; i++) {
 					addMessage(1, "Stopping player %" PRId64, i);
@@ -737,6 +735,10 @@ void *reader( void *arg ) {
 						}
 					}
 				}
+				if (control->mpmode & PM_SWITCH) {
+					control->active=oactive;
+				}
+				control->status=mpc_idle;
 
 				addMessage(1, "Stopping reader");
 				return NULL;
@@ -1012,8 +1014,13 @@ void *reader( void *arg ) {
 						break;
 
 					case 2:  /* PLAY */
-						if( control->status == mpc_start ) {
-							addMessage(  2, "Playing profile #%i", control->active );
+						if((control->status == mpc_start) || 
+								(control->mpmode & PM_SWITCH)) {
+							addMessage(  1, "Playing profile #%i", control->active );
+							control->mpmode &= ~PM_SWITCH;
+							if (control->active != 0) {
+								oactive=control->active;
+							}
 						}
 						control->status=mpc_play;
 						break;
