@@ -1323,7 +1323,7 @@ function playerUpdate (data) {
     clearBody('pause')
     power(1)
     document.getElementById('play').innerHTML = '||'
-  } else if (!data.mpmode & 8) {
+  } else if (!(data.mpmode & 8)) {
     setBody('pause')
     if (idlesleep > 0) {
       if (idletime < idlesleep) {
