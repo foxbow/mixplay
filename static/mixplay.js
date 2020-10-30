@@ -111,10 +111,10 @@ function initKbdDiv () {
           btn = createKbdKey('CLR', 'C')
           break
         case 'O':
-          btn = createKbdKey('OK', '')
+          btn = createKbdKey('&#x2714;', '')
           break
         case 'X':
-          btn = createKbdKey('ESC', 'X')
+          btn = createKbdKey('X', 'X')
           break
         case ' ':
           btn = createKbdKey('&nbsp;', ' ')
@@ -146,6 +146,7 @@ function toggleKbd (id, ok) {
     t.value = e.value
     kbdcurrent = e
     kbdokay = ok
+    t.focus()
   } else {
     if (id.length > 0) {
       e.value = t.value
