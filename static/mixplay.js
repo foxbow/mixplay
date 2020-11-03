@@ -515,8 +515,13 @@ function sendCMDArg (cmd, arg) {
   code = Number(cmd).toString(16)
 
   /* replay, prev and next don't make sense on stream */
-  if (isstream && ((cmd === 0x02) || (cmd === 0x03) || (cmd === 0x05))) {
-    return
+  if (isstream) {
+    if ((cmd === 0x02) || (cmd === 0x03) || (cmd === 0x05)) {
+      return
+    }
+    if ((cmd === 0x0) && (idletime > 0)) {
+      setElement('title', '-- reconnect --')
+    }
   }
 
   /* ignore volume controls */
@@ -1248,7 +1253,6 @@ function playerUpdate (data) {
     isstream = (data.mpmode & 1) /* PM_STREAM */
     enableElement('goprev', !isstream)
     enableElement('gonext', !isstream)
-    enableElement('playtime', !isstream)
     enableElement('dnp', !isstream)
     enableElement('setfavplay', !isstream)
     enableElement('cextra3', !isstream)
@@ -1301,6 +1305,7 @@ function playerUpdate (data) {
         secsToTime(data.remtime))
     document.getElementById('progressbar').style.width = data.percent + '%'
   } else {
+    setElement('playtime', secsToTime(data.playtime))
     document.getElementById('progressbar').style.width = '100%'
   }
 
