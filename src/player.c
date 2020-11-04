@@ -1268,6 +1268,8 @@ void *reader( void *arg ) {
 						writeConfig(NULL);
 						asyncRun( plSetProfile );
 						order=1;
+					} else {
+						addMessage(0, "Invalid profile %i", profile);
 					}
 					sfree(&(control->argument));
 				}

@@ -125,7 +125,7 @@ static int fillReqInfo( mpReqInfo *info, char *line) {
 	char *jsonLine = calloc(strlen(line),1);
 	int rc = 0;
 	strdec( jsonLine, line );
-	addMessage( 2, "received request: %s", jsonLine );
+	addMessage( 3, "received request: %s", jsonLine );
 	jo = jsonRead( jsonLine );
 	free( jsonLine );
 	if( jsonPeek(jo, "cmd") == json_error ) {
@@ -141,9 +141,9 @@ static int fillReqInfo( mpReqInfo *info, char *line) {
 			}
 		}
 		info->clientid=jsonGetInt(jo, "clientid");
-		addMessage(2,"cmd: %i", info->cmd);
-		addMessage(2,"arg: %s", info->arg?info->arg:"(NULL)");
-		addMessage(2,"cid: %i", info->clientid);
+		addMessage(3,"cmd: %i", info->cmd);
+		addMessage(3,"arg: %s", info->arg?info->arg:"(NULL)");
+		addMessage(3,"cid: %i", info->clientid);
 	}
 	jsonDiscard(jo);
 	return rc;
@@ -306,11 +306,11 @@ static void *clientHandler(void *args ) {
 								running|=CL_UPD;
 								/* no initMsgCnt(clientid); as this may still be correct */
 								addNotify(clientid, MPCOMM_TITLES);
-								addMessage( 1, "Resurrect Update Handler for %i", reqInfo.clientid );
+								addMessage( 2, "Resurrect Update Handler for %i", reqInfo.clientid );
 							} else {
 								/* treat as one-shot for now */
 								running = CL_ONE;
-								addMessage( 1, "Temporary one-shot for %i", reqInfo.clientid );
+								addMessage( 3, "Temporary one-shot for %i", reqInfo.clientid );
 							}
 						}
 					}
@@ -369,7 +369,7 @@ static void *clientHandler(void *args ) {
 							state=req_update;
 							/* make sure no one asks for searchresults */
 							fullstat|=(reqInfo.cmd & ~MPCOMM_RESULT);
-							addMessage(2,"Statusrequest: %i", fullstat);
+							addMessage(3,"Statusrequest: %i", fullstat);
 						}
 						else if( strstr( pos, "/title/" ) == pos ) {
 							pos+=7;
@@ -688,7 +688,7 @@ static void *clientHandler(void *args ) {
 		}
 	}
 
-	addMessage( 2, "Client handler exited" );
+	addMessage( 3, "Client handler exited" );
 	if( isCurClient(clientid) ){
 		addMessage(1, "Unlocking client %i", clientid );
 		unlockClient(clientid);
@@ -751,7 +751,7 @@ static void *mpserver( void *arg ) {
 				addMessage( 0, "accept() failed!" );
 				continue;
 			}
-			addMessage( 2, "Connection accepted" );
+			addMessage( 3, "Connection accepted" );
 
 			/* free()'d in clientHandler() */
 			new_sock = (int*)falloc( 1, sizeof(int) );

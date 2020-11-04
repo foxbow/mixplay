@@ -1503,7 +1503,7 @@ function updateConfig (data) {
         name = '&#x25B6; ' + name
       }
       items[i] = popselect(choices, -(i + 1),
-        data.sname[i], 0, lineid++)
+        name, 0, lineid++)
     }
   }
   tabify(e, 'chanlist', items, 11)
