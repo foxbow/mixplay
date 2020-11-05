@@ -237,26 +237,31 @@ static void *clientHandler(void *args ) {
 		if( FD_ISSET( sock, &fds ) ) {
 			memset( commdata, 0, commsize );
 			recvd=0;
-			while( ( retval=recv( sock, commdata+recvd, commsize-recvd, 0 ) ) == commsize-recvd ) {
+			while( ( retval=recv( sock, commdata+recvd, commsize-recvd, MSG_DONTWAIT ) ) == commsize-recvd ) {
 				recvd=commsize;
 				commsize+=MP_BLKSIZE;
 				commdata=(char*)frealloc( commdata, commsize );
 				memset( commdata+recvd, 0, MP_BLKSIZE );
 			}
-			switch( retval ) {
-			case -1:
-				addMessage( 1, "Read error on socket!\n%s", strerror( errno ) );
-				running&=~CL_RUN;
-				break;
-			case 0:
+
+			/* data available but zero bytes read */
+			if( retval == 0 ) {
 				if(recvd == 0) {
 					addMessage( 1, "Client disconnected");
 				} else {
-					addMessage( 1, "Truncated request: %s", commdata);
+					addMessage( 1, "Truncated request (%li): %s", (commsize-recvd), commdata);
 				}
 				running&=~CL_RUN;
-				break;
-			default:
+			}
+			/* an error occured, EAGAIN and EWOULDBLOCK are ignored */
+			else if(( retval == -1 ) &&
+					(errno != EAGAIN) &&
+					(errno != EWOULDBLOCK)) {
+				addMessage( 1, "Read error on socket!\n%s", strerror( errno ) );
+				running&=~CL_RUN;
+			}
+			/* all seems good.. */
+			else {
 				method=0;
 				toLower( commdata );
 				addMessage(3, "%s", commdata);

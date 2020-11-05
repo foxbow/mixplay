@@ -585,9 +585,22 @@ static int playResults( mpcmd_t range, const char *arg, const int insert ) {
 	return 0;
 }
 
-static void killPlayers(pid_t	pid[2], int p_command[2][2], int p_status[2][2]) {
+static void killPlayers(pid_t	pid[2], int p_command[2][2], int p_status[2][2], int p_error[2][2], int restart) {
 	uint64_t i;
 	mpconfig_t  *control=getConfig();
+
+	if( restart ) {
+		addMessage(1, "Stopping reader");
+		strcpy(control->current->title->title, "Restarting");
+		control->status=mpc_idle;
+		/* make sure that the player gets restarted */
+		control->watchdog = STREAM_TIMEOUT+1;
+
+		if (control->mpmode & PM_SWITCH) {
+			control->active=oactive;
+		}
+		control->status=mpc_idle;
+	}
 
 	/* ask nicely first.. */
 	for( i=0; i<=control->fade; i++) {
@@ -595,6 +608,7 @@ static void killPlayers(pid_t	pid[2], int p_command[2][2], int p_status[2][2]) {
 		dowrite( p_command[i][1], "QUIT\n", 5 );
 		close( p_command[i][1] );
 		close( p_status[i][0] );
+		close( p_error[i][0] );
 		sleep(1);
 		if( waitpid( pid[i], NULL, WNOHANG|WCONTINUED ) != pid[i] ) {
 			addMessage(1, "Terminating player %" PRId64, i);
@@ -610,11 +624,6 @@ static void killPlayers(pid_t	pid[2], int p_command[2][2], int p_status[2][2]) {
 			}
 		}
 	}
-	if (control->mpmode & PM_SWITCH) {
-		control->active=oactive;
-	}
-	control->status=mpc_idle;
-
 }
 
 /**
@@ -645,6 +654,7 @@ void *reader( void *arg ) {
 	int 	fade=3;
 	int 	p_status[2][2];			/* status pipes to mpg123 */
 	int 	p_command[2][2];		/* command pipes to mpg123 */
+	int   p_error[2][2];			/* error pipes to mpg123 */
 	pid_t	pid[2];
 	mpcmd_t cmd=mpc_idle;
 	unsigned update=0;
@@ -671,7 +681,9 @@ void *reader( void *arg ) {
 		addMessage(  2, "Starting player %" PRId64, i+1 );
 
 		/* create communication pipes */
-		if( ( pipe( p_status[i] ) != 0 ) || ( pipe( p_command[i] ) != 0 ) ) {
+		if( ( pipe( p_status[i] ) != 0 ) ||
+				( pipe( p_command[i] ) != 0 ) ||
+				( pipe( p_error[i] ) != 0 )) {
 			fail( errno, "Could not create pipes!" );
 		}
 		pid[i] = fork();
@@ -693,18 +705,25 @@ void *reader( void *arg ) {
 				fail( errno, "Could not dup stdout for player %" PRId64, i+1 );
 			}
 
+			if ( dup2( p_error[i][1], STDERR_FILENO ) != STDERR_FILENO ) {
+				fail( errno, "Could not dup stderr for player %" PRId64, i+1 );
+			}
+
 			/* this process needs no pipe handles */
 			close( p_command[i][0] );
 			close( p_command[i][1] );
 			close( p_status[i][0] );
 			close( p_status[i][1] );
+			close( p_error[i][0] );
+			close( p_error[i][1] );
 			/* Start mpg123 in Remote mode */
-			execlp( "mpg123", "mpg123", "-R", "--rva-mix", "2> &1", NULL );
+			execlp( "mpg123", "mpg123", "-R", "--rva-mix", NULL );
 			fail( errno, "Could not exec mpg123" );
 		}
 
 		close( p_command[i][0] );
 		close( p_status[i][1] );
+		close( p_error[i][1] );
 	}
 
 	/* check if we can control the system's volume */
@@ -726,6 +745,7 @@ void *reader( void *arg ) {
 		FD_ZERO( &fds );
 		for( i=0; i<=control->fade; i++ ) {
 			FD_SET( p_status[i][0], &fds );
+			FD_SET( p_error[i][0], &fds );
 		}
 		to.tv_sec=1;
 		to.tv_usec=0; /* 1/10 second */
@@ -740,14 +760,12 @@ void *reader( void *arg ) {
 		 * changes - most likely due to a DSL reconnect.
 		 */
 		if( (i == 0) &&
-				(control->mpmode & PM_STREAM) &&
 				((control->status == mpc_start) ||
 				 (control->mpmode & PM_SWITCH))) {
 			control->watchdog++;
 			if ( control->watchdog > STREAM_TIMEOUT ) {
-				addMessage(-1, "Stream player froze!");
-				killPlayers(pid, p_command, p_status);
-				addMessage(1, "Stopping reader");
+				addMessage(-1, "Player froze!");
+				killPlayers(pid, p_command, p_status, p_error, 1);
 				return NULL;
 			}
 		}
@@ -755,43 +773,50 @@ void *reader( void *arg ) {
 			control->watchdog=0;
 		}
 
-		/* drain inactive player */
-		if( control->fade && FD_ISSET( p_status[fdset?0:1][0], &fds ) ) {
-			key=readline( line, MAXPATHLEN, p_status[fdset?0:1][0] );
+		if( control->fade ) {
+			/* drain inactive player */
+			if (FD_ISSET( p_status[fdset?0:1][0], &fds )) {
+				key=readline( line, MAXPATHLEN, p_status[fdset?0:1][0] );
+				if( key > 2 ) {
+					if( '@' == line[0] ) {
+						if( ( 'F' != line[1] ) && ( 'V' != line[1] ) && ( 'I' != line[1] )) {
+							addMessage(  2, "P- %s", line );
+						}
 
-			if( key > 2 ) {
-				if( '@' == line[0] ) {
-					if( ( 'F' != line[1] ) && ( 'V' != line[1] ) && ( 'I' != line[1] )) {
-						addMessage(  2, "P- %s", line );
+						switch ( line[1] ) {
+						case 'R': /* startup */
+							addMessage(  1, "MPG123 background instance is up" );
+							break;
+						case 'E':
+							if( control->current == NULL ) {
+								addMessage( -1, "ERROR: %s", line );
+							}
+							else {
+								addMessage( -1, "ERROR: %s\nIndex: %i\nName: %s\nPath: %s", line,
+									control->current->title->key,
+									control->current->title->display,
+									fullpath(control->current->title->path) );
+							}
+							killPlayers(pid, p_command, p_status, p_error, 1);
+							break;
+						case 'F':
+							if( outvol > 0 ) {
+								outvol--;
+								snprintf( line, MAXPATHLEN, "volume %i\n", outvol );
+								dowrite( p_command[fdset?0:1][1], line, strlen( line ) );
+							}
+							break;
+						}
 					}
-
-					switch ( line[1] ) {
-					case 'R': /* startup */
-						addMessage(  1, "MPG123 background instance is up" );
-						break;
-					case 'E':
-						if( control->current == NULL ) {
-							fail( F_FAIL, "ERROR: %s", line );
-						}
-						else {
-							fail( F_FAIL, "ERROR: %s\nIndex: %i\nName: %s\nPath: %s", line,
-								control->current->title->key,
-								control->current->title->display,
-								fullpath(control->current->title->path) );
-						}
-						break;
-					case 'F':
-						if( outvol > 0 ) {
-							outvol--;
-							snprintf( line, MAXPATHLEN, "volume %i\n", outvol );
-							dowrite( p_command[fdset?0:1][1], line, strlen( line ) );
-						}
-						break;
+					else {
+						addMessage(  1, "OFF123: %s", line );
 					}
 				}
-				else {
-					addMessage(  1, "OFF123: %s", line );
-				}
+			}
+			/* this shouldn't be happening but if it happens, it gives a hint */
+			if (FD_ISSET( p_error[fdset?0:1][0], &fds )) {
+				key=readline( line, MAXPATHLEN, p_error[fdset?0:1][0] );
+				addMessage(0, "REPORT: %s", line );
 			}
 		}
 
@@ -1051,25 +1076,34 @@ void *reader( void *arg ) {
 								control->current->title->display,
 								fullpath(control->current->title->path) );
 					}
-					killPlayers(pid, p_command, p_status);
-					addMessage(1, "Stopping reader");
-					strcpy(control->current->title->title, "Restarting");
-					control->status=mpc_idle;
-					/* make sure that the player gets restarted */
-					control->watchdog = STREAM_TIMEOUT+1;
+					/* This is pretty much overkill, but the one size fits all way */
+					killPlayers(pid, p_command, p_status, p_error, 1);
 					return NULL;
 					break;
 
 				default:
-					addMessage( 0, "Player %i: Warning!\n%s", fdset, line );
+					addMessage( 0, "Warning: %s", line );
 					break;
 				} /* case line[1] */
 			} /* if line starts with '@' */
 			else {
 				/* verbosity 1 as sometimes tags appear here which confuses on level 0 */
-				addMessage( 1, "Player %i - MPG123: %s", fdset, line );
+				addMessage( 1, "Raw: %s", line );
 			}
-		} /* fgets() > 0 */
+		} /* FD_ISSET( p_status ) */
+
+		if (FD_ISSET( p_error[fdset][0], &fds )) {
+			key=readline( line, MAXPATHLEN, p_error[fdset][0] );
+			if( strstr(line, "error: ") ) {
+				addMessage(0, "%s", strstr(line, "error: ") + 7 );
+				control->active=oactive;
+				/* it should be enough to just reset to the previous state
+				   if the player is in fact dead, then the watchdog should trigger */
+				asyncRun( plSetProfile );
+			} else if (strlen(line) > 1) {
+				addMessage(1, "Player %i: %s", fdset, line );
+			}
+		}
 
 		pthread_mutex_lock( &_pcmdlock );
 		cmd=MPC_CMD(control->command);
@@ -1251,8 +1285,9 @@ void *reader( void *arg ) {
 					if( ( profile != 0 ) && ( profile != control->active ) ) {
 						/* switching channels started */
 						control->mpmode|=PM_SWITCH;
-						/* do not try to play the next title */
-						order=0;
+						/* stop the current play */
+						order = 0;
+						dowrite( p_command[fdset][1], "STOP\n", 6 );
 						/* reload database when switching from favplay to 'forget'
 						   playcount changes */
 						if( getFavplay() ) {
@@ -1267,7 +1302,6 @@ void *reader( void *arg ) {
 						control->active=profile;
 						writeConfig(NULL);
 						asyncRun( plSetProfile );
-						order=1;
 					} else {
 						addMessage(0, "Invalid profile %i", profile);
 					}
@@ -1303,6 +1337,7 @@ void *reader( void *arg ) {
 					control->argument=NULL;
 				}
 				pthread_mutex_unlock( &_asynclock );
+				notifyChange(MPCOMM_CONFIG);
 			}
 			break;
 
@@ -1581,7 +1616,7 @@ void *reader( void *arg ) {
 	}
 
 	/* stop player(s) gracefully */
-	killPlayers( pid, p_command, p_status);
+	killPlayers( pid, p_command, p_status, p_error, 0);
 	addMessage( 0, "Players stopped" );
 	closeAudio();
 
