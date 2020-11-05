@@ -249,7 +249,7 @@ static void *clientHandler(void *args ) {
 				if(recvd == 0) {
 					addMessage( 1, "Client disconnected");
 				} else {
-					addMessage( 1, "Truncated request (%li): %s", (commsize-recvd), commdata);
+					addMessage( 1, "Truncated request (%li): %s", (long)(commsize-recvd), commdata);
 				}
 				running&=~CL_RUN;
 			}
