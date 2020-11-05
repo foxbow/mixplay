@@ -760,6 +760,7 @@ void *reader( void *arg ) {
 		 * changes - most likely due to a DSL reconnect.
 		 */
 		if( (i == 0) &&
+				(control->mpmode & PM_STREAM) &&
 				((control->status == mpc_start) ||
 				 (control->mpmode & PM_SWITCH))) {
 			control->watchdog++;
