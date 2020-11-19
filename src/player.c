@@ -46,17 +46,17 @@ static int asyncTest() {
 
 static int checkPasswd( void ) {
 	char *pass=getConfig()->argument;
-	if( pthread_mutex_trylock( &_asynclock ) != EBUSY ) {
-		addMessage(0, "Player was not locked!");
+	if( asyncTest() ) {
+		if( pass && !strcmp( getConfig()->password, pass )) {
+			return 1;
+		}
+		addMessage(1, "Unlocking player after wrong password");
+		/* unlock mutex locked in asyncTest() */
+		pthread_mutex_unlock( &_asynclock );
+		/* TODO this may be potentially dangerous! */
+		unlockClient(-1);
+		addMessage( -1, "Wrong password!" );
 	}
-	if( pass && !strcmp( getConfig()->password, pass )) {
-		return 1;
-	}
-	addMessage(1, "Unlocking player after wrong password");
-	pthread_mutex_unlock( &_asynclock );
-	/* TODO this may be potentially dangerous! */
-	unlockClient(-1);
-	addMessage( -1, "Wrong password!" );
 	return 0;
 }
 
@@ -1218,14 +1218,14 @@ void *reader( void *arg ) {
 			break;
 
 		case mpc_doublets:
-			if( asyncTest() && checkPasswd()) {
+			if(checkPasswd()) {
 				asyncRun( plCheckDoublets );
 			}
 			sfree(&(control->argument));
 			break;
 
 		case mpc_dbclean:
-			if( asyncTest() && checkPasswd()) {
+			if(checkPasswd()) {
 				asyncRun( plDbClean );
 			}
 			sfree(&(control->argument));
@@ -1269,7 +1269,7 @@ void *reader( void *arg ) {
 		case mpc_quit:
 			/* The player does not know about the main App so anything setting
 			 * mcp_quit MUST make sure that the main app terminates as well ! */
-			if( asyncTest() && checkPasswd()) {
+			if(checkPasswd()) {
 				control->status=mpc_quit;
 				pthread_mutex_unlock( &_asynclock );
 			}
@@ -1444,15 +1444,11 @@ void *reader( void *arg ) {
 			break;
 
 		case mpc_dbinfo:
-			if( asyncTest() ) {
-				if( control->argument ) {
-					if( checkPasswd() ) {
-						asyncRun( plDbFix );
-					}
-				}
-				else {
-					asyncRun( plDbInfo );
-				}
+			if((control->argument) && checkPasswd()) {
+				asyncRun( plDbFix );
+			}
+			else if(asyncTest()){
+				asyncRun( plDbInfo );
 			}
 			sfree(&(control->argument));
 			break;

@@ -73,8 +73,8 @@ static char *sendRequest( clientInfo* usefd, const char *path ) {
 	if( usefd == NULL ) {
 		ci=getConnection(0);
 		if( ci->fd < 0 ) {
-			free(ci);
 			printf("C: could not open connection (%i)\n", ci->fd);
+			free(ci);
 			return NULL;
 		}
 	}

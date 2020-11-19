@@ -364,13 +364,15 @@ mpconfig_t *readConfig( void ) {
 		while( !feof( fp ) );
 
 		fclose(fp);
-		pthread_cond_signal(&confinit);
-		pthread_mutex_unlock(&conflock);
-
-		return _cconfig;
+	}
+	else {
+		addMessage(-1, "Could not open %s! Using default settings.", conffile);
 	}
 
-	return NULL;
+	pthread_cond_signal(&confinit);
+	pthread_mutex_unlock(&conflock);
+
+	return _cconfig;
 }
 
 /**
