@@ -1028,14 +1028,12 @@ void *reader( void *arg ) {
 
 							if( control->status != mpc_idle ) {
 								sendplay( p_command[fdset][1] );
-								order=1;
 							}
-							else {
-								order=0;
-							}
+
 							if(control->mpmode == PM_DATABASE) {
-								plCheck( 0 );
+								plCheck(0);
 							}
+							order=1;
 						}
 						else {
 							addMessage( 1, "Player status without current title" );
