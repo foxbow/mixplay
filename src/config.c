@@ -585,12 +585,12 @@ void addMessage( int v, const char *msg, ... ) {
 			}
 			if( _cconfig->inUI ) {
 				msgBuffAdd( _cconfig->msg, line );
-			} else {
+			} else if (!getDebug()) {
 				fprintf( stderr, "\r%s\n", line );
 			}
 		}
 		if( v < getDebug() ) {
-			fprintf( stderr, "\r%i %s\n", v, line );
+			fprintf( stderr, "\r%s\n", line );
 		}
 	}
 

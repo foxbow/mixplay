@@ -786,7 +786,7 @@ int startServer( ) {
 	mpconfig_t	*control=getConfig( );
 	struct sockaddr_in server;
 	int mainsocket = -1;
-	int rcnt=0;
+	int val=1;
 	memset( &server, 0, sizeof(server) );
 
 	mainsocket = socket(AF_INET , SOCK_STREAM , 0);
@@ -795,25 +795,21 @@ int startServer( ) {
 		addError( errno );
 		return -1;
 	}
+	if (setsockopt(mainsocket, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(int)) < 0) {
+		addMessage( 0, "Could not set SO_REUSEADDR on socket!");
+		addError( errno );
+	}
 	addMessage( 1, "Socket created" );
 
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = INADDR_ANY;
 	server.sin_port = htons( control->port );
 
-	while ( bind(mainsocket,(struct sockaddr *)&server , sizeof(server)) < 0) {
-		if( (errno == 98) && (rcnt < 4) ) {
-			/* this commonly takes a minute so try three times to reconnect if the
-			   socket is still blocked, then something is really wrong */
-			rcnt++;
-			addMessage(0, "Busy, retrying in 20s" );
-			sleep(20);
-		} else {
-			addMessage( 0, "bind to port %i failed!", control->port );
-			addError( errno );
-			close(mainsocket);
-			return -1;
-		}
+	if (bind(mainsocket, (struct sockaddr *)&server, sizeof(server)) < 0) {
+		addMessage( 0, "bind to port %i failed!", control->port );
+		addError( errno );
+		close(mainsocket);
+		return -1;
 	}
 	addMessage( 1, "bind() done");
 
