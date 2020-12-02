@@ -558,6 +558,7 @@ function sendCMDArg (cmd, arg) {
       break
     case 0x13: /* mpc_search */
       if (cmdtosend === '') {
+        switchView(3)
         e = document.getElementById('search0')
         text = document.createElement('em')
         text.innerHTML = '.. searching ..'
@@ -806,6 +807,15 @@ function togglePopup (ident) {
       }
     }
     currentPop = ident
+  }
+}
+
+/* for hardcoded popups, only show when the player is not in stream mode */
+function togglePopupDB (ident) {
+  if (!isstream) {
+    togglePopup(ident)
+  } else {
+    sendCMD(0x00)
   }
 }
 
@@ -1094,7 +1104,7 @@ function searchUpdate (data) {
     switchTabByRef('search', 2)
     for (i = 0; i < data.albums.length; i++) {
       choices = []
-      choices.push(['&#x26b2;', 0x0413]) // search
+      choices.push(['&#x26b2;', 0x0413]) // search album
       if ((!favplay) || (favplay && data.fpcurrent)) {
         choices.push(['&#x2665;', 0x0409]) // fav
       }
@@ -1879,4 +1889,5 @@ function dummy () {
   loadURL()
   toggleSearch()
   clearPass()
+  togglePopupDB()
 }

@@ -29,23 +29,29 @@
         <p id='prev'>prev</p>
       </div>
       <div id='current'>
-        <div id='ascroll' class='scroll' onclick='togglePopup("DFartist")'>
+        <div id='ascroll' class='scroll' onclick='togglePopupDB("DFartist")'>
           <p id='artist'>artist</p>
           <span class='popup' id='popupDFartist'>
-            <em class='clickline' onclick='sendCMD(0x020a)'>DNP&nbsp;/</em>
-            <em class='clickline' onclick='sendCMD(0x0209)'>&nbsp;FAV</em>
-            &#x2000;&#x274E;
+            <em class='clickline' onclick='sendCMD(0x0213)'>&nbsp;&#x26b2;</em>
+            <b> /</b>
+            <em class='clickline' onclick='sendCMD(0x0209)'>&nbsp;&#x2665;</em>
+            <b> /</b>
+            <em class='clickline' onclick='sendCMD(0x020a)'>&nbsp;&#x2620;</em>
+            <b>&#x2000;&#x274E;</b>
           </span>
         </div>
         <div id='tscroll' class='scroll' onclick='sendCMD(0x00)'>
           <p id='title'>title</p>
         </div>
-        <div id='lscroll' class='scroll' onclick='togglePopup("DFalbum")'>
+        <div id='lscroll' class='scroll' onclick='togglePopupDB("DFalbum")'>
           <p id='album'>album</p>
           <span class='popup' id='popupDFalbum'>
-            <em class='clickline' onclick='sendCMD(0x040a)'>DNP&nbsp;/</em>
-            <em class='clickline' onclick='sendCMD(0x0409)'>&nbsp;FAV</em>
-            &#x2000;&#x274E;
+            <em class='clickline' onclick='sendCMD(0x0413)'>&nbsp;&#x26b2;</em>
+            <b> /</b>
+            <em class='clickline' onclick='sendCMD(0x0409)'>&nbsp;&#x2665;</em>
+            <b> /</b>
+            <em class='clickline' onclick='sendCMD(0x040a)'>&nbsp;&#x2620;</em>
+            <b>&#x2000;&#x274E;</b>
           </span>
         </div>
       </div>
@@ -75,6 +81,7 @@
           <button onclick='toggleKbd("pass", function () {checkPass()})'>Login</button>
           <input  id='pass' type='text' style='display:none;'><br>
         </p>
+        <button id='dbinfo'  onclick='document.location.reload()'>Reload</button>
         <div id='admin' class='hide'>
           <button id='dbinfo'  onclick='sendCMD(0x12)'>Playcount</button>
           <button id='playcnt'  onclick='pwSendCMD(0x12)'>Fix playcount</button>

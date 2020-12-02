@@ -87,7 +87,8 @@ const char *_mprccmdstrings[MPRC_NUM];
 /* extract raw command */
 #define MPC_CMD(x)   (mpcmd_t)((int)x&0x00ff)
 /* determine range */
-#define MPC_RANGE(x) (mpcmd_t)((int)x&0xff00)
+#define MPC_RANGE(x) (mpcmd_t)((int)x&0x1f00)
+#define MPC_MODE(x)  (mpcmd_t)((int)x&0xff00)
 /* check for set range */
 #define MPC_ISTITLE(x) ((x) & mpc_title)
 #define MPC_ISARTIST(x) ((x) & mpc_artist)

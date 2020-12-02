@@ -412,13 +412,13 @@ static int getDirs( const char *cd, struct dirent ***dirlist ) {
  */
 static int isMatch( const char *term, const char *pat, const mpcmd_t range ) {
 	char loterm[MAXPATHLEN];
+	strltcpy( loterm, term, MAXPATHLEN );
 
 	if( MPC_ISFUZZY(range) ){
-		return patMatch( term, pat);
+		return patMatch( loterm, pat);
 	}
 
 	if( MPC_ISSUBSTR(range) ) {
-		strltcpy( loterm, term, MAXPATHLEN );
 		return ( strstr( loterm, pat ) != NULL );
 	}
 
@@ -525,21 +525,23 @@ int search( const char *pat, const mpcmd_t range ) {
 
 	do {
 		activity( 1, "searching for %s", lopat );
-		/* dnp XNOR MP_DNP */
+		/* dnp == XNOR MP_DNP */
 		found = 0;
 		if( ( runner->flags & MP_DNP ) == dnp ) {
 			/* check for searchrange and pattern */
-			if( ( ( MPC_ISTITLE(range) &&
-					isMatch( runner->title, pat, range) ) ||
-					( MPC_ISDISPLAY( range ) &&
-					isMatch( runner->display, pat, range ) ) ) ) {
+			if( MPC_ISTITLE(range) &&
+					isMatch( runner->title, lopat, range ) ){
 				found = (mpcmd_t)(found | mpc_title);
 			}
+
+			if ( MPC_ISDISPLAY( range ) &&
+					isMatch( runner->display, lopat, range ) ) {
+				found = (mpcmd_t)(found | mpc_display);
+			}
+
 			if( MPC_ISARTIST(range) &&
-					isMatch( runner->artist, pat, range ) ) {
-				if( MPC_EQARTIST(range) ) {
-					found = (mpcmd_t)(found | mpc_artist);
-				}
+					isMatch( runner->artist, lopat, range ) ) {
+				found = (mpcmd_t)(found | mpc_artist);
 				/* check for new artist */
 				for( i=0; (i<res->anum) && strcmp( res->artists[i], runner->artist ); i++ );
 				if( i == res->anum ) {
@@ -548,13 +550,19 @@ int search( const char *pat, const mpcmd_t range ) {
 					res->artists[i]=runner->artist;
 				}
 			}
+
 			/* if we search for artists, also add the artist's albums */
-			if( ( MPC_EQARTIST(range) && MPC_ISARTIST(found) ) ||
-					( MPC_ISALBUM( range ) &&
-					isMatch( runner->album, pat, range ) ) ) {
-				if (MPC_EQALBUM(range)) {
-					found = (mpcmd_t)(found | mpc_album);
-				}
+			if ( MPC_EQARTIST(range) && MPC_ISARTIST(found) ) {
+				found = (mpcmd_t)(found | mpc_album);
+			}
+
+			if( MPC_ISALBUM(range) &&
+					isMatch( runner->album, lopat, range ) ) {
+				found = (mpcmd_t)(found | mpc_album);
+			}
+
+			/* add current album to results? */
+			if( MPC_ISALBUM(found) ) {
 				/* check for new albums */
 				for( i=0; (i<res->lnum) && strcmp( res->albums[i], runner->album ); i++ );
 				if( i == res->lnum ) {
@@ -572,6 +580,7 @@ int search( const char *pat, const mpcmd_t range ) {
 					res->albart[i]=ARTIST_SAMPLER;
 				}
 			}
+
 			/* add title (too)? */
 			if (found && ( res->tnum++ < MAXSEARCH ) ) {
 				res->titles=appendToPL( runner, res->titles, 0 );

@@ -1461,19 +1461,21 @@ void *reader( void *arg ) {
 				/* if we mix two searches we're in trouble! */
 				assert( control->found->state != mpsearch_idle );
 				if( control->argument == NULL ) {
-					addMessage( -1, "Nothing to search for!" );
-				}
-				else {
-					if ( search( control->argument, MPC_RANGE(control->command) ) == -1 ) {
-						addMessage( 0, "Too many titles found!" );
+					if (MPC_ISARTIST(control->command)) {
+						control->argument = strdup(control->current->title->artist);
+					} else {
+						control->argument = strdup(control->current->title->album);
 					}
-					/* todo: a signal/unblock would be nicer here */
-					addMessage( 1, "Waiting for results..");
-					while( control->found->state != mpsearch_idle ) {
-						nanosleep( &ts, NULL );
-					}
-					addMessage( 1, "Results sent!");
 				}
+				if ( search( control->argument, MPC_MODE(control->command) ) == -1 ) {
+					addMessage( 0, "Too many titles found!" );
+				}
+				/* todo: a signal/unblock would be nicer here */
+				addMessage( 1, "Waiting to send results..");
+				while( control->found->state != mpsearch_idle ) {
+					nanosleep( &ts, NULL );
+				}
+				addMessage( 1, "Results sent!");
 				pthread_mutex_unlock( &_asynclock );
 			}
 			sfree( &(control->argument) );
