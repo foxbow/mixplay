@@ -38,7 +38,7 @@ typedef enum {
 	mpc_ivol,
 	mpc_dvol,
 	mpc_fskip,
-	mpc_bskip,
+	mpc_bskip,         /* 0x10 */
 	mpc_move,
 	mpc_dbinfo,
 	mpc_search,
@@ -53,7 +53,8 @@ typedef enum {
 	mpc_remove,
 	mpc_mute,
 	mpc_favplay,       /* 30 */
-	mpc_idle,
+	mpc_reset,
+	mpc_idle,          /* 0x20 */
 	mpc_title=1<<8,    /* 0x0100 */
 	mpc_artist=1<<9,   /* 0x0200 */
 	mpc_album=1<<10,   /* 0x0400 */

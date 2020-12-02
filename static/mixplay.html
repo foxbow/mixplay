@@ -81,7 +81,8 @@
           <button onclick='toggleKbd("pass", function () {checkPass()})'>Login</button>
           <input  id='pass' type='text' style='display:none;'><br>
         </p>
-        <button id='dbinfo'  onclick='document.location.reload()'>Reload</button>
+        <button id='reload'  onclick='document.location.reload()'>Reload client</button>
+        <button id='reset'  onclick='sendCMD(0x1f)'>Reset player</button>
         <div id='admin' class='hide'>
           <button id='dbinfo'  onclick='sendCMD(0x12)'>Playcount</button>
           <button id='playcnt'  onclick='pwSendCMD(0x12)'>Fix playcount</button>

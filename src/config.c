@@ -78,6 +78,7 @@ static const char *mpccommand[] = {
 	"remove",
 	"mute",
 	"favplay",
+	"reset",
 	"idle"
 };
 
