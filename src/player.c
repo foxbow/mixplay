@@ -1594,6 +1594,8 @@ void *reader( void *arg ) {
 		case mpc_reset:
 			addMessage(-1, "Force restart!");
 			killPlayers(pid, p_command, p_status, p_error, 1);
+			asyncTest();
+			pthread_mutex_unlock( &_asynclock );
 			pthread_cond_signal( &_pcmdcond );
 			pthread_mutex_unlock( &_pcmdlock );
 			return NULL;

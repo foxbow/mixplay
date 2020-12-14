@@ -816,7 +816,8 @@ mpplaylist_t *wipePlaylist( mpplaylist_t *pl ) {
 	lockPlaylist();
 	while( pl != NULL ){
 		next=pl->next;
-		if( getConfig()->root == NULL ) {
+		/* do not free titles in getConfig()->root database */
+		if( getConfig()->mpmode != PM_DATABASE ) {
 			free( pl->title );
 		}
 		free(pl);
