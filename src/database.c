@@ -54,7 +54,8 @@ mptitle_t *getTitleByIndex( unsigned int index ) {
  * a title that can be used for FAV/DNP marking.
  */
 mptitle_t *getTitleForRange( const mpcmd_t range, const char *name ) {
-	mptitle_t *root=getConfig()->root;
+	/* start with the current title so we can notice it disappear on DNP */
+	mptitle_t *root=getConfig()->current->title;
 	mptitle_t *run=root;
 
 	if( root == NULL ) {

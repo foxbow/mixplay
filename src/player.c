@@ -637,7 +637,6 @@ static void killPlayers(pid_t	pid[2], int p_command[2][2], int p_status[2][2], i
 void *reader( void *arg ) {
 	mpconfig_t  *control=getConfig();
 	mptitle_t *title=NULL;
-	mptitle_t *tbuf=NULL;
 	fd_set		fds;
 	struct timeval	to;
 	struct timespec ts;
@@ -1239,13 +1238,13 @@ void *reader( void *arg ) {
 
 		case mpc_dnp:
 			if( (title != NULL ) && asyncTest() ) {
-				tbuf = control->current->title;
-				handleRangeCmd( title, control->command );
-				plCheck(1);
-				if( tbuf != control->current->title ) {
+				if( title == control->current->title ) {
+					/* current title is affected, play the next one */
 					order=0;
 					dowrite( p_command[fdset][1], "STOP\n", 6 );
 				}
+				handleRangeCmd( title, control->command );
+				plCheck(1);
 				pthread_mutex_unlock( &_asynclock );
 			}
 			break;
