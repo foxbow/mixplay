@@ -16,6 +16,8 @@
 #define MP_MSGLEN 512
 #define MAXCLIENT 100
 #define STREAM_TIMEOUT 9
+/* standard crossfade value */
+#define FADESECS 4
 
 /*
  * commands and states
@@ -162,7 +164,7 @@ typedef struct {
 	unsigned fpcurrent:1;
 	unsigned mpmix:1;
 	/* other flags */
-	unsigned fade:1;					/* controls fading between titles */
+	unsigned fade;					/* controls fading between titles */
 	unsigned isDaemon:1;
 	unsigned inUI:1;					/* flag to show if the UI is active */
 	unsigned list:1;					/* remote playlist */
@@ -216,8 +218,9 @@ const char *mpcString( mpcmd_t rawcmd );
 mpcmd_t mpcCommand( const char *val );
 char *fullpath( const char *file );
 
-mpplaylist_t *wipePlaylist( mpplaylist_t *pl );
+mpplaylist_t *wipePlaylist( mpplaylist_t *pl, int recursive );
 mptitle_t *wipeTitles( mptitle_t *root );
+void wipePTLists( mpconfig_t *config );
 marklist_t *wipeList( marklist_t *root );
 int playerIsInactive( void );
 void blockSigint();

@@ -503,7 +503,7 @@ int search( const char *pat, const mpcmd_t range ) {
 	assert(pat!=NULL);
 
 	/* free buffer playlist, the arrays will not get lost due to the realloc later */
-	res->titles=wipePlaylist(res->titles);
+	res->titles=wipePlaylist(res->titles, 0);
 	res->tnum=0;
 	res->anum=0;
 	res->lnum=0;

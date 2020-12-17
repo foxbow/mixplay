@@ -216,8 +216,7 @@ static int toggleMute() {
  */
 void setStream( const char* stream, const char *name ) {
 	mpconfig_t *control=getConfig();
-	control->current=wipePlaylist( control->current );
-	control->root=wipeTitles(control->root);
+	wipePTLists( control );
 	control->current=addPLDummy( control->current, "<waiting for info>" );
 	control->current=addPLDummy( control->current, name );
 	control->current=control->current->next;
@@ -332,8 +331,10 @@ void *setProfile( void *arg ) {
 
 		/* only load database if it has not yet been used */
 		if( !(control->mpmode & PM_DATABASE) ) {
-			control->root=wipeTitles( control->root );
+			wipePTLists( control );
 			control->root=dbGetMusic( );
+		} else {
+			control->current=wipePlaylist(control->current, 1);
 		}
 
 		/* change mode */
@@ -355,8 +356,6 @@ void *setProfile( void *arg ) {
 		control->dnplist=loadList( mpc_dnp );
 		control->favlist=loadList( mpc_fav );
 		control->dbllist=loadList( mpc_doublets );
-
-		control->current=wipePlaylist( control->current );
 
 		if( NULL == control->root ) {
 			addMessage( 0, "Scanning musicdir" );
@@ -588,6 +587,7 @@ static int playResults( mpcmd_t range, const char *arg, const int insert ) {
 static void killPlayers(pid_t	pid[2], int p_command[2][2], int p_status[2][2], int p_error[2][2], int restart) {
 	uint64_t i;
 	mpconfig_t  *control=getConfig();
+	unsigned players=(control->fade > 0)?2:1;
 
 	if( restart ) {
 		addMessage(1, "Stopping reader");
@@ -603,7 +603,7 @@ static void killPlayers(pid_t	pid[2], int p_command[2][2], int p_status[2][2], i
 	}
 
 	/* ask nicely first.. */
-	for( i=0; i<=control->fade; i++) {
+	for( i=0; i<players; i++) {
 		addMessage(1, "Stopping player %" PRId64, i);
 		dowrite( p_command[i][1], "QUIT\n", 5 );
 		close( p_command[i][1] );
@@ -650,7 +650,7 @@ void *reader( void *arg ) {
 	int 	order=1;
 	float	intime=0.0;
 	float	oldtime=0.0;
-	int 	fade=3;
+	int 	fading=1;
 	int 	p_status[2][2];			/* status pipes to mpg123 */
 	int 	p_command[2][2];		/* command pipes to mpg123 */
 	int   p_error[2][2];			/* error pipes to mpg123 */
@@ -666,7 +666,7 @@ void *reader( void *arg ) {
 
 	if( control->fade == 0 ) {
 		addMessage( 1, "No crossfading" );
-		fade=0;
+		fading=0;
 	}
 
 	ts.tv_nsec=250000;
@@ -676,7 +676,7 @@ void *reader( void *arg ) {
 	/* start the player processes */
 	/* these may wait in the background until */
 	/* something needs to be played at all */
-	for( i=0; i <= control->fade; i++ ) {
+	for( i=0; i <= fading; i++ ) {
 		addMessage(  2, "Starting player %" PRId64, i+1 );
 
 		/* create communication pipes */
@@ -742,7 +742,7 @@ void *reader( void *arg ) {
 	/* main loop */
 	do {
 		FD_ZERO( &fds );
-		for( i=0; i<=control->fade; i++ ) {
+		for( i=0; i<=fading; i++ ) {
 			FD_SET( p_status[i][0], &fds );
 			FD_SET( p_error[i][0], &fds );
 		}
@@ -773,7 +773,7 @@ void *reader( void *arg ) {
 			control->watchdog=0;
 		}
 
-		if( control->fade ) {
+		if( fading ) {
 			/* drain inactive player */
 			if (FD_ISSET( p_status[fdset?0:1][0], &fds )) {
 				key=readline( line, MAXPATHLEN, p_status[fdset?0:1][0] );
@@ -954,7 +954,7 @@ void *reader( void *arg ) {
 							break;
 						}
 
-						if( ( control->fade ) && ( rem <= fade ) ){
+						if( ( fading ) && ( rem <= control->fade ) ){
 							/* should the playcount be increased? */
 							playCount( control->current->title, skipped );
 							skipped=0;
@@ -965,13 +965,11 @@ void *reader( void *arg ) {
 							else {
 								control->current=control->current->next;
 								plCheck( 0 );
-								/* swap player if we want to fade */
-								if( control->fade ) {
-									fdset=fdset?0:1;
-									invol=0;
-									outvol=100;
-									dowrite( p_command[fdset][1], "volume 0\n", 9 );
-								}
+								/* swap players */
+								fdset=fdset?0:1;
+								invol=0;
+								outvol=100;
+								dowrite( p_command[fdset][1], "volume 0\n", 9 );
 								sendplay( p_command[fdset][1] );
 							}
 						}
@@ -1001,7 +999,7 @@ void *reader( void *arg ) {
 								order=0;
 							}
 							addMessage( 2, "Title change on player %i", fdset );
-							if( ( order == 1 ) && ( control->fade == 0 ) ) {
+							if( ( order == 1 ) && ( !fading ) ) {
 								playCount( control->current->title, skipped );
 								skipped=0;
 							}
@@ -1203,7 +1201,7 @@ void *reader( void *arg ) {
 					order=atoi(control->argument);
 					sfree(&(control->argument));
 				}
-				if( control->fade ) {
+				if( fading ) {
 					playCount(control->current->title, 1);
 				}
 				else {
@@ -1289,8 +1287,7 @@ void *reader( void *arg ) {
 						/* reload database when switching from favplay to 'forget'
 						   playcount changes */
 						if( getFavplay() ) {
-							control->current=wipePlaylist(control->current);
-							control->root=wipeTitles(control->root);
+							wipePTLists( control );
 							control->root=dbGetMusic();
 							addMessage( 1, "Switching from Favplay");
 						}
@@ -1541,19 +1538,18 @@ void *reader( void *arg ) {
 					/* reload database when switching back to normal play to 'forget'
 					   playcounts */
 					if( !toggleFavplay() ) {
-						control->root=wipeTitles(control->root);
-						control->current=wipePlaylist(control->current);
+						wipePTLists( control );
 						control->root=dbGetMusic();
 						addMessage( 1, "Disabling Favplay");
 					}
 					else {
+						control->current=wipePlaylist( control->current, 0 );
 						addMessage( 1, "Enabling Favplay");
 					}
 
 					writeConfig(NULL);
 					applyLists( 1 );
 
-					control->current=wipePlaylist( control->current );
 					plCheck( 0 );
 					sendplay( p_command[fdset][1] );
 				}

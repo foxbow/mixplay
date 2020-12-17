@@ -14,7 +14,7 @@ static void printUsage( char *name ) {
 	printf( " -V : print curent build ID\n" );
 	printf( " -d : increase debug message level to display on console\n" );
 	printf( " -f : single channel - disable fading\n" );
-	printf( " -F : enable fading\n");
+	printf( " -F <seconds> : enable crossfading\n");
 	printf( " -h : print help\n" );
 	printf( " -p <port> : set port [2347]\n" );
 	printf( " -m : force mix on playlist\n" );
@@ -26,7 +26,7 @@ static void printUsage( char *name ) {
 static mpplaylist_t *titleToPlaylist( mptitle_t *title, mpplaylist_t *pl ) {
 	mptitle_t *guard=title;
 
-	pl=wipePlaylist(pl);
+	pl=wipePlaylist(pl, 0);
 
 	do {
 		pl=appendToPL( title, pl, -1 );
@@ -110,8 +110,7 @@ int setArgument( const char *arg ) {
 		title=loadPlaylist( arg );
 		if( title != NULL ) {
 			if( control->mpmix ) {
-				control->current=wipePlaylist( control->current );
-				control->root=wipeTitles( control->root );
+				wipePTLists( control );
 				control->root=title;
 				plCheck(0);
 			}
@@ -136,7 +135,7 @@ int getArgs( int argc, char ** argv ){
 
 	/* parse command line options */
 	/* using unsigned char c to work around getopt quirk on ARM */
-	while ( ( c = getopt( argc, argv, "vVfdFh:p:Wm" ) ) != -1 ) {
+	while ( ( c = getopt( argc, argv, "vVfdF:h:p:Wm" ) ) != -1 ) {
 		switch ( c ) {
 
 		case 'V':
@@ -152,7 +151,11 @@ int getArgs( int argc, char ** argv ){
 			break;
 
 		case 'F': /* enable fading */
-			config->fade=1;
+			config->fade=atoi(optarg);
+			if (config->fade < 1) {
+				printf("Invalid number of seconds for -F (%s)\n", optarg);
+				exit( EXIT_FAILURE );
+			}
 			break;
 
 		case 'h':
@@ -176,6 +179,7 @@ int getArgs( int argc, char ** argv ){
 			switch( optopt )  {
 				case 'h':
 				case 'p':
+				case 'F':
 					fprintf (stderr, "Option -%c requires an argument!\n", optopt);
 				break;
 				default:

@@ -268,7 +268,7 @@ mpconfig_t *readConfig( void ) {
 	_cconfig->skipdnp=3;
 	_cconfig->sleepto=0;
 	_cconfig->debug=0;
-	_cconfig->fade=1;
+	_cconfig->fade=FADESECS;
 	_cconfig->inUI=0;
 	_cconfig->msg->lines=0;
 	_cconfig->msg->current=0;
@@ -528,8 +528,8 @@ void freeConfigContents() {
 void freeConfig( ) {
 	assert( _cconfig != NULL );
 	freeConfigContents( );
-	_cconfig->current=wipePlaylist( _cconfig->current );
-	_cconfig->found->titles=wipePlaylist( _cconfig->found->titles );
+	wipePTLists( _cconfig );
+	_cconfig->found->titles=wipePlaylist( _cconfig->found->titles, 0 );
 	if( _cconfig->found->artists != NULL ) {
 		free( _cconfig->found->artists );
 	}
@@ -539,8 +539,6 @@ void freeConfig( ) {
 	if( _cconfig->found->albart != NULL ) {
 		free( _cconfig->found->albart );
 	}
-	/* free root last so playlist cleanup does not double free titles */
-	_cconfig->root=wipeTitles( _cconfig->root );
 	free( _cconfig->found );
 	wipeList(_cconfig->dnplist);
 	wipeList(_cconfig->favlist);
@@ -802,7 +800,7 @@ void freeProfile( profile_t *profile ){
  * this is not in musicmanager.c to keep cross-dependecies in
  * config.c low
  */
-mpplaylist_t *wipePlaylist( mpplaylist_t *pl ) {
+mpplaylist_t *wipePlaylist( mpplaylist_t *pl, int recursive ) {
 	mpplaylist_t *next=NULL;
 
 	if( pl == NULL ) {
@@ -816,8 +814,7 @@ mpplaylist_t *wipePlaylist( mpplaylist_t *pl ) {
 	lockPlaylist();
 	while( pl != NULL ){
 		next=pl->next;
-		/* do not free titles in getConfig()->root database */
-		if( getConfig()->mpmode != PM_DATABASE ) {
+		if( recursive ) {
 			free( pl->title );
 		}
 		free(pl);
@@ -826,6 +823,20 @@ mpplaylist_t *wipePlaylist( mpplaylist_t *pl ) {
 	unlockPlaylist();
 
 	return NULL;
+}
+
+/*
+ * wrapper to clean up player. If no database was loaded, the titles in the
+ * playlist should be free()'d  too. If a database is loaded the titles in
+ * the playlist must not be free()'d
+ */
+void wipePTLists( mpconfig_t *control ) {
+	if( control->root != NULL ) {
+		control->root=wipeTitles( control->root );
+		control->current=wipePlaylist( control->current, 0 );
+	} else {
+		control->current=wipePlaylist( control->current, 1 );
+	}
 }
 
 /**
