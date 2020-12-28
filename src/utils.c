@@ -29,7 +29,7 @@ size_t strtcpy( char *t,const  char *s, size_t l ) {
  * bytes to copy.
  */
 size_t strtcat( char *t, const char *s, size_t l ) {
-	l=MIN( strlen(t)+strlen(s), l-1 )-strlen(t);
+	l=MIN( strlen(t)+strlen(s), l )-strlen(t);
 	if( l > 0 ) {
 		strncat( t, s, l );
 	}

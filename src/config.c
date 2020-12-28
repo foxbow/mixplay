@@ -253,6 +253,9 @@ mpconfig_t *readConfig( void ) {
 		_cconfig->msg=msgBuffInit();
 		_cconfig->found=(searchresults_t*)falloc(1,sizeof(searchresults_t));
 	}
+	else {
+		return _cconfig;
+	}
 
 	/* Set some default values */
 	_cconfig->root=NULL;
@@ -303,21 +306,20 @@ mpconfig_t *readConfig( void ) {
 
 			if( strstr( line, "musicdir=" ) == line ) {
 				/* make sure that musicdir ends with a '/' */
-				if( line[strlen(line)-1] != '/' ) {
-					strtcat( line, "/", strlen(line)+1 );
+				if( line[strlen(line)-1] == '/' ) {
+					_cconfig->musicdir=strdup(pos);
 				}
-
-				_cconfig->musicdir=strdup(pos);
-				strip( _cconfig->musicdir, pos, strlen(pos) );
+				else {
+					_cconfig->musicdir=falloc(strlen(pos)+2, 1);
+					strcpy(_cconfig->musicdir, pos);
+					_cconfig->musicdir[strlen(pos)]='/';
+				}
 			}
 			if( strstr( line, "password=" ) == line ) {
-				/* make sure that musicdir ends with a '/' */
-				_cconfig->password=(char*)frealloc( _cconfig->password, strlen(pos)+1 );
-				strip( _cconfig->password, pos, strlen(pos) );
+				_cconfig->password=strdup(pos);
 			}
 			if( strstr( line, "channel=" ) == line ) {
-				_cconfig->channel=(char*)falloc( strlen(pos)+1, 1 );
-				strip( _cconfig->channel, pos, strlen(pos) );
+				_cconfig->channel=strdup(pos);
 			}
 			if( strstr( line, "profiles=" ) == line ) {
 				_cconfig->profiles=scanprofiles( pos, &_cconfig->profile );

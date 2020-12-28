@@ -330,11 +330,12 @@ void *setProfile( void *arg ) {
 		addMessage(1,"Playmode=%u",control->mpmode);
 
 		/* only load database if it has not yet been used */
-		if( !(control->mpmode & PM_DATABASE) ) {
+		if( control->mpmode & PM_DATABASE ) {
+			control->current=wipePlaylist(control->current, 0);
+		}
+		else {
 			wipePTLists( control );
 			control->root=dbGetMusic( );
-		} else {
-			control->current=wipePlaylist(control->current, 1);
 		}
 
 		/* change mode */
@@ -489,13 +490,9 @@ static void *plDbInfo( void *arg ) {
 	return NULL;
 }
 
+/* simple wrapper to run setProfile as an own thread */
 static void *plSetProfile( void *arg ) {
-	mpconfig_t *control=getConfig();
 	pthread_mutex_t *lock=(pthread_mutex_t *) arg;
-
-	if( control->dbname[0] == 0 ) {
-		readConfig( );
-	}
 	setProfile(NULL);
 	pthread_mutex_unlock( lock );
 	return NULL;
@@ -622,6 +619,22 @@ static void killPlayers(pid_t	pid[2], int p_command[2][2], int p_status[2][2], i
 					addMessage(-1, "Could not get rid of %i!", pid[i]);
 				}
 			}
+		}
+	}
+}
+
+/* stops the current title. That means send a stop to a stream and a pause
+ * to a database title. */
+static void stopPlay( int channel ) {
+	mpconfig_t *control=getConfig();
+
+	if( control->status == mpc_play ) {
+		if( control->mpmode & PM_STREAM ) {
+			dowrite( channel, "STOP\n", 6 );
+		}
+		else {
+			dowrite( channel, "PAUSE\n", 7 );
+			control->status=mpc_idle;
 		}
 	}
 }
@@ -1228,8 +1241,7 @@ void *reader( void *arg ) {
 
 		case mpc_stop:
 			if( asyncTest() ) {
-				order=0;
-				dowrite( p_command[fdset][1], "STOP\n", 6 );
+				stopPlay(p_command[fdset][1]);
 				pthread_mutex_unlock( &_asynclock );
 			}
 			break;
@@ -1282,8 +1294,7 @@ void *reader( void *arg ) {
 						/* switching channels started */
 						control->mpmode|=PM_SWITCH;
 						/* stop the current play */
-						order = 0;
-						dowrite( p_command[fdset][1], "STOP\n", 6 );
+						stopPlay(p_command[fdset][1]);
 						/* reload database when switching from favplay to 'forget'
 						   playcount changes */
 						if( getFavplay() ) {
@@ -1532,8 +1543,7 @@ void *reader( void *arg ) {
 						break;
 					}
 					if( control->status == mpc_play ) {
-						order=0;
-						dowrite( p_command[fdset][1], "STOP\n", 6 );
+						stopPlay(p_command[fdset][1]);
 					}
 					/* reload database when switching back to normal play to 'forget'
 					   playcounts */
