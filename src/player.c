@@ -1012,8 +1012,10 @@ void *reader( void *arg ) {
 								order=0;
 							}
 							addMessage( 2, "Title change on player %i", fdset );
-							if( ( order == 1 ) && ( !fading ) ) {
-								playCount( control->current->title, skipped );
+							if (order == 1) {
+								if (playCount( control->current->title, skipped ) == 1) {
+									order=0;
+								}
 								skipped=0;
 							}
 
@@ -1186,7 +1188,7 @@ void *reader( void *arg ) {
 			if( control->mpmode & PM_STREAM ) {
 				break;
 			}
-			if( control->playtime > 2 ) {
+			if( control->playtime > 3 ) {
 				dowrite( p_command[fdset][1], "JUMP 0\n", 8 );
 				control->percent=0;
 				control->playtime=0;
@@ -1213,9 +1215,6 @@ void *reader( void *arg ) {
 				if( control->argument != NULL ) {
 					order=atoi(control->argument);
 					sfree(&(control->argument));
-				}
-				if( fading ) {
-					playCount(control->current->title, 1);
 				}
 				else {
 					skipped=1;

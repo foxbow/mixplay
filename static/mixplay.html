@@ -81,11 +81,11 @@
           <button onclick='toggleKbd("pass", function () {checkPass()})'>Login</button>
           <input  id='pass' type='text' style='display:none;'><br>
         </p>
-        <button id='reload'  onclick='document.location.reload()'>Reload client</button>
-        <button id='reset'  onclick='sendCMD(0x1f)'>Reset player</button>
+        <button id='reload' onclick='document.location.reload()'>Reload client</button>
+        <button id='reset'  onclick='sendCMD(0x1f)'>Reset player</button><br>
+        <button id='dbinfo' onclick='sendCMD(0x12)'>Show Playcount</button>
         <div id='admin' class='hide'>
-          <button id='dbinfo'  onclick='sendCMD(0x12)'>Playcount</button>
-          <button id='playcnt'  onclick='pwSendCMD(0x12)'>Fix playcount</button>
+          <button id='playcnt' onclick='pwSendCMD(0x12)'>Fix playcount</button>
           <button id='rescan'  onclick='pwSendCMD(0x08)'>Rescan</button>
           <button id='doublet' onclick='pwSendCMD(0x0b)'>Doublets</button>
           <button id='quit'    onclick='pwSendCMD(0x07)'>QUIT</button>

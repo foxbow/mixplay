@@ -85,7 +85,7 @@ int search( const char *pat, const mpcmd_t range );
 
 void moveTitleByIndex( unsigned from, unsigned before );
 
-void playCount( mptitle_t *title, int skip );
+int playCount( mptitle_t *title, int skip );
 void applyLists( int clean );
 int searchPlay( const char *pat, unsigned num, const int global );
 int handleRangeCmd( mptitle_t *title, mpcmd_t cmd );

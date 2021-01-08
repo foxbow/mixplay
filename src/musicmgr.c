@@ -207,19 +207,21 @@ static mpplaylist_t *remFromPL( mpplaylist_t *pltitle ) {
  * checks if the playcount needs to be increased and if the skipcount
  * needs to be decreased. In both cases the updated information is written
  * back into the db.
+ * returns 1 if the title was marked DNP due to skipping
  */
-void playCount( mptitle_t *title, int skip ) {
+int playCount( mptitle_t *title, int skip ) {
+	int rv=0;
 	/* playcount only makes sense with a title list */
 	if( getConfig()->mpmode & PM_STREAM ) {
-		addMessage(1,"No skip on streams!");
-		return;
+		addMessage(1, "No skip on streams!");
+		return -1;
 	}
 
 	/* not marked = searchplay, does not count
 	   just marked dnp? someone else may like it though */
 	if ( !(title->flags&MP_MARK ) || (title->flags&MP_DNP)) {
-		addMessage(1,"%s is dnp or not marked!", title->display);
-		return;
+		addMessage(2, "%s is dnp or not marked -> ignored", title->display);
+		return -1;
 	}
 
 	/* skipcount only happens on database play */
@@ -230,10 +232,11 @@ void playCount( mptitle_t *title, int skip ) {
 				/* prepare resurrection */
 				title->skipcount=0;
 				/* three strikes and you're out */
-				addMessage(0,"Marked %s as DNP for skipping!", title->display);
+				addMessage(0, "Marked %s as DNP for skipping!", title->display);
 				handleRangeCmd( title, (mpcmd_t)(mpc_display|mpc_dnp) );
+				rv=1;
 			} else {
-				addMessage(1,"%s was skipped (%i/%i)!", title->display,
+				addMessage(1, "%s was skipped (%i/%i)!", title->display,
 						title->skipcount, getConfig()->skipdnp);
 			}
 			dbMarkDirty();
@@ -253,6 +256,8 @@ void playCount( mptitle_t *title, int skip ) {
 		title->playcount++;
 		dbMarkDirty();
 	}
+
+	return rv;
 }
 
 /*
@@ -1623,10 +1628,11 @@ void dumpInfo( mptitle_t *root, int smooth ) {
 		current=current->next;
 	} while( current != root );
 
-	addMessage( 0, "%4i\ttitles in Database", numtitles );
+	addMessage( 0, "%5i titles in Database", numtitles );
 
 	while( pl <= maxplayed ) {
 		unsigned int pcount=0;
+		unsigned int dcount=0;
 		unsigned int favcnt=0;
 		unsigned int markcnt=0;
 		char line[MAXPATHLEN];
@@ -1634,8 +1640,9 @@ void dumpInfo( mptitle_t *root, int smooth ) {
 		do {
 			if( ( getFavplay() && current->favpcount == pl ) ||
 					(!getFavplay() && current->playcount == pl )) {
-				if( !(current->flags & MP_DNP) ) {
-					pcount++;
+				pcount++;
+				if( current->flags & MP_DNP ) {
+					dcount++;
 				}
 				if( current->flags & MP_FAV ) {
 					favcnt++;
@@ -1665,36 +1672,45 @@ void dumpInfo( mptitle_t *root, int smooth ) {
 		else if (pcount > 0) {
 			switch( pl ) {
 			case 0:
-				sprintf( line, "Never played\t%i", pcount);
+				sprintf( line, "    Never %5i", pcount);
 				break;
 			case 1:
-				sprintf( line, " Once played\t%i", pcount);
+				sprintf( line, "     Once %5i", pcount);
 				break;
 			case 2:
-				sprintf( line, "Twice played\t%i", pcount);
+				sprintf( line, "    Twice %5i", pcount);
 				break;
 			default:
-				sprintf( line, "%5i times\t%i", pl, pcount);
+				sprintf( line, "%3i times %5i", pl, pcount);
 			}
 
-			if ( favcnt == 0 ) {
-				addMessage( 0, "%s", line );
-			}
-			else {
-				if( favcnt < pcount ) {
-					addMessage( 0, "%s (%i favs)", line, favcnt );
+			if ( favcnt || dcount ) {
+				if( favcnt == pcount ) {
+					addMessage( 0, "%s - allfav", line );
+				}
+				else if( dcount == pcount ) {
+					addMessage( 0, "%s - alldnp", line );
+				}
+				else if( favcnt == 0 ) {
+					addMessage( 0, "%s - %i dnp", line, dcount );
+				}
+				else if( dcount == 0 ) {
+					addMessage( 0, "%s - %i fav", line, favcnt );
 				}
 				else {
-					addMessage( 0, "%s (allfavs)", line );
+					addMessage( 0, "%s - %i dnp / %i fav", line, dcount, favcnt );
 				}
+			}
+			else {
+				addMessage( 0, "%s", line );
 			}
 		}
 		pl++;
 	} /* while pl < maxplay */
 
-	addMessage( 0, "%4i\tfavourites", fav );
-	addMessage( 0, "%4i\tdo not plays", dnp );
-	addMessage( 0, "%4i\tmarked", marked );
+	addMessage( 0, "%4i favourites", fav );
+	addMessage( 0, "%4i do not plays", dnp );
+	addMessage( 0, "%4i marked", marked );
 	if (fixed) {
 		dbWrite();
 	}
