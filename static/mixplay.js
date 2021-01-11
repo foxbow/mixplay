@@ -859,6 +859,7 @@ function popselect (choice, arg, text, drag, id) {
 
   /* playlist ordering does not make sense in streams */
   if (!isstream) {
+    reply.setAttribute('data-tnum', arg)
     /* element is draggable */
     if (drag & 1) {
       reply.draggable = 'true'
@@ -870,7 +871,6 @@ function popselect (choice, arg, text, drag, id) {
     }
     /* element is drop target */
     if (drag & 2) {
-      reply.setAttribute('data-tnum', arg)
       reply.ondrop = function (e) {
         const source = parseInt(e.dataTransfer.getData('title'))
         if (source !== arg) {
