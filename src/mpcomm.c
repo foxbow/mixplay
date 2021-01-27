@@ -135,6 +135,10 @@ static jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mpplaylist_t 
 
 	jo=jsonInitArr( jo, key );
 	if( trylockPlaylist() != EBUSY ) {
+		if (pl == NULL) {
+			jsonTitle=jsonAddTitle( NULL, "title", NULL );
+			jsonAddArrElement( jo, jsonTitle, json_object );
+		}
 		while( pl != NULL ) {
 			jsonTitle=jsonAddTitle( NULL, "title", pl );
 			jsonAddArrElement( jo, jsonTitle, json_object );

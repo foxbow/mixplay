@@ -649,6 +649,7 @@ void activity( int v, const char *msg, ... ) {
 	/* Update the current action for the client */
 	if(strcmp(newact, _curact)) {
 		strcpy(_curact, newact);
+		notifyChange(MPCOMM_TITLES);
 	}
 
 	if ( ( v < getDebug() ) && ( _ftrpos % 100 == 0 ) ){
