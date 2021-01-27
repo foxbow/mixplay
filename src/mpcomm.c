@@ -103,7 +103,12 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplayli
 		val=jsonAddInt( NULL, "key", title->key );
 		jsonAddStr( val, "artist", title->artist );
 		jsonAddStr( val, "album", title->album );
-		jsonAddStr( val, "title", title->title );
+		if( getConfig()->mpmode & PM_SWITCH ) {
+			jsonAddStr( val, "title", getCurrentActivity() );
+		}
+		else {
+			jsonAddStr( val, "title", title->title );
+		}
 		jsonAddInt( val, "flags", title->flags );
 		jsonAddStr( val, "genre", title->genre );
 		jsonAddInt( val, "favpcount", title->favpcount );

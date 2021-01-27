@@ -638,6 +638,7 @@ void activity( int v, const char *msg, ... ) {
 	vsnprintf( newact, MP_ACTLEN, msg, args );
 	va_end( args );
 
+	/* fill activity up with blanks and ensure \0 termination */
 	for( i=strlen(newact); i < (MP_ACTLEN-1); i++ ){
 		newact[i]=' ';
 	}
@@ -645,13 +646,9 @@ void activity( int v, const char *msg, ... ) {
 	/* _ftrpos is unsigned so an overflow does not cause issues later */
 	++_ftrpos;
 
-	/* add a message for dbinfo et.al. */
+	/* Update the current action for the client */
 	if(strcmp(newact, _curact)) {
 		strcpy(_curact, newact);
-		/* All notifications so far sucked one way or the other.. */
-		if( playerIsInactive() ) {
-			addMessage(v, "ACT:%s", newact);
-		}
 	}
 
 	if ( ( v < getDebug() ) && ( _ftrpos % 100 == 0 ) ){
