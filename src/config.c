@@ -609,8 +609,8 @@ int getDebug( void ) {
 	return _cconfig->debug;
 }
 
-/* returns true if the config is in a well defined state */
-int playerIsInactive( void ) {
+/* returns true if the player is not normally playing */
+int playerIsBusy( void ) {
 	int res = 0;
 	mpconfig_t *control=getConfig();
 	res = (control->status == mpc_start) ||
@@ -621,7 +621,7 @@ int playerIsInactive( void ) {
 
 static unsigned _ftrpos=0;
 #define MP_ACTLEN 75
-static char _curact[MP_ACTLEN]="";
+static char _curact[MP_ACTLEN]="startup";
 
 /**
  * show activity roller on console

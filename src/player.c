@@ -957,7 +957,7 @@ void *reader( void *arg ) {
 						}
 
 						/* Is the player initializing or changing profiles */
-						if( playerIsInactive() ) {
+						if( playerIsBusy() ) {
 							break;
 						}
 

@@ -222,7 +222,7 @@ mpplaylist_t *wipePlaylist( mpplaylist_t *pl, int recursive );
 mptitle_t *wipeTitles( mptitle_t *root );
 void wipePTLists( mpconfig_t *config );
 marklist_t *wipeList( marklist_t *root );
-int playerIsInactive( void );
+int playerIsBusy( void );
 void blockSigint();
 
 int getFreeClient( void );

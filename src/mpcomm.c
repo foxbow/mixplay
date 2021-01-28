@@ -99,23 +99,10 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplayli
 		title=pl->title;
 	}
 
-	if( title != NULL ) {
-		val=jsonAddInt( NULL, "key", title->key );
-		jsonAddStr( val, "artist", title->artist );
-		jsonAddStr( val, "album", title->album );
-		if( getConfig()->mpmode & PM_SWITCH ) {
-			jsonAddStr( val, "title", getCurrentActivity() );
-		}
-		else {
-			jsonAddStr( val, "title", title->title );
-		}
-		jsonAddInt( val, "flags", title->flags );
-		jsonAddStr( val, "genre", title->genre );
-		jsonAddInt( val, "favpcount", title->favpcount );
-		jsonAddInt( val, "playcount", title->playcount );
-		jsonAddInt( val, "skipcount", title->skipcount );
-	}
-	else {
+	/* show activity if the playlist is empty, or the player is bosy and
+	   the current title is to be added */
+	if( (title == NULL) ||
+			( playerIsBusy() && (pl == getConfig()->current) )) {
 		val=jsonAddInt( NULL, "key", 0 );
 		jsonAddStr( val, "artist", "Mixplay" );
 		jsonAddStr( val, "album", "" );
@@ -123,7 +110,17 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplayli
 		jsonAddInt( val, "flags", 0 );
 		jsonAddStr( val, "genre", "" );
 	}
-
+	else {
+		val=jsonAddInt( NULL, "key", title->key );
+		jsonAddStr( val, "artist", title->artist );
+		jsonAddStr( val, "album", title->album );
+		jsonAddStr( val, "title", title->title );
+		jsonAddInt( val, "flags", title->flags );
+		jsonAddStr( val, "genre", title->genre );
+		jsonAddInt( val, "favpcount", title->favpcount );
+		jsonAddInt( val, "playcount", title->playcount );
+		jsonAddInt( val, "skipcount", title->skipcount );
+	}
 	return jsonAddObj(jo, key, val);
 }
 
