@@ -126,26 +126,36 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplayli
 
 /**
  * turns a playlist into a jsonObject.
+ * there may be a race condition when switching titles. It should be okay but
+ * this needs to be checked over the time
  */
 static jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mpplaylist_t *pl, int dir ) {
 	jsonObject *jsonTitle=NULL;
+	int unlock=0;
 
 	jo=jsonInitArr( jo, key );
-	if( trylockPlaylist() != EBUSY ) {
-		if (pl == NULL) {
-			jsonTitle=jsonAddTitle( NULL, "title", NULL );
-			jsonAddArrElement( jo, jsonTitle, json_object );
+	/* check if something else is changing the playlist and if not lock it to
+	   make sure it stays consistent */
+	unlock = trylockPlaylist();
+
+	/* No playlist or someone is currently changing it */
+	if ((pl == NULL) || (unlock == EBUSY)) {
+		jsonTitle=jsonAddTitle( NULL, "title", NULL );
+		jsonAddArrElement( jo, jsonTitle, json_object );
+	}
+	else while( pl != NULL ) {
+		jsonTitle=jsonAddTitle( NULL, "title", pl );
+		jsonAddArrElement( jo, jsonTitle, json_object );
+		if( dir < 0 ) {
+			pl=pl->prev;
 		}
-		while( pl != NULL ) {
-			jsonTitle=jsonAddTitle( NULL, "title", pl );
-			jsonAddArrElement( jo, jsonTitle, json_object );
-			if( dir < 0 ) {
-				pl=pl->prev;
-			}
-			else {
-				pl=pl->next;
-			}
+		else {
+			pl=pl->next;
 		}
+	}
+
+	/* unlock playlist only if we locked it */
+	if (unlock != EBUSY) {
 		unlockPlaylist();
 	}
 
