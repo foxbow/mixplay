@@ -619,6 +619,7 @@ static int applyDNPlist( marklist_t *list ) {
 		return 0;
 	}
 
+	activity(1, "Applying DNP list");
 	do {
 		ptr=list;
 
@@ -677,6 +678,7 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 		return 0;
 	}
 
+	activity(1, "Applying FAV list");
 	if( excl ) {
 		do {
 			runner->flags = MP_DNP;
@@ -754,6 +756,18 @@ marklist_t *loadList( const mpcmd_t cmd ) {
 	if( !file ) {
 		addMessage( 1, "Could not open %s", path );
 		return NULL;
+	}
+
+	switch(cmd) {
+		case mpc_dnp:
+			activity(1, "Loading DNP list");
+			break;
+		case mpc_fav:
+			activity(1, "Loading FAV list");
+			break;
+		default:
+			activity(1, "Loading doublets");
+			break;
 	}
 
 	buff=(char*)falloc( MAXPATHLEN+4, 1 );
