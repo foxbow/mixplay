@@ -89,7 +89,7 @@ static jsonObject *jsonAddProfiles( jsonObject *jo, const char *key, profile_t *
 
 /*
  * helperfunction to add a title to the given jsonObject
- * if title is NULL an empty title will be created
+ * if pl is NULL an empty title will be created
  */
 static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplaylist_t *pl ) {
 	jsonObject *val=NULL;
@@ -99,10 +99,11 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplayli
 		title=pl->title;
 	}
 
-	/* show activity if the playlist is empty, or the player is bosy and
+	/* show activity if the playlist is empty, or the player is busy and
 	   the current title is to be added */
 	if( (title == NULL) ||
-			( playerIsBusy() && (pl == getConfig()->current) )) {
+			( playerIsBusy() &&
+			(( pl == getConfig()->current ) || ( pl==NULL )))) {
 		val=jsonAddInt( NULL, "key", 0 );
 		jsonAddStr( val, "artist", "Mixplay" );
 		jsonAddStr( val, "album", "" );
@@ -131,31 +132,21 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplayli
  */
 static jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mpplaylist_t *pl, int dir ) {
 	jsonObject *jsonTitle=NULL;
-	int unlock=0;
 
 	jo=jsonInitArr( jo, key );
 	/* check if something else is changing the playlist and if not lock it to
 	   make sure it stays consistent */
-	unlock = trylockPlaylist();
-
-	/* No playlist or someone is currently changing it */
-	if ((pl == NULL) || (unlock == EBUSY)) {
-		jsonTitle=jsonAddTitle( NULL, "title", NULL );
-		jsonAddArrElement( jo, jsonTitle, json_object );
-	}
-	else while( pl != NULL ) {
-		jsonTitle=jsonAddTitle( NULL, "title", pl );
-		jsonAddArrElement( jo, jsonTitle, json_object );
-		if( dir < 0 ) {
-			pl=pl->prev;
+	if (trylockPlaylist() != EBUSY) {
+		while( pl != NULL ) {
+			jsonTitle=jsonAddTitle( NULL, "title", pl );
+			jsonAddArrElement( jo, jsonTitle, json_object );
+			if( dir < 0 ) {
+				pl=pl->prev;
+			}
+			else {
+				pl=pl->next;
+			}
 		}
-		else {
-			pl=pl->next;
-		}
-	}
-
-	/* unlock playlist only if we locked it */
-	if (unlock != EBUSY) {
 		unlockPlaylist();
 	}
 

@@ -314,6 +314,10 @@ mpconfig_t *readConfig( void ) {
 					strcpy(_cconfig->musicdir, pos);
 					_cconfig->musicdir[strlen(pos)]='/';
 				}
+				if (!isDir(_cconfig->musicdir)) {
+					printf("%s is no valid directory!\n", _cconfig->musicdir);
+					exit(ENOENT);
+				}
 			}
 			if( strstr( line, "password=" ) == line ) {
 				_cconfig->password=strdup(pos);

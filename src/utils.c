@@ -267,7 +267,7 @@ int isDir( const char *path ) {
 	struct stat st;
 
 	if( !stat( path, &st ) && S_ISDIR( st.st_mode ) ) {
-		return 1;
+		return ENOENT;
 	}
 
 	return 0;

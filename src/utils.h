@@ -28,7 +28,7 @@ void fail( const int error, const char* msg, ... ) __attribute__((__format__(__p
  */
 int strltcpy( char *dest, const char *src, const size_t len );
 int strltcat( char *dest, const char *src, const size_t len );
-char *strip( char *buff, const char *text, const size_t maxlen );
+char *strip( char *dest, const char *src, const size_t len );
 int endsWith( const char *text, const char *suffix );
 int startsWith( const char *text, const char *prefix );
 int isURL( const char *uri );

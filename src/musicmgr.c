@@ -1156,8 +1156,6 @@ unsigned long countTitles( const unsigned int inc, const unsigned int exc ) {
 	}
 
 	do {
-		activity( 1, "Counting" );
-
 		if( ( ( inc == MP_ALL ) || ( runner->flags & inc ) ) &&
 				!( runner->flags & exc ) ) {
 			cnt++;

@@ -588,7 +588,12 @@ static void killPlayers(pid_t	pid[2], int p_command[2][2], int p_status[2][2], i
 
 	if( restart ) {
 		addMessage(1, "Stopping reader");
-		strcpy(control->current->title->title, "Restarting");
+		if (control->current == NULL) {
+			addMessage(-1, "Restarting on empty player!");
+		}
+		else {
+			strcpy(control->current->title->title, "Restarting");
+		}
 		control->status=mpc_idle;
 		/* make sure that the player gets restarted */
 		control->watchdog = STREAM_TIMEOUT+1;
