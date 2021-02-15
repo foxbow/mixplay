@@ -532,7 +532,7 @@ int search( const char *pat, const mpcmd_t range ) {
 		activity( 1, "searching for %s", lopat );
 		/* dnp == XNOR MP_DNP */
 		found = 0;
-		if( ( runner->flags & MP_DNP ) == dnp ) {
+		if( ( runner->flags & (MP_DNP|MP_DBL) ) == dnp ) {
 			/* check for searchrange and pattern */
 			if( MPC_ISTITLE(range) &&
 					isMatch( runner->title, lopat, range ) ){
@@ -606,9 +606,11 @@ int search( const char *pat, const mpcmd_t range ) {
  * if the title is part of the playlist it will be removed from the playlist
  * too. This may lead to double played artists though...
  *
+ * if dbl is true, then the title is marked as doublet as well
+ *
  * returns the number of marked titles or -1 on error
  */
-static int applyDNPlist( marklist_t *list ) {
+static int applyDNPlist( marklist_t *list, int dbl ) {
 	mptitle_t *base=getConfig()->root;
 	mptitle_t  *pos = base;
 	marklist_t *ptr = list;
@@ -627,6 +629,7 @@ static int applyDNPlist( marklist_t *list ) {
 			if( matchTitle( pos, ptr->dir ) ) {
 				addMessage( 3, "[D] %s: %s", ptr->dir, pos->display );
 				pos->flags = MP_DNP;
+				if (dbl) pos->flags |= MP_DBL;
 				cnt++;
 				break;
 			}
@@ -725,13 +728,13 @@ void applyLists( int clean ) {
 	lockPlaylist();
 	if( clean ) {
 		do {
-			title->flags&=~(MP_FAV|MP_DNP);
+			title->flags&=~(MP_FAV|MP_DNP|MP_DBL);
 			title=title->next;
 		} while( title != control->root );
 	}
 	applyFAVlist( control->favlist, getFavplay() );
-	applyDNPlist( control->dbllist );
-	applyDNPlist( control->dnplist );
+	applyDNPlist( control->dbllist, 1 );
+	applyDNPlist( control->dnplist, 0 );
 	unlockPlaylist();
 	notifyChange(MPCOMM_LISTS);
 }
@@ -1269,7 +1272,8 @@ static mptitle_t *skipTitles( mptitle_t *current, long num ) {
 
 static char flagToChar( int flag ) {
 	if( flag & MP_DNP ) {
-		return 'D';
+		if( flag & MP_DBL ) return '2';
+		else return 'D';
 	} else if( flag & MP_FAV ) {
 		return 'F';
 	} else if( flag & MP_MARK ) {
@@ -1611,6 +1615,7 @@ void dumpInfo( mptitle_t *root, int smooth ) {
 	unsigned maxplayed=0;
 	unsigned pl=0;
 	unsigned dnp=0;
+	unsigned dbl=0;
 	unsigned fav=0;
 	unsigned marked=0;
 	unsigned numtitles=0;
@@ -1622,6 +1627,9 @@ void dumpInfo( mptitle_t *root, int smooth ) {
 		}
 		if( current->flags & MP_DNP ) {
 			dnp++;
+		}
+		if( current->flags & MP_DBL ) {
+			dbl++;
 		}
 		if( current->flags & MP_MARK ) {
 			marked++;
@@ -1641,10 +1649,15 @@ void dumpInfo( mptitle_t *root, int smooth ) {
 	} while( current != root );
 
 	addMessage( 0, "%5i titles in Database", numtitles );
+	addMessage( 0, "%5i favourites", fav );
+	addMessage( 0, "%5i do not plays", dnp );
+	addMessage( 0, "%5i marked", marked );
+	addMessage( 0, "-- Playcount --" );
 
 	while( pl <= maxplayed ) {
 		unsigned int pcount=0;
 		unsigned int dcount=0;
+		unsigned int dblcnt=0;
 		unsigned int favcnt=0;
 		unsigned int markcnt=0;
 		char line[MAXPATHLEN];
@@ -1655,6 +1668,9 @@ void dumpInfo( mptitle_t *root, int smooth ) {
 				pcount++;
 				if( current->flags & MP_DNP ) {
 					dcount++;
+				}
+				if( current->flags & MP_DBL ) {
+					dblcnt++;
 				}
 				if( current->flags & MP_FAV ) {
 					favcnt++;
@@ -1696,35 +1712,31 @@ void dumpInfo( mptitle_t *root, int smooth ) {
 				sprintf( line, "%3i times %5i", pl, pcount);
 			}
 
-			if ( favcnt || dcount ) {
-				if( favcnt == pcount ) {
+			if ( favcnt || dcount )
+				if( favcnt == pcount )
 					addMessage( 0, "%s - allfav", line );
-				}
-				else if( dcount == pcount ) {
+				else if( dcount == pcount )
 					addMessage( 0, "%s - alldnp", line );
-				}
-				else if( favcnt == 0 ) {
-					addMessage( 0, "%s - %i dnp", line, dcount );
-				}
-				else if( dcount == 0 ) {
+				else if( favcnt == 0 )
+					if( dblcnt == 0 )
+						addMessage( 0, "%s - %i dnp", line, dcount );
+					else
+						addMessage( 0, "%s - %i dnp (%i dbl)", line, dcount, dblcnt );
+				else if( dcount == 0 )
 					addMessage( 0, "%s - %i fav", line, favcnt );
-				}
-				else {
-					addMessage( 0, "%s - %i dnp / %i fav", line, dcount, favcnt );
-				}
-			}
-			else {
+				else
+					if( dblcnt == 0 )
+						addMessage( 0, "%s - %i dnp / %i fav", line, dcount, favcnt );
+					else
+						addMessage( 0, "%s - %i dnp (%i dbl) / %i fav", line, dcount, dblcnt, favcnt );
+			else
 				addMessage( 0, "%s", line );
-			}
 		}
 		pl++;
 	} /* while pl < maxplay */
 
-	addMessage( 0, "%4i favourites", fav );
-	addMessage( 0, "%4i do not plays", dnp );
-	addMessage( 0, "%4i marked", marked );
 	if (fixed) {
-		dbWrite();
+		dbWrite(1);
 	}
 }
 
@@ -1916,7 +1928,7 @@ int handleRangeCmd( mptitle_t *title, mpcmd_t cmd ) {
 			cnt=applyFAVlist( buff, 0 );
 		}
 		else if( MPC_CMD(cmd) == mpc_dnp ) {
-			cnt=applyDNPlist( buff );
+			cnt=applyDNPlist( buff, 0 );
 		}
 	}
 
@@ -1958,5 +1970,5 @@ int handleDBL( mptitle_t *title ) {
 	}
 
 	addToList( buff->dir, mpc_doublets );
-	return applyDNPlist( buff );
+	return applyDNPlist( buff, 1 );
 }

@@ -156,7 +156,11 @@ static jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mpplaylist_t 
 static jsonObject *jsonAddList( jsonObject *jo, const char *key, marklist_t *list ) {
 	jo = jsonInitArr( jo, key );
 	while( list != NULL ) {
-		jsonAddArrElement( jo, list->dir, json_string );
+		/* cut off musicdir if it's given.. */
+		if (strstr(list->dir, getConfig()->musicdir))
+			jsonAddArrElement( jo, list->dir, json_string );
+		else
+			jsonAddArrElement( jo, list->dir+strlen(getConfig()->musicdir), json_string );
 		list=list->next;
 	}
 	return jo;

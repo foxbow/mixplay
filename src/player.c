@@ -404,15 +404,12 @@ void *setProfile( void *arg ) {
  * client
  */
 static void *plCheckDoublets( void *arg ) {
-	mpconfig_t *control=getConfig();
 	pthread_mutex_t *lock=(pthread_mutex_t *) arg;
 	int i;
 
 	addMessage(0,  "Checking for doublets.." );
 	/* update database with current playcount etc */
-	if( control->dbDirty > 0 ) {
-		dbWrite( );
-	}
+	dbWrite(0);
 
 	i=dbNameCheck( );
 	if( i > 0 ) {
@@ -435,16 +432,15 @@ static void *plDbClean( void *arg ) {
 	addMessage(0,  "Database Cleanup" );
 
 	/* update database with current playcount etc */
-	if( control->dbDirty ) {
-		dbWrite( );
-	}
+	dbWrite(0);
+
 	addMessage( 0, "Checking for deleted titles.." );
 	i=dbCheckExist( );
 
 	if( i > 0 ) {
 		addMessage( 0, "Removed %i titles", i );
-		dbWrite();
-		plCheck( 1 );
+		dbWrite(1);
+		plCheck(1);
 	}
 	else {
 		addMessage( 0, "No titles removed" );
@@ -455,7 +451,7 @@ static void *plDbClean( void *arg ) {
 
 	if( i > 0 ) {
 		addMessage( 0, "Added %i new titles", i );
-		dbWrite();
+		dbWrite(1);
 	}
 	else {
 		addMessage( 0, "No titles to be added" );
@@ -471,7 +467,6 @@ static void *plDbFix( void *arg ) {
 	pthread_mutex_t *lock=(pthread_mutex_t *) arg;
 
 	addMessage(0,  "Database smooth" );
-	addMessage( 0, "Music dir: %s", control->musicdir );
 	dumpInfo( control->root, 1 );
 	unlockClient(-1);
 	pthread_mutex_unlock( lock );
@@ -483,7 +478,6 @@ static void *plDbInfo( void *arg ) {
 	pthread_mutex_t *lock=(pthread_mutex_t *) arg;
 
 	addMessage(0,  "Database Info" );
-	addMessage( 0, "Music dir: %s", control->musicdir );
 	dumpInfo( control->root, 0 );
 	unlockClient(-1);
 	pthread_mutex_unlock( lock );
@@ -1299,15 +1293,14 @@ void *reader( void *arg ) {
 						control->mpmode|=PM_SWITCH;
 						/* stop the current play */
 						stopPlay(p_command[fdset][1]);
+						/* write database if needed */
+						dbWrite(0);
 						/* reload database when switching from favplay to 'forget'
 						   playcount changes */
 						if( getFavplay() ) {
 							wipePTLists( control );
 							control->root=dbGetMusic();
 							addMessage( 1, "Switching from Favplay");
-						}
-						else if( control->dbDirty ) {
-							dbWrite( );
 						}
 						control->active=profile;
 						writeConfig(NULL);
@@ -1625,10 +1618,7 @@ void *reader( void *arg ) {
 	}
 	while ( control->status != mpc_quit );
 
-	if( control->dbDirty > 0 ) {
-		addMessage( 0, "Updating Database" );
-		dbWrite( );
-	}
+	dbWrite(0);
 
 	/* stop player(s) gracefully */
 	killPlayers( pid, p_command, p_status, p_error, 0);

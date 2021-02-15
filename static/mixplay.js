@@ -458,7 +458,7 @@ function pwSendCMD (cmd) {
  */
 function addText (text) {
   var line = ''
-  var numlines = 10
+  var numlines = 13
   var b = document.getElementById('cextra2')
   if ((text.charAt(0) !== '+') && (b.className === 'inactive')) {
     b.className = 'alert'

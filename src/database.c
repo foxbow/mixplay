@@ -26,8 +26,12 @@ void dbMarkDirty( void ) {
 		return;
 	}
 	/* ignore changes to the database in favplay mode */
+	if (getFavplay()) {
+		return;
+	}
+
 	if( getConfig()->dbDirty++ > 25 ) {
-		dbWrite( );
+		dbWrite(0);
 	}
 }
 
@@ -615,17 +619,33 @@ int dbNameCheck( void ) {
 /**
  * Creates a backup of the current database file and dumps the
  * current reindexed database in a new file
+ *
+ * if force is set, the database is written without checking the dbDirty
+ * flag.
  */
-void dbWrite( void ) {
+void dbWrite( int force ) {
 	int db;
 	unsigned int index=1;
 	const char *dbname=getConfig()->dbname;
 	mptitle_t *root=getConfig()->root;
 	mptitle_t *runner=root;
 
+	if( !force && (getConfig()->dbDirty == 0) ) {
+		return;
+	}
+
+	/* this should never happen, if it does, then there is a logic fail
+	   somewhere */
+	if ( force && getFavplay() ) {
+		addMessage( -1, "forced dbWrite on Favplay!" );
+		/* TODO is this abort() worthy in any case? */
+		if( getDebug() ) abort();
+		return;
+	}
+	getConfig()->dbDirty=0;
+
 	if( root == NULL ) {
-		addMessage(1, "Trying to save database in play/stream mode!");
-		getConfig()->dbDirty=0;
+		addMessage(0, "Trying to save database in play/stream mode!");
 		return;
 	}
 
@@ -644,5 +664,4 @@ void dbWrite( void ) {
 	while( runner != root );
 
 	dbClose( db );
-	getConfig()->dbDirty=0;
 }

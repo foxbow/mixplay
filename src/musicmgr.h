@@ -14,7 +14,7 @@
 /* flags */
 #define MP_FAV   1	/* Favourite */
 #define MP_DNP   2	/* do not play */
-#define MP_RSVRD 4  /* unused */
+#define MP_DBL   4  /* doublet */
 #define MP_MARK  8	/* was added normally to the playlist */
 #define MP_ALL   31
 
