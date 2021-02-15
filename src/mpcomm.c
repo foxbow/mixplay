@@ -155,10 +155,18 @@ static jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mpplaylist_t 
 
 static jsonObject *jsonAddList( jsonObject *jo, const char *key, marklist_t *list ) {
 	jo = jsonInitArr( jo, key );
+	size_t len = strlen(getConfig()->musicdir)+2;
+
 	while( list != NULL ) {
-		/* cut off musicdir if it's given.. */
-		if (startsWith(list->dir, getConfig()->musicdir))
-			jsonAddArrElement( jo, list->dir+strlen(getConfig()->musicdir), json_string );
+		/* cut off musicdir if it's given, list->dir starts with 'p=' */
+		if (startsWith(list->dir, "p=")) {
+			if( strlen(list->dir) <  len ) {
+				addMessage(-1, "%s is an illegal list entry!", list->dir );
+			}
+			else {
+				jsonAddArrElement( jo, list->dir+len, json_string );
+			}
+		}
 		else
 			jsonAddArrElement( jo, list->dir, json_string );
 		list=list->next;

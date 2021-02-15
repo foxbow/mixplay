@@ -621,7 +621,9 @@ static int applyDNPlist( marklist_t *list, int dbl ) {
 		return 0;
 	}
 
-	activity(1, "Applying DNP list");
+	if (dbl) activity(1, "Applying DBL list");
+	else     activity(1, "Applying DNP list");
+	
 	do {
 		ptr=list;
 
