@@ -157,10 +157,10 @@ static jsonObject *jsonAddList( jsonObject *jo, const char *key, marklist_t *lis
 	jo = jsonInitArr( jo, key );
 	while( list != NULL ) {
 		/* cut off musicdir if it's given.. */
-		if (strstr(list->dir, getConfig()->musicdir))
-			jsonAddArrElement( jo, list->dir, json_string );
-		else
+		if (startsWith(list->dir, getConfig()->musicdir))
 			jsonAddArrElement( jo, list->dir+strlen(getConfig()->musicdir), json_string );
+		else
+			jsonAddArrElement( jo, list->dir, json_string );
 		list=list->next;
 	}
 	return jo;

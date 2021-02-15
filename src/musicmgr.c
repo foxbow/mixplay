@@ -1649,9 +1649,15 @@ void dumpInfo( mptitle_t *root, int smooth ) {
 	} while( current != root );
 
 	addMessage( 0, "%5i titles in Database", numtitles );
-	addMessage( 0, "%5i favourites", fav );
-	addMessage( 0, "%5i do not plays", dnp );
-	addMessage( 0, "%5i marked", marked );
+	if( fav )
+		addMessage( 0, "%5i favourites", fav );
+	if( dnp ) {
+		addMessage( 0, "%5i do not plays", dnp );
+		if( dbl )
+			addMessage( 0, "%5i doublets", dbl );
+	}
+	if( marked )
+		addMessage( 0, "%5i marked", marked );
 	addMessage( 0, "-- Playcount --" );
 
 	while( pl <= maxplayed ) {
@@ -1721,14 +1727,14 @@ void dumpInfo( mptitle_t *root, int smooth ) {
 					if( dblcnt == 0 )
 						addMessage( 0, "%s - %i dnp", line, dcount );
 					else
-						addMessage( 0, "%s - %i dnp (%i dbl)", line, dcount, dblcnt );
+						addMessage( 0, "%s - %i/%i dnp", line, dcount, dblcnt );
 				else if( dcount == 0 )
 					addMessage( 0, "%s - %i fav", line, favcnt );
 				else
 					if( dblcnt == 0 )
 						addMessage( 0, "%s - %i dnp / %i fav", line, dcount, favcnt );
 					else
-						addMessage( 0, "%s - %i dnp (%i dbl) / %i fav", line, dcount, dblcnt, favcnt );
+						addMessage( 0, "%s - %i/%i dnp / %i fav", line, dcount, dblcnt, favcnt );
 			else
 				addMessage( 0, "%s", line );
 		}
