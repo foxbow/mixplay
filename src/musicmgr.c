@@ -623,7 +623,7 @@ static int applyDNPlist( marklist_t *list, int dbl ) {
 
 	if (dbl) activity(1, "Applying DBL list");
 	else     activity(1, "Applying DNP list");
-	
+
 	do {
 		ptr=list;
 
@@ -704,7 +704,8 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 					else if( !(runner->flags & MP_DNP ) ) {
 						addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
 						runner->flags|=MP_FAV;
-						runner->favpcount=runner->playcount;
+						if(runner->playcount > 0)
+							runner->favpcount = runner->playcount-1;
 					}
 					cnt++;
 				}
@@ -735,8 +736,8 @@ void applyLists( int clean ) {
 		} while( title != control->root );
 	}
 	applyFAVlist( control->favlist, getFavplay() );
-	applyDNPlist( control->dbllist, 1 );
 	applyDNPlist( control->dnplist, 0 );
+	applyDNPlist( control->dbllist, 1 );
 	unlockPlaylist();
 	notifyChange(MPCOMM_LISTS);
 }
