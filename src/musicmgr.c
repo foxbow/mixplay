@@ -704,8 +704,8 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 					else if( !(runner->flags & MP_DNP ) ) {
 						addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
 						runner->flags|=MP_FAV;
-						if(runner->playcount > 0)
-							runner->favpcount = runner->playcount-1;
+						/* This is correct! Both counters get increased once every round */
+						runner->favpcount = runner->playcount;
 					}
 					cnt++;
 				}
