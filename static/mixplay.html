@@ -72,27 +72,12 @@
     </div>
     <!-- Tools view -->
     <div id='extra2' class='inactive' >
-      <button id='ctools0' class='active'   onclick='switchTab(this)'>&#x2630; Info</button>
+      <button id='ctools0' class='active'   onclick='switchTab(this)'>&#x2630; Shortcuts</button>
       <button id='ctools1' class='inactive' onclick='switchTab(this)'>&#x2630; Profiles</button>
       <button id='ctools2' class='inactive' onclick='switchTab(this)'>&#x2630; Channels</button>
+      <button id='ctools3' class='inactive' onclick='switchTab(this)'>&#x2630; Info</button>
       <div id='tools0' class='active'>
-        <p id='active'>No active profile/channel</p>
-        <p id='login' class='show'>
-          <button onclick='toggleKbd("pass", function () {checkPass()})'>Login</button>
-          <input  id='pass' type='text' style='display:none;'><br>
-        </p>
-        <button id='reload' onclick='document.location.reload()'>Reload client</button>
-        <button id='reset'  onclick='sendCMD(0x1f)'>Reset player</button><br>
-        <button id='dbinfo' onclick='sendCMD(0x12)'>Show Playcount</button>
-        <button id='debug'   onclick='toggleDebug()'>Debug info</button>
-        <div id='admin' class='hide'>
-          <button id='playcnt' onclick='pwSendCMD(0x12)'>Fix playcount</button>
-          <button id='rescan'  onclick='pwSendCMD(0x08)'>Rescan</button>
-          <button id='doublet' onclick='pwSendCMD(0x0b)'>Doublets</button>
-          <button id='quit'    onclick='pwSendCMD(0x07)'>QUIT</button>
-          <button id='logout'  onclick='clearPass()'>Logout</button>
-        </div>
-        <div id='messages'></div>
+        <div id='shortcuts'><em>No Shortcuts</em></div>
       </div>
       <div id='tools1' class='inactive'>
         <button id='cprof' onclick='newActive()'>New Profile</button>
@@ -103,6 +88,25 @@
         <button id='lurl'  onclick='loadURL()'>Load URL</button>
         <button id='schan' onclick='newActive()'>Save Channel</button>
         <div id='channels'><em>No Channels</em></div>
+      </div>
+      <div id='tools3' class='inactive'>
+        <p id='active'>No active profile/channel</p>
+        <button id='dbinfo' onclick='sendCMD(0x12)'>Show Playcount</button>
+        <button id='debug'   onclick='toggleDebug()'>Debug info</button><br>
+        <button id='reload' onclick='document.location.reload()'>Reload client</button>
+        <button id='reset'  onclick='confReset()'>Reset player</button><br>
+        <p id='login' class='show'>
+          <button onclick='toggleKbd("pass", function () {checkPass()})'>Unlock</button>
+          <input  id='pass' type='text' style='display:none;'><br>
+        </p>
+        <div id='admin' class='hide'>
+          <button id='playcnt' onclick='pwSendCMD(0x12)'>Fix playcount</button>
+          <button id='rescan'  onclick='pwSendCMD(0x08)'>Rescan</button>
+          <button id='doublet' onclick='pwSendCMD(0x0b)'>Doublets</button>
+          <button id='quit'    onclick='pwSendCMD(0x07)'>QUIT</button>
+          <button id='logout'  onclick='clearPass()'>Logout</button>
+        </div>
+        <div id='messages'></div>
       </div>
     </div>
     <!-- Search view -->

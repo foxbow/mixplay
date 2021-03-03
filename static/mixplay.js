@@ -29,6 +29,7 @@ var kbdcurrent
 var kbdokay = function () {}
 var clientid = -1
 var upactive = 1
+var shortcuts = []
 
 function sendKey (key) {
   const e = document.getElementById('kbdtext')
@@ -453,6 +454,12 @@ function pwSendCMD (cmd) {
   }
 }
 
+function confReset () {
+  if (window.confirm('Confirm restart')) {
+    sendCMD(0x1f)
+  }
+}
+
 /*
  * add a line of text to the message pane. Acts as ringbuffer
  */
@@ -508,6 +515,27 @@ function sendCMDArg (cmd, arg) {
 
   if (cmd === 'download') {
     download(arg)
+    return
+  }
+
+  if (cmd === 'shortcut') {
+    const id = Number(arg)
+    for (var i = 0; i < shortcuts.length; i++) {
+      if (id === shortcuts[i]) return
+    }
+    shortcuts.push(id)
+    setCookies()
+    doUpdate |= 8
+    return
+  }
+
+  if (cmd === 'remsc') {
+    const pos = shortcuts.indexOf(arg)
+    if (~pos) {
+      shortcuts.splice(pos, 1)
+      setCookies()
+      doUpdate |= 8
+    }
     return
   }
 
@@ -1465,6 +1493,44 @@ function updateUI () {
   xmlhttp.send()
 }
 
+function updateShortcuts (data) {
+  const e = document.getElementById('shortcuts')
+  var items = []
+  var i
+  var name
+  var choices
+  var lineid = 5000
+
+  wipeElements(e)
+  if (shortcuts.length === 0) {
+    items[0] = document.createElement('em')
+    items[0].innerHTML = 'No shortcuts'
+  } else {
+    for (i = 0; i < shortcuts.length; i++) {
+      var id = shortcuts[i]
+      if (id !== 0) {
+        if (id < 0) {
+          name = data.sname[-id - 1]
+        } else {
+          name = data.profile[id - 1]
+        }
+        choices = []
+        if (id !== -(active + 1)) {
+          choices.push(['Play', 0x06])
+        } else {
+          name = '&#x25B6; ' + name
+        }
+        choices.push(['Remove', 'remsc'])
+        items[i] = popselect(choices, id,
+          name, 0, lineid++)
+      } else {
+        console.log('Illegal channel 0 in shortcuts! (' + i + ')')
+      }
+    }
+  }
+  tabify(e, 'sclist', items, 11)
+}
+
 function updateConfig (data) {
   var e
   var items = []
@@ -1490,6 +1556,7 @@ function updateConfig (data) {
       } else {
         name = '&#x25B6; ' + name
       }
+      choices.push(['&#x2665;', 'shortcut']) /* FAV */
       items[i] = popselect(choices, i + 1,
         name, 0, lineid++)
     }
@@ -1512,11 +1579,14 @@ function updateConfig (data) {
       } else {
         name = '&#x25B6; ' + name
       }
+      choices.push(['&#x2665;', 'shortcut']) /* FAV */
       items[i] = popselect(choices, -(i + 1),
         name, 0, lineid++)
     }
   }
   tabify(e, 'chanlist', items, 11)
+
+  updateShortcuts(data)
 
   if (active > 0) {
     if (favplay) {
@@ -1667,13 +1737,7 @@ function clearPass () {
 
 function switchUI () {
   smallUI = !smallUI
-  if (smallUI) {
-    var d = new Date()
-    d.setTime(d.getTime() + (10 * 356 * 24 * 60 * 60 * 1000))
-    document.cookie = 'MPsmallUI=1; expires=' + d.toUTCString() + '; path=/'
-  } else {
-    document.cookie = 'MPsmallUI=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
-  }
+  setCookies()
   adaptUI(1)
 }
 
@@ -1843,15 +1907,41 @@ function addVolWheel (id) {
   }
 }
 
+function setCookies () {
+  var d = new Date()
+  d.setTime(d.getTime() + (10 * 356 * 24 * 60 * 60 * 1000))
+  if (smallUI) {
+    document.cookie = 'MPsmallUI=1; expires=' + d.toUTCString() + '; path=/;'
+  } else {
+    document.cookie = 'MPsmallUI=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
+  }
+  var scbase = ''
+  if (shortcuts.length > 0) {
+    scbase = 'MPshortcuts=' + shortcuts[0]
+    for (var i = 1; i < shortcuts.length; i++) {
+      scbase += ',' + shortcuts[i]
+    }
+    scbase += '; expires=' + d.toUTCString() + '; path=/'
+    document.cookie = scbase
+  } else {
+    document.cookie = 'MPshortcuts=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
+  }
+}
+
 /*
  * start the UI update thread loops
  */
 function initializeUI () {
+  var cookieValue = 'none'
+  if (document.cookie && (document.cookie.indexOf('MPshortcuts') !== -1)) {
+    cookieValue = document.cookie.split('; ').find(row => row.startsWith('MPshortcuts=')).split('=')[1]
+    shortcuts = cookieValue.split(',')
+  }
   for (var i = 0; i < 4; i++) {
     if (i < 3) {
-      addTouch('tools', i)
       addTouch('search', i)
     }
+    addTouch('tools', i)
     addTouch('extra', i)
     addTouch('dnpfav', i)
   }
@@ -1890,4 +1980,5 @@ function dummy () {
   toggleSearch()
   clearPass()
   togglePopupDB()
+  confReset()
 }
