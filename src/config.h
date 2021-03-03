@@ -57,15 +57,21 @@ typedef enum {
 	mpc_favplay,       /* 30 */
 	mpc_reset,
 	mpc_idle,          /* 0x20 */
-	mpc_title=1<<8,    /* 0x0100 */
+	/* by order of strength - fav-title beats dnp-album */
+	mpc_genre=1<<8,    /* 0x0100 */
 	mpc_artist=1<<9,   /* 0x0200 */
 	mpc_album=1<<10,   /* 0x0400 */
-	mpc_display=1<<11, /* 0x0800 */
-	mpc_genre=1<<12,   /* 0x1000 */
+	mpc_title=1<<11,   /* 0x0800 */
+	mpc_display=1<<12, /* 0x1000 */
 	mpc_substr=1<<13,  /* 0x2000 */
 	mpc_fuzzy=1<<14,   /* 0x4000 */
 	mpc_mix=1<<14      /* 0x4000 */
 } mpcmd_t;
+
+/* some filtermasks */
+#define MPC_DFRANGE  (mpc_genre|mpc_artist|mpc_album|mpc_title|mpc_display)
+#define MPC_DNPFAV   (mpc_dnp|mpc_fav)
+#define MPC_DFALL    (MPC_DFRANGE|MPC_DNPFAV)
 
 #include "musicmgr.h"
 
@@ -90,7 +96,7 @@ const char *_mprccmdstrings[MPRC_NUM];
 /* extract raw command */
 #define MPC_CMD(x)   (mpcmd_t)((int)x&0x00ff)
 /* determine range */
-#define MPC_RANGE(x) (mpcmd_t)((int)x&0x1f00)
+#define MPC_RANGE(x) (mpcmd_t)((int)x&MPC_DFRANGE)
 #define MPC_MODE(x)  (mpcmd_t)((int)x&0xff00)
 /* check for set range */
 #define MPC_ISTITLE(x) ((x) & mpc_title)

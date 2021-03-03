@@ -441,7 +441,7 @@ static int isMatch( const char *term, const char *pat, const mpcmd_t range ) {
  * todo: consider adding a exact substring match or deprecate
  *       fuzzy matching for fav/dnp
  */
-static int matchTitle( mptitle_t *title, const char* pat ) {
+static unsigned matchTitle( mptitle_t *title, const char* pat ) {
 	int fuzzy=0;
 	int res=0;
 
@@ -452,27 +452,33 @@ static int matchTitle( mptitle_t *title, const char* pat ) {
 
 		switch( pat[0] ) {
 		case 't':
-			res=isMatch( title->title, pat+2, fuzzy );
+			if(isMatch( title->title, pat+2, fuzzy ))
+				res=mpc_title;
 			break;
 
 		case 'a':
-			res=isMatch( title->artist, pat+2, fuzzy );
+			if(isMatch( title->artist, pat+2, fuzzy ))
+				res=mpc_artist;
 			break;
 
 		case 'l':
-			res=isMatch( title->album, pat+2, fuzzy );
+			if(isMatch( title->album, pat+2, fuzzy ))
+				res=mpc_album;
 			break;
 
 		case 'g':
-			res=isMatch( title->genre, pat+2, fuzzy );
+			if(isMatch( title->genre, pat+2, fuzzy ))
+				res=mpc_genre;
 			break;
 
 		case 'd':
-			res=isMatch( title->display, pat+2, fuzzy );
+			if(isMatch( title->display, pat+2, fuzzy ))
+				res=mpc_display;
 			break;
 
-		case 'p': /* @obsolete! */
-			res=isMatch( title->path, pat+2, fuzzy );
+		case 'p':
+			if(isMatch( title->path, pat+2, fuzzy ))
+				res=MPC_DFALL;
 			break;
 
 		default:
@@ -616,6 +622,7 @@ static int applyDNPlist( marklist_t *list, int dbl ) {
 	marklist_t *ptr = list;
 	mpplaylist_t *pl=getConfig()->current;
 	int cnt=0;
+	unsigned range=0;
 
 	if( NULL == list ) {
 		return 0;
@@ -625,19 +632,21 @@ static int applyDNPlist( marklist_t *list, int dbl ) {
 	else     activity(1, "Applying DNP list");
 
 	do {
-		ptr=list;
+		if( !(pos->flags&MP_DBL)) {
+			ptr=list;
 
-		while( ptr ) {
-			if( matchTitle( pos, ptr->dir ) ) {
-				addMessage( 3, "[D] %s: %s", ptr->dir, pos->display );
-				pos->flags = MP_DNP;
-				if (dbl) pos->flags |= MP_DBL;
-				cnt++;
-				break;
+			while( ptr ) {
+				range=matchTitle( pos, ptr->dir );
+				if( range > MPC_RANGE(pos->flags) ) {
+					addMessage( 3, "[D] %s: %s", ptr->dir, pos->display );
+					pos->flags = (range|MP_DNP);
+					if (dbl) pos->flags |= MP_DBL;
+					cnt++;
+					break;
+				}
+				ptr=ptr->next;
 			}
-			ptr=ptr->next;
 		}
-
 		pos=pos->next;
 	}
 	while( pos != base );
@@ -649,7 +658,7 @@ static int applyDNPlist( marklist_t *list, int dbl ) {
 	}
 
 	while( pl != NULL ) {
-		if( pl->title->flags & MP_DNP ) {
+		if( pl->title->flags & (MP_DNP|MP_DBL) ) {
 			if( pl == getConfig()->current ) {
 				getConfig()->current=pl->next;
 			}
@@ -673,6 +682,7 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 	mptitle_t *root=getConfig()->root;
 	mptitle_t *runner=root;
 	int cnt=0;
+	unsigned range=0;
 
 	if( NULL == root ) {
 		addMessage( 0, "No music loaded for FAVlist" );
@@ -686,36 +696,39 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 	activity(1, "Applying FAV list");
 	if( excl ) {
 		do {
-			runner->flags = MP_DNP;
+			runner->flags = (runner->flags & MP_DBL)|MP_DNP;
 			runner=runner->next;
 		} while( runner != root );
 	}
 
 	do {
-		ptr=favourites;
+		if( !(runner->flags & MP_DBL) ) {
+			ptr=favourites;
 
-		while( ptr ) {
-			if( matchTitle( runner, ptr->dir ) ) {
-				if( !( runner->flags & MP_FAV ) ) {
-					if( excl || getFavplay() ) {
-						addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
-						runner->flags=MP_FAV;
+			while( ptr ) {
+				range=matchTitle( runner, ptr->dir );
+				if( range > MPC_RANGE(runner->flags) ) {
+					if( !( runner->flags & MP_FAV ) ) {
+						if( excl || getFavplay() ) {
+							addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
+							runner->flags=MP_FAV;
+						}
+						else {
+							addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
+							/* Save MP_MARK */
+							runner->flags=(runner->flags & MP_MARK) | MP_FAV | range;
+							/* This is correct! Both counters get increased once every round */
+							runner->favpcount = runner->playcount;
+						}
+						cnt++;
 					}
-					else if( !(runner->flags & MP_DNP ) ) {
-						addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
-						runner->flags|=MP_FAV;
-						/* This is correct! Both counters get increased once every round */
-						runner->favpcount = runner->playcount;
-					}
-					cnt++;
+					ptr=NULL;
 				}
-				ptr=NULL;
-			}
-			else {
-				ptr=ptr->next;
+				else {
+					ptr=ptr->next;
+				}
 			}
 		}
-
 		runner=runner->next;
 	} while ( runner != root );
 
@@ -731,13 +744,13 @@ void applyLists( int clean ) {
 	lockPlaylist();
 	if( clean ) {
 		do {
-			title->flags&=~(MP_FAV|MP_DNP|MP_DBL);
+			title->flags&=~(MPC_DFRANGE|MP_FAV|MP_DNP|MP_DBL);
 			title=title->next;
 		} while( title != control->root );
 	}
+	applyDNPlist( control->dbllist, 1 );
 	applyFAVlist( control->favlist, getFavplay() );
 	applyDNPlist( control->dnplist, 0 );
-	applyDNPlist( control->dbllist, 1 );
 	unlockPlaylist();
 	notifyChange(MPCOMM_LISTS);
 }
