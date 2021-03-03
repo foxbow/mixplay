@@ -240,23 +240,34 @@ void setStream( const char* stream, const char *name ) {
  * also makes sure that commands are not overwritten
  */
 void setCommand( mpcmd_t cmd, char *arg ) {
-	if( cmd == mpc_idle ) {
+	if(( cmd == mpc_idle ) ||
+		(getConfig()->status == mpc_quit) ||
+		(getConfig()->status == mpc_reset)) {
 		return;
 	}
 
 	pthread_mutex_lock( &_pcmdlock );
-
-	while (getConfig()->command != mpc_idle) {
+	/* wait for the last command to be handled */
+	if (getConfig()->command != mpc_idle) {
 		pthread_cond_wait( &_pcmdcond, &_pcmdlock );
 	}
-	/* someone did not clean up! */
-	if( getConfig()->argument != NULL ) {
-		addMessage( 0, "Wiping leftover %s on %s!",
-				getConfig()->argument, mpcString(cmd) );
-		sfree(&(getConfig()->argument));
+	assert(getConfig()->command == mpc_idle);
+	/* player is being reset or about to quit - do not handle any commands */
+	if((getConfig()->status != mpc_reset) &&
+		 (getConfig()->status != mpc_quit)) {
+		/* someone did not clean up! */
+		if( getConfig()->argument != NULL ) {
+			addMessage( 0, "Wiping leftover %s on %s!",
+					getConfig()->argument, mpcString(cmd) );
+			sfree(&(getConfig()->argument));
+		}
+		getConfig()->command=cmd;
+		getConfig()->argument=arg;
 	}
-	getConfig()->command=cmd;
-	getConfig()->argument=arg;
+	else {
+		addMessage(-1, "%s blocked by %s!", mpcString(cmd),
+				mpcString(getConfig()->status));
+	}
 	pthread_mutex_unlock( &_pcmdlock );
 }
 
@@ -388,11 +399,9 @@ void *setProfile( void *arg ) {
 	}
 
 	/* if we're not in player context, start playing automatically */
-	if( pthread_mutex_trylock( &_pcmdlock ) != EBUSY ) {
-		addMessage( 1, "Start play" );
-		control->command=mpc_start;
-		pthread_mutex_unlock( &_pcmdlock );
-	}
+	addMessage( 1, "Start play" );
+	setCommand(mpc_start, NULL);
+
 	/* make sure that progress messages are removed */
 	notifyChange( MPCOMM_TITLES );
 	addMessage( 2, "End Thread: setProfile()" );
@@ -585,33 +594,29 @@ static void killPlayers(pid_t	pid[2], int p_command[2][2], int p_status[2][2], i
 		if (control->current == NULL) {
 			addMessage(-1, "Restarting on empty player!");
 		}
-		else {
-			strcpy(control->current->title->title, "Restarting");
-		}
-		control->status=mpc_idle;
 		/* make sure that the player gets restarted */
+		control->status=mpc_idle;
 		control->watchdog = STREAM_TIMEOUT+1;
 
 		if (control->mpmode & PM_SWITCH) {
 			control->active=oactive;
 		}
-		control->status=mpc_idle;
 	}
 
 	/* ask nicely first.. */
 	for( i=0; i<players; i++) {
-		addMessage(1, "Stopping player %" PRId64, i);
+		activity(0, "Stopping player %" PRId64, i);
 		dowrite( p_command[i][1], "QUIT\n", 5 );
 		close( p_command[i][1] );
 		close( p_status[i][0] );
 		close( p_error[i][0] );
 		sleep(1);
 		if( waitpid( pid[i], NULL, WNOHANG|WCONTINUED ) != pid[i] ) {
-			addMessage(1, "Terminating player %" PRId64, i);
+			activity(1, "Terminating player %" PRId64, i);
 			kill( pid[i], SIGTERM );
 			sleep(1);
 			if( waitpid( pid[i], NULL, WNOHANG|WCONTINUED ) != pid[i] ) {
-				addMessage(1, "Killing player %" PRId64, i);
+				activity(1, "Killing player %" PRId64, i);
 				kill( pid[i], SIGKILL );
 				sleep(1);
 				if( waitpid( pid[i], NULL, WNOHANG|WCONTINUED ) != pid[i] ) {
@@ -620,6 +625,7 @@ static void killPlayers(pid_t	pid[2], int p_command[2][2], int p_status[2][2], i
 			}
 		}
 	}
+	activity(0, "Players stopped!");
 }
 
 /* stops the current title. That means send a stop to a stream and a pause
@@ -1115,7 +1121,6 @@ void *reader( void *arg ) {
 			}
 		}
 
-		pthread_mutex_lock( &_pcmdlock );
 		cmd=MPC_CMD(control->command);
 
 		/* get the target title for fav and dnp commands */
@@ -1595,11 +1600,12 @@ void *reader( void *arg ) {
 
 		case mpc_reset:
 			addMessage(-1, "Force restart!");
+			control->status=mpc_reset;
 			killPlayers(pid, p_command, p_status, p_error, 1);
 			asyncTest();
 			pthread_mutex_unlock( &_asynclock );
+			control->command=mpc_idle;
 			pthread_cond_signal( &_pcmdcond );
-			pthread_mutex_unlock( &_pcmdlock );
 			return NULL;
 
 		default:
@@ -1609,7 +1615,6 @@ void *reader( void *arg ) {
 
 		control->command=mpc_idle;
 		pthread_cond_signal( &_pcmdcond );
-		pthread_mutex_unlock( &_pcmdlock );
 
 		/* notify UI that something has changed */
 		if( update ) {

@@ -228,8 +228,6 @@ int initAll() {
 		pthread_detach( tid );
 	}
 	else {
-		control->active=0;
-		control->dbname[0]=0;
 		setCommand( mpc_play, NULL );
 	}
 
