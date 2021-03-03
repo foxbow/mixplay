@@ -285,7 +285,7 @@ div#time {
 	background-image: linear-gradient( lightblue, darkblue 20%, darkblue 80%, black );
 }
 
-div#profiles, div#channels {
+div#profiles, div#channels, div#shortcuts {
 	font-size: 1.25em;
 }
 
