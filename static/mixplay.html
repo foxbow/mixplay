@@ -32,11 +32,11 @@
         <div id='ascroll' class='scroll' onclick='togglePopupDB("DFartist")'>
           <p id='artist'>artist</p>
           <span class='popup' id='popupDFartist'>
-            <em class='clickline' onclick='sendCMD(0x0213)'>&nbsp;&#x26b2;</em>
+            <em class='clickline' onclick='sendCMD(0x0113)'>&nbsp;&#x26b2;</em>
             <b> /</b>
-            <em class='clickline' onclick='sendCMD(0x0209)'>&nbsp;&#x2665;</em>
+            <em class='clickline' onclick='sendCMD(0x0109)'>&nbsp;&#x2665;</em>
             <b> /</b>
-            <em class='clickline' onclick='sendCMD(0x020a)'>&nbsp;&#x2620;</em>
+            <em class='clickline' onclick='sendCMD(0x010a)'>&nbsp;&#x2620;</em>
             <b>&#x2000;&#x274E;</b>
           </span>
         </div>
@@ -113,10 +113,10 @@
     <div id='extra3' class='inactive' >
       <em>Search:</em>
       <button id='searchmode' onclick='toggleSearch()'>Current titles</button><br/>
-      <button onclick='toggleKbd("text", function () { sendArg(0x2713) })'>&#x2328;</button>
-      <input  id='text' type='text' onkeydown='isEnter(event,0x2713)'>
-      <button id='search' onclick='sendArg(0x2713)'>Search</button>
-      <button id='fuzzy'  onclick='sendArg(0x4713)'>Fuzzy</button>
+      <button onclick='toggleKbd("text", function () { sendArg(0x2e13) })'>&#x2328;</button>
+      <input  id='text' type='text' onkeydown='isEnter(event,0x2e13)'>
+      <button id='search' onclick='sendArg(0x2e13)'>Search</button>
+      <button id='fuzzy'  onclick='sendArg(0x4e13)'>Fuzzy</button>
       </br>
       <button id='csearch0' class='active'   onclick='switchTab(this)'>&#x2630; Titles</button>
       <button id='csearch1' class='inactive' onclick='switchTab(this)'>&#x2630; Artists</button>
@@ -132,8 +132,8 @@
       <button id='gonext' class='inactive' onclick='sendCMD(0x03)'>&#x276f;</button>
       <div id='playtime' onclick='sendCMD(0x05)'>00:00/00:00</div>
       <div id='progress' class='progress' onclick='sendCMD(0x05)'><div id='progressbar'></div></div>
-      <button id='fav' class='inactive' onclick='sendCMD(0x0809)'>&#x2665;</button>
-      <button id='dnp' class='inactive' onclick='sendCMD(0x080a)'>&#x2620;</button>
+      <button id='fav' class='inactive' onclick='sendCMD(0x1009)'>&#x2665;</button>
+      <button id='dnp' class='inactive' onclick='sendCMD(0x100a)'>&#x2620;</button>
       <div id='time'>&nbsp;00:00&nbsp;</div>
     </div>
     <!-- hide everything -->

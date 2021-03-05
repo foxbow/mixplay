@@ -8,11 +8,12 @@ cmd = 0MSR RRRR 000C CCCC
 ### S - 'substring' marker for search.
 
 ### R -  the range:
-* 0x01 - title
+* 0x01 - genre
 * 0x02 - artist
 * 0x04 - album
-* 0x08 - display
-* 0x10 - genre
+* 0x08 - title
+* 0x10 - display
+* 0x1f - path
 
 ### C - the actual commands:
 * 0x00 - play/pause

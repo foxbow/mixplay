@@ -209,7 +209,7 @@ static void *clientHandler(void *args ) {
 		FD_ZERO( &fds );
 		FD_SET( sock, &fds );
 
-		to.tv_sec=5;
+		to.tv_sec=2;
 		to.tv_usec=0;
 		if( select( FD_SETSIZE, &fds, NULL, NULL, &to ) < 1) {
 			switch(errno) {

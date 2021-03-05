@@ -569,7 +569,7 @@ function sendCMDArg (cmd, arg) {
 
   /* clear title results after add all */
   if ((arg === '0') &&
-     ((cmd === 0x080c) || (cmd === 0x0814))) {
+     ((cmd === 0x100c) || (cmd === 0x1014))) {
     e = document.getElementById('search0')
     text = document.createElement('em')
     text.innerHTML = '.. done ..'
@@ -1026,9 +1026,9 @@ function fullUpdate (data) {
         cline.innerHTML = data.prev[i].title
       } else {
         choices = []
-        choices.push(['&#x2620;', 0x080a])
+        choices.push(['&#x2620;', 0x100a])
         if (!(data.prev[i].flags & 1)) {
-          choices.push(['&#x2665;', 0x0809])
+          choices.push(['&#x2665;', 0x1009])
         }
         choices.push(['&#x25B6;', 0x0011]) // re-play
         choices.push(['&#x1f4be;', 'download'])
@@ -1060,9 +1060,9 @@ function fullUpdate (data) {
     cline.onclick = function () { sendCMD(0x00) }
   } else {
     choices = []
-    choices.push(['&#x2620;', 0x080a]) /* DNP */
+    choices.push(['&#x2620;', 0x100a]) /* DNP */
     if (!(data.current.flags & 1)) {
-      choices.push(['&#x2665;', 0x0809]) /* FAV */
+      choices.push(['&#x2665;', 0x1009]) /* FAV */
     }
     choices.push(['&#x1f4be;', 'download']) // download
     cline = popselect(choices,
@@ -1091,9 +1091,9 @@ function fullUpdate (data) {
         cline.innerHTML = titleline
       } else {
         choices = []
-        choices.push(['&#x2620;', 0x080a])
+        choices.push(['&#x2620;', 0x100a])
         if (!(data.next[i].flags & 1)) {
-          choices.push(['&#x2665;', 0x0809])
+          choices.push(['&#x2665;', 0x1009])
         }
         choices.push(['X', 0x001c])
         choices.push(['&#x1f4be;', 'download']) // download
@@ -1185,24 +1185,24 @@ function searchUpdate (data) {
     switchTabByRef('search', 0)
     choices = []
     if ((!favplay) || (favplay && data.fpcurrent)) {
-      choices.push(['&#x2665;', 0x0809]) // fav
+      choices.push(['&#x2665;', 0x1009]) // fav
     }
     if ((!favplay) || (favplay && !data.fpcurrent)) {
-      choices.push(['&#x2620;', 0x080a]) // dnp
-      choices.push(['&#x276f;', 0x080c]) // next
-      choices.push(['&#x276f;&#x276f;', 0x0814]) // append
+      choices.push(['&#x2620;', 0x100a]) // dnp
+      choices.push(['&#x276f;', 0x100c]) // next
+      choices.push(['&#x276f;&#x276f;', 0x1014]) // append
     }
     items[0] = popselect(choices, 0, 'All results', 0, lineid++)
 
     for (i = 0; i < data.titles.length; i++) {
       choices = []
       if ((!favplay) || (favplay && data.fpcurrent)) {
-        choices.push(['&#x2665;', 0x0809]) // fav
+        choices.push(['&#x2665;', 0x1009]) // fav
       }
       if ((!favplay) || (favplay && !data.fpcurrent)) {
-        choices.push(['&#x2620;', 0x080a]) // dnp
-        choices.push(['&#x276f;', 0x080c]) // next
-        choices.push(['&#x276f;&#x276f;', 0x0814]) // append
+        choices.push(['&#x2620;', 0x100a]) // dnp
+        choices.push(['&#x276f;', 0x100c]) // next
+        choices.push(['&#x276f;&#x276f;', 0x1014]) // append
       }
       choices.push(['&#x1f4be;', 'download'])
       items[i + 1] = popselect(choices,
@@ -1516,11 +1516,11 @@ function updateShortcuts (data) {
         }
         choices = []
         if (id !== -(active + 1)) {
-          choices.push(['Play', 0x06])
+          choices.push(['&#x25B6;', 0x06])
         } else {
           name = '&#x25B6; ' + name
         }
-        choices.push(['Remove', 'remsc'])
+        choices.push(['X', 'remsc'])
         items[i] = popselect(choices, id,
           name, 0, lineid++)
       } else {
@@ -1549,9 +1549,9 @@ function updateConfig (data) {
       name = data.profile[i]
       choices = []
       if (i !== (active - 1)) {
-        choices.push(['Play', 0x06])
+        choices.push(['&#x25B6;', 0x06])
         if (i !== 0) {
-          choices.push(['Remove', 0x18])
+          choices.push(['X', 0x18])
         }
       } else {
         name = '&#x25B6; ' + name
@@ -1574,8 +1574,8 @@ function updateConfig (data) {
       name = data.sname[i]
       choices = []
       if (i !== -(active + 1)) {
-        choices.push(['Play', 0x06])
-        choices.push(['Remove', 0x18])
+        choices.push(['&#x25B6;', 0x06])
+        choices.push(['X', 0x18])
       } else {
         name = '&#x25B6; ' + name
       }
@@ -1777,10 +1777,10 @@ function handleKey (event) {
       sendCMD(0x03)
       break
     case 'f':
-      sendCMD(0x0809)
+      sendCMD(0x1009)
       break
     case 'd':
-      sendCMD(0x080a)
+      sendCMD(0x100a)
       break
     case '-':
       sendCMD(0x1d)
