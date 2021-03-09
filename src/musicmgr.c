@@ -539,20 +539,41 @@ int search( const char *pat, const mpcmd_t range ) {
 		/* dnp == XNOR MP_DNP */
 		found = 0;
 		if( ( runner->flags & (MP_DNP|MP_DBL) ) == dnp ) {
-			/* check for searchrange and pattern */
+			/* check for searchrange and patterns */
 			if( MPC_ISTITLE(range) &&
 					isMatch( runner->title, lopat, range ) ){
-				found = (mpcmd_t)(found | mpc_title);
+				found |= mpc_title;
 			}
 
+			/* from a result point of view display(, path) and title are the same */
 			if ( MPC_ISDISPLAY( range ) &&
 					isMatch( runner->display, lopat, range ) ) {
-				found = (mpcmd_t)(found | mpc_display);
+				found |= mpc_title;
 			}
 
 			if( MPC_ISARTIST(range) &&
 					isMatch( runner->artist, lopat, range ) ) {
-				found = (mpcmd_t)(found | mpc_artist);
+				found |= mpc_artist;
+
+				/* Add albums and titles if search was for artists only */
+				if( MPC_EQARTIST(range) ) {
+					found |= mpc_title | mpc_album;
+				}
+			}
+
+			if( MPC_ISALBUM(range) &&
+					isMatch( runner->album, lopat, range ) ) {
+				found |= mpc_album;
+
+				/* Add titles if search was for albums only */
+				if( MPC_EQALBUM(range) ) {
+					found |= mpc_title;
+				}
+			}
+
+			/* now interpret the value of 'found' */
+
+			if( MPC_ISARTIST(found) ) {
 				/* check for new artist */
 				for( i=0; (i<res->anum) && strcmp( res->artists[i], runner->artist ); i++ );
 				if( i == res->anum ) {
@@ -562,17 +583,6 @@ int search( const char *pat, const mpcmd_t range ) {
 				}
 			}
 
-			/* if we search for artists, also add the artist's albums */
-			if ( MPC_EQARTIST(range) && MPC_ISARTIST(found) ) {
-				found = (mpcmd_t)(found | mpc_album);
-			}
-
-			if( MPC_ISALBUM(range) &&
-					isMatch( runner->album, lopat, range ) ) {
-				found = (mpcmd_t)(found | mpc_album);
-			}
-
-			/* add current album to results? */
 			if( MPC_ISALBUM(found) ) {
 				/* check for new albums */
 				for( i=0; (i<res->lnum) && strcmp( res->albums[i], runner->album ); i++ );
@@ -592,8 +602,7 @@ int search( const char *pat, const mpcmd_t range ) {
 				}
 			}
 
-			/* add title (too)? */
-			if (found && ( res->tnum++ < MAXSEARCH ) ) {
+			if (MPC_ISTITLE(found) && ( res->tnum++ < MAXSEARCH ) ) {
 				res->titles=appendToPL( runner, res->titles, 0 );
 			}
 		}
