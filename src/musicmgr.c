@@ -529,7 +529,7 @@ int search( const char *pat, const mpcmd_t range ) {
 
 	/* if player is in favplay mode and the search in in fav mode
 	   then search for DNP titles. */
-	if ( getConfig()->fpcurrent && getFavplay() ) {
+	if ( getConfig()->searchDNP ) {
 		addMessage( 1, "DNP search");
 		dnp=MP_DNP;
 	}

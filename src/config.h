@@ -49,7 +49,7 @@ typedef enum {
 	mpc_newprof,
 	mpc_path,
 	mpc_remprof,
-	mpc_edit,
+	mpc_smode,
 	mpc_deldnp,
 	mpc_delfav,
 	mpc_remove,
@@ -167,7 +167,7 @@ typedef struct {
 	unsigned sleepto;			/* idle timeout for clients */
 	unsigned dbDirty;
 	/* flags for mpmode */
-	unsigned fpcurrent:1;
+	unsigned searchDNP:1;
 	unsigned mpmix:1;
 	/* other flags */
 	unsigned fade;					/* controls fading between titles */

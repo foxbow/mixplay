@@ -75,13 +75,12 @@
       <button id='ctools0' class='active'   onclick='switchTab(this)'>&#x2630; Shortcuts</button>
       <button id='ctools1' class='inactive' onclick='switchTab(this)'>&#x2630; Profiles</button>
       <button id='ctools2' class='inactive' onclick='switchTab(this)'>&#x2630; Channels</button>
-      <button id='ctools3' class='inactive' onclick='switchTab(this)'>&#x2630; Info</button>
+      <button id='ctools3' class='inactive' onclick='switchTab(this)'>&#x2630; Tools</button>
       <div id='tools0' class='active'>
         <div id='shortcuts'><em>No Shortcuts</em></div>
       </div>
       <div id='tools1' class='inactive'>
         <button id='cprof' onclick='newActive()'>New Profile</button>
-        <button id='setfavplay' onclick='sendCMD(0x1e)'>Enable Favplay</button>
         <div id='profiles'><em>No profiles?</em></div>
       </div>
       <div id='tools2' class='inactive'>
@@ -91,6 +90,7 @@
       </div>
       <div id='tools3' class='inactive'>
         <p id='active'>No active profile/channel</p>
+        <button id='setfavplay' onclick='sendCMD(0x1e)'>Enable Favplay</button><br>
         <button id='dbinfo' onclick='sendCMD(0x12)'>Show Playcount</button>
         <button id='debug'   onclick='toggleDebug()'>Debug info</button><br>
         <button id='reload' onclick='document.location.reload()'>Reload client</button>
@@ -112,7 +112,7 @@
     <!-- Search view -->
     <div id='extra3' class='inactive' >
       <em>Search:</em>
-      <button id='searchmode' onclick='toggleSearch()'>Current titles</button><br/>
+      <button id='searchmode' onclick='toggleSearch()'>Active</button><br/>
       <button onclick='toggleKbd("text", function () { sendArg(0x2e13) })'>&#x2328;</button>
       <input  id='text' type='text' onkeydown='isEnter(event,0x2e13)'>
       <button id='search' onclick='sendArg(0x2e13)'>Search</button>

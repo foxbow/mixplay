@@ -320,7 +320,7 @@ void *setProfile( void *arg ) {
 	}
 	cactive=control->active;
 
-	control->fpcurrent=1;
+	control->searchDNP=0;
 
 	/* stream selected */
 	if( cactive < 0 ) {
@@ -1513,8 +1513,8 @@ void *reader( void *arg ) {
 			update=1;
 			break;
 
-		case mpc_edit:
-			control->fpcurrent=~(control->fpcurrent);
+		case mpc_smode:
+			control->searchDNP=~(control->searchDNP);
 			break;
 
 		case mpc_deldnp:

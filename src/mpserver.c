@@ -311,12 +311,16 @@ static void *clientHandler(void *args ) {
 								running|=CL_UPD;
 								/* no initMsgCnt(clientid); as this may still be correct */
 								addNotify(clientid, MPCOMM_TITLES);
-								addMessage( 2, "Resurrect Update Handler for %i", reqInfo.clientid );
+								/* After a client reload the clientid/socket alignment is lost */
+								addMessage( 1, "Recreate Update Handler for %i", reqInfo.clientid );
 							} else {
 								/* treat as one-shot for now */
 								running = CL_ONE;
-								addMessage( 3, "Temporary one-shot for %i", reqInfo.clientid );
+								addMessage( 1, "Temporary one-shot for %i", reqInfo.clientid );
 							}
+						}
+						if (clientid != reqInfo.clientid) {
+							addMessage( 0, "Client mix up, expcted %i and got %i!", clientid, reqInfo.clientid );
 						}
 					}
 
@@ -341,18 +345,15 @@ static void *clientHandler(void *args ) {
 						}
 					}
 
-					/* Avoid turning update handlers into one-shot handlers */
+					/* Reload may reset the clientid/socket alignment */
 					if((reqInfo.clientid == 0) && (clientid > 0)){
-						addMessage( 2, "Clientless request coming in on socket for client %i", clientid);
-						reqInfo.clientid=clientid;
+						addMessage( 1, "Recycling socket for client %i", clientid);
+						running&=~CL_RUN;
 					}
 
 					if( clientid == 0 ) {
-						addMessage(1, "One shot request");
-						running=CL_ONE;
-					} else if( (reqInfo.clientid > 0 ) &&
-										(clientid != reqInfo.clientid) ) {
-						addMessage(0, "Client %i on client %i's handler!?", reqInfo.clientid, clientid);
+						addMessage(2, "One shot request");
+						running = CL_ONE;
 					}
 
 					if( end == NULL ) {
@@ -691,6 +692,10 @@ static void *clientHandler(void *args ) {
 		} else {
 			addMessage( 0, "Update Handler for client 0 ?!" );
 		}
+	}
+	else if (clientid) {
+		addMessage( 1, "Updatehandler (client %i) got recycled", clientid );
+		freeClient(clientid);
 	}
 
 	addMessage( 3, "Client handler exited" );

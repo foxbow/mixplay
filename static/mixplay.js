@@ -658,7 +658,7 @@ function sendCMDArg (cmd, arg) {
     console.log('oreq: ' + json)
   }
 
-  xmlhttp.open('POST', '/mpctrl/cmd?' + json)
+  xmlhttp.open('POST', '/mpctrl/cmd?' + json, true)
   xmlhttp.send()
 }
 
@@ -1108,6 +1108,7 @@ function fullUpdate (data) {
 
   if (!isstream) {
     enableElement('fav', !(data.current.flags & 1))
+    enableElement('dnp', !(data.current.flags & 2))
   }
 
   adaptUI(1)
@@ -1133,10 +1134,10 @@ function searchUpdate (data) {
     for (i = 0; i < data.albums.length; i++) {
       choices = []
       choices.push(['&#x26b2;', 0x0413]) // search album
-      if ((!favplay) || (favplay && data.fpcurrent)) {
+      if (!favplay || data.searchDNP) {
         choices.push(['&#x2665;', 0x0409]) // fav
       }
-      if ((!favplay) || (favplay && !data.fpcurrent)) {
+      if (!data.searchDNP) {
         choices.push(['&#x2620;', 0x040a]) // dnp
       }
 
@@ -1160,10 +1161,10 @@ function searchUpdate (data) {
     for (i = 0; i < data.artists.length; i++) {
       choices = []
       choices.push(['&#x26b2;', 0x0213]) // search
-      if ((!favplay) || (favplay && data.fpcurrent)) {
+      if (!favplay || data.searchDNP) {
         choices.push(['&#x2665;', 0x0209]) // fav
       }
-      if ((!favplay) || (favplay && !data.fpcurrent)) {
+      if (!data.searchDNP) {
         choices.push(['&#x2620;', 0x020a]) // dnp
       }
       items[i] = popselect(choices,
@@ -1177,6 +1178,7 @@ function searchUpdate (data) {
   }
   tabify(e, 'ares', items, 13)
 
+  /* titles */
   e = document.getElementById('search0')
   items = []
   wipeElements(e)
@@ -1184,26 +1186,26 @@ function searchUpdate (data) {
     enableElement('csearch0', 1)
     switchTabByRef('search', 0)
     choices = []
-    if ((!favplay) || (favplay && data.fpcurrent)) {
+    if (!favplay || data.searchDNP) {
       choices.push(['&#x2665;', 0x1009]) // fav
     }
-    if ((!favplay) || (favplay && !data.fpcurrent)) {
+    if (!data.searchDNP) {
       choices.push(['&#x2620;', 0x100a]) // dnp
-      choices.push(['&#x276f;', 0x100c]) // next
-      choices.push(['&#x276f;&#x276f;', 0x1014]) // append
     }
+    choices.push(['&#x276f;', 0x100c]) // next
+    choices.push(['&#x276f;&#x276f;', 0x1014]) // append
     items[0] = popselect(choices, 0, 'All results', 0, lineid++)
 
     for (i = 0; i < data.titles.length; i++) {
       choices = []
-      if ((!favplay) || (favplay && data.fpcurrent)) {
+      if (!(data.titles[i].flags & 1)) {
         choices.push(['&#x2665;', 0x1009]) // fav
       }
-      if ((!favplay) || (favplay && !data.fpcurrent)) {
+      if (!(data.titles[i].flags & 2)) {
         choices.push(['&#x2620;', 0x100a]) // dnp
-        choices.push(['&#x276f;', 0x100c]) // next
-        choices.push(['&#x276f;&#x276f;', 0x1014]) // append
       }
+      choices.push(['&#x276f;', 0x100c]) // next
+      choices.push(['&#x276f;&#x276f;', 0x1014]) // append
       choices.push(['&#x1f4be;', 'download'])
       items[i + 1] = popselect(choices,
         data.titles[i].key,
@@ -1323,19 +1325,20 @@ function playerUpdate (data) {
     clientid = data.clientid
   }
 
+  if (data.searchDNP) {
+    document.getElementById('searchmode').innerHTML = 'DNP'
+  } else {
+    document.getElementById('searchmode').innerHTML = 'Active'
+  }
+
   favplay = data.mpfavplay
   if (favplay) {
-    if (!data.fpcurrent) {
-      document.getElementById('searchmode').innerHTML = 'Current titles'
-    } else {
-      document.getElementById('searchmode').innerHTML = 'Database'
-    }
     document.getElementById('setfavplay').innerHTML = 'Disable Favplay'
   } else {
     document.getElementById('setfavplay').innerHTML = 'Enable Favplay'
   }
 
-  enableElement('searchmode', favplay)
+  /* enableElement('searchmode', favplay) */
 
   /* switching between stream and normal play */
   if (!isstream) {
@@ -1471,7 +1474,7 @@ function updateUI () {
     if (debug) {
       console.log('areq: ' + json)
     }
-    xmlhttp.open('POST', '/mpctrl/cmd?' + json)
+    xmlhttp.open('POST', '/mpctrl/cmd?' + json, true)
     cmdtosend = ''
     argtosend = ''
   } else {
