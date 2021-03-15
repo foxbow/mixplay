@@ -411,6 +411,20 @@ static int getDirs( const char *cd, struct dirent ***dirlist ) {
 	return scandir( cd, dirlist, dsel, alphasort );
 }
 
+/**
+ * compare two strings and ignore the case.
+ * returns 1 on equality and 0 on differerences.
+ * This is not equal to stricmp/strcasecmp!
+ */
+static int strieq( const char *t1, const char *t2 ) {
+	size_t len = strlen(t1);
+	if( len != strlen(t2) ) return 0;
+	do {
+		if( tolower(t1[len]) != tolower(t2[len]) ) return 0;
+	} while (len-- > 0);
+	return 1;
+}
+
 /*
  * matches term with pattern in search.
  * range is only used to mark fuzzy searches!
@@ -574,8 +588,9 @@ int search( const char *pat, const mpcmd_t range ) {
 			/* now interpret the value of 'found' */
 
 			if( MPC_ISARTIST(found) ) {
-				/* check for new artist */
-				for( i=0; (i<res->anum) && strcmp( res->artists[i], runner->artist ); i++ );
+				/* check for new artist - checksim to group typos and collabs
+				   TDOD: check if this is really as beneficial as expected */
+				for( i=0; (i<res->anum) && !checkSim( res->artists[i], runner->artist ); i++ );
 				if( i == res->anum ) {
 					res->anum++;
 					res->artists=(char**)frealloc( res->artists, res->anum*sizeof(char*) );
@@ -585,7 +600,7 @@ int search( const char *pat, const mpcmd_t range ) {
 
 			if( MPC_ISALBUM(found) ) {
 				/* check for new albums */
-				for( i=0; (i<res->lnum) && strcmp( res->albums[i], runner->album ); i++ );
+				for( i=0; (i<res->lnum) && !strieq( res->albums[i], runner->album ); i++ );
 				if( i == res->lnum ) {
 					/* album not yet in list */
 					res->lnum++;
@@ -594,8 +609,9 @@ int search( const char *pat, const mpcmd_t range ) {
 					res->albart=(char**)frealloc( res->albart, res->lnum*sizeof(char*) );
 					res->albart[i]=runner->artist;
 				}
-				else if( strcmp( res->albart[i], ARTIST_SAMPLER ) &&
-						strcmp( res->albart[i], runner->artist ) ){
+				/* fuzzy comparation to avoid collabs turning an album into a sampler */
+				else if( !strieq( res->albart[i], ARTIST_SAMPLER ) &&
+						!checkSim( res->albart[i], runner->artist ) ){
 					addMessage( 1, "%s is considered a sampler (%s <> %s).",
 							runner->album, runner->artist, res->albart[i] );
 					res->albart[i]=ARTIST_SAMPLER;

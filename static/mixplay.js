@@ -20,7 +20,7 @@ var swipest = []
 var overflow = 0
 var toval = 500
 var idletime = 0
-var idlesleep = 10000 /* milliseconds until the clock shows up */
+var idlesleep = 30000 /* milliseconds until the clock shows up (30s) */
 var currentPop = ''
 var debug = 0
 const layout = ['1234567890', 'qwertzuiop', 'asdfghjkl\'', 'yxcvbnm-', 'XC BO']
@@ -1122,12 +1122,14 @@ function wipeElements (e) {
 }
 
 function searchUpdate (data) {
-  var e = document.getElementById('search2')
-  wipeElements(e)
   var items = []
   var choices = []
   var i
   var lineid = 2000
+
+  /* albums */
+  var e = document.getElementById('search2')
+  wipeElements(e)
   if (data.albums.length > 0) {
     enableElement('csearch2', 1)
     switchTabByRef('search', 2)
@@ -1152,6 +1154,7 @@ function searchUpdate (data) {
   }
   tabify(e, 'lres', items, 13)
 
+  /* artists */
   e = document.getElementById('search1')
   wipeElements(e)
   items = []
@@ -1160,12 +1163,12 @@ function searchUpdate (data) {
     switchTabByRef('search', 1)
     for (i = 0; i < data.artists.length; i++) {
       choices = []
-      choices.push(['&#x26b2;', 0x0213]) // search
+      choices.push(['&#x26b2;', 0x4213]) // search
       if (!favplay || data.searchDNP) {
-        choices.push(['&#x2665;', 0x0209]) // fav
+        choices.push(['&#x2665;', 0x4209]) // fav
       }
       if (!data.searchDNP) {
-        choices.push(['&#x2620;', 0x020a]) // dnp
+        choices.push(['&#x2620;', 0x420a]) // dnp
       }
       items[i] = popselect(choices,
         data.artists[i],
