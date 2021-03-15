@@ -248,10 +248,13 @@ void setCommand( mpcmd_t cmd, char *arg ) {
 
 	pthread_mutex_lock( &_pcmdlock );
 	/* wait for the last command to be handled */
-	if (getConfig()->command != mpc_idle) {
+	while (getConfig()->command != mpc_idle) {
 		pthread_cond_wait( &_pcmdcond, &_pcmdlock );
+		if (getConfig()->command == mpc_idle) {
+			addMessage(1, "unblocked on active command %s", mpcString(getConfig()->command));
+		}
 	}
-	assert(getConfig()->command == mpc_idle);
+
 	/* player is being reset or about to quit - do not handle any commands */
 	if((getConfig()->status != mpc_reset) &&
 		 (getConfig()->status != mpc_quit)) {

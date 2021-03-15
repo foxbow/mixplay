@@ -37,8 +37,7 @@ body.pause {
 }
 
 div#black {
-	background-color: black;
-	color: #444;
+	background-image: inherit;
 	position: absolute;
 	height: 100%;
 	width: 100%;

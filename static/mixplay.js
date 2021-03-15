@@ -14,7 +14,7 @@ var favplay = 0
 var cmdtosend = ''
 var argtosend = ''
 var activecmd = -1
-var smallUI = (document.cookie && (document.cookie.indexOf('MPsmallUI') !== -1))
+var smallUI = 0
 var active = 0
 var swipest = []
 var overflow = 0
@@ -312,6 +312,12 @@ function adaptUI (keep) {
   }
 
   document.body.style.fontSize = fsize + 'px'
+
+  /* show clock during play */
+  if (smallUI === 2) {
+    power(0)
+    return
+  }
 
   /* nothing scrolls elsewhere */
   if (!maintab) {
@@ -1371,7 +1377,9 @@ function playerUpdate (data) {
   /* mpc_play */
   if (data.status === 0) {
     clearBody('pause')
-    power(1)
+    if (smallUI !== 2) {
+      power(1)
+    }
     document.getElementById('play').innerHTML = '||'
   } else if (!(data.mpmode & 8)) {
     setBody('pause')
@@ -1742,9 +1750,13 @@ function clearPass () {
 }
 
 function switchUI () {
-  smallUI = !smallUI
-  setCookies()
-  adaptUI(1)
+  smallUI = (smallUI + 1) % 3
+  if (smallUI === 2) {
+    smallUI = -1
+  } else {
+    adaptUI(1)
+    setCookies()
+  }
 }
 
 function blockSpace (event) {
@@ -1882,6 +1894,15 @@ function addTouch (name, num) {
 function power (on) {
   const el = document.getElementById('black')
   if (on === 1) {
+    if (smallUI === -1) {
+      smallUI = 2
+      setCookies()
+      el.className = ''
+      return
+    }
+    if (smallUI === 2) {
+      switchUI()
+    }
     idletime = 0
     el.className = 'hide'
   } else {
@@ -1916,10 +1937,10 @@ function addVolWheel (id) {
 function setCookies () {
   var d = new Date()
   d.setTime(d.getTime() + (10 * 356 * 24 * 60 * 60 * 1000))
-  if (smallUI) {
-    document.cookie = 'MPsmallUI=1; expires=' + d.toUTCString() + '; path=/;'
-  } else {
+  if (smallUI === 0) {
     document.cookie = 'MPsmallUI=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
+  } else {
+    document.cookie = 'MPsmallUI=' + smallUI + '; expires=' + d.toUTCString() + '; path=/;'
   }
   var scbase = ''
   if (shortcuts.length > 0) {
@@ -1939,9 +1960,15 @@ function setCookies () {
  */
 function initializeUI () {
   var cookieValue = 'none'
-  if (document.cookie && (document.cookie.indexOf('MPshortcuts') !== -1)) {
-    cookieValue = document.cookie.split('; ').find(row => row.startsWith('MPshortcuts=')).split('=')[1]
-    shortcuts = cookieValue.split(',')
+  if (document.cookie) {
+    if (document.cookie.indexOf('MPshortcuts') !== -1) {
+      cookieValue = document.cookie.split('; ').find(row => row.startsWith('MPshortcuts=')).split('=')[1]
+      shortcuts = cookieValue.split(',')
+    }
+    if (document.cookie.indexOf('MPsmallUI') !== -1) {
+      cookieValue = document.cookie.split('; ').find(row => row.startsWith('MPsmallUI=')).split('=')[1]
+      smallUI = Number(cookieValue)
+    }
   }
   for (var i = 0; i < 4; i++) {
     if (i < 3) {
