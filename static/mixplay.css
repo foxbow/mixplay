@@ -32,12 +32,12 @@ body.disconnect {
 
 body.pause {
 	background: #000;
-	background-image: radial-gradient( circle at 90% -30%, #888, darkblue 2%, black 100%);
-	color: #556;
+	color: #444;
 }
 
 div#black {
 	background-image: inherit;
+	background-color: inherit;
 	position: absolute;
 	height: 100%;
 	width: 100%;
