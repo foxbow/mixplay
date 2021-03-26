@@ -779,10 +779,8 @@ void *reader( void *arg ) {
 		 * this may happen when a stream is played and the network connection
 		 * changes - most likely due to a DSL reconnect.
 		 */
-		if( (i == 0) &&
-				(control->mpmode & PM_STREAM) &&
-				((control->status == mpc_start) ||
-				 (control->mpmode & PM_SWITCH))) {
+		if( (i == 0) && (control->mpmode & PM_STREAM) &&
+				(control->status != mpc_idle) ) {
 			control->watchdog++;
 			if ( control->watchdog > STREAM_TIMEOUT ) {
 				addMessage(-1, "Player froze!");
