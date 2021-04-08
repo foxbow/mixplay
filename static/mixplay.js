@@ -685,6 +685,23 @@ function volWheel (e) {
   }
 }
 
+function changeVolume (e) {
+  const volel = document.getElementById('volume')
+  const w = volel.clientWidth
+  var pos
+  var vol
+  const rect = volel.getBoundingClientRect()
+  if (e.offsetX) {
+    pos = e.offsetX
+  } else {
+    pos = e.changedTouches[0].clientX - rect.left
+  }
+  vol = 100 * (pos / w)
+  if (vol) {
+    sendCMDArg(0x15, parseInt(vol).toString())
+  }
+}
+
 /*
  * change text in an element
  */
@@ -1981,6 +1998,8 @@ function initializeUI () {
   addVolWheel('viewtabs')
   addVolWheel('extra0')
   addVolWheel('playpack')
+  document.getElementById('volume').addEventListener('touchmove', changeVolume, { passive: true })
+  document.getElementById('volume').addEventListener('click', changeVolume)
   document.body.addEventListener('keypress', handleKey)
   document.body.addEventListener('keyup', blockSpace)
   document.body.addEventListener('click', function () { power(1) })

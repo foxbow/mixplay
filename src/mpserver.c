@@ -414,7 +414,7 @@ static void *clientHandler(void *args ) {
 						if( strstr( pos, "/cmd" ) == pos ) {
 							state = req_command;
 							cmd=(mpcmd_t)reqInfo.cmd;
-							addMessage( 1, "Got command 0x%04x - %s", cmd, mpcString(cmd) );
+							addMessage( 1, "Got command 0x%04x - %s %s", cmd, mpcString(cmd), reqInfo.arg?reqInfo.arg:"" );
 							/* search is synchronous */
 							if( MPC_CMD(cmd) == mpc_search ) {
 								if( setCurClient(clientid) == clientid ) {
