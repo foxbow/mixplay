@@ -94,6 +94,8 @@ div#extra1, div#extra2, div#extra3 {
 
 div#volume {
 	margin-top: 0.6em;
+	margin-right: 0.6em;
+	margin-left: 0.6em;
 }
 
 p#active, p#download {
@@ -123,6 +125,7 @@ button:hover {
 #uiextra:hover {
 	cursor: row-resize;
 }
+
 #tscroll:hover {
 	cursor: pointer;
 }

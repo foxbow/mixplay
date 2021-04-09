@@ -30,6 +30,8 @@ var kbdokay = function () {}
 var clientid = -1
 var upactive = 1
 var shortcuts = []
+var curvol = 0
+var setvol = -1
 
 function sendKey (key) {
   const e = document.getElementById('kbdtext')
@@ -685,20 +687,38 @@ function volWheel (e) {
   }
 }
 
+/**
+ * callback for touchmove/click on the volumebar
+ */
 function changeVolume (e) {
   const volel = document.getElementById('volume')
   const w = volel.clientWidth
-  var pos
   var vol
   const rect = volel.getBoundingClientRect()
+  /* click event */
   if (e.offsetX) {
-    pos = e.offsetX
+    /* single tap to unmute, double tap to mute */
+    if ((curvol === -2) || (setvol !== -1)) {
+      setvol = -1
+      sendCMD(0x1d)
+    } else {
+      setvol = 100 * (e.offsetX / w)
+      if (setvol < 0) setvol = 0
+      /* wait 0.3s to check if it is a double click */
+      setTimeout(function () {
+        if (setvol !== -1) {
+          sendCMDArg(0x15, parseInt(setvol).toString())
+          setvol = -1
+        }
+      }, 333)
+    }
+  /* touchmove event */
   } else {
-    pos = e.changedTouches[0].clientX - rect.left
-  }
-  vol = 100 * (pos / w)
-  if (vol) {
-    sendCMDArg(0x15, parseInt(vol).toString())
+    vol = 100 * (e.changedTouches[0].clientX - rect.left) / w
+    if (vol) {
+      setvol = -1
+      sendCMDArg(0x15, parseInt(vol).toString())
+    }
   }
 }
 
@@ -1410,10 +1430,11 @@ function playerUpdate (data) {
     document.getElementById('play').innerHTML = '&#x25B6;'
   }
 
-  if (data.volume > 0) {
-    document.getElementById('volumebar').style.width = data.volume + '%'
+  curvol = data.volume
+  if (curvol > 0) {
+    document.getElementById('volumebar').style.width = curvol + '%'
     document.getElementById('volumebar').className = ''
-  } else if (data.volume === -1) {
+  } else if (curvol === -1) {
     enableElement('volume', 0)
   } else {
     document.getElementById('volumebar').className = 'mute'
