@@ -687,38 +687,24 @@ function volWheel (e) {
   }
 }
 
-/**
- * callback for touchmove/click on the volumebar
+/*
+ * use swipe on volumebar to increase/decrease volume
  */
-function changeVolume (e) {
-  const volel = document.getElementById('volume')
-  const w = volel.clientWidth
-  var vol
-  const rect = volel.getBoundingClientRect()
-  /* click event */
-  if (e.offsetX) {
-    /* single tap to unmute, double tap to mute */
-    if ((curvol === -2) || (setvol !== -1)) {
-      setvol = -1
-      sendCMD(0x1d)
-    } else {
-      setvol = 100 * (e.offsetX / w)
-      if (setvol < 0) setvol = 0
-      /* wait 0.3s to check if it is a double click */
-      setTimeout(function () {
-        if (setvol !== -1) {
-          sendCMDArg(0x15, parseInt(setvol).toString())
-          setvol = -1
-        }
-      }, 333)
-    }
-  /* touchmove event */
+function volStartEL (e) {
+  setvol = e.changedTouches[0].clientX
+}
+
+/*
+ * decide if this was a left, right or no swipe
+ */
+function volEndEL (e) {
+  setvol = setvol - e.changedTouches[0].clientX
+  if (setvol === 0) {
+    /* handled as clickevent */
+  } else if (setvol < 0) {
+    sendCMD(0x0d)
   } else {
-    vol = 100 * (e.changedTouches[0].clientX - rect.left) / w
-    if (vol) {
-      setvol = -1
-      sendCMDArg(0x15, parseInt(vol).toString())
-    }
+    sendCMD(0x0e)
   }
 }
 
@@ -2019,8 +2005,8 @@ function initializeUI () {
   addVolWheel('viewtabs')
   addVolWheel('extra0')
   addVolWheel('playpack')
-  document.getElementById('volume').addEventListener('touchmove', changeVolume, { passive: true })
-  document.getElementById('volume').addEventListener('click', changeVolume)
+  document.getElementById('volume').addEventListener('touchstart', volStartEL, { passive: true })
+  document.getElementById('volume').addEventListener('touchend', volEndEL, false)
   document.body.addEventListener('keypress', handleKey)
   document.body.addEventListener('keyup', blockSpace)
   document.body.addEventListener('click', function () { power(1) })
