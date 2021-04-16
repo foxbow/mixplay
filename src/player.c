@@ -593,16 +593,37 @@ static void killPlayers(pid_t	pid[2], int p_command[2][2], int p_status[2][2], i
 	unsigned players=(control->fade > 0)?2:1;
 
 	if( restart ) {
-		addMessage(1, "Stopping reader");
+		addMessage(1, "Restarting reader");
 		if (control->current == NULL) {
 			addMessage(-1, "Restarting on empty player!");
 		}
 		/* make sure that the player gets restarted */
-		control->status=mpc_idle;
 		control->watchdog = STREAM_TIMEOUT+1;
 
+		/* starting on an error? Not good.. */
+		if (control->status == mpc_start) {
+			if (control->mpmode == PM_STREAM) {
+				addMessage(0, "Stream unavailable, reset to mixplay");
+				control->active=1;
+			}
+			else if (control->mpmode & PM_DATABASE) {
+				addMessage(-1, "Music database failure!");
+				control->status = mpc_quit;
+				control->watchdog = 0;
+			}
+		}
+
+		control->status=mpc_idle;
+
+		/* failed switch, get back to previous */
 		if (control->mpmode & PM_SWITCH) {
-			control->active=oactive;
+			if (control->active == oactive) {
+				addMessage(0, "Switch failed, reset to mixplay");
+				control->active=1;
+			}
+			else {
+				control->active=oactive;
+			}
 		}
 	}
 
@@ -629,6 +650,11 @@ static void killPlayers(pid_t	pid[2], int p_command[2][2], int p_status[2][2], i
 		}
 	}
 	activity(0, "Players stopped!");
+	asyncTest();
+	pthread_mutex_unlock( &_asynclock );
+	control->command=mpc_idle;
+	pthread_cond_signal( &_pcmdcond );
+	activity(0, "All unlocked");
 }
 
 /* stops the current title. That means send a stop to a stream and a pause
@@ -773,17 +799,28 @@ void *reader( void *arg ) {
 		update=0;
 
 		/**
-		 * status is mpc_play but we did not get any updates from either player
+		 * status is not idle but we did not get any updates from either player
 		 * after ten times we decide all hope is lost and we take the hard way out
 		 *
 		 * this may happen when a stream is played and the network connection
-		 * changes - most likely due to a DSL reconnect.
+		 * changes - most likely due to a DSL reconnect - or if the stream host
+		 * fails.
 		 */
 		if( (i == 0) && (control->mpmode & PM_STREAM) &&
 				(control->status != mpc_idle) ) {
 			control->watchdog++;
 			if ( control->watchdog > STREAM_TIMEOUT ) {
 				addMessage(-1, "Player froze!");
+				/* if this is already a retry, fall back to something better */
+				if (control->status == mpc_start) {
+					if (oactive != control->active) {
+						addMessage(-1, "Stream error, switching to default profile");
+						control->active=1;
+					} else {
+						addMessage(-1, "Stream error, switching back to previous program");
+						control->active=oactive;
+					}
+				}
 				killPlayers(pid, p_command, p_status, p_error, 1);
 				return NULL;
 			}
@@ -808,15 +845,16 @@ void *reader( void *arg ) {
 							break;
 						case 'E':
 							if( control->current == NULL ) {
-								addMessage( -1, "ERROR: %s", line );
+								addMessage( -1, "BG: %s", line );
 							}
 							else {
-								addMessage( -1, "ERROR: %s\nIndex: %i\nName: %s\nPath: %s", line,
+								addMessage( -1, "BG: %s\n> Index: %i\n> Name: %s\n> Path: %s", line,
 									control->current->title->key,
 									control->current->title->display,
 									fullpath(control->current->title->path) );
 							}
 							killPlayers(pid, p_command, p_status, p_error, 1);
+							return NULL;
 							break;
 						case 'F':
 							if( outvol > 0 ) {
@@ -835,7 +873,9 @@ void *reader( void *arg ) {
 			/* this shouldn't be happening but if it happens, it gives a hint */
 			if (FD_ISSET( p_error[fdset?0:1][0], &fds )) {
 				key=readline( line, MAXPATHLEN, p_error[fdset?0:1][0] );
-				addMessage(0, "REPORT: %s", line );
+				if (key > 1) {
+					addMessage(-1, "BE: %s", line );
+				}
 			}
 		}
 
@@ -1000,11 +1040,11 @@ void *reader( void *arg ) {
 
 					switch ( cmd ) {
 					case 0: /* STOP */
-						addMessage( 2, "Player %i stopped", fdset );
+						addMessage( 2, "FG Player stopped" );
 						/* player was not yet fully initialized or the current
 						   profile/stream has changed start again */
 						if( control->status == mpc_start ) {
-							addMessage( 2, "Restart player %i..", fdset );
+							addMessage( 2, "(Re)Start play.." );
 							sendplay( p_command[fdset][1] );
 						}
 						/* stream stopped playing (PAUSE) */
@@ -1017,7 +1057,7 @@ void *reader( void *arg ) {
 							if( control->mpmode&PM_SWITCH ) {
 								order=0;
 							}
-							addMessage( 2, "Title change on player %i", fdset );
+							addMessage( 2, "Title change" );
 							if (order == 1) {
 								if (playCount( control->current->title, skipped ) == 1) {
 									order=0;
@@ -1075,7 +1115,7 @@ void *reader( void *arg ) {
 						break;
 
 					default:
-						addMessage( 0, "Unknown status %i on player %i!\n%s", cmd, fdset, line );
+						addMessage( 0, "Unknown status %i on FG player!\n%s", cmd, line );
 						break;
 					}
 
@@ -1086,14 +1126,13 @@ void *reader( void *arg ) {
 					break;
 
 				case 'E':
-					addMessage( -1, "Player %i: %s!", fdset, line+3 );
+					addMessage( -1, "FG: %s!", line+3 );
 					if( control->current != NULL ) {
-						addMessage( 1, "Index: %i\nName: %s\nPath: %s",
+						addMessage( 1, "FG: %i\n> Name: %s\n> Path: %s",
 								control->current->title->key,
 								control->current->title->display,
 								fullpath(control->current->title->path) );
 					}
-					/* This is pretty much overkill, but the one size fits all way */
 					killPlayers(pid, p_command, p_status, p_error, 1);
 					return NULL;
 					break;
@@ -1111,14 +1150,14 @@ void *reader( void *arg ) {
 
 		if (FD_ISSET( p_error[fdset][0], &fds )) {
 			key=readline( line, MAXPATHLEN, p_error[fdset][0] );
-			if( strstr(line, "error: ") ) {
-				addMessage(0, "%s", strstr(line, "error: ") + 7 );
+			if( strstr(line, "rror: ") ) {
+				addMessage(-1, "%s", strstr(line, "rror: ") + 6 );
 				control->active=oactive;
 				/* it should be enough to just reset to the previous state
 				   if the player is in fact dead, then the watchdog should trigger */
 				asyncRun( plSetProfile );
-			} else if (strlen(line) > 1) {
-				addMessage(1, "Player %i: %s", fdset, line );
+			} else if (key > 1) {
+				addMessage(0, "FE: %s", line );
 			}
 		}
 
@@ -1603,10 +1642,6 @@ void *reader( void *arg ) {
 			addMessage(-1, "Force restart!");
 			control->status=mpc_reset;
 			killPlayers(pid, p_command, p_status, p_error, 1);
-			asyncTest();
-			pthread_mutex_unlock( &_asynclock );
-			control->command=mpc_idle;
-			pthread_cond_signal( &_pcmdcond );
 			return NULL;
 
 		default:

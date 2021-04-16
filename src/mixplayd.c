@@ -236,6 +236,7 @@ int main( int argc, char **argv ) {
 		}
 		fprintf( pidlog, "%i", getpid() );
 		fclose(pidlog);
+		addMessage(1, "PID: %i", getpid());
 	}
 	else {
 		addMessage(0, "Another mixplayd was quicker!");

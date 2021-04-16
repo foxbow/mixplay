@@ -267,7 +267,7 @@ static void *clientHandler(void *args ) {
 				addMessage(3, "%s", commdata);
 				end=strchr( commdata, ' ' );
 				if( end == NULL ) {
-					addMessage( 1, "Malformed request %s", commdata );
+					addMessage( 1, "Malformed HTTP: %s", commdata );
 					method=-1;
 				}
 				else {
@@ -280,7 +280,7 @@ static void *clientHandler(void *args ) {
 						method=2;
 					}
 					else {
-						addMessage(0,"malformed: %s", commdata);
+						addMessage(0,"Unsupported method: %s", commdata);
 						method=0;
 					}
 				}
@@ -347,8 +347,12 @@ static void *clientHandler(void *args ) {
 
 					/* Reload may reset the clientid/socket alignment */
 					if((reqInfo.clientid == 0) && (clientid > 0)){
-						addMessage( 1, "Recycling socket for client %i", clientid);
-						running&=~CL_RUN;
+						addMessage( 1, "One shot for client %i", clientid);
+						/*  The client did not request a new ID but we should tell him
+						    who is listening.. */
+						reqInfo.clientid = clientid;
+						/* stopping the thread may be a bad idea.. */
+						/* running&=~CL_RUN; */
 					}
 
 					if( clientid == 0 ) {

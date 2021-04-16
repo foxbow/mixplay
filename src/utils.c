@@ -368,7 +368,7 @@ int dowrite( const int fd, const char *buf, const size_t buflen ) {
 	while( sent < buflen ) {
 		ret=write( fd, pos+sent, buflen-sent );
 		if( ret == -1 ) {
-			fail( errno, "Could not write");
+			fail( errno, "Could not write %s (%zd)", buf, sent);
 			return -1;
 		}
 		sent=sent+ret;

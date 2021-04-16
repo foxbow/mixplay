@@ -660,7 +660,8 @@ function sendCMDArg (cmd, arg) {
     }
   }
 
-  /* cmds are one-shots, so clientid is 0 */
+  /* cmds are one-shots, so clientid is 0 to make sure no new update thread
+     is started */
   var json = JSON.stringify({ cmd: cmd, arg: arg, clientid: 0 })
   if (debug) {
     console.log('oreq: ' + json)
