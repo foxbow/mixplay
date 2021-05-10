@@ -217,8 +217,7 @@ char *serializeStatus( int clientid, int type ) {
 		jsonAddStr( jo, "musicdir", data->musicdir );
 		jsonAddProfiles( jo, "profile", data->profile, data->profiles );
 		jsonAddInt( jo, "skipdnp", data->skipdnp );
-		jsonAddStrs( jo, "stream", data->stream, data->streams );
-		jsonAddStrs( jo, "sname", data->sname, data->streams );
+		jsonAddProfiles( jo, "sname", data->stream, data->streams );
 		jsonAddInt( jo, "sleepto", data->sleepto );
 		jsonAddInt( jo, "debug", getDebug() );
 	}

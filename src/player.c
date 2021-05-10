@@ -328,6 +328,7 @@ void *setProfile( void *arg ) {
 	/* stream selected */
 	if( cactive < 0 ) {
 		active = -(cactive+1);
+		profile=control->stream[active];
 		control->mpmode=PM_STREAM|PM_SWITCH;
 
 		if( active >= control->streams ) {
@@ -335,8 +336,7 @@ void *setProfile( void *arg ) {
 			control->active=1;
 			return setProfile(NULL);
 		}
-
-		setStream( control->stream[active], control->sname[active] );
+		setStream( profile->stream, profile->name );
 	}
 	/* profile selected */
 	else if( cactive > 0 ){
@@ -399,6 +399,12 @@ void *setProfile( void *arg ) {
 			/* do not free, the string has become the new profile entry! */
 			control->argument=NULL;
 		}
+	}
+	if( profile->volume == -1 ) {
+		profile->volume=control->volume;
+	}
+	else {
+		setVolume( profile->volume );
 	}
 
 	/* if we're not in player context, start playing automatically */
@@ -1334,6 +1340,12 @@ void *reader( void *arg ) {
 				else {
 					profile=atoi( control->argument );
 					if( ( profile != 0 ) && ( profile != control->active ) ) {
+						if (control->active < 0) {
+							control->stream[(-control->active)-1]->volume = control->volume;
+						}
+						else if (control->active > 0) {
+							control->profile[control->active-1]->volume = control->volume;
+						}
 						/* switching channels started */
 						control->mpmode|=PM_SWITCH;
 						/* stop the current play */
@@ -1367,23 +1379,18 @@ void *reader( void *arg ) {
 				/* save the current stream */
 				else if(control->active == 0){
 					control->streams++;
-					control->stream=(char**)frealloc(control->stream, control->streams*sizeof( char * ) );
-					control->stream[control->streams-1]=(char*)falloc( strlen(control->streamURL)+1, 1 );
-					strcpy( control->stream[control->streams-1], control->streamURL );
-					control->sname=(char**)frealloc(control->sname, control->streams*sizeof( char * ) );
-					control->sname[control->streams-1]=control->argument;
+					control->stream=(profile_t **)frealloc( control->stream, control->streams*sizeof(profile_t *) );
+					control->stream[control->streams-1]=createProfile( control->argument, control->streamURL, 0, control->volume );
 					control->active=-(control->streams);
-					writeConfig( NULL );
-					control->argument=NULL;
 				}
 				/* just add argument as new profile */
 				else {
 					control->profiles++;
 					control->profile=(profile_t **)frealloc( control->profile, control->profiles*sizeof(profile_t *) );
-					control->profile[control->profiles-1]=createProfile( control->argument, 0 );
-					writeConfig( NULL );
-					control->argument=NULL;
+					control->profile[control->profiles-1]=createProfile( control->argument, NULL, 0, control->volume );
 				}
+				writeConfig( NULL );
+				control->argument=NULL;
 				pthread_mutex_unlock( &_asynclock );
 				notifyChange(MPCOMM_CONFIG);
 			}
@@ -1426,16 +1433,15 @@ void *reader( void *arg ) {
 							addMessage( -1, "Cannot remove active profile!" );
 						}
 						else {
-							free( control->stream[profile-1] );
-							free( control->sname[profile-1] );
+							freeProfile( control->stream[profile-1] );
 							for(i=profile;i<control->streams;i++) {
 								control->stream[i-1]=control->stream[i];
-								control->sname[i-1]=control->sname[i];
 								if ( i == control->active ) {
 									control->active = control->active - 1;
 								}
 							}
 							control->streams--;
+							control->stream=(profile_t **)frealloc( control->stream, control->streams*sizeof(profile_t *) );
 
 							writeConfig(NULL);
 						}

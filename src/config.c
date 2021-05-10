@@ -183,29 +183,75 @@ static int scanparts( char *line, char ***target ) {
 	return num;
 }
 
-static int scanprofiles( char *input, profile_t ***target ) {
+/*
+ * scans a number on names into newly created profile entries
+ * this must happen before urls or volumes get parsed!
+ */
+static int scanpronames( char *input, profile_t ***target, int max ) {
 	char **line;
 	int i, num;
 
 	num=scanparts( input, &line );
-	if( num > 0 ) {
+	if ( max > 0 ) {
+			for( i=0; i<MIN(max, num); i++ ) {
+				(*target)[i]->name=strdup(line[i]);
+				free(line[i]);
+			}
+			free(line);
+			max=(max == num);
+	}
+	else if( num > 0 ) {
 		*target=(profile_t **)falloc( num, sizeof( profile_t *) );
 
 		for( i=0; i<num; i++ ) {
 			if( line[i][1] == ':' ) {
-				(*target)[i]=createProfile( line[i]+2, 0 );
+				(*target)[i]=createProfile( line[i]+2, NULL, 0, -1 );
 				if (line[i][0]=='1') {
 					(*target)[i]->favplay=1;
 				}
 			}
 			else {
-				(*target)[i]=createProfile( line[i], 0 );
+				(*target)[i]=createProfile( line[i], NULL, 0, -1 );
 			}
 			free(line[i]);
 		}
 		free(line);
+		max=num;
 	}
+	return max;
+}
+
+static int scanpropaths( char *input, profile_t ***target ) {
+	char **line;
+	int i, num;
+
+	num=scanparts( input, &line );
+
+	if( num > 0 ) {
+		*target=(profile_t **)falloc( num, sizeof( profile_t *) );
+
+		for( i=0; i<num; i++ ) {
+			(*target)[i]=createProfile( NULL, line[i], 0, -1 );
+			free(line[i]);
+		}
+		free(line);
+	}
+
 	return num;
+}
+
+static int scanprovols( char *input, profile_t **target, int max ) {
+	char **line;
+	int i, num;
+
+	num=scanparts( input, &line );
+	for( i=0; i<MIN(max, num); i++ ) {
+		target[i]->volume=atoi(line[i]);
+		free(line[i]);
+	}
+	free(line);
+
+	return (num == max);
 }
 
 static int scancodes( char *input, int *codes ) {
@@ -326,15 +372,25 @@ mpconfig_t *readConfig( void ) {
 				_cconfig->channel=strdup(pos);
 			}
 			if( strstr( line, "profiles=" ) == line ) {
-				_cconfig->profiles=scanprofiles( pos, &_cconfig->profile );
+				_cconfig->profiles=scanpronames( pos, &_cconfig->profile, -1 );
+			}
+			if( strstr( line, "volumes=" ) == line ) {
+				if( !scanprovols( pos, _cconfig->profile, _cconfig->profiles )) {
+					addMessage(0, "Number of profile volumes does not match!");
+				}
 			}
 			if( strstr( line, "streams=" ) == line ) {
-				_cconfig->streams=scanparts( pos, &_cconfig->stream );
+				_cconfig->streams=scanpropaths( pos, &_cconfig->stream );
 			}
 			if( strstr( line, "snames=" ) == line ) {
-				if( scanparts( pos, &_cconfig->sname ) != _cconfig->streams ) {
+				if( !scanpronames( pos, &_cconfig->stream, _cconfig->streams )) {
 					fclose(fp);
 					fail( F_FAIL, "Number of streams and stream names does not match!");
+				}
+			}
+			if( strstr( line, "svolumes=" ) == line ) {
+				if( !scanprovols( pos, _cconfig->stream, _cconfig->streams )) {
+					addMessage(0, "Number of stream volumes does not match!");
 				}
 			}
 			if( strstr( line, "active=" ) == line ) {
@@ -424,8 +480,9 @@ void writeConfig( const char *musicpath ) {
 		fprintf( fp, "\nmusicdir=%s", _cconfig->musicdir );
 		fprintf( fp, "\npassword=%s", _cconfig->password );
 		if( _cconfig->profiles == 0 ) {
-		fprintf( fp, "\nactive=1" );
-			fprintf( fp, "\nprofiles=mixplay;" );
+			fprintf( fp, "\nactive=1" );
+			fprintf( fp, "\nprofiles=0:mixplay;" );
+			fprintf( fp, "\nvolumes=100;" );
 		}
 		else {
 			fprintf( fp, "\nactive=%i", _cconfig->active );
@@ -434,14 +491,22 @@ void writeConfig( const char *musicpath ) {
 				fprintf( fp, "%i:%s;", _cconfig->profile[i]->favplay,
 					_cconfig->profile[i]->name );
 			}
+			fprintf( fp, "\nvolumes=" );
+			for( i=0; i< _cconfig->profiles; i++ ) {
+				fprintf( fp, "%i;", _cconfig->profile[i]->volume );
+			}
 		}
 		fprintf( fp, "\nstreams=" );
 		for( i=0; i< _cconfig->streams; i++ ) {
-			fprintf( fp, "%s;", _cconfig->stream[i] );
+			fprintf( fp, "%s;", _cconfig->stream[i]->stream );
 		}
 		fprintf( fp, "\nsnames=" );
 		for( i=0; i< _cconfig->streams; i++ ) {
-			fprintf( fp, "%s;", _cconfig->sname[i] );
+			fprintf( fp, "%s;", _cconfig->stream[i]->name );
+		}
+		fprintf( fp, "\nsvolumes=" );
+		for( i=0; i< _cconfig->streams; i++ ) {
+			fprintf( fp, "%i;", _cconfig->stream[i]->volume );
 		}
 		fprintf( fp, "\nskipdnp=%i", _cconfig->skipdnp );
 		fprintf( fp, "\nsleepto=%i", _cconfig->sleepto );
@@ -499,6 +564,18 @@ mpconfig_t *createConfig() {
 	return readConfig();
 }
 
+void freeProfile( profile_t *profile ){
+	if( profile != NULL ) {
+		if( profile->name != NULL ) {
+			free( profile->name );
+		}
+		if( profile->stream != NULL ) {
+			free( profile->stream );
+		}
+		free( profile );
+	}
+}
+
 /**
  * frees the static parts of the config
  */
@@ -516,12 +593,10 @@ void freeConfigContents() {
 	sfree( (char **)&(_cconfig->profile) );
 
 	for( i=0; i<_cconfig->streams; i++ ) {
-		sfree( &(_cconfig->stream[i]) );
-		sfree( &(_cconfig->sname[i]) );
+		freeProfile( _cconfig->stream[i] );
 	}
 	_cconfig->streams=0;
 	sfree( (char **)&(_cconfig->stream) );
-	sfree( (char **)&(_cconfig->sname) );
 	sfree( (char **)&(_cconfig->channel) );
 	sfree( (char **)&(_cconfig->password) );
 
@@ -782,23 +857,26 @@ int toggleFavplay() {
 	return 0;
 }
 
-profile_t *createProfile( const char *name, const unsigned favplay ) {
+profile_t *createProfile( const char *name, const char *stream, const unsigned favplay, const int vol ) {
 	profile_t *profile =
 		(profile_t *)falloc( 1, sizeof( profile_t ) );
-	profile->name=falloc(strlen(name)+1,1);
-	strcpy( profile->name, name );
+	if( name ) {
+		profile->name=strdup(name);
+	}
+	else {
+		profile->name=NULL;
+	}
+	if( stream ) {
+		profile->stream=strdup(stream);
+	}
+	else {
+		profile->stream=NULL;
+	}
 	profile->favplay=favplay;
+	profile->volume=vol;
 	return profile;
 }
 
-void freeProfile( profile_t *profile ){
-	if( profile != NULL ) {
-		if( profile->name != NULL ) {
-			free( profile->name );
-		}
-		free( profile );
-	}
-}
 /**
  * deletes the current playlist
  * this is not in musicmanager.c to keep cross-dependecies in

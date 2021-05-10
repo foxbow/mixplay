@@ -124,9 +124,14 @@ const char *_mprccmdstrings[MPRC_NUM];
 #define PM_DATABASE 0x04
 #define PM_SWITCH   0x08
 
+/**
+ * wrapper for streams and profiles
+ */
 typedef struct {
-	char *name;
-	unsigned favplay;
+	char *name;		/* name to display */
+	char *stream;		/* URL to load if any */
+	int volume;		/* last volume */
+	unsigned favplay;	/* favplay flag for profiles */
 } profile_t ;
 
 /**
@@ -139,8 +144,7 @@ typedef struct {
 	int profiles;				/* number of profiles */
 	profile_t **profile;	/* profiles */
 	int streams;				/* number of streams */
-	char **stream;				/* stream URLs */
-	char **sname;				/* stream names */
+	profile_t **stream;	/*streams */
 	mptitle_t *root;				/* the root title */
 	searchresults_t *found;		/* buffer list to contain searchresults etc */
 	mpplaylist_t *current;		/* the current title */
@@ -202,7 +206,7 @@ void freeConfig( void );
 void freeConfigContents( void );
 int getFavplay();
 int toggleFavplay();
-profile_t *createProfile( const char *name, const unsigned favplay );
+profile_t *createProfile( const char *name, const char *stream, const unsigned favplay, const int vol );
 void freeProfile( profile_t *profile );
 
 void incDebug( void );
