@@ -368,7 +368,7 @@ int dbAddTitles( char *basedir ) {
 				index=dbrunner->key;
 			}
 			/* find mean playcount */
-			if( !( dbrunner->flags & MP_DNP ) ) {
+			if( !( dbrunner->flags & (MP_DNP|MP_DBL) ) ) {
 				count++;
 				mean+=dbrunner->playcount;
 			}

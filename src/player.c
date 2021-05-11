@@ -27,9 +27,23 @@ static pthread_mutex_t _pcmdlock=PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  _pcmdcond=PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t _asynclock=PTHREAD_MUTEX_INITIALIZER;
 
+/* clean up when switching Favplay mode */
+static void cleanFavPlay( int flags ) {
+	mpconfig_t *control=getConfig();
+	mptitle_t *runner = control->root;
+	wipePlaylist( control->current, 0 );
+	do {
+		runner->favpcount=runner->playcount;
+		runner=runner->next;
+		if( flags ) {
+			runner->flags&=~MP_DBL;
+		}
+	} while( runner != control->root );
+}
+
 /**
  * returns TRUE when no asynchronous operation is running but does not
- * lock async operations.
+ * block on async operations.
  */
 static int asyncTest() {
 	int ret=0;
@@ -78,7 +92,7 @@ static void closeAudio( ) {
 /**
  * tries to connect to the mixer
  */
-static long openAudio( const char *channel ) {
+static long openAudio( char const * const channel ) {
 	snd_mixer_selem_id_t *sid=NULL;
 	if( channel == NULL || strlen( channel ) == 0 ) {
 		addMessage( 0, "No audio channel set" );
@@ -180,7 +194,7 @@ static long controlVolume( long volume, int absolute ) {
  *         -2 if mute was enabled
  *         the current volume on unmute
  */
-static int toggleMute() {
+static long toggleMute() {
 	mpconfig_t *config=getConfig();
 	int mswitch;
 
@@ -214,7 +228,7 @@ static int toggleMute() {
 /**
  * sets the given stream
  */
-void setStream( const char* stream, const char *name ) {
+void setStream( char const * const stream, char const * const name ) {
 	mpconfig_t *control=getConfig();
 	wipePTLists( control );
 	control->current=addPLDummy( control->current, "<waiting for info>" );
@@ -344,13 +358,10 @@ void *setProfile( void *arg ) {
 		addMessage(1,"Playmode=%u",control->mpmode);
 
 		/* only load database if it has not yet been used */
-		if( control->mpmode & PM_DATABASE ) {
-			control->current=wipePlaylist(control->current, 0);
-		}
-		else {
-			wipePTLists( control );
+		if( control->root == NULL ) {
 			control->root=dbGetMusic( );
 		}
+		cleanFavPlay(1);
 
 		/* change mode */
 		control->mpmode=PM_DATABASE|PM_SWITCH;
@@ -367,10 +378,12 @@ void *setProfile( void *arg ) {
 
 		control->dnplist=wipeList( control->dnplist );
 		control->favlist=wipeList( control->favlist );
-		control->dbllist=wipeList( control->dbllist );
 		control->dnplist=loadList( mpc_dnp );
 		control->favlist=loadList( mpc_fav );
-		control->dbllist=loadList( mpc_doublets );
+		if(control->dbllist == NULL) {
+			control->dbllist=loadList( mpc_doublets );
+			applyDNPlist( control->dbllist, 1 );
+		}
 
 		if( NULL == control->root ) {
 			addMessage( 0, "Scanning musicdir" );
@@ -406,6 +419,7 @@ void *setProfile( void *arg ) {
 	else {
 		setVolume( profile->volume );
 	}
+	writeConfig(NULL);
 
 	/* if we're not in player context, start playing automatically */
 	addMessage( 1, "Start play" );
@@ -1340,6 +1354,9 @@ void *reader( void *arg ) {
 				else {
 					profile=atoi( control->argument );
 					if( ( profile != 0 ) && ( profile != control->active ) ) {
+						if( !(control->mpmode&(PM_STREAM|PM_DATABASE))) {
+							wipeTitles(control->root);
+						}
 						if (control->active < 0) {
 							control->stream[(-control->active)-1]->volume = control->volume;
 						}
@@ -1352,15 +1369,7 @@ void *reader( void *arg ) {
 						stopPlay(p_command[fdset][1]);
 						/* write database if needed */
 						dbWrite(0);
-						/* reload database when switching from favplay to 'forget'
-						   playcount changes */
-						if( getFavplay() ) {
-							wipePTLists( control );
-							control->root=dbGetMusic();
-							addMessage( 1, "Switching from Favplay");
-						}
 						control->active=profile;
-						writeConfig(NULL);
 						asyncRun( plSetProfile );
 					} else {
 						addMessage(0, "Invalid profile %i", profile);
@@ -1461,7 +1470,9 @@ void *reader( void *arg ) {
 				}
 				else {
 					control->mpmix=MPC_ISSHUFFLE(control->command);
-
+					if( !(control->mpmode&(PM_STREAM|PM_DATABASE))) {
+						wipeTitles(control->root);
+					}
 					if( setArgument( control->argument ) ){
 						control->active = 0;
 						if( control->status == mpc_start ) {
@@ -1593,20 +1604,16 @@ void *reader( void *arg ) {
 					if( control->status == mpc_play ) {
 						stopPlay(p_command[fdset][1]);
 					}
-					/* reload database when switching back to normal play to 'forget'
-					   playcounts */
+
 					if( !toggleFavplay() ) {
-						wipePTLists( control );
-						control->root=dbGetMusic();
 						addMessage( 1, "Disabling Favplay");
 					}
 					else {
-						control->current=wipePlaylist( control->current, 0 );
 						addMessage( 1, "Enabling Favplay");
 					}
+					cleanFavPlay(0);
 
 					writeConfig(NULL);
-					applyLists( 1 );
 
 					plCheck( 0 );
 					sendplay( p_command[fdset][1] );

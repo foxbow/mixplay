@@ -15,6 +15,6 @@
 void setCommand( mpcmd_t cmd, char *arg );
 void *reader( void* );
 void *setProfile( void* );
-void setStream( const char* stream, const char *name );
+void setStream( const char* const stream, const char * const name );
 
 #endif /* __PLAYER_H__ */

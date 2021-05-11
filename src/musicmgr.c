@@ -219,7 +219,7 @@ int playCount( mptitle_t *title, int skip ) {
 
 	/* not marked = searchplay, does not count
 	   just marked dnp? someone else may like it though */
-	if ( !(title->flags&MP_MARK ) || (title->flags&MP_DNP)) {
+	if ( !(title->flags&MP_MARK ) || (title->flags&(MP_DNP|MP_DBL))) {
 		addMessage(2, "%s is dnp or not marked -> ignored", title->display);
 		return -1;
 	}
@@ -552,7 +552,9 @@ int search( const char *pat, const mpcmd_t range ) {
 		activity( 1, "searching for %s", lopat );
 		/* dnp == XNOR MP_DNP */
 		found = 0;
-		if( ( runner->flags & (MP_DNP|MP_DBL) ) == dnp ) {
+		/* this logic makes it pretty much impossible to search for DBLs unless
+		   they are marked DNP too.. probably for the better.. */
+		if( ( runner->flags & (MP_DNP) ) == dnp ) {
 			/* check for searchrange and patterns */
 			if( MPC_ISTITLE(range) &&
 					isMatch( runner->title, lopat, range ) ){
@@ -641,7 +643,7 @@ int search( const char *pat, const mpcmd_t range ) {
  *
  * returns the number of marked titles or -1 on error
  */
-static int applyDNPlist( marklist_t *list, int dbl ) {
+int applyDNPlist( marklist_t *list, int dbl ) {
 	mptitle_t *base=getConfig()->root;
 	mptitle_t  *pos = base;
 	marklist_t *ptr = list;
@@ -721,6 +723,7 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 	activity(1, "Applying FAV list");
 	if( excl ) {
 		do {
+			/* set everything DNP but keep DBL */
 			runner->flags = (runner->flags & MP_DBL)|MP_DNP;
 			runner=runner->next;
 		} while( runner != root );
@@ -769,11 +772,10 @@ void applyLists( int clean ) {
 	lockPlaylist();
 	if( clean ) {
 		do {
-			title->flags&=~(MPC_DFRANGE|MP_FAV|MP_DNP|MP_DBL);
+			title->flags&=~(MPC_DFRANGE|MP_FAV|MP_DNP);
 			title=title->next;
 		} while( title != control->root );
 	}
-	applyDNPlist( control->dbllist, 1 );
 	applyFAVlist( control->favlist, getFavplay() );
 	applyDNPlist( control->dnplist, 0 );
 	unlockPlaylist();
@@ -1240,7 +1242,7 @@ unsigned getPlaycount( int high ) {
 	}
 
 	do {
-		if( !( runner->flags & MP_DNP ) ) {
+		if( !( runner->flags & (MP_DNP|MP_DBL) ) ) {
 			if( runner->playcount < min ) {
 				min=runner->playcount;
 			}
@@ -1267,7 +1269,7 @@ static mptitle_t *skipOver( mptitle_t *current, int dir ) {
 		return NULL;
 	}
 
-	while( marker->flags & ( MP_DNP|MP_MARK ) ) {
+	while( marker->flags & ( MP_DBL|MP_DNP|MP_MARK ) ) {
 		if( dir > 0 ) {
 			marker=marker->next;
 		}
@@ -1361,7 +1363,7 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 
 	/* select a random title from the database */
 	/* skip forward until a title is found that is neither DNP nor MARK */
-	num = countTitles( MP_ALL, MP_DNP|MP_MARK );
+	num = countTitles( MP_ALL, MP_DBL|MP_DNP|MP_MARK );
 	if( num == 0 ) {
 		addMessage(-1, "No titles to be played!" );
 		return NULL;
@@ -1513,9 +1515,11 @@ void plCheck( int del ) {
 
 		/* go through end of the playlist and clean up underway */
 		while( pl->next != NULL ) {
-			/* clean up on the way to remove DNP marked or deleted files? */
+			/* clean up on the way to remove DNP marked or deleted files?
+			   there /should/ not be any doublets here, but it does not hurt
+				 to check those too */
 			if( del != 0 ) {
-				if ( ( pl->title->flags & MP_DNP ) || ( !mp3Exists( pl->title ) ) ){
+				if ( ( pl->title->flags & (MP_DNP|MP_DBL) ) || ( !mp3Exists( pl->title ) ) ){
 					/* title leaves the playlist so it must be unmarked */
 					pl->title->flags &= ~MP_MARK;
 					buf=pl->next;
