@@ -519,7 +519,7 @@ int search( const char *pat, const mpcmd_t range ) {
 	mptitle_t *runner=root;
 	searchresults_t *res=getConfig()->found;
 	unsigned int i=0;
-	unsigned dnp=0;
+	unsigned valid=0;
 	mpcmd_t found=mpc_play;
 	char *lopat;
 
@@ -541,20 +541,22 @@ int search( const char *pat, const mpcmd_t range ) {
 	/* whatever pattern we get, ignore case */
 	lopat=toLower(strdup(pat));
 
-	/* if player is in favplay mode and the search in in fav mode
-	   then search for DNP titles. */
-	if ( getConfig()->searchDNP ) {
-		addMessage( 1, "DNP search");
-		dnp=MP_DNP;
-	}
-
 	do {
 		activity( 1, "searching for %s", lopat );
-		/* dnp == XNOR MP_DNP */
 		found = 0;
-		/* this logic makes it pretty much impossible to search for DBLs unless
-		   they are marked DNP too.. probably for the better.. */
-		if( ( runner->flags & (MP_DNP) ) == dnp ) {
+
+		/* ugly but at least somewhat understandable how titles get filtered */
+		if (getFavplay()) {
+			valid=runner->flags & MP_FAV;
+		}
+		else {
+			valid=!(runner->flags &(MP_DNP|MP_DBL));
+		}
+		if ( getConfig()->searchDNP ) {
+			valid=!valid;
+		}
+
+		if( valid ) {
 			/* check for searchrange and patterns */
 			if( MPC_ISTITLE(range) &&
 					isMatch( runner->title, lopat, range ) ){
@@ -704,7 +706,7 @@ int applyDNPlist( marklist_t *list, int dbl ) {
 /**
  * This function sets the favourite bit on titles found in the given list
  */
-static int applyFAVlist( marklist_t *favourites, int excl ) {
+static int applyFAVlist( marklist_t *favourites ) {
 	marklist_t *ptr = NULL;
 	mptitle_t *root=getConfig()->root;
 	mptitle_t *runner=root;
@@ -721,13 +723,6 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 	}
 
 	activity(1, "Applying FAV list");
-	if( excl ) {
-		do {
-			/* set everything DNP but keep DBL */
-			runner->flags = (runner->flags & MP_DBL)|MP_DNP;
-			runner=runner->next;
-		} while( runner != root );
-	}
 
 	do {
 		if( !(runner->flags & MP_DBL) ) {
@@ -737,17 +732,11 @@ static int applyFAVlist( marklist_t *favourites, int excl ) {
 				range=matchTitle( runner, ptr->dir );
 				if( range > MPC_RANGE(runner->flags) ) {
 					if( !( runner->flags & MP_FAV ) ) {
-						if( excl || getFavplay() ) {
-							addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
-							runner->flags=MP_FAV;
-						}
-						else {
-							addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
-							/* Save MP_MARK */
-							runner->flags=(runner->flags & MP_MARK) | MP_FAV | range;
-							/* This is correct! Both counters get increased once every round */
-							runner->favpcount = runner->playcount;
-						}
+						addMessage( 3, "[F] %s: %s", ptr->dir, runner->display );
+						/* Save MP_MARK */
+						runner->flags=(runner->flags & MP_MARK) | MP_FAV | range;
+						/* This is correct! Both counters get increased once every round */
+						runner->favpcount = runner->playcount;
 						cnt++;
 					}
 					ptr=NULL;
@@ -776,7 +765,7 @@ void applyLists( int clean ) {
 			title=title->next;
 		} while( title != control->root );
 	}
-	applyFAVlist( control->favlist, getFavplay() );
+	applyFAVlist( control->favlist );
 	applyDNPlist( control->dnplist, 0 );
 	unlockPlaylist();
 	notifyChange(MPCOMM_LISTS);
@@ -1269,7 +1258,8 @@ static mptitle_t *skipOver( mptitle_t *current, int dir ) {
 		return NULL;
 	}
 
-	while( marker->flags & ( MP_DBL|MP_DNP|MP_MARK ) ) {
+	while( (marker->flags & (MP_DBL|MP_DNP|MP_MARK) ) ||
+	       (getFavplay() && !(marker->flags & MP_FAV) ) ) {
 		if( dir > 0 ) {
 			marker=marker->next;
 		}
@@ -1363,7 +1353,7 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 
 	/* select a random title from the database */
 	/* skip forward until a title is found that is neither DNP nor MARK */
-	num = countTitles( MP_ALL, MP_DBL|MP_DNP|MP_MARK );
+	num = countTitles( getFavplay()?MP_FAV:MP_ALL, MP_DBL|MP_DNP|MP_MARK );
 	if( num == 0 ) {
 		addMessage(-1, "No titles to be played!" );
 		return NULL;
@@ -1375,9 +1365,7 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 		return NULL;
 	}
 
-	if (!getFavplay()) {
-		pcount=getPlaycount(0);
-	}
+	pcount=getPlaycount(0);
 
 	cycles=0;
 	while( ( valid & 3 ) != 3 ) {
@@ -1434,9 +1422,9 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
 				valid=0;
 				activity( 1, "Playcountskipping" );
 				/* simply pick a new title at random to avoid edge cases */
-				runner=skipTitles( runner, rand()%num );
+				/* runner=skipTitles( runner, rand()%num ); */
 				/* TODO check if this is better or worse.. */
-				/* runner=skipTitles( runner, 1 ); */
+				runner=skipTitles( runner, 1 );
 
 				if( runner == guard ) {
 					pcount++;	/* allow more replays */
@@ -1468,17 +1456,13 @@ mpplaylist_t *addNewTitle( mpplaylist_t *pl, mptitle_t *root ) {
  */
 void plCheck( int del ) {
 	int cnt=0;
-	mpplaylist_t *pl=getConfig()->current;
-	mpplaylist_t *buf=pl;
+	mpplaylist_t *pl;
+	mpplaylist_t *buf;
 
-	if((getConfig()->mpmode & PM_PLAYLIST ) && !getConfig()->mpmix ) {
-		addMessage( 1, "plCheck: Sorted playlist");
-		if( getConfig()->current == NULL ) {
-			addMessage( 0, "No playlist available!");
-		}
-		return;
-	}
+	/* make sure the playlist is not modifid elsewhere right now */
+	lockPlaylist();
 
+  pl=getConfig()->current;
 	/* there is a playlist, so clean up */
 	if( pl != NULL ) {
 		/* It's a stream, so truncate stream title history to 20 titles */
@@ -1497,14 +1481,12 @@ void plCheck( int del ) {
 				buf=pl;
 			}
 			notifyChange(MPCOMM_TITLES);
+			unlockPlaylist();
 			return;
 		}
 
 		/* No stream but standard mixplaylist */
 		cnt=0;
-		pl=getConfig()->current;
-		/* make sure the playlist is not modifid elsewhere right now */
-		lockPlaylist();
 
 		/* rewind to the start of the list */
 		if ( del != 0 ) {
@@ -1551,7 +1533,6 @@ void plCheck( int del ) {
 				pl=pl->next;
 			}
 		}
-		unlockPlaylist();
 
 		/* Done cleaning, now start pruning */
 		/* truncate playlist title history to 10 titles */
@@ -1595,6 +1576,7 @@ void plCheck( int del ) {
 		cnt++;
 	}
 
+	unlockPlaylist();
 	notifyChange(MPCOMM_TITLES);
 }
 
@@ -1976,7 +1958,7 @@ int handleRangeCmd( mptitle_t *title, mpcmd_t cmd ) {
 
 		addToList( buff->dir, cmd );
 		if( MPC_CMD(cmd) == mpc_fav ) {
-			cnt=applyFAVlist( buff, 0 );
+			cnt=applyFAVlist( buff );
 		}
 		else if( MPC_CMD(cmd) == mpc_dnp ) {
 			cnt=applyDNPlist( buff, 0 );

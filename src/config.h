@@ -120,7 +120,7 @@ const char *_mprccmdstrings[MPRC_NUM];
 /* playmodes */
 #define PM_NONE     0x00
 #define PM_STREAM   0x01
-#define PM_PLAYLIST 0x02
+#define PM_UNUSED   0x02
 #define PM_DATABASE 0x04
 #define PM_SWITCH   0x08
 
@@ -172,7 +172,6 @@ typedef struct {
 	unsigned dbDirty;
 	/* flags for mpmode */
 	unsigned searchDNP:1;
-	unsigned mpmix:1;
 	/* other flags */
 	unsigned fade;					/* controls fading between titles */
 	unsigned isDaemon:1;

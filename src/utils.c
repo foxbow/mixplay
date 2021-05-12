@@ -97,12 +97,12 @@ char *fetchline( FILE *fp ) {
 	char *line=falloc( 256, 1 );
 	char *rv=NULL;
 	int len=0;
-	int size=255;
+	int size=256;
 	int c;
 
 	c=fgetc(fp);
 	while( (c != EOF) && (c != (int)'\n' ) ) {
-		if( len == size ) {
+		if( len >= size-2 ) {
 			size=size+256;
 			line=frealloc(line, size);
 		}

@@ -23,23 +23,6 @@ static void printUsage( char *name ) {
 	printf( "		   URL, directory, mp3 file, playlist\n" );
 }
 
-static mpplaylist_t *titleToPlaylist( mptitle_t *title, mpplaylist_t *pl ) {
-	mptitle_t *guard=title;
-
-	pl=wipePlaylist(pl, 0);
-
-	do {
-		pl=appendToPL( title, pl, -1 );
-		title=title->next;
-	} while( title != guard );
-
-	while( pl->prev != NULL ) {
-		pl=pl->prev;
-	}
-
-	return pl;
-}
-
 /**
  * parse arguments given to the application
  * also handles playing of a single file, a directory, a playlist or an URL
@@ -47,7 +30,6 @@ static mpplaylist_t *titleToPlaylist( mptitle_t *title, mpplaylist_t *pl ) {
  * actually make sense here.
  */
 int setArgument( const char *arg ) {
-	mptitle_t *title=NULL;
 	char line [MAXPATHLEN+1];
 	mpconfig_t *control=getConfig();
 
@@ -66,60 +48,8 @@ int setArgument( const char *arg ) {
 		else {
 			strtcpy( line, arg, MAXPATHLEN );
 		}
-		control->mpmode=PM_STREAM|PM_SWITCH;
 		setStream( line, "<connecting>" );
 		return 1;
-	}
-	else if( endsWith( arg, ".mp3" ) ) {
-		addMessage( 1, "Single file: %s", arg );
-		/* play single song... */
-		control->mpmode=PM_PLAYLIST|PM_SWITCH;
-		title=insertTitle( NULL, arg );
-		if( title != NULL ) {
-			control->root=wipeTitles( control->root );
-			control->current=titleToPlaylist( title, control->current );
-		}
-		return 2;
-	}
-	else if( isDir( arg ) ) {
-		if( arg[0] != '/' ) {
-			addMessage( 0, "%s is not an absolute path!", arg );
-		}
-		else {
-			addMessage( 1, "Directory: %s", arg );
-		}
-		strncpy( line, arg, MAXPATHLEN );
-		title=recurse( line, NULL );
-		if( title != NULL ) {
-			control->mpmode=PM_PLAYLIST|PM_SWITCH;
-			control->root=wipeTitles( control->root );
-			if( control->mpmix ) {
-				control->root=title;
-				plCheck(0);
-			}
-			else {
-				control->current=titleToPlaylist( title, control->current );
-			}
-		}
-		return 3;
-	}
-	else if ( endsWith( arg, ".m3u" ) ||
-			  endsWith( arg, ".pls" ) ) {
-		addMessage( 1, "Playlist: %s", arg );
-		control->mpmode=PM_PLAYLIST|PM_SWITCH;
-		title=loadPlaylist( arg );
-		if( title != NULL ) {
-			if( control->mpmix ) {
-				wipePTLists( control );
-				control->root=title;
-				plCheck(0);
-			}
-			else {
-				control->current=titleToPlaylist( title, control->current );
-				control->root=wipeTitles( control->root );
-			}
-		}
-		return 4;
 	}
 
 	fail( F_FAIL, "Illegal argument '%s'!", arg );
@@ -169,10 +99,6 @@ int getArgs( int argc, char ** argv ){
 
 		case 'W':
 			changed=1;
-			break;
-
-		case 'm':
-			config->mpmix=1;
 			break;
 
 		case '?':

@@ -31,7 +31,12 @@ static pthread_mutex_t _asynclock=PTHREAD_MUTEX_INITIALIZER;
 static void cleanFavPlay( int flags ) {
 	mpconfig_t *control=getConfig();
 	mptitle_t *runner = control->root;
-	wipePlaylist( control->current, 0 );
+	control->current=wipePlaylist( control->current, control->mpmode&PM_STREAM );
+	/* this should even be assert() worthy */
+	if (runner == NULL) {
+		addMessage(-1, "Switching Favplay without active database!");
+		return;
+	}
 	do {
 		runner->favpcount=runner->playcount;
 		runner=runner->next;
@@ -230,7 +235,8 @@ static long toggleMute() {
  */
 void setStream( char const * const stream, char const * const name ) {
 	mpconfig_t *control=getConfig();
-	wipePTLists( control );
+	control->current=wipePlaylist(control->current, control->mpmode&PM_STREAM);
+	control->mpmode=PM_STREAM|PM_SWITCH;
 	control->current=addPLDummy( control->current, "<waiting for info>" );
 	control->current=addPLDummy( control->current, name );
 	control->current=control->current->next;
@@ -244,6 +250,7 @@ void setStream( char const * const stream, char const * const name ) {
 		control->list=0;
 	}
 
+	/* no strdup() as this will be recycled on each setStream() call */
 	control->streamURL=(char *)frealloc( control->streamURL, strlen(stream)+1 );
 	strcpy( control->streamURL, stream );
 	addMessage( 1, "Play Stream %s (%s)", name, stream );
@@ -320,7 +327,6 @@ static void sendplay( int fdset ) {
  * This is thread-able to have progress information on startup!
  */
 void *setProfile( void *arg ) {
-	char		confdir[MAXPATHLEN]; /* = "~/.mixplay"; */
 	profile_t *profile;
 	int num;
 	int64_t active;
@@ -328,28 +334,28 @@ void *setProfile( void *arg ) {
 	mpconfig_t *control=getConfig();
 	char *home=getenv("HOME");
 
+	if( home == NULL ) {
+		fail( -1, "Cannot get homedir!" );
+	}
+
 	blockSigint();
 
 	addMessage( 2, "New Thread: setProfile(%d)", control->active );
 
-	if( home == NULL ) {
-		fail( -1, "Cannot get homedir!" );
-	}
 	cactive=control->active;
-
 	control->searchDNP=0;
 
 	/* stream selected */
 	if( cactive < 0 ) {
 		active = -(cactive+1);
 		profile=control->stream[active];
-		control->mpmode=PM_STREAM|PM_SWITCH;
 
 		if( active >= control->streams ) {
 			addMessage( 0, "Stream #%" PRId64 " does no exist!", active );
 			control->active=1;
 			return setProfile(NULL);
 		}
+
 		setStream( profile->stream, profile->name );
 	}
 	/* profile selected */
@@ -357,24 +363,35 @@ void *setProfile( void *arg ) {
 		active=cactive-1;
 		addMessage(1,"Playmode=%u",control->mpmode);
 
-		/* only load database if it has not yet been used */
-		if( control->root == NULL ) {
-			control->root=dbGetMusic( );
-		}
-		cleanFavPlay(1);
-
-		/* change mode */
-		control->mpmode=PM_DATABASE|PM_SWITCH;
-
 		if( active > control->profiles ) {
 			addMessage ( 0, "Profile #%" PRId64 " does no exist!", active );
 			control->active=1;
 			return setProfile(NULL);
 		}
 
-		profile=control->profile[active];
+		/* only load database if it has not yet been used */
+		if( control->root == NULL ) {
+			control->root=dbGetMusic( );
+			if( NULL == control->root ) {
+				addMessage( 0, "Scanning musicdir" );
+				num = dbAddTitles( control->musicdir );
+				if( 0 == num ) {
+					fail( F_FAIL, "No music found at %s!", control->musicdir );
+				}
+				addMessage( 0, "Added %i titles.", num );
+				control->root=dbGetMusic( );
+				if( NULL == control->root ) {
+					fail( F_FAIL, "No music found at %s for database %s!\nThis should never happen!",
+						  control->musicdir,  control->dbname );
+				}
+			}
+		}
+		/* reset favpcount and FAVDNP flags and wipe playlist */
+		cleanFavPlay(1);
 
-		snprintf( confdir, MAXPATHLEN, "%s/.mixplay", home );
+		/* change mode */
+		control->mpmode=PM_DATABASE|PM_SWITCH;
+		profile=control->profile[active];
 
 		control->dnplist=wipeList( control->dnplist );
 		control->favlist=wipeList( control->favlist );
@@ -385,29 +402,10 @@ void *setProfile( void *arg ) {
 			applyDNPlist( control->dbllist, 1 );
 		}
 
-		if( NULL == control->root ) {
-			addMessage( 0, "Scanning musicdir" );
-
-			num = dbAddTitles( control->musicdir );
-
-			if( 0 == num ) {
-				fail( F_FAIL, "No music found at %s!", control->musicdir );
-			}
-
-			addMessage( 0, "Added %i titles.", num );
-			control->root=dbGetMusic( );
-
-			if( NULL == control->root ) {
-				fail( F_FAIL, "No music found at %s for database %s!\nThis should never happen!",
-					  control->musicdir,  control->dbname );
-			}
-		}
-
 		applyLists( 1 );
 		plCheck( 0 );
 
 		addMessage( 1, "Profile set to %s.", profile->name );
-		notifyChange( MPCOMM_CONFIG );
 		if( control->argument != NULL ) {
 			/* do not free, the string has become the new profile entry! */
 			control->argument=NULL;
@@ -419,6 +417,7 @@ void *setProfile( void *arg ) {
 	else {
 		setVolume( profile->volume );
 	}
+	notifyChange( MPCOMM_CONFIG );
 	writeConfig(NULL);
 
 	/* if we're not in player context, start playing automatically */
@@ -1469,10 +1468,6 @@ void *reader( void *arg ) {
 					addMessage( -1, "No path given!" );
 				}
 				else {
-					control->mpmix=MPC_ISSHUFFLE(control->command);
-					if( !(control->mpmode&(PM_STREAM|PM_DATABASE))) {
-						wipeTitles(control->root);
-					}
 					if( setArgument( control->argument ) ){
 						control->active = 0;
 						if( control->status == mpc_start ) {
@@ -1600,9 +1595,6 @@ void *reader( void *arg ) {
 					if( countTitles( MP_FAV, 0 ) < 21 ) {
 						addMessage( -1, "Need at least 21 Favourites to enable Favplay." );
 						break;
-					}
-					if( control->status == mpc_play ) {
-						stopPlay(p_command[fdset][1]);
 					}
 
 					if( !toggleFavplay() ) {
