@@ -261,36 +261,48 @@ void setStream( char const * const stream, char const * const name ) {
  * also makes sure that commands are not overwritten
  */
 void setCommand( mpcmd_t cmd, char *arg ) {
+	mpconfig_t *config=getConfig();
 	if(( cmd == mpc_idle ) ||
-		(getConfig()->status == mpc_quit) ||
-		(getConfig()->status == mpc_reset)) {
+		(config->status == mpc_quit) ||
+		(config->status == mpc_reset)) {
 		return;
 	}
 
-	pthread_mutex_lock( &_pcmdlock );
+	if (pthread_mutex_trylock( &_pcmdlock ) == EBUSY) {
+		/* these two have precedence and may come in while everything
+		   else is blocked */
+		if(( cmd == mpc_reset ) || (cmd == mpc_quit)) {
+			addMessage( -1, "Player blocked on %s(state: %s)",
+					mpcString(config->command), mpcString(config->status));
+		}
+		else {
+			pthread_mutex_lock( &_pcmdlock );
+		}
+	}
+
 	/* wait for the last command to be handled */
-	while (getConfig()->command != mpc_idle) {
+	while (config->command != mpc_idle) {
 		pthread_cond_wait( &_pcmdcond, &_pcmdlock );
-		if (getConfig()->command == mpc_idle) {
-			addMessage(1, "unblocked on active command %s", mpcString(getConfig()->command));
+		if (config->command == mpc_idle) {
+			addMessage(1, "unblocked after active command");
 		}
 	}
 
 	/* player is being reset or about to quit - do not handle any commands */
-	if((getConfig()->status != mpc_reset) &&
-		 (getConfig()->status != mpc_quit)) {
+	if((config->status != mpc_reset) &&
+		 (config->status != mpc_quit)) {
 		/* someone did not clean up! */
-		if( getConfig()->argument != NULL ) {
+		if( config->argument != NULL ) {
 			addMessage( 0, "Wiping leftover %s on %s!",
-					getConfig()->argument, mpcString(cmd) );
-			sfree(&(getConfig()->argument));
+					config->argument, mpcString(cmd) );
+			sfree(&(config->argument));
 		}
-		getConfig()->command=cmd;
-		getConfig()->argument=arg;
+		config->command=cmd;
+		config->argument=arg;
 	}
 	else {
 		addMessage(-1, "%s blocked by %s!", mpcString(cmd),
-				mpcString(getConfig()->status));
+				mpcString(config->status));
 	}
 	pthread_mutex_unlock( &_pcmdlock );
 }
