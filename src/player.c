@@ -398,23 +398,30 @@ void *setProfile( void *arg ) {
 				}
 			}
 		}
-		/* reset favpcount and FAVDNP flags and wipe playlist */
-		cleanFavPlay(1);
 
 		/* change mode */
-		control->mpmode=PM_DATABASE|PM_SWITCH;
 		profile=control->profile[active];
-
-		control->dnplist=wipeList( control->dnplist );
-		control->favlist=wipeList( control->favlist );
-		control->dnplist=loadList( mpc_dnp );
-		control->favlist=loadList( mpc_fav );
-		if(control->dbllist == NULL) {
-			control->dbllist=loadList( mpc_doublets );
-			applyDNPlist( control->dbllist, 1 );
+		/* last database play was on the same profile, so just wipe playlist */
+		if( control->lastact == control->active ) {
+			control->current=wipePlaylist(control->current, control->mpmode&PM_STREAM);
+			control->mpmode=PM_DATABASE|PM_SWITCH;
+		}
+		/* last database play was a different profile, so clean up all */
+		else {
+			cleanFavPlay(1);
+			control->mpmode=PM_DATABASE|PM_SWITCH;
+			control->dnplist=wipeList( control->dnplist );
+			control->favlist=wipeList( control->favlist );
+			control->dnplist=loadList( mpc_dnp );
+			control->favlist=loadList( mpc_fav );
+			if(control->dbllist == NULL) {
+				control->dbllist=loadList( mpc_doublets );
+				applyDNPlist( control->dbllist, 1 );
+			}
+			applyLists( 1 );
+			control->lastact=control->active;
 		}
 
-		applyLists( 1 );
 		plCheck( 0 );
 
 		addMessage( 1, "Profile set to %s.", profile->name );

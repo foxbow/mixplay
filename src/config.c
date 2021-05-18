@@ -307,6 +307,8 @@ mpconfig_t *readConfig( void ) {
 	_cconfig->root=NULL;
 	_cconfig->current=NULL;
 	_cconfig->volume=80;
+	_cconfig->active=0;
+	_cconfig->lastact=0;
 	_cconfig->playtime=0;
 	_cconfig->remtime=0;
 	_cconfig->percent=0;
