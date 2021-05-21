@@ -343,6 +343,7 @@ void *setProfile( void *arg ) {
 	int num;
 	int64_t active;
 	int64_t cactive;
+	static int lastact=0;
 	mpconfig_t *control=getConfig();
 	char *home=getenv("HOME");
 
@@ -351,7 +352,7 @@ void *setProfile( void *arg ) {
 	}
 
 	blockSigint();
-
+	activity(0, "Changing profile");
 	addMessage( 2, "New Thread: setProfile(%d)", control->active );
 
 	cactive=control->active;
@@ -402,7 +403,7 @@ void *setProfile( void *arg ) {
 		/* change mode */
 		profile=control->profile[active];
 		/* last database play was on the same profile, so just wipe playlist */
-		if( control->lastact == control->active ) {
+		if( lastact == control->active ) {
 			control->current=wipePlaylist(control->current, control->mpmode&PM_STREAM);
 			control->mpmode=PM_DATABASE|PM_SWITCH;
 		}
@@ -419,7 +420,7 @@ void *setProfile( void *arg ) {
 				applyDNPlist( control->dbllist, 1 );
 			}
 			applyLists( 1 );
-			control->lastact=control->active;
+			lastact=control->active;
 		}
 
 		plCheck( 0 );
@@ -430,6 +431,14 @@ void *setProfile( void *arg ) {
 			control->argument=NULL;
 		}
 	}
+	else {
+		addMessage( -1, "No valid profile selected!" );
+		addMessage( 1, "Restart play" );
+		plCheck( 0 );
+		setCommand(mpc_start, NULL);
+		return arg;
+	}
+
 	if( profile->volume == -1 ) {
 		profile->volume=control->volume;
 	}

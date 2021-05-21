@@ -141,7 +141,6 @@ typedef struct {
 	char *musicdir;				/* path to the music */
 	char *password;				/* password to lock up quit, scan and info */
 	int active;					/* active >0 = profile / 0=none / <0 = stream */
-	int lastact;
 	int profiles;				/* number of profiles */
 	profile_t **profile;	/* profiles */
 	int streams;				/* number of streams */

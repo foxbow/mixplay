@@ -308,7 +308,6 @@ mpconfig_t *readConfig( void ) {
 	_cconfig->current=NULL;
 	_cconfig->volume=80;
 	_cconfig->active=0;
-	_cconfig->lastact=0;
 	_cconfig->playtime=0;
 	_cconfig->remtime=0;
 	_cconfig->percent=0;
@@ -670,6 +669,9 @@ void addMessage( int v, const char *msg, ... ) {
 			} else if (!getDebug()) {
 				fprintf( stderr, "\r%s\n", line );
 			}
+			if( _cconfig->isDaemon ) {
+				syslog( LOG_NOTICE, "%s", line );
+			}
 		}
 		if( v < getDebug() ) {
 			fprintf( stderr, "\r%s\n", line );
@@ -700,7 +702,6 @@ int playerIsBusy( void ) {
 	return res;
 }
 
-static unsigned _ftrpos=0;
 #define MP_ACTLEN 75
 static char _curact[MP_ACTLEN]="startup";
 
@@ -714,6 +715,7 @@ void activity( int v, const char *msg, ... ) {
 	int i;
 	va_list args;
 	char newact[MP_ACTLEN]="";
+	static unsigned _ftrpos=0;
 
 	va_start( args, msg );
 	vsnprintf( newact, MP_ACTLEN, msg, args );

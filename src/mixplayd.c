@@ -24,8 +24,6 @@
 #include "mpflirc.h"
 #include "mpserver.h"
 
-static unsigned long _curmsg=0;
-
 /**
  * TODO: create a dedicated signal handler thread.
  **/
@@ -67,19 +65,6 @@ void fail( const int error, const char* msg, ... ) {
 	pthread_join( getConfig()->rtid, NULL );
 
 	abort();
-}
-
-/**
- * special handling for the server during information updates
- */
-static void s_updateHook( ) {
-	mpconfig_t *data=getConfig();
-	if( _curmsg < data->msg->count ) {
-		if( data->isDaemon ) {
-			syslog( LOG_NOTICE, "%s", msgBuffPeek( data->msg, _curmsg )->msg );
-		}
-		_curmsg++;
-	}
 }
 
 /*
@@ -242,8 +227,6 @@ int main( int argc, char **argv ) {
 		addMessage(0, "Another mixplayd was quicker!");
 		return -1;
 	}
-
-	addUpdateHook( &s_updateHook );
 
 	if( !startServer() && !initAll() ) {
 		/* flirc handler */
