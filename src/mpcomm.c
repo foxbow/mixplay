@@ -17,8 +17,8 @@
 #include "mpcomm.h"
 #include "utils.h"
 
-static pthread_mutex_t _clientlock=PTHREAD_MUTEX_INITIALIZER;
-static int _curclient=-1;
+static pthread_mutex_t _clientlock = PTHREAD_MUTEX_INITIALIZER;
+static int _curclient = -1;
 
 /*
  * all of the next messages will only be sent to this client
@@ -28,24 +28,24 @@ static int _curclient=-1;
  * Even if it may look tempting, queuing the calls is not
  * worth the effort!
  */
-int setCurClient( int client ) {
-	if( pthread_mutex_trylock( &_clientlock ) == EBUSY ) {
-		if( _curclient == client ) {
-			addMessage( 1, "Client %i is already locked!", client );
+int setCurClient(int client) {
+	if (pthread_mutex_trylock(&_clientlock) == EBUSY) {
+		if (_curclient == client) {
+			addMessage(1, "Client %i is already locked!", client);
 			return client;
 		}
 		else {
-			addMessage( 1, "Client %i is blocked by %i!", client, _curclient );
+			addMessage(1, "Client %i is blocked by %i!", client, _curclient);
 		}
 		return -1;
 	}
-	addMessage( 1, "Locking %i!", client );
-	_curclient=client;
+	addMessage(1, "Locking %i!", client);
+	_curclient = client;
 	return client;
 }
 
-int isCurClient( int client ) {
-	return( _curclient == client );
+int isCurClient(int client) {
+	return (_curclient == client);
 }
 
 int getCurClient() {
@@ -58,31 +58,33 @@ int getCurClient() {
  * only unlock if we really are the current client. Otherwise this is just a clean-up
  * call to avoid a deadlock.
  */
-void unlockClient( int client ) {
+void unlockClient(int client) {
 	/* a little nasty but needed to end progress when it's unknown which client
-	   is the current one */
-	if( client == -1 ) {
+	 * is the current one */
+	if (client == -1) {
 		client = _curclient;
 	}
 
-	if( client == _curclient ) {
-		_curclient=-1;
-		addMessage( 1, "Unlocking %i", client );
-		pthread_mutex_unlock( &_clientlock );
+	if (client == _curclient) {
+		_curclient = -1;
+		addMessage(1, "Unlocking %i", client);
+		pthread_mutex_unlock(&_clientlock);
 	}
-	else if( _curclient != -1 ) {
-		addMessage( 0, "Client %i is not %i", client, _curclient );
+	else if (_curclient != -1) {
+		addMessage(0, "Client %i is not %i", client, _curclient);
 	}
 	else {
-		addMessage( 1, "Client %i was not locked!", client );
+		addMessage(1, "Client %i was not locked!", client);
 	}
 }
 
-static jsonObject *jsonAddProfiles( jsonObject *jo, const char *key, profile_t **vals, const int num ) {
+static jsonObject *jsonAddProfiles(jsonObject * jo, const char *key,
+								   profile_t ** vals, const int num) {
 	int i;
+
 	jo = jsonInitArr(jo, key);
-	for( i=0; i<num; i++ ) {
-		jsonAddArrElement( jo, vals[i]->name, json_string );
+	for (i = 0; i < num; i++) {
+		jsonAddArrElement(jo, vals[i]->name, json_string);
 	}
 	return jo;
 }
@@ -91,36 +93,36 @@ static jsonObject *jsonAddProfiles( jsonObject *jo, const char *key, profile_t *
  * helperfunction to add a title to the given jsonObject
  * if pl is NULL an empty title will be created
  */
-static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplaylist_t *pl ) {
-	jsonObject *val=NULL;
-	mptitle_t *title=NULL;
+static jsonObject *jsonAddTitle(jsonObject * jo, const char *key,
+								const mpplaylist_t * pl) {
+	jsonObject *val = NULL;
+	mptitle_t *title = NULL;
 
-	if( pl != NULL ) {
-		title=pl->title;
+	if (pl != NULL) {
+		title = pl->title;
 	}
 
 	/* show activity if the playlist is empty, or the player is busy and
-	   the current title is to be added */
-	if( (title == NULL) ||
-			( playerIsBusy() &&
-			(( pl == getConfig()->current ) || ( pl==NULL )))) {
-		val=jsonAddInt( NULL, "key", 0 );
-		jsonAddStr( val, "artist", "Mixplay" );
-		jsonAddStr( val, "album", "" );
-		jsonAddStr( val, "title", getCurrentActivity() );
-		jsonAddInt( val, "flags", 0 );
-		jsonAddStr( val, "genre", "" );
+	 * the current title is to be added */
+	if ((title == NULL) ||
+		(playerIsBusy() && ((pl == getConfig()->current) || (pl == NULL)))) {
+		val = jsonAddInt(NULL, "key", 0);
+		jsonAddStr(val, "artist", "Mixplay");
+		jsonAddStr(val, "album", "");
+		jsonAddStr(val, "title", getCurrentActivity());
+		jsonAddInt(val, "flags", 0);
+		jsonAddStr(val, "genre", "");
 	}
 	else {
-		val=jsonAddInt( NULL, "key", title->key );
-		jsonAddStr( val, "artist", title->artist );
-		jsonAddStr( val, "album", title->album );
-		jsonAddStr( val, "title", title->title );
-		jsonAddInt( val, "flags", title->flags );
-		jsonAddStr( val, "genre", title->genre );
-		jsonAddInt( val, "favpcount", title->favpcount );
-		jsonAddInt( val, "playcount", title->playcount );
-		jsonAddInt( val, "skipcount", title->skipcount );
+		val = jsonAddInt(NULL, "key", title->key);
+		jsonAddStr(val, "artist", title->artist);
+		jsonAddStr(val, "album", title->album);
+		jsonAddStr(val, "title", title->title);
+		jsonAddInt(val, "flags", title->flags);
+		jsonAddStr(val, "genre", title->genre);
+		jsonAddInt(val, "favpcount", title->favpcount);
+		jsonAddInt(val, "playcount", title->playcount);
+		jsonAddInt(val, "skipcount", title->skipcount);
 	}
 	return jsonAddObj(jo, key, val);
 }
@@ -130,21 +132,22 @@ static jsonObject *jsonAddTitle( jsonObject *jo, const char *key, const mpplayli
  * there may be a race condition when switching titles. It should be okay but
  * this needs to be checked over the time
  */
-static jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mpplaylist_t *pl, int dir ) {
-	jsonObject *jsonTitle=NULL;
+static jsonObject *jsonAddTitles(jsonObject * jo, const char *key,
+								 mpplaylist_t * pl, int dir) {
+	jsonObject *jsonTitle = NULL;
 
-	jo=jsonInitArr( jo, key );
+	jo = jsonInitArr(jo, key);
 	/* check if something else is changing the playlist and if not lock it to
-	   make sure it stays consistent */
+	 * make sure it stays consistent */
 	if (trylockPlaylist() != EBUSY) {
-		while( pl != NULL ) {
-			jsonTitle=jsonAddTitle( NULL, "title", pl );
-			jsonAddArrElement( jo, jsonTitle, json_object );
-			if( dir < 0 ) {
-				pl=pl->prev;
+		while (pl != NULL) {
+			jsonTitle = jsonAddTitle(NULL, "title", pl);
+			jsonAddArrElement(jo, jsonTitle, json_object);
+			if (dir < 0) {
+				pl = pl->prev;
 			}
 			else {
-				pl=pl->next;
+				pl = pl->next;
 			}
 		}
 		unlockPlaylist();
@@ -153,23 +156,24 @@ static jsonObject *jsonAddTitles( jsonObject *jo, const char *key, mpplaylist_t 
 	return jo;
 }
 
-static jsonObject *jsonAddList( jsonObject *jo, const char *key, marklist_t *list ) {
-	jo = jsonInitArr( jo, key );
-	size_t len = strlen(getConfig()->musicdir)+2;
+static jsonObject *jsonAddList(jsonObject * jo, const char *key,
+							   marklist_t * list) {
+	jo = jsonInitArr(jo, key);
+	size_t len = strlen(getConfig()->musicdir) + 2;
 
-	while( list != NULL ) {
+	while (list != NULL) {
 		/* cut off musicdir if it's given, list->dir starts with 'p=' */
 		if (startsWith(list->dir, "p=")) {
-			if( strlen(list->dir) <  len ) {
-				addMessage(-1, "%s is an illegal list entry!", list->dir );
+			if (strlen(list->dir) < len) {
+				addMessage(-1, "%s is an illegal list entry!", list->dir);
 			}
 			else {
-				jsonAddArrElement( jo, list->dir+len, json_string );
+				jsonAddArrElement(jo, list->dir + len, json_string);
 			}
 		}
 		else
-			jsonAddArrElement( jo, list->dir, json_string );
-		list=list->next;
+			jsonAddArrElement(jo, list->dir, json_string);
+		list = list->next;
 	}
 	return jo;
 }
@@ -178,87 +182,87 @@ static jsonObject *jsonAddList( jsonObject *jo, const char *key, marklist_t *lis
  * put data to be sent over into the buff
  * adds messages only if any are available for the client
 **/
-char *serializeStatus( int clientid, int type ) {
-	mpconfig_t *data=getConfig();
-	jsonObject *jo=NULL;
-	mpplaylist_t *current=data->current;
-	char *rv=NULL;
-	char *err=NULL;
-	const clmessage *msg=NULL;
-	char *msgline=NULL;
+char *serializeStatus(int clientid, int type) {
+	mpconfig_t *data = getConfig();
+	jsonObject *jo = NULL;
+	mpplaylist_t *current = data->current;
+	char *rv = NULL;
+	char *err = NULL;
+	const clmessage *msg = NULL;
+	char *msgline = NULL;
 
-	jo=jsonAddInt( jo, "type", type );
+	jo = jsonAddInt(jo, "type", type);
 
-	if( type & MPCOMM_TITLES ) {
-		if( current != NULL ) {
-			jsonAddTitles( jo, "prev", current->prev, -1 );
-			jsonAddTitle( jo, "current", current );
-			jsonAddTitles( jo, "next", current->next, 1 );
+	if (type & MPCOMM_TITLES) {
+		if (current != NULL) {
+			jsonAddTitles(jo, "prev", current->prev, -1);
+			jsonAddTitle(jo, "current", current);
+			jsonAddTitles(jo, "next", current->next, 1);
 		}
 		else {
-			jsonAddTitles( jo, "prev", NULL, -1 );
-			jsonAddTitle( jo, "current", NULL );
-			jsonAddTitles( jo, "next", NULL, 1 );
+			jsonAddTitles(jo, "prev", NULL, -1);
+			jsonAddTitle(jo, "current", NULL);
+			jsonAddTitles(jo, "next", NULL, 1);
 		}
 	}
-	if ( type & MPCOMM_RESULT ) {
-		jsonAddTitles(jo, "titles", data->found->titles, 1 );
+	if (type & MPCOMM_RESULT) {
+		jsonAddTitles(jo, "titles", data->found->titles, 1);
 		jsonAddStrs(jo, "artists", data->found->artists, data->found->anum);
 		jsonAddStrs(jo, "albums", data->found->albums, data->found->lnum);
 		jsonAddStrs(jo, "albart", data->found->albart, data->found->lnum);
 	}
-	if ( type & MPCOMM_LISTS ) {
-		jsonAddList( jo, "dnplist", data->dnplist );
-		jsonAddList( jo, "favlist", data->favlist );
-		jsonAddList( jo, "dbllist", data->dbllist );
+	if (type & MPCOMM_LISTS) {
+		jsonAddList(jo, "dnplist", data->dnplist);
+		jsonAddList(jo, "favlist", data->favlist);
+		jsonAddList(jo, "dbllist", data->dbllist);
 	}
-	if ( type & MPCOMM_CONFIG ) {
-		jsonAddInt( jo, "fade", data->fade );
-		jsonAddStr( jo, "musicdir", data->musicdir );
-		jsonAddProfiles( jo, "profile", data->profile, data->profiles );
-		jsonAddInt( jo, "skipdnp", data->skipdnp );
-		jsonAddProfiles( jo, "sname", data->stream, data->streams );
-		jsonAddInt( jo, "sleepto", data->sleepto );
-		jsonAddInt( jo, "debug", getDebug() );
+	if (type & MPCOMM_CONFIG) {
+		jsonAddInt(jo, "fade", data->fade);
+		jsonAddStr(jo, "musicdir", data->musicdir);
+		jsonAddProfiles(jo, "profile", data->profile, data->profiles);
+		jsonAddInt(jo, "skipdnp", data->skipdnp);
+		jsonAddProfiles(jo, "sname", data->stream, data->streams);
+		jsonAddInt(jo, "sleepto", data->sleepto);
+		jsonAddInt(jo, "debug", getDebug());
 	}
-	jsonAddInt( jo, "active", data->active );
-	jsonAddInt( jo, "playtime", data->playtime );
-	jsonAddInt( jo, "remtime", data->remtime );
-	jsonAddInt( jo, "percent", data->percent );
-	jsonAddInt( jo, "volume", data->volume );
-	jsonAddInt( jo, "status", data->status );
-	jsonAddInt( jo, "mpmode", data->mpmode );
-	jsonAddBool( jo, "mpfavplay", getFavplay() );
-	jsonAddBool( jo, "searchDNP", data->searchDNP );
-  jsonAddInt( jo, "clientid", clientid );
+	jsonAddInt(jo, "active", data->active);
+	jsonAddInt(jo, "playtime", data->playtime);
+	jsonAddInt(jo, "remtime", data->remtime);
+	jsonAddInt(jo, "percent", data->percent);
+	jsonAddInt(jo, "volume", data->volume);
+	jsonAddInt(jo, "status", data->status);
+	jsonAddInt(jo, "mpmode", data->mpmode);
+	jsonAddBool(jo, "mpfavplay", getFavplay());
+	jsonAddBool(jo, "searchDNP", data->searchDNP);
+	jsonAddInt(jo, "clientid", clientid);
 	/* broadcast */
 
-	if( clientid > 0 ) {
-		if( getMsgCnt(clientid) < data->msg->count ) {
-			msg=msgBuffPeek( data->msg, getMsgCnt(clientid) );
-			if( msg != NULL ) {
+	if (clientid > 0) {
+		if (getMsgCnt(clientid) < data->msg->count) {
+			msg = msgBuffPeek(data->msg, getMsgCnt(clientid));
+			if (msg != NULL) {
 				incMsgCnt(clientid);
-				if( (msg->cid == clientid) || (msg->cid == -1) ) {
-					msgline=msg->msg;
+				if ((msg->cid == clientid) || (msg->cid == -1)) {
+					msgline = msg->msg;
 				}
 			}
 		}
 	}
 
-	jsonAddStr( jo, "msg", msgline?msgline:"" );
+	jsonAddStr(jo, "msg", msgline ? msgline : "");
 
-	err=jsonGetError(jo);
-	if( err != NULL ) {
-		addMessage(-1,"%s",err);
+	err = jsonGetError(jo);
+	if (err != NULL) {
+		addMessage(-1, "%s", err);
 		sfree(&err);
 		jsonDiscard(jo);
 		return NULL;
 	}
 
-	rv=jsonToString( jo );
-	err=jsonGetError(jo);
-	if( err != NULL ) {
-		addMessage(-1,"%s",err);
+	rv = jsonToString(jo);
+	err = jsonGetError(jo);
+	if (err != NULL) {
+		addMessage(-1, "%s", err);
 		sfree(&rv);
 		sfree(&err);
 		jsonDiscard(jo);

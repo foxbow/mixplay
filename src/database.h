@@ -23,15 +23,15 @@ typedef struct {
 #define DBESIZE sizeof(dbentry_t)
 #define ESIZE sizeof(mptitle_t)
 
-mptitle_t *dbGetMusic( void );
-int dbCheckExist( void );
-int dbAddTitles( char *basedir );
-void dbWrite( int );
-int dbNameCheck( void );
-mptitle_t *getTitleByIndex( unsigned int index );
-mptitle_t *getTitleForRange( const mpcmd_t range, const char *name );
-void dbMarkDirty( void );
-int mp3Exists( const mptitle_t *title );
+mptitle_t *dbGetMusic(void);
+int dbCheckExist(void);
+int dbAddTitles(char *basedir);
+void dbWrite(int);
+int dbNameCheck(void);
+mptitle_t *getTitleByIndex(unsigned int index);
+mptitle_t *getTitleForRange(const mpcmd_t range, const char *name);
+void dbMarkDirty(void);
+int mp3Exists(const mptitle_t * title);
 
 /* void dbDump( const char *dbname, mptitle_t *root ); */
 

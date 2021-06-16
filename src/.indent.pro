@@ -1,0 +1,27 @@
+--blank-lines-after-declarations
+--blank-lines-after-procedures
+--braces-after-func-def-line
+--braces-on-if-line
+--braces-on-func-def-line
+--braces-on-struct-decl-line
+--blank-before-sizeof
+--cuddle-do-while
+--case-indentation 0
+--space-after-cast
+--indent-level 4
+--line-length 79
+--dont-cuddle-else
+--dont-format-first-column-comments
+--no-space-after-function-call-names
+--leave-optional-blank-lines
+--no-verbosity
+--paren-indentation 2
+--no-space-after-parentheses
+--dont-break-procedure-type
+--space-after-for
+--space-after-if
+--space-after-while
+--start-left-side-of-comments
+--tab-size 4
+--use-tabs
+--honour-newlines

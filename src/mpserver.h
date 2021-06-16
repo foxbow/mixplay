@@ -17,6 +17,6 @@ typedef struct {
 	int clientid;
 } mpReqInfo;
 
-int startServer( );
+int startServer();
 
 #endif /* _MPSERVER_H_ */

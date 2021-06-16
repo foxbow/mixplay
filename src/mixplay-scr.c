@@ -12,14 +12,14 @@
 #include "mpclient.h"
 #include "utils.h"
 
-static int displayPower( int on ) {
+static int displayPower(int on) {
 	int dummy;
 	int rv = -1;
 	Display *dpy;
-	char *disp=":0";
+	char *disp = ":0";
 
-	dpy = XOpenDisplay(disp);    /*  Open display and check for success */
- 	if (dpy == NULL) {
+	dpy = XOpenDisplay(disp);	/*  Open display and check for success */
+	if (dpy == NULL) {
 		return -1;
 	}
 
@@ -28,15 +28,15 @@ static int displayPower( int on ) {
 		usleep(100000);
 		if (on) {
 			DPMSForceLevel(dpy, DPMSModeOn);
-			rv=1;
+			rv = 1;
 		}
-		else  {
+		else {
 			DPMSForceLevel(dpy, DPMSModeOff);
-			rv=0;
+			rv = 0;
 		}
 	}
 	else {
-		rv=-2;
+		rv = -2;
 	}
 	XCloseDisplay(dpy);
 	return rv;
@@ -48,7 +48,7 @@ static int getDisplayState() {
 	BOOL dummy2;
 	int rv = -1;
 	Display *dpy;
-	char *disp=":0";
+	char *disp = ":0";
 	CARD16 level;
 
 	dpy = XOpenDisplay(disp);
@@ -59,102 +59,102 @@ static int getDisplayState() {
 	if (DPMSQueryExtension(dpy, &dummy, &dummy)) {
 		DPMSEnable(dpy);
 		DPMSInfo(dpy, &level, &dummy2);
-		if( level == DPMSModeOn ) {
-			rv=1;
+		if (level == DPMSModeOn) {
+			rv = 1;
 		}
 		else {
-			rv=0;
+			rv = 0;
 		}
 	}
 	else {
-		rv=-2;
+		rv = -2;
 	}
 	XCloseDisplay(dpy);
 	return rv;
 }
 
-int main(){
-	jsonObject *jo=NULL;
-	int to=-6;
-	int timer=0;
-	mpcmd_t state=mpc_idle;
+int main() {
+	jsonObject *jo = NULL;
+	int to = -6;
+	int timer = 0;
+	mpcmd_t state = mpc_idle;
 	int sstate;
-	int dstate=getDisplayState();
+	int dstate = getDisplayState();
 
-	sstate=dstate;
-	if( sstate < 0 ) {
+	sstate = dstate;
+	if (sstate < 0) {
 		fail(F_FAIL, "Cannot access DPMS!");
 	}
 
-	if( daemon( 1, 0 ) != 0 ) {
-		fail( errno, "Could not demonize!" );
+	if (daemon(1, 0) != 0) {
+		fail(errno, "Could not demonize!");
 	}
 
 	/* todo parameters: timeout, host, port */
-	while ( to < 0 ) {
+	while (to < 0) {
 		sleep(5);
-		jo=getStatus(NULL, MPCOMM_CONFIG);
-		if( jsonPeek(jo, "type") == json_error ) {
+		jo = getStatus(NULL, MPCOMM_CONFIG);
+		if (jsonPeek(jo, "type") == json_error) {
 			to++;
 		}
 		else {
-			to=jsonGetInt(jo,"sleepto");
+			to = jsonGetInt(jo, "sleepto");
 		}
 		jsonDiscard(jo);
 	}
 
-	if( to == 0 ) {
+	if (to == 0) {
 		fail(F_FAIL, "No timeout set, disabling screensaver!");
 	}
-	timer=to;
+	timer = to;
 
-	while ( state != (mpc_idle+1) ) {
-		jo=getStatus(NULL, MPCOMM_STAT);
-		if( jsonPeek(jo, "type") == json_error ) {
-			state=mpc_idle;
+	while (state != (mpc_idle + 1)) {
+		jo = getStatus(NULL, MPCOMM_STAT);
+		if (jsonPeek(jo, "type") == json_error) {
+			state = mpc_idle;
 		}
 		else {
-			state=(mpcmd_t)jsonGetInt(jo,"status");
+			state = (mpcmd_t) jsonGetInt(jo, "status");
 		}
 		jsonDiscard(jo);
 
 		/* get display state */
-		dstate=getDisplayState();
+		dstate = getDisplayState();
 		/* nothing is playing */
-		if( state == mpc_idle ) {
+		if (state == mpc_idle) {
 			/* is the screen physically on? */
-			if( dstate == 1 ) {
+			if (dstate == 1) {
 				/* should it be off - then turn it off again in 10s */
-				if( sstate == 0 ) {
-					timer=10;
-					sstate=1;
+				if (sstate == 0) {
+					timer = 10;
+					sstate = 1;
 				}
 				/* screen is on */
 				else {
 					/* No timer yet, start countdown */
-					if( timer == 0 ) {
-						timer=to;
-						sstate=1;
+					if (timer == 0) {
+						timer = to;
+						sstate = 1;
 					}
 					else {
 						timer--;
 					}
 					/* timeout hit? turn off screen */
-					if( timer <= 0 ) {
+					if (timer <= 0) {
 						displayPower(0);
-						sstate=0;
+						sstate = 0;
 					}
 				}
-			} /* when the display is off, nothing needs to be done */
+			}					/* when the display is off, nothing needs to be done */
 		}
 		/* player state is not idle */
 		else {
 			/* we turned the screen off? Turn it on! */
-			if( (sstate == 0) || (dstate == 0)) {
+			if ((sstate == 0) || (dstate == 0)) {
 				displayPower(1);
-				sstate=1;
+				sstate = 1;
 			}
-			timer=to;
+			timer = to;
 		}
 		sleep(1);
 	}

@@ -11,9 +11,9 @@
 #include "config.h"
 #include "json.h"
 
-char *serializeStatus( int clientid, int fullstat );
-int setCurClient( int client );
-int isCurClient( int client );
-void unlockClient( int client );
+char *serializeStatus(int clientid, int fullstat);
+int setCurClient(int client);
+int isCurClient(int client);
+void unlockClient(int client);
 int getCurClient();
 #endif /* MPCOMM_H_ */

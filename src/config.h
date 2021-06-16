@@ -24,7 +24,7 @@
  * caveat: when changing this check *mpc_command[] in config.c too!
  */
 typedef enum {
-	mpc_play=0,
+	mpc_play = 0,
 	mpc_stop,
 	mpc_prev,
 	mpc_next,
@@ -34,17 +34,17 @@ typedef enum {
 	mpc_quit,
 	mpc_dbclean,
 	mpc_fav,
-	mpc_dnp,           /* 10 */
+	mpc_dnp,					/* 10 */
 	mpc_doublets,
 	mpc_insert,
 	mpc_ivol,
 	mpc_dvol,
 	mpc_fskip,
-	mpc_bskip,         /* 0x10 */
+	mpc_bskip,					/* 0x10 */
 	mpc_move,
 	mpc_dbinfo,
 	mpc_search,
-	mpc_append,        /* 20 */
+	mpc_append,					/* 20 */
 	mpc_setvol,
 	mpc_newprof,
 	mpc_path,
@@ -54,18 +54,18 @@ typedef enum {
 	mpc_delfav,
 	mpc_remove,
 	mpc_mute,
-	mpc_favplay,       /* 30 */
+	mpc_favplay,				/* 30 */
 	mpc_reset,
-	mpc_idle,          /* 0x20 */
+	mpc_idle,					/* 0x20 */
 	/* by order of strength - fav-title beats dnp-album */
-	mpc_genre=1<<8,    /* 0x0100 */
-	mpc_artist=1<<9,   /* 0x0200 */
-	mpc_album=1<<10,   /* 0x0400 */
-	mpc_title=1<<11,   /* 0x0800 */
-	mpc_display=1<<12, /* 0x1000 */
-	mpc_substr=1<<13,  /* 0x2000 */
-	mpc_fuzzy=1<<14,   /* 0x4000 */
-	mpc_mix=1<<14      /* 0x4000 */
+	mpc_genre = 1 << 8,			/* 0x0100 */
+	mpc_artist = 1 << 9,		/* 0x0200 */
+	mpc_album = 1 << 10,		/* 0x0400 */
+	mpc_title = 1 << 11,		/* 0x0800 */
+	mpc_display = 1 << 12,		/* 0x1000 */
+	mpc_substr = 1 << 13,		/* 0x2000 */
+	mpc_fuzzy = 1 << 14,		/* 0x4000 */
+	mpc_mix = 1 << 14			/* 0x4000 */
 } mpcmd_t;
 
 /* some filtermasks */
@@ -128,11 +128,11 @@ const char *_mprccmdstrings[MPRC_NUM];
  * wrapper for streams and profiles
  */
 typedef struct {
-	char *name;		/* name to display */
-	char *stream;		/* URL to load if any */
-	int volume;		/* last volume */
-	unsigned favplay;	/* favplay flag for profiles */
-} profile_t ;
+	char *name;					/* name to display */
+	char *stream;				/* URL to load if any */
+	int volume;					/* last volume */
+	unsigned favplay;			/* favplay flag for profiles */
+} profile_t;
 
 /**
  * holds the widgets and pipes for communication
@@ -142,45 +142,45 @@ typedef struct {
 	char *password;				/* password to lock up quit, scan and info */
 	int active;					/* active >0 = profile / 0=none / <0 = stream */
 	int profiles;				/* number of profiles */
-	profile_t **profile;	/* profiles */
+	profile_t **profile;		/* profiles */
 	int streams;				/* number of streams */
-	profile_t **stream;	/*streams */
-	mptitle_t *root;				/* the root title */
+	profile_t **stream;			/*streams */
+	mptitle_t *root;			/* the root title */
 	searchresults_t *found;		/* buffer list to contain searchresults etc */
 	mpplaylist_t *current;		/* the current title */
 	char *dbname;				/* path to the database */
-	marklist_t *favlist;	/* favourites */
-	marklist_t *dnplist;	/* DNPlist */
-	marklist_t *dbllist;	/* doublets */
+	marklist_t *favlist;		/* favourites */
+	marklist_t *dnplist;		/* DNPlist */
+	marklist_t *dbllist;		/* doublets */
 	unsigned playtime;			/* seconds time into song */
 	unsigned remtime;			/* seconds remaining */
 	int percent;				/* how many percent of the song have been played */
-	mpcmd_t command;				/* command to the player */
+	mpcmd_t command;			/* command to the player */
 	char *argument;				/* arguments to command */
-	mpcmd_t status;					/* status of the player/system */
+	mpcmd_t status;				/* status of the player/system */
 	pthread_t rtid;				/* thread ID of the reader */
 	pthread_t stid;				/* thread ID of the server */
-	unsigned skipdnp;				/* how many skips mean dnp? */
+	unsigned skipdnp;			/* how many skips mean dnp? */
 	int volume;					/* current volume [0..100] */
 	char *channel;				/* the name of the ALSA master channel */
 	int debug;
 	char *streamURL;
-	msgbuf_t *msg;		/* generic message buffer */
-	int  port;
-	unsigned mpmode;						/* playmode, see PM_* */
+	msgbuf_t *msg;				/* generic message buffer */
+	int port;
+	unsigned mpmode;			/* playmode, see PM_* */
 	unsigned sleepto;			/* idle timeout for clients */
 	unsigned dbDirty;
 	/* flags for mpmode */
 	unsigned searchDNP:1;
 	/* other flags */
-	unsigned fade;					/* controls fading between titles */
+	unsigned fade;				/* controls fading between titles */
 	unsigned isDaemon:1;
-	unsigned inUI:1;					/* flag to show if the UI is active */
-	unsigned list:1;					/* remote playlist */
-	char *rcdev;							/* device by-id of the remote control */
+	unsigned inUI:1;			/* flag to show if the UI is active */
+	unsigned list:1;			/* remote playlist */
+	char *rcdev;				/* device by-id of the remote control */
 	int rccodes[MPRC_NUM];		/* command codes for the remote */
-	unsigned client[MAXCLIENT];		/* glabal clientID marker */
-	unsigned notify[MAXCLIENT];		/* next state per client */
+	unsigned client[MAXCLIENT];	/* glabal clientID marker */
+	unsigned notify[MAXCLIENT];	/* next state per client */
 	unsigned long msgcnt[MAXCLIENT];
 	unsigned watchdog;
 } mpconfig_t;
@@ -197,58 +197,62 @@ typedef struct {
 /* return immutable configuration */
 #define MPCOMM_CONFIG 8
 
-void writeConfig( const char *musicpath );
-mpconfig_t *readConfig( void );
-mpconfig_t *getConfig( void );
-mpconfig_t *createConfig( void );
-void freeConfig( void );
-void freeConfigContents( void );
+void writeConfig(const char *musicpath);
+mpconfig_t *readConfig(void);
+mpconfig_t *getConfig(void);
+mpconfig_t *createConfig(void);
+void freeConfig(void);
+void freeConfigContents(void);
 int getFavplay();
 int toggleFavplay();
-profile_t *createProfile( const char *name, const char *stream, const unsigned favplay, const int vol );
-void freeProfile( profile_t *profile );
+profile_t *createProfile(const char *name, const char *stream,
+						 const unsigned favplay, const int vol);
+void freeProfile(profile_t * profile);
 
-void incDebug( void );
-int getDebug( void );
-void addMessage( int v, const char *msg, ... ) __attribute__((__format__(__printf__, 2, 3)));
+void incDebug(void);
+int getDebug(void);
+void addMessage(int v, const char *msg, ...)
+	__attribute__ ((__format__(__printf__, 2, 3)));
+
 #define addError(x) addMessage( 0, "%i - %s", x, strerror(x) );
 
-char *getCurrentActivity( void );
-void activity( int v, const char *msg, ... ) __attribute__((__format__(__printf__, 2, 3)));
+char *getCurrentActivity(void);
+void activity(int v, const char *msg, ...)
+	__attribute__ ((__format__(__printf__, 2, 3)));
 
-void updateUI( void );
+void updateUI(void);
 
 void notifyChange(int state);
 
-void addProgressHook( void (*)( void * ), void *id );
-void addUpdateHook( void (*)( ) );
+void addProgressHook(void (*)(void *), void *id);
+void addUpdateHook(void (*)());
 
-const char *mpcString( mpcmd_t rawcmd );
-mpcmd_t mpcCommand( const char *val );
-char *fullpath( const char *file );
+const char *mpcString(mpcmd_t rawcmd);
+mpcmd_t mpcCommand(const char *val);
+char *fullpath(const char *file);
 
-mpplaylist_t *wipePlaylist( mpplaylist_t *pl, int recursive );
-mptitle_t *wipeTitles( mptitle_t *root );
-void wipePTLists( mpconfig_t *config );
-marklist_t *wipeList( marklist_t *root );
-int playerIsBusy( void );
+mpplaylist_t *wipePlaylist(mpplaylist_t * pl, int recursive);
+mptitle_t *wipeTitles(mptitle_t * root);
+void wipePTLists(mpconfig_t * config);
+marklist_t *wipeList(marklist_t * root);
+int playerIsBusy(void);
 void blockSigint();
 
-int getFreeClient( void );
-void freeClient( int );
-int trylockClient( int );
+int getFreeClient(void);
+void freeClient(int);
+int trylockClient(int);
 
-int getNotify( int );
-void setNotify( int, int );
-void addNotify( int, int );
+int getNotify(int);
+void setNotify(int, int);
+void addNotify(int, int);
 
-unsigned long getMsgCnt( int );
-void setMsgCnt( int, unsigned long );
-void incMsgCnt( int );
-void initMsgCnt( int );
+unsigned long getMsgCnt(int);
+void setMsgCnt(int, unsigned long);
+void incMsgCnt(int);
+void initMsgCnt(int);
 
-void lockPlaylist( void );
-void unlockPlaylist( void );
-int trylockPlaylist( void );
+void lockPlaylist(void);
+void unlockPlaylist(void);
+int trylockPlaylist(void);
 
 #endif /* _CONFIG_H_ */

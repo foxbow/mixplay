@@ -10,9 +10,8 @@
 /**
  * helperfunction for scandir()
  */
-static int devsel( const struct dirent *entry ) {
-	return( ( entry->d_name[0] != '.' ) &&
-			endsWith( entry->d_name, "kbd" ) );
+static int devsel(const struct dirent *entry) {
+	return ((entry->d_name[0] != '.') && endsWith(entry->d_name, "kbd"));
 }
 
 /*
@@ -22,68 +21,69 @@ static int devsel( const struct dirent *entry ) {
  * error - errno that was set
  *		 F_FAIL = print message w/o errno and exit
  */
-void fail( const int error, const char* msg, ... ) {
+void fail(const int error, const char *msg, ...) {
 	va_list args;
-	fprintf( stdout, "\n" );
+
+	fprintf(stdout, "\n");
 	printf("mprcinit: ");
-	va_start( args, msg );
-	vfprintf( stdout, msg, args );
-	va_end( args );
-	fprintf( stdout, "\n" );
-	if( error > 0 ) {
-		fprintf( stdout, "ERROR: %i - %s\n", abs( error ), strerror( abs( error ) ) );
+	va_start(args, msg);
+	vfprintf(stdout, msg, args);
+	va_end(args);
+	fprintf(stdout, "\n");
+	if (error > 0) {
+		fprintf(stdout, "ERROR: %i - %s\n", abs(error), strerror(abs(error)));
 	}
-	exit( error );
+	exit(error);
 }
 
-int main( ) {
-	int numdev=0;
-	int c=-1;
-	int fd=-1;
+int main() {
+	int numdev = 0;
+	int c = -1;
+	int fd = -1;
 	int i;
-	mpconfig_t *config=NULL;
+	mpconfig_t *config = NULL;
 	struct dirent **devices;
 
-	numdev=scandir( "/dev/input/by-id/", &devices, devsel, alphasort );
-	if( numdev < 1 ) {
+	numdev = scandir("/dev/input/by-id/", &devices, devsel, alphasort);
+	if (numdev < 1) {
 		printf("No input devices available!\n");
 		return -1;
 	}
 
-	config=readConfig( );
-	if( config == NULL ) {
-		config=createConfig();
-		if( config == NULL ) {
-			printf( "Could not create config file!\n" );
+	config = readConfig();
+	if (config == NULL) {
+		config = createConfig();
+		if (config == NULL) {
+			printf("Could not create config file!\n");
 			return -1;
 		}
 	}
 
-  printf("Select input device:\n");
-	for( i=0; i<numdev; i++ ) {
-		printf("%2i - %s\n", i, devices[i]->d_name );
+	printf("Select input device:\n");
+	for (i = 0; i < numdev; i++) {
+		printf("%2i - %s\n", i, devices[i]->d_name);
 	}
-	printf(" x - cancel\n" );
-	while( c == -1 ) {
-		c=getch( 1000 );
-		if( c == 'x' ) {
+	printf(" x - cancel\n");
+	while (c == -1) {
+		c = getch(1000);
+		if (c == 'x') {
 			printf("\nExit.\n");
 			return 0;
 		}
 		else {
-			c=c-'0';
-			if( ( c < 0 ) || ( c > numdev ) ){
-				c=-1;
+			c = c - '0';
+			if ((c < 0) || (c > numdev)) {
+				c = -1;
 			}
 		}
 	}
 
-	printf("\rOkay, trying to init %s\n", devices[c]->d_name );
+	printf("\rOkay, trying to init %s\n", devices[c]->d_name);
 	sleep(1);
-	getConfig()->rcdev=strdup(devices[c]->d_name);
-	fd=initFLIRC();
-	if( fd == -1 ) {
-		printf("Failed to use %s!\n", devices[c]->d_name );
+	getConfig()->rcdev = strdup(devices[c]->d_name);
+	fd = initFLIRC();
+	if (fd == -1) {
+		printf("Failed to use %s!\n", devices[c]->d_name);
 		return -1;
 	}
 
@@ -93,28 +93,29 @@ int main( ) {
 
 	do {
 		printf("Press any key to start..\n");
-		while( getch(1000) == -1 );
+		while (getch(1000) == -1);
 
-		for( i = 0; i<MPRC_NUM; i++ ) {
+		for (i = 0; i < MPRC_NUM; i++) {
 			/* skip mpc_quit */
-			if(_mprccmds[i] == mpc_quit) {
-				getConfig()->rccodes[i]=-1;
+			if (_mprccmds[i] == mpc_quit) {
+				getConfig()->rccodes[i] = -1;
 				continue;
 			}
-			printf("Code for %s: ", _mprccmdstrings[i] ); fflush(stdout);
-			if( getEventCode( &c, fd, 3000, 0) == -1 ) {
+			printf("Code for %s: ", _mprccmdstrings[i]);
+			fflush(stdout);
+			if (getEventCode(&c, fd, 3000, 0) == -1) {
 				printf("NONE\n");
-				getConfig()->rccodes[i]=-1;
+				getConfig()->rccodes[i] = -1;
 			}
 			else {
-				printf("%i\n", c );
-				getConfig()->rccodes[i]=c;
+				printf("%i\n", c);
+				getConfig()->rccodes[i] = c;
 			}
 			sleep(1);
 		}
 		printf("Okay? (y)\n");
-		while( ( c=getch(1000) ) == -1 );
-	} while ( c != 'y' );
+		while ((c = getch(1000)) == -1);
+	} while (c != 'y');
 
 	writeConfig(NULL);
 }
