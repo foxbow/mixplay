@@ -29,6 +29,9 @@ depends on 'flirc_util' to let a FLIRC adapter learn keys from a new remote cont
 ### mpstream.sh
 depends on 'VLC' and will stream the current audio on port 2348. This is very experimental and suffers a lack of tagging as well as several seconds lag. But it works for now..
 
+### pre-commit
+depends on the 'indent' utility and checks the code formatting on commit. Should only be needed for changes in the code. Check the fiule itself for more information.
+
 ### valgrind.sh
 depends on 'valgrind' to run a memory check on mixplay running in simple debug mode.
 

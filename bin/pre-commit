@@ -1,0 +1,67 @@
+#!/bin/bash
+
+# checks the coding style before checking code in.
+# to install use
+# $ ln -s ../../bin/pre-commit .git/hooks/
+# in the mixplay root
+
+# check for proper project if this fails then something is really,
+# really messed up!
+if [ "${PWD##*/}" != "mixplay" ]; then
+	echo "Error: Not in mixplay!?"
+	exit 1
+fi
+
+# Check if there are files that were modified after staging. Usually this means
+# that indent did something in the last commit run. But it also may be desired
+# so offer a way out (not recommended though)
+RES=$(git status -s | grep "^MM src/")
+if [ ! -z "${RES}" ]; then
+	echo "Files were changed after staging!"
+	echo -e "${RES}" | grep "^MM"
+	echo ""
+	echo "If these are false, use 'commit --no-verify'"
+	exit 1
+fi
+
+# remember unstaged modified files
+PREINDENT=$(git status -s | grep "^ M src/")
+
+# run indent on source directory
+cd src
+indent *.[ch]
+cd ..
+
+# check for new modifications changes
+#
+# this is a little convoluted and may not find every change done by indent
+# but commonly everything that matters should be staged. Check if the
+# staged files changed, meaning new changes appeared or changes were reverted
+# by indent
+RV=0
+RES=$(git status -s | grep "^ M src/")
+if [ "${RES}" != "${PREINDENT}" ]; then
+	echo "Unstaged files changed!"
+	echo "Before:"
+	echo -e "${PREINDENT}\n"
+	echo "After:"
+	echo -e "${RES}\n"
+	RV=1
+fi
+
+# check for changes in staged files
+RES=$(git status -s | grep "^MM src/")
+if [ ! -z "${RES}" ]; then
+	echo "Staged files changed!"
+	echo -e "${RES}\n"
+	RV=1
+fi
+
+# there are new diffs, so bail out
+if [ "${RV}" = "1" ]; then
+	echo "commit cancelled!"
+	exit 1
+fi
+
+# clean up backups
+rm src/*~
