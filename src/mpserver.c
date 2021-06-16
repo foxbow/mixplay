@@ -449,7 +449,7 @@ static void *clientHandler(void *args) {
 									   mpsearch_idle);
 								getConfig()->found->state = mpsearch_busy;
 								setCommand(cmd, reqInfo.arg ?
-										strdup(reqInfo.arg) : NULL);
+										   strdup(reqInfo.arg) : NULL);
 								running |= CL_SRC;
 								state = req_update;
 							}

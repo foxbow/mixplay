@@ -916,10 +916,12 @@ void *reader(void *arg) {
 								addMessage(-1, "BG: %s", line);
 							}
 							else {
+								/*  *INDENT-OFF*  */
 								addMessage(-1, "BG: %s\n> Index: %i\n> Name: %s\n> Path: %s",
 										   line, control->current->title->key,
 										   control->current->title->display,
 										   fullpath(control->current->title->path));
+								/*  *INDENT-ON*  */
 							}
 							killPlayers(pid, p_command, p_status, p_error, 1);
 							return NULL;

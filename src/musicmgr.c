@@ -1468,11 +1468,11 @@ mpplaylist_t *addNewTitle(mpplaylist_t * pl, mptitle_t * root) {
 			addMessage(1, "Increasing maxplaycount to %i (loop)", pcount);
 		}
 	}							/* while( valid != 3 ) */
-
+	/*  *INDENT-OFF*  */
 	addMessage(1, "[+] (%i/%i/%c) %5d %s",
 			   (runner->flags & MP_FAV) ? runner->favpcount : runner->playcount,
 			   pcount, flagToChar(runner->flags), runner->key, runner->display);
-
+	/*  *INDENT-ON*  */
 	/* count again in case this is a favourite */
 	return appendToPL(runner, pl, -1);
 }
