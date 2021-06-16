@@ -32,13 +32,19 @@ cd src
 indent *.[ch]
 cd ..
 
+# check for changes in staged files and re-add them
+RES=$(git status -s | grep "^MM src/" | sed "s/^MM //g")
+if [ ! -z "${RES}" ]; then
+	RES=$(echo -e ${RES} | sed "s/\n//g")
+	git add ${RES}
+fi
+
 # check for new modifications changes
 #
 # this is a little convoluted and may not find every change done by indent
 # but commonly everything that matters should be staged. Check if the
 # staged files changed, meaning new changes appeared or changes were reverted
 # by indent
-RV=0
 RES=$(git status -s | grep "^ M src/")
 if [ "${RES}" != "${PREINDENT}" ]; then
 	echo "Unstaged files changed!"
@@ -46,19 +52,6 @@ if [ "${RES}" != "${PREINDENT}" ]; then
 	echo -e "${PREINDENT}\n"
 	echo "After:"
 	echo -e "${RES}\n"
-	RV=1
-fi
-
-# check for changes in staged files
-RES=$(git status -s | grep "^MM src/")
-if [ ! -z "${RES}" ]; then
-	echo "Staged files changed!"
-	echo -e "${RES}\n"
-	RV=1
-fi
-
-# there are new diffs, so bail out
-if [ "${RV}" = "1" ]; then
 	echo "commit cancelled!"
 	exit 1
 fi
