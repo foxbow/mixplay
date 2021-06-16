@@ -666,29 +666,13 @@ static void killPlayers(pid_t pid[2], int p_command[2][2], int p_status[2][2],
 		control->watchdog = STREAM_TIMEOUT + 1;
 
 		/* starting on an error? Not good.. */
-		if (control->status == mpc_start) {
-			if (control->mpmode == PM_STREAM) {
-				addMessage(0, "Stream unavailable, reset to mixplay");
-				control->active = 1;
-			}
-			else if (control->mpmode & PM_DATABASE) {
-				addMessage(-1, "Music database failure!");
-				control->status = mpc_quit;
-				control->watchdog = 0;
-			}
+		if ((control->status == mpc_start) && (control->mpmode & PM_DATABASE)) {
+			addMessage(-1, "Music database failure!");
+			control->status = mpc_quit;
+			control->watchdog = 0;
 		}
-
-		control->status = mpc_idle;
-
-		/* failed switch, get back to previous */
-		if (control->mpmode & PM_SWITCH) {
-			if (control->active == oactive) {
-				addMessage(0, "Switch failed, reset to mixplay");
-				control->active = 1;
-			}
-			else {
-				control->active = oactive;
-			}
+		else {
+			control->status = mpc_idle;
 		}
 	}
 
@@ -719,7 +703,7 @@ static void killPlayers(pid_t pid[2], int p_command[2][2], int p_status[2][2],
 	pthread_mutex_unlock(&_asynclock);
 	control->command = mpc_idle;
 	pthread_cond_signal(&_pcmdcond);
-	activity(0, "All unlocked");
+	activity(1, "All unlocked");
 }
 
 /* stops the current title. That means send a stop to a stream and a pause
@@ -877,7 +861,7 @@ void *reader(void *arg) {
 				addMessage(-1, "Player froze!");
 				/* if this is already a retry, fall back to something better */
 				if (control->status == mpc_start) {
-					if (oactive != control->active) {
+					if (oactive == control->active) {
 						addMessage(-1,
 								   "Stream error, switching to default profile");
 						control->active = 1;
