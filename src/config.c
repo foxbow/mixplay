@@ -305,6 +305,10 @@ mpconfig_t *readConfig(void) {
 			(searchresults_t *) falloc(1, sizeof (searchresults_t));
 	}
 	else {
+		/* This may even be assert() worthy */
+		addMessage(-1, "Config being read twice!");
+		pthread_cond_signal(&confinit);
+		pthread_mutex_unlock(&conflock);
 		return _cconfig;
 	}
 

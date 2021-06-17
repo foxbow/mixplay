@@ -365,9 +365,6 @@ static void *clientHandler(void *args) {
 					/* Reload may reset the clientid/socket alignment */
 					if ((reqInfo.clientid == 0) && (clientid > 0)) {
 						addMessage(1, "One shot for client %i", clientid);
-						/*  The client did not request a new ID but we should tell him
-						 * who is listening.. */
-						reqInfo.clientid = clientid;
 						/* stopping the thread may be a bad idea.. */
 						/* running&=~CL_RUN; */
 					}
