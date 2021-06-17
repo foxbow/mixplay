@@ -732,7 +732,7 @@ static void stopPlay(int channel) {
  */
 void *reader(void *arg) {
 	mpconfig_t *control = getConfig();
-	mptitle_t *title = NULL;
+	mptitle_t *ctitle = NULL;	/* the title commands should use */
 	fd_set fds;
 	struct timeval to;
 	struct timespec ts;
@@ -1238,20 +1238,20 @@ void *reader(void *arg) {
 
 		/* get the target title for fav and dnp commands */
 		if (control->current != NULL) {
-			title = control->current->title;
+			ctitle = control->current->title;
 			if ((cmd == mpc_fav) || (cmd == mpc_dnp)) {
 				if (control->argument != NULL) {
 					/* todo: check if control->argument is a number */
 					if (MPC_EQDISPLAY(control->command)) {
-						title = getTitleByIndex(atoi(control->argument));
+						ctitle = getTitleByIndex(atoi(control->argument));
 					}
 					else {
-						title =
+						ctitle =
 							getTitleForRange(control->command,
 											 control->argument);
 					}
 					/* someone is testing parameters, mh? */
-					if (title == NULL) {
+					if (ctitle == NULL) {
 						addMessage(0, "Nothing matches %s!",
 								   control->argument);
 					}
@@ -1367,21 +1367,21 @@ void *reader(void *arg) {
 			break;
 
 		case mpc_dnp:
-			if ((title != NULL) && asyncTest()) {
-				if (title == control->current->title) {
+			if ((ctitle != NULL) && asyncTest()) {
+				if (ctitle == control->current->title) {
 					/* current title is affected, play the next one */
 					order = 0;
 					dowrite(p_command[fdset][1], "STOP\n", 6);
 				}
-				handleRangeCmd(title, control->command);
+				handleRangeCmd(ctitle, control->command);
 				plCheck(1);
 				pthread_mutex_unlock(&_asynclock);
 			}
 			break;
 
 		case mpc_fav:
-			if ((title != NULL) && asyncTest()) {
-				handleRangeCmd(title, control->command);
+			if ((ctitle != NULL) && asyncTest()) {
+				handleRangeCmd(ctitle, control->command);
 				notifyChange(MPCOMM_TITLES);
 				pthread_mutex_unlock(&_asynclock);
 			}
@@ -1601,12 +1601,10 @@ void *reader(void *arg) {
 				assert(control->found->state != mpsearch_idle);
 				if (control->argument == NULL) {
 					if (MPC_ISARTIST(control->command)) {
-						control->argument =
-							strdup(control->current->title->artist);
+						control->argument = strdup(ctitle->artist);
 					}
 					else {
-						control->argument =
-							strdup(control->current->title->album);
+						control->argument = strdup(ctitle->album);
 					}
 				}
 				if (search(control->argument, MPC_MODE(control->command)) ==
