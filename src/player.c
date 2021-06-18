@@ -164,6 +164,13 @@ static long controlVolume(long volume, int absolute) {
 		}
 	}
 
+	/* for some reason this can happen and lead to an assert error
+	 * Give a stern warning and return default */
+	if (_elem == NULL) {
+		addMessage(-1, "Volume control is not fully initialized!");
+		return config->volume;
+	}
+
 	/* if audio is muted, don't change a thing */
 	if (snd_mixer_selem_has_playback_switch(_elem)) {
 		snd_mixer_selem_get_playback_switch(_elem, SND_MIXER_SCHN_FRONT_LEFT,
