@@ -9,14 +9,15 @@ body {
 	background: #000;
 	background-image: radial-gradient( circle at 90% -30%, white, darkblue 2%, black 100%);
 	color: #bbc;
-  margin: 0;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
+	margin: 0;
+	background-repeat: no-repeat;
+	background-attachment: fixed;
 	display: flex;
 	flex-direction: column;
 	height: 100%;
 	width: 100%;
 	scrollbar-color: blue darkblue;
+	user-select: none;
 }
 
 body.busy {

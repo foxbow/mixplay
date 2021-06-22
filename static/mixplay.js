@@ -22,7 +22,7 @@ var toval = 500
 var idletime = 0
 var idlesleep = 30000 /* milliseconds until the clock shows up (30s) */
 var currentPop = ''
-var debug = 0
+var debug = false
 const layout = ['1234567890', 'qwertzuiop', 'asdfghjkl\'', 'yxcvbnm-', 'XC BO']
 var kbddiv
 var kbdcurrent
@@ -31,7 +31,12 @@ var clientid = -1
 var upactive = 1
 var shortcuts = []
 var curvol = 0
-var setvol = -1
+
+function debugLog (txt) {
+  if (debug) {
+    console.log(txt)
+  }
+}
 
 function sendKey (key) {
   const e = document.getElementById('kbdtext')
@@ -422,7 +427,7 @@ function switchTabByRef (element, num) {
         e.className = 'inactive'
       }
     } else {
-      console.log('No button c' + element + i + '!')
+      debugLog('No button c' + element + i + '!')
     }
     i++
     e = document.getElementById(element + i)
@@ -517,7 +522,7 @@ function sendCMDArg (cmd, arg) {
   /* dirty trick to recognize a move... */
   if (cmd === 'move') {
     moveline = 'start'
-    console.log('Start move')
+    debugLog('Start move')
     return
   }
 
@@ -663,9 +668,7 @@ function sendCMDArg (cmd, arg) {
   /* cmds are one-shots, so clientid is 0 to make sure no new update thread
      is started */
   var json = JSON.stringify({ cmd: cmd, arg: arg, clientid: 0 })
-  if (debug) {
-    console.log('oreq: ' + json)
-  }
+  debugLog('oreq: ' + json)
 
   xmlhttp.open('POST', '/mpctrl/cmd?' + json, true)
   xmlhttp.send()
@@ -688,24 +691,15 @@ function volWheel (e) {
   }
 }
 
-/*
- * use swipe on volumebar to increase/decrease volume
- */
-function volStartEL (e) {
-  setvol = e.changedTouches[0].clientX
-}
-
-/*
- * decide if this was a left, right or no swipe
- */
-function volEndEL (e) {
-  setvol = setvol - e.changedTouches[0].clientX
-  if (setvol === 0) {
-    /* handled as clickevent */
-  } else if (setvol < 0) {
-    sendCMD(0x0d)
+function ctrlVol (e) {
+  if (curvol === -2) {
+    sendCMD(0x1d)
   } else {
-    sendCMD(0x0e)
+    if ((e.clientX - this.offsetLeft) < (this.clientWidth / 2)) {
+      sendCMD(0x0e)
+    } else {
+      sendCMD(0x0d)
+    }
   }
 }
 
@@ -735,7 +729,7 @@ function enableElement (e, i) {
       }
     }
   } else {
-    console.log('Element ' + e + ' does not exist!')
+    debugLog('Element ' + e + ' does not exist!')
   }
 }
 
@@ -843,7 +837,7 @@ function togglePopup (ident) {
 
   const popup = document.getElementById('popup' + ident)
   if (!popup) {
-    console.log('Unknown popup "popup' + ident + '"!')
+    debugLog('Unknown popup "popup' + ident + '"!')
     return
   }
 
@@ -858,7 +852,7 @@ function togglePopup (ident) {
       // Clean up other popup
       const oldpop = document.getElementById('popup' + currentPop)
       if (!oldpop) {
-        console.log('Unknown popup "popup' + currentPop + '"!')
+        debugLog('Unknown popup "popup' + currentPop + '"!')
       } else {
         oldpop.classList.remove('show')
         setParentFontSize(currentPop, '')
@@ -894,7 +888,7 @@ function popselect (choice, arg, text, drag, id) {
     var popspan = document.createElement('span')
     popspan.className = 'popup'
     if (document.getElementById('popup' + id)) {
-      console.log('popup' + id + ' already exists!')
+      debugLog('popup' + id + ' already exists!')
     } else {
       popspan.id = 'popup' + id
       for (i = 0; i < num; i++) {
@@ -1477,7 +1471,7 @@ function updateUI () {
               updateConfig(data)
             }
           } else {
-            console.log('JSON-less reply!')
+            debugLog('JSON-less reply!')
           }
           /* fallthrough */
         case 204:
@@ -1507,25 +1501,19 @@ function updateUI () {
   if (cmdtosend !== '') {
     /* snchronous command */
     json = JSON.stringify({ cmd: cmdtosend, arg: argtosend, clientid: clientid })
-    if (debug) {
-      console.log('areq: ' + json)
-    }
+    debugLog('areq: ' + json)
     xmlhttp.open('POST', '/mpctrl/cmd?' + json, true)
     cmdtosend = ''
     argtosend = ''
   } else {
     if (doUpdate >= 0) {
       json = JSON.stringify({ cmd: doUpdate, clientid: clientid })
-      if (debug) {
-        console.log('ureq: ' + json)
-      }
+      debugLog('ureq: ' + json)
       doUpdate = 0
     } else {
       clientid = -1
       json = JSON.stringify({ cmd: 0, clientid: clientid })
-      if (debug) {
-        console.log('rreq: ' + json)
-      }
+      debugLog('rreq: ' + json)
     }
     xmlhttp.open('GET', '/mpctrl/status?' + json, true)
   }
@@ -1563,7 +1551,7 @@ function updateShortcuts (data) {
         items[i] = popselect(choices, id,
           name, 0, lineid++)
       } else {
-        console.log('Illegal channel 0 in shortcuts! (' + i + ')')
+        debugLog('Illegal channel 0 in shortcuts! (' + i + ')')
       }
     }
   }
@@ -1643,8 +1631,9 @@ function updateConfig (data) {
   }
   /*  idlesleep = data.sleepto * 1000 */
 
-  if ((data.debug > 1) && !debug) {
-    toggleDebug()
+  /* client debug is off but the server is in full debug mode */
+  if (data.debug > 1) {
+    debug = true
   }
 }
 
@@ -1673,7 +1662,7 @@ function checkURL (url) {
 
 function loadURL2 (url) {
   if (!url) {
-    console.log('loadURL() returned an invalid value!')
+    debugLog('loadURL() returned an invalid value!')
     url = ''
   }
   const parts = url.split('/')
@@ -1714,7 +1703,7 @@ function loadURL () {
     navigator.clipboard.readText().then(function (clipText) {
       loadURL2(clipText)
     }).catch(function (err) {
-      console.log('readText: ' + err)
+      debugLog('readText: ' + err)
       loadURL2('')
     })
   }
@@ -1842,7 +1831,7 @@ function handleKey (event) {
       break
     default:
       prevent = 0
-      console.log('Pressed: ' + event.key)
+      debugLog('Pressed: ' + event.key)
       return
   }
   /* stop propagation if the event was handled here */
@@ -1877,7 +1866,7 @@ function touchendEL (event) {
   if ((distx > disty) && (distx > wwidth)) {
     const button = document.getElementById('c' + this.id)
     if (!button) {
-      console.log('listener ' + this.id + 'has no Tab!')
+      debugLog('listener ' + this.id + 'has no Tab!')
       return
     }
     const name = button.getAttribute('data-name')
@@ -1902,7 +1891,7 @@ function touchendEL (event) {
 function addTouch (name, num) {
   var el = document.getElementById(name + num)
   if (!el) {
-    console.log('There is no element ' + name + num)
+    debugLog('There is no element ' + name + num)
   }
   el.setAttribute('data-num', num)
   el.setAttribute('data-name', name)
@@ -1910,7 +1899,7 @@ function addTouch (name, num) {
   el.addEventListener('touchend', touchendEL, false)
   el = document.getElementById('c' + name + num)
   if (!el) {
-    console.log('Element ' + name + num + ' has no Tab!')
+    debugLog('Element ' + name + num + ' has no Tab!')
   }
   el.setAttribute('data-num', num)
   el.setAttribute('data-name', name)
@@ -1955,7 +1944,7 @@ function addVolWheel (id) {
   if (e) {
     e.addEventListener('wheel', volWheel, { passive: false })
   } else {
-    console.log('Element ' + id + ' does not exist!')
+    debugLog('Element ' + id + ' does not exist!')
   }
 }
 
@@ -2006,8 +1995,7 @@ function initializeUI () {
   addVolWheel('viewtabs')
   addVolWheel('extra0')
   addVolWheel('playpack')
-  document.getElementById('volume').addEventListener('touchstart', volStartEL, { passive: true })
-  document.getElementById('volume').addEventListener('touchend', volEndEL, false)
+  document.getElementById('volume').addEventListener('click', ctrlVol, false)
   document.body.addEventListener('keypress', handleKey)
   document.body.addEventListener('keyup', blockSpace)
   document.body.addEventListener('click', function () { power(1) })
