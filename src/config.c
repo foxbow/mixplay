@@ -198,8 +198,7 @@ static int scanpronames(char *input, profile_t *** target, int max) {
 	num = scanparts(input, &line);
 	if (max > 0) {
 		for (i = 0; i < MIN(max, num); i++) {
-			(*target)[i]->name = strdup(line[i]);
-			free(line[i]);
+			(*target)[i]->name = line[i];
 		}
 		free(line);
 		max = (max == num);

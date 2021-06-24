@@ -691,14 +691,25 @@ function volWheel (e) {
   }
 }
 
+/*
+ * tap on the volume bar.
+ * On mute just unmute, otherwise:
+ * left third  - decrease volume
+ * mid third   - mute
+ * right third - quieter
+ */
 function ctrlVol (e) {
+  const pos = e.clientX - this.offsetLeft
+  const third = this.clientWidth / 3
   if (curvol === -2) {
     sendCMD(0x1d)
   } else {
-    if ((e.clientX - this.offsetLeft) < (this.clientWidth / 2)) {
+    if (pos < third) {
       sendCMD(0x0e)
-    } else {
+    } else if (pos > (2 * third)) {
       sendCMD(0x0d)
+    } else {
+      sendCMD(0x1d)
     }
   }
 }
