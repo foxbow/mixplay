@@ -857,7 +857,8 @@ void *reader(void *arg) {
 
 		/**
 		 * status is not idle but we did not get any updates from either player
-		 * after ten times we decide all hope is lost and we take the hard way out
+		 * after ten times we decide all hope is lost and we take the hard way
+		 * out.
 		 *
 		 * this may happen when a stream is played and the network connection
 		 * changes - most likely due to a DSL reconnect - or if the stream host
@@ -1122,16 +1123,19 @@ void *reader(void *arg) {
 							addMessage(2, "(Re)Start play..");
 							sendplay(p_command[fdset][1]);
 						}
-						/* stream stopped playing (PAUSE) */
+						/* stream stopped playing (PAUSE/switch profile) */
 						else if (control->mpmode & PM_STREAM) {
 							addMessage(2, "Stream stopped");
-							control->status = mpc_idle;
+							if (control->mpmode & PM_SWITCH) {
+								control->status = mpc_start;
+							}
+							else {
+								control->status = mpc_idle;
+							}
 						}
 						/* we're playing a playlist */
-						else if (control->current != NULL) {
-							if (control->mpmode & PM_SWITCH) {
-								order = 0;
-							}
+						else if ((control->current != NULL) &&
+								 !(control->mpmode & PM_SWITCH)) {
 							addMessage(2, "Title change");
 							if (order == 1) {
 								if (playCount(control->current->title, skipped)
@@ -1172,8 +1176,8 @@ void *reader(void *arg) {
 							order = 1;
 						}
 						else {
-							addMessage(1,
-									   "Player status without current title");
+							addMessage(1, "Preparing for new start");
+							control->status = mpc_start;
 						}
 						break;
 
@@ -1423,6 +1427,12 @@ void *reader(void *arg) {
 						if (!(control->mpmode & (PM_STREAM | PM_DATABASE))) {
 							wipeTitles(control->root);
 						}
+						/* switching channels started */
+						control->mpmode |= PM_SWITCH;
+						/* stop the current play */
+						stopPlay(p_command[fdset][1]);
+						/* write database if needed */
+						dbWrite(0);
 						if (control->active < 0) {
 							control->stream[(-control->active) - 1]->volume =
 								control->volume;
@@ -1431,12 +1441,6 @@ void *reader(void *arg) {
 							control->profile[control->active - 1]->volume =
 								control->volume;
 						}
-						/* switching channels started */
-						control->mpmode |= PM_SWITCH;
-						/* stop the current play */
-						stopPlay(p_command[fdset][1]);
-						/* write database if needed */
-						dbWrite(0);
 						control->active = profile;
 						asyncRun(plSetProfile);
 					}
