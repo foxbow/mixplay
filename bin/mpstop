@@ -1,0 +1,18 @@
+#! /bin/bash
+if [ -f /tmp/mixplayd.pid ]; then
+  echo "Stopping mixplayd.."
+  PID=$(cat /tmp/mixplayd.pid)
+  kill ${PID}
+  for i in {1..5}; do
+    sleep 1
+    if [ ! -f /tmp/mixplayd.pid ]; then
+      return
+    fi
+  done
+  echo "Killing mixplayd!"
+  kill -9 ${PID}
+  rm -f /tmp/mixplaydf.pid
+else
+  echo "mixplayd is not running!"
+fi
+

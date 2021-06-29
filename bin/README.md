@@ -9,6 +9,9 @@ the mixplay server
 ### mprcinit
 utility to create a valid configuration and learn about a remote control. This shall move into the web interface.
 
+### mpstop
+script that will terminate a running mixplayd. May become an init script of sorts.
+
 ### mixplay-hid
 example standalone client that connects to a mixplay server, shows the current title and allows basic commands like the 'mixplay -d' HID interface.
 

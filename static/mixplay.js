@@ -31,6 +31,7 @@ var clientid = -1
 var upactive = 1
 var shortcuts = []
 var curvol = 0
+var inUpdate = 0
 
 function debugLog (txt) {
   if (debug) {
@@ -898,24 +899,20 @@ function popselect (choice, arg, text, drag, id) {
     reply.onclick = function () { togglePopup(id) }
     var popspan = document.createElement('span')
     popspan.className = 'popup'
-    if (document.getElementById('popup' + id)) {
-      debugLog('popup' + id + ' already exists!')
-    } else {
-      popspan.id = 'popup' + id
-      for (i = 0; i < num; i++) {
-        if (i !== 0) {
-          select = document.createElement('b')
-          select.innerText = ' /'
-          popspan.appendChild(select)
-        }
-        select = clickable(choice[i][0], choice[i][1], arg, id)
+    popspan.id = 'popup' + id
+    for (i = 0; i < num; i++) {
+      if (i !== 0) {
+        select = document.createElement('b')
+        select.innerText = ' /'
         popspan.appendChild(select)
       }
-      select = document.createElement('b')
-      select.innerHTML = '\u2000\u274E'
+      select = clickable(choice[i][0], choice[i][1], arg, id)
       popspan.appendChild(select)
-      reply.appendChild(popspan)
     }
+    select = document.createElement('b')
+    select.innerHTML = '\u2000\u274E'
+    popspan.appendChild(select)
+    reply.appendChild(popspan)
   } else {
     reply.className = 'nopopselect'
   }
@@ -1461,6 +1458,16 @@ function updateUI () {
           fail('CMD Error: connection lost!')
           break
         case 200:
+          /* elCheapo locking */
+          if (inUpdate++ > 1) {
+            /* TODO turn this into debugLog */
+            addText('Active update!')
+            /* do not poison local data */
+            var buffData = JSON.parse(xmlhttp.responseText)
+            /* rinse, repeat .. */
+            doUpdate |= buffData.type
+            return
+          }
           data = JSON.parse(xmlhttp.responseText)
           if (data !== undefined) {
             /* standard update */
@@ -1484,6 +1491,7 @@ function updateUI () {
           } else {
             debugLog('JSON-less reply!')
           }
+          inUpdate = 0
           /* fallthrough */
         case 204:
           if (doUpdate < 0) {
