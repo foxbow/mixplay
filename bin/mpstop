@@ -6,7 +6,7 @@ if [ -f /tmp/mixplayd.pid ]; then
   for i in {1..5}; do
     sleep 1
     if [ ! -f /tmp/mixplayd.pid ]; then
-      return
+      exit
     fi
   done
   echo "Killing mixplayd!"
@@ -15,4 +15,3 @@ if [ -f /tmp/mixplayd.pid ]; then
 else
   echo "mixplayd is not running!"
 fi
-

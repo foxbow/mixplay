@@ -688,8 +688,13 @@ static void *clientHandler(void *args) {
 				break;
 
 			case req_current:	/* return "artist - title" line */
-				snprintf(line, MAXPATHLEN, "%s - %s", title->artist,
-						 title->title);
+				if (title != NULL) {
+					snprintf(line, MAXPATHLEN, "%s - %s", title->artist,
+							 title->title);
+				}
+				else {
+					snprintf(line, MAXPATHLEN, "<initializing>");
+				}
 				sprintf(commdata,
 						"HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
 						(int) strlen(line), line);
