@@ -1,17 +1,30 @@
 #! /bin/bash
 if [ -f /tmp/mixplayd.pid ]; then
-  echo "Stopping mixplayd.."
   PID=$(cat /tmp/mixplayd.pid)
-  kill ${PID}
-  for i in {1..5}; do
-    sleep 1
-    if [ ! -f /tmp/mixplayd.pid ]; then
-      exit
-    fi
-  done
-  echo "Killing mixplayd!"
-  kill -9 ${PID}
-  rm -f /tmp/mixplaydf.pid
+  LIST=$(ps -fea)
+  LIST=$(echo -e "${LIST}" | grep mixplayd)
+  RES=$(echo -e "${LIST}" | grep ${PID})
+  if [ "${RES}" != "" ]; then
+      echo -n "Stopping mixplayd "
+      kill ${PID}
+      if [ $? != 0 ]; then
+          echo "Error while stopping mixplayd.."
+          echo -n "${LIST}"
+          exit
+      fi
+      for i in {1..5}; do
+        sleep 1
+        if [ ! -f /tmp/mixplayd.pid ]; then
+          exit
+        fi
+        echo -n "."
+      done
+      echo -e "\nKilling mixplayd!"
+      kill -9 ${PID}
+  else
+    echo "mixplayd(${PID}) does not exist!"
+  fi
+  rm -f /tmp/mixplayd.pid
 else
   echo "mixplayd is not running!"
 fi
