@@ -721,12 +721,12 @@ static void stopPlay(int channel) {
 	mpconfig_t *control = getConfig();
 
 	if (control->status == mpc_play) {
+		control->status = mpc_idle;
 		if (control->mpmode & PM_STREAM) {
 			dowrite(channel, "STOP\n", 6);
 		}
 		else {
 			dowrite(channel, "PAUSE\n", 7);
-			control->status = mpc_idle;
 		}
 	}
 }
@@ -1129,6 +1129,12 @@ void *reader(void *arg) {
 							if (control->mpmode & PM_SWITCH) {
 								control->status = mpc_start;
 							}
+							/* stream stopped without user interaction */
+							else if (control->status == mpc_play) {
+								addMessage(0, "Trying to restart stream");
+								control->status = mpc_start;
+								sendplay(p_command[fdset][1]);
+							}
 							else {
 								control->status = mpc_idle;
 							}
@@ -1289,24 +1295,25 @@ void *reader(void *arg) {
 		case mpc_play:
 			/* has the player been properly initialized yet? */
 			if (control->status != mpc_start) {
-				/* streamplay cannot be properly paused for longer */
-				if (control->mpmode & PM_STREAM) {
-					if (control->status == mpc_play) {
-						dowrite(p_command[fdset][1], "STOP\n", 6);
-					}
-					/* restart the stream in case it broke */
-					else {
+				/* simple stop */
+				if (control->status == mpc_play) {
+					stopPlay(p_command[fdset][1]);
+				}
+				/* play */
+				else {
+					/* play stream */
+					if (control->mpmode & PM_STREAM) {
 						sendplay(p_command[fdset][1]);
 					}
-				}
-				/* just toggle pause on normal play */
-				else {
-					dowrite(p_command[fdset][1], "PAUSE\n", 7);
-					control->status =
-						(mpc_play == control->status) ? mpc_idle : mpc_play;
+					/* unpause on normal play */
+					else {
+						dowrite(p_command[fdset][1], "PAUSE\n", 7);
+						control->status = mpc_play;
+					}
 				}
 			}
 			/* initialize player after startup */
+			/* todo: what happens if the user sends a play during startup? */
 			else {
 				plCheck(0);
 				if (control->current != NULL) {
