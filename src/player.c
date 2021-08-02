@@ -56,7 +56,7 @@ static int asyncTest() {
 	int ret = 0;
 
 	if (pthread_mutex_trylock(&_asynclock) != EBUSY) {
-		addMessage(1, "Player is trylocked");
+		addMessage(2, "Player is trylocked");
 		ret = 1;
 	}
 	else {
@@ -301,10 +301,11 @@ void setCommand(mpcmd_t cmd, char *arg) {
 
 	/* wait for the last command to be handled */
 	while (config->command != mpc_idle) {
+		addMessage(1, "%s blocked on %s/%s", mpcString(cmd),
+				   mpcString(config->command), mpcString(config->status));
 		pthread_cond_wait(&_pcmdcond, &_pcmdlock);
-		if (config->command == mpc_idle) {
-			addMessage(1, "unblocked after active command");
-		}
+		addMessage(1, "unblocked on %s/%s", mpcString(config->command),
+				   mpcString(config->status));
 	}
 
 	/* player is being reset or about to quit - do not handle any commands */
@@ -327,6 +328,10 @@ void setCommand(mpcmd_t cmd, char *arg) {
 
 static int64_t oactive = 1;
 
+static int toPlayer(int fd, const char *msg) {
+	return dowrite(fd, msg, strlen(msg));
+}
+
 /**
  * make mpeg123 play the given title
  */
@@ -337,6 +342,10 @@ static void sendplay(int fdset) {
 	assert(control->current != NULL);
 
 	if (control->mpmode & PM_STREAM) {
+		if (control->status == mpc_play) {
+			addMessage(-1, "Not loading stream on active player!");
+			return;
+		}
 		if (control->list) {
 			strcpy(line, "loadlist 1 ");
 		}
@@ -346,11 +355,20 @@ static void sendplay(int fdset) {
 		strtcat(line, fullpath(control->current->title->path), MAXPATHLEN + 6);
 	}
 	strtcat(line, "\n", MAXPATHLEN + 6);
-	if (dowrite(fdset, line, MAXPATHLEN + 6) == -1) {
+	if (toPlayer(fdset, line) == -1) {
 		fail(errno, "Could not write\n%s", line);
 	}
 	notifyChange(MPCOMM_TITLES);
 	addMessage(1, "CMD: %s", line);
+}
+
+static void startPlayer() {
+	mpconfig_t *control = getConfig();
+
+	if (control->status != mpc_idle) {
+		setCommand(mpc_stop, NULL);
+	}
+	setCommand(mpc_start, NULL);
 }
 
 /**
@@ -456,7 +474,7 @@ void *setProfile(void *arg) {
 		addMessage(-1, "No valid profile selected!");
 		addMessage(1, "Restart play");
 		plCheck(0);
-		setCommand(mpc_start, NULL);
+		startPlayer();
 		return arg;
 	}
 
@@ -469,9 +487,7 @@ void *setProfile(void *arg) {
 	notifyChange(MPCOMM_CONFIG);
 	writeConfig(NULL);
 
-	/* if we're not in player context, start playing automatically */
-	addMessage(1, "Start play");
-	setCommand(mpc_start, NULL);
+	startPlayer();
 
 	/* make sure that progress messages are removed */
 	notifyChange(MPCOMM_TITLES);
@@ -665,12 +681,11 @@ static void killPlayers(pid_t pid[2], int p_command[2][2], int p_status[2][2],
 	unsigned players = (control->fade > 0) ? 2 : 1;
 
 	if (restart) {
-		addMessage(1, "Restarting reader");
+		addMessage(1, "kill and restart reader");
+		control->watchdog = STREAM_TIMEOUT;
 		if (control->current == NULL) {
 			addMessage(-1, "Restarting on empty player!");
 		}
-		/* make sure that the player gets restarted */
-		control->watchdog = STREAM_TIMEOUT + 1;
 
 		/* starting on an error? Not good.. */
 		if ((control->status == mpc_start) && (control->mpmode & PM_DATABASE)) {
@@ -686,7 +701,7 @@ static void killPlayers(pid_t pid[2], int p_command[2][2], int p_status[2][2],
 	/* ask nicely first.. */
 	for (i = 0; i < players; i++) {
 		activity(0, "Stopping player %" PRId64, i);
-		dowrite(p_command[i][1], "QUIT\n", 5);
+		toPlayer(p_command[i][1], "QUIT\n");
 		close(p_command[i][1]);
 		close(p_status[i][0]);
 		close(p_error[i][0]);
@@ -715,18 +730,31 @@ static void killPlayers(pid_t pid[2], int p_command[2][2], int p_status[2][2],
 	activity(1, "All unlocked");
 }
 
-/* stops the current title. That means send a stop to a stream and a pause
- * to a database title. */
 static void stopPlay(int channel) {
 	mpconfig_t *control = getConfig();
 
+	if (control->status == mpc_stop) {
+		addMessage(1, "Patience we are altready stopping..");
+		return;
+	}
+
+	if (control->status != mpc_idle) {
+		control->status = mpc_stop;
+		toPlayer(channel, "STOP\n");
+	}
+}
+
+/* stops the current title. That means send a stop to a stream and a pause
+ * to a database title. */
+static void pausePlay(int channel) {
+	mpconfig_t *control = getConfig();
+
 	if (control->status == mpc_play) {
-		control->status = mpc_idle;
 		if (control->mpmode & PM_STREAM) {
-			dowrite(channel, "STOP\n", 6);
+			stopPlay(channel);
 		}
 		else {
-			dowrite(channel, "PAUSE\n", 7);
+			toPlayer(channel, "PAUSE\n");
 		}
 	}
 }
@@ -829,6 +857,8 @@ void *reader(void *arg) {
 		close(p_error[i][1]);
 	}
 
+	control->watchdog = 0;
+
 	/* check if we can control the system's volume */
 	control->volume = getVolume();
 	switch (control->volume) {
@@ -864,27 +894,29 @@ void *reader(void *arg) {
 		 * changes - most likely due to a DSL reconnect - or if the stream host
 		 * fails.
 		 */
+		if (control->watchdog >= STREAM_TIMEOUT) {
+			addMessage(1, "Player restart! cmd:%s - status:%s",
+					   mpcString(control->command),
+					   mpcString(control->status));
+			/* if this is already a retry, fall back to something better */
+			if (control->status == mpc_start) {
+				if (oactive == control->active) {
+					addMessage(-1,
+							   "Stream error, switching to default profile");
+					control->active = 1;
+				}
+				else {
+					addMessage(-1,
+							   "Stream error, switching back to previous program");
+					control->active = oactive;
+				}
+			}
+			killPlayers(pid, p_command, p_status, p_error, 1);
+			return NULL;
+		}
 		if ((i == 0) && (control->mpmode & PM_STREAM) &&
 			(control->status != mpc_idle)) {
 			control->watchdog++;
-			if (control->watchdog > STREAM_TIMEOUT) {
-				addMessage(-1, "Player froze!");
-				/* if this is already a retry, fall back to something better */
-				if (control->status == mpc_start) {
-					if (oactive == control->active) {
-						addMessage(-1,
-								   "Stream error, switching to default profile");
-						control->active = 1;
-					}
-					else {
-						addMessage(-1,
-								   "Stream error, switching back to previous program");
-						control->active = oactive;
-					}
-				}
-				killPlayers(pid, p_command, p_status, p_error, 1);
-				return NULL;
-			}
 		}
 		else {
 			control->watchdog = 0;
@@ -925,8 +957,7 @@ void *reader(void *arg) {
 								outvol--;
 								snprintf(line, MAXPATHLEN, "volume %i\n",
 										 outvol);
-								dowrite(p_command[fdset ? 0 : 1][1], line,
-										strlen(line));
+								toPlayer(p_command[fdset ? 0 : 1][1], line);
 							}
 							break;
 						}
@@ -966,16 +997,15 @@ void *reader(void *arg) {
 					break;
 
 				case 'I':		/* ID3 info */
-
+					/* ignore ID3 info on database play */
+					if (control->mpmode & PM_DATABASE) {
+						break;
+					}
 					/* ICY stream info */
 					if ((control->current != NULL)
 						&& (NULL != strstr(line, "ICY-"))) {
 						if (NULL != strstr(line, "ICY-NAME: ")) {
-							if (control->current->prev == NULL) {
-								addMessage(0,
-										   "Got stream title before playlist!?");
-							}
-							else {
+							if (control->current->prev != NULL) {
 								strip(control->current->prev->title->title,
 									  line + 13, NAMELEN - 1);
 								update = 1;
@@ -1052,7 +1082,7 @@ void *reader(void *arg) {
 					if (invol < 100) {
 						invol++;
 						snprintf(line, MAXPATHLEN, "volume %i\n", invol);
-						dowrite(p_command[fdset][1], line, strlen(line));
+						toPlayer(p_command[fdset][1], line);
 					}
 
 					if (intime != oldtime) {
@@ -1104,7 +1134,7 @@ void *reader(void *arg) {
 								fdset = fdset ? 0 : 1;
 								invol = 0;
 								outvol = 100;
-								dowrite(p_command[fdset][1], "volume 0\n", 9);
+								toPlayer(p_command[fdset][1], "volume 0\n");
 								sendplay(p_command[fdset][1]);
 							}
 						}
@@ -1116,22 +1146,23 @@ void *reader(void *arg) {
 
 					switch (cmd) {
 					case 0:	/* STOP */
-						addMessage(2, "FG Player stopped");
+						addMessage(1, "FG Player stopped");
 						/* player was not yet fully initialized or the current
 						 * profile/stream has changed start again */
+						if (control->status == mpc_stop) {
+							control->status = mpc_idle;
+							break;
+						}
+						/* unclear how this happens... */
 						if (control->status == mpc_start) {
-							addMessage(2, "(Re)Start play..");
-							sendplay(p_command[fdset][1]);
+							break;
 						}
 						/* stream stopped playing (PAUSE/switch profile) */
 						else if (control->mpmode & PM_STREAM) {
-							addMessage(2, "Stream stopped");
-							if (control->mpmode & PM_SWITCH) {
-								control->status = mpc_start;
-							}
+							addMessage(1, "Stream stopped");
 							/* stream stopped without user interaction */
-							else if (control->status == mpc_play) {
-								addMessage(0, "Trying to restart stream");
+							if (control->status == mpc_play) {
+								addMessage(1, "Trying to restart stream");
 								control->status = mpc_start;
 								sendplay(p_command[fdset][1]);
 							}
@@ -1181,19 +1212,14 @@ void *reader(void *arg) {
 							}
 							order = 1;
 						}
-						else {
-							addMessage(1, "Preparing for new start");
-							control->status = mpc_start;
-						}
 						break;
 
 					case 1:	/* PAUSE */
-						control->status = mpc_idle;
+						control->status = mpc_pause;
 						break;
 
 					case 2:	/* PLAY */
-						if ((control->status == mpc_start) ||
-							(control->mpmode & PM_SWITCH)) {
+						if (control->mpmode & PM_SWITCH) {
 							addMessage(1, "Playing profile #%i",
 									   control->active);
 							control->mpmode &= ~PM_SWITCH;
@@ -1224,8 +1250,7 @@ void *reader(void *arg) {
 								   control->current->title->display,
 								   fullpath(control->current->title->path));
 					}
-					killPlayers(pid, p_command, p_status, p_error, 1);
-					return NULL;
+					control->watchdog = STREAM_TIMEOUT;
 					break;
 
 				default:
@@ -1243,10 +1268,7 @@ void *reader(void *arg) {
 			key = readline(line, MAXPATHLEN, p_error[fdset][0]);
 			if (strstr(line, "rror: ")) {
 				addMessage(-1, "%s", strstr(line, "rror: ") + 6);
-				control->active = oactive;
-				/* it should be enough to just reset to the previous state
-				 * if the player is in fact dead, then the watchdog should trigger */
-				asyncRun(plSetProfile);
+				control->watchdog = STREAM_TIMEOUT;
 			}
 			else if (key > 1) {
 				addMessage(0, "FE: %s", line);
@@ -1281,23 +1303,25 @@ void *reader(void *arg) {
 
 		switch (cmd) {
 		case mpc_start:
-			plCheck(0);
+			addMessage(1, "mpc_start (%s)", mpcString(control->status));
 			if (control->status == mpc_start) {
-				dowrite(p_command[fdset][1], "STOP\n", 6);
+				addMessage(1, "Already starting!");
 			}
 			else {
+				plCheck(0);
 				control->status = mpc_start;
 				sendplay(p_command[fdset][1]);
+				notifyChange(MPCOMM_CONFIG);
 			}
-			notifyChange(MPCOMM_CONFIG);
 			break;
 
 		case mpc_play:
+			addMessage(1, "mpc_play (%s)", mpcString(control->status));
 			/* has the player been properly initialized yet? */
 			if (control->status != mpc_start) {
 				/* simple stop */
 				if (control->status == mpc_play) {
-					stopPlay(p_command[fdset][1]);
+					pausePlay(p_command[fdset][1]);
 				}
 				/* play */
 				else {
@@ -1307,8 +1331,7 @@ void *reader(void *arg) {
 					}
 					/* unpause on normal play */
 					else {
-						dowrite(p_command[fdset][1], "PAUSE\n", 7);
-						control->status = mpc_play;
+						toPlayer(p_command[fdset][1], "PAUSE\n");
 					}
 				}
 			}
@@ -1330,7 +1353,7 @@ void *reader(void *arg) {
 				break;
 			}
 			if (control->playtime > 3) {
-				dowrite(p_command[fdset][1], "JUMP 0\n", 8);
+				toPlayer(p_command[fdset][1], "JUMP 0\n");
 				control->percent = 0;
 				control->playtime = 0;
 			}
@@ -1340,7 +1363,7 @@ void *reader(void *arg) {
 					order = -atoi(control->argument);
 					sfree(&(control->argument));
 				}
-				dowrite(p_command[fdset][1], "STOP\n", 6);
+				toPlayer(p_command[fdset][1], "STOP\n");
 				pthread_mutex_unlock(&_asynclock);
 			}
 			break;
@@ -1360,7 +1383,7 @@ void *reader(void *arg) {
 				else {
 					skipped = 1;
 				}
-				dowrite(p_command[fdset][1], "STOP\n", 6);
+				toPlayer(p_command[fdset][1], "STOP\n");
 				pthread_mutex_unlock(&_asynclock);
 			}
 			break;
@@ -1380,10 +1403,8 @@ void *reader(void *arg) {
 			break;
 
 		case mpc_stop:
-			if (asyncTest()) {
-				stopPlay(p_command[fdset][1]);
-				pthread_mutex_unlock(&_asynclock);
-			}
+			addMessage(1, "mpc_stop (%s)", mpcString(control->status));
+			stopPlay(p_command[fdset][1]);
 			break;
 
 		case mpc_dnp:
@@ -1391,7 +1412,7 @@ void *reader(void *arg) {
 				if (ctitle == control->current->title) {
 					/* current title is affected, play the next one */
 					order = 0;
-					dowrite(p_command[fdset][1], "STOP\n", 6);
+					toPlayer(p_command[fdset][1], "STOP\n");
 				}
 				handleRangeCmd(ctitle, control->command);
 				plCheck(1);
@@ -1408,7 +1429,7 @@ void *reader(void *arg) {
 			break;
 
 		case mpc_repl:
-			dowrite(p_command[fdset][1], "JUMP 0\n", 8);
+			toPlayer(p_command[fdset][1], "JUMP 0\n");
 			control->percent = 0;
 			control->playtime = 0;
 			break;
@@ -1437,7 +1458,7 @@ void *reader(void *arg) {
 						/* switching channels started */
 						control->mpmode |= PM_SWITCH;
 						/* stop the current play */
-						stopPlay(p_command[fdset][1]);
+						order = 0;
 						/* write database if needed */
 						dbWrite(0);
 						if (control->active < 0) {
@@ -1568,13 +1589,8 @@ void *reader(void *arg) {
 				else {
 					if (setArgument(control->argument)) {
 						control->active = 0;
-						if (control->status == mpc_start) {
-							dowrite(p_command[fdset][1], "STOP\n", 6);
-						}
-						else {
-							control->status = mpc_start;
-							sendplay(p_command[fdset][1]);
-						}
+						stopPlay(p_command[fdset][1]);
+						sendplay(p_command[fdset][1]);
 					}
 					sfree(&(control->argument));
 				}
@@ -1593,11 +1609,11 @@ void *reader(void *arg) {
 			break;
 
 		case mpc_bskip:
-			dowrite(p_command[fdset][1], "JUMP -64\n", 10);
+			toPlayer(p_command[fdset][1], "JUMP -64\n");
 			break;
 
 		case mpc_fskip:
-			dowrite(p_command[fdset][1], "JUMP +64\n", 10);
+			toPlayer(p_command[fdset][1], "JUMP +64\n");
 			break;
 
 		case mpc_dbinfo:

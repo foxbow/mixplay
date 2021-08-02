@@ -56,7 +56,8 @@ typedef enum {
 	mpc_mute,
 	mpc_favplay,				/* 30 */
 	mpc_reset,
-	mpc_idle,					/* 0x20 */
+	mpc_pause,					/* 0x20 */
+	mpc_idle,
 	/* by order of strength - fav-title beats dnp-album */
 	mpc_genre = 1 << 8,			/* 0x0100 */
 	mpc_artist = 1 << 9,		/* 0x0200 */

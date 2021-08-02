@@ -5,7 +5,7 @@ if [ -f /tmp/mixplayd.pid ]; then
   LIST=$(echo -e "${LIST}" | grep mixplayd)
   RES=$(echo -e "${LIST}" | grep ${PID})
   if [ "${RES}" != "" ]; then
-      echo -n "Stopping mixplayd "
+      echo "Stopping mixplayd.."
       kill ${PID}
       if [ $? != 0 ]; then
           echo "Error while stopping mixplayd.."
@@ -17,9 +17,8 @@ if [ -f /tmp/mixplayd.pid ]; then
         if [ ! -f /tmp/mixplayd.pid ]; then
           exit
         fi
-        echo -n "."
       done
-      echo -e "\nKilling mixplayd!"
+      echo "Killing mixplayd!"
       kill -9 ${PID}
   else
     echo "mixplayd(${PID}) does not exist!"

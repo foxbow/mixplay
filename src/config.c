@@ -79,6 +79,7 @@ static const char *mpccommand[] = {
 	"mute",
 	"favplay",
 	"reset",
+	"pause",
 	"idle"
 };
 
@@ -319,7 +320,7 @@ mpconfig_t *readConfig(void) {
 	_cconfig->playtime = 0;
 	_cconfig->remtime = 0;
 	_cconfig->percent = 0;
-	_cconfig->status = mpc_start;
+	_cconfig->status = mpc_idle;
 	_cconfig->command = mpc_idle;
 	_cconfig->dbname = (char *) falloc(MAXPATHLEN + 1, 1);
 	_cconfig->password = strdup("mixplay");

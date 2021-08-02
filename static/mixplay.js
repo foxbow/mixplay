@@ -1439,6 +1439,8 @@ function playerUpdate (data) {
       addText(data.msg)
     }
   }
+
+  setElement('status', 'cmd:' + data.mpcmd + ' - status:' + data.mpstatus)
 }
 
 /*
@@ -1651,8 +1653,8 @@ function updateConfig (data) {
   /*  idlesleep = data.sleepto * 1000 */
 
   /* client debug is off but the server is in full debug mode */
-  if (data.debug > 1) {
-    debug = true
+  if ((debug === false) && (data.debug > 1)) {
+    toggleDebug()
   }
 }
 
@@ -1807,6 +1809,7 @@ function toggleDebug () {
   } else {
     setElement('debug', 'Enable Debug')
   }
+  enableElement('status', debug)
   doUpdate |= 1
 }
 

@@ -74,7 +74,7 @@ void fail(const int error, const char *msg, ...) {
  * keyboard support for -d
  */
 static char _lasttitle[MAXPATHLEN + 1];
-static mpcmd_t _last = mpc_start;
+static mpcmd_t _last = mpc_idle;
 
 /*
  * print title and play changes
@@ -251,11 +251,11 @@ int main(int argc, char **argv) {
 			addMessage(1, "Waiting for reader to stop");
 			pthread_join(control->rtid, NULL);
 			addMessage(1, "Reader stopped");
-			if (control->watchdog > STREAM_TIMEOUT) {
-				addMessage(-1, "Restarting reader");
+			if (control->watchdog >= STREAM_TIMEOUT) {
+				addMessage(1, "Restarting after timeout");
 				initAll();
 			}
-		} while (control->watchdog > STREAM_TIMEOUT);
+		} while (control->watchdog >= STREAM_TIMEOUT);
 		addMessage(1, "Waiting for server to stop");
 		pthread_join(control->stid, NULL);
 		if (hidtid > 0) {
