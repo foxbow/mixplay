@@ -9,7 +9,7 @@ CCFLAGS+=-std=gnu11 -Wall -Wextra -pedantic -Werror -I . -g
 
 OBJS=$(addprefix $(OBJDIR)/,mpserver.o utils.o musicmgr.o database.o \
   config.o mpcomm.o json.o msgbuf.o mpinit.o mphid.o mpgutils.o player.o \
-	mpflirc.o)
+	mpflirc.o mpalsa.o)
 
 CLOBJS=$(addprefix $(OBJDIR)/,utils.o msgbuf.o config.o json.o mpclient.o \
   mpcomm.o )
