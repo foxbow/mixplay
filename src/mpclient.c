@@ -54,6 +54,10 @@ int setMPHost(const char *host) {
 	return 0;
 }
 
+const char *getMPHost(void) {
+	return _mphost;
+}
+
 #define RBLKSIZE 512
 
 /* send a get request to the server and return the reply as a string

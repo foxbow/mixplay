@@ -12,6 +12,7 @@ typedef struct {
 
 int setMPPort(int port);
 int setMPHost(const char *host);
+const char *getMPHost(void);
 clientInfo *getConnection(int keep);
 
 int sendCMD(clientInfo * usefd, mpcmd_t cmd);

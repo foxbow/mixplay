@@ -67,12 +67,11 @@ int main(int argc, char **argv) {
 	if (argc == 2) {
 		setMPHost(argv[1]);
 	}
-	else {
-		ci = getConnection(1);
-		if (ci->fd < 0) {
-			fail(errno, "Could not connect to server (%i)!", ci->fd);
-		}
+	ci = getConnection(1);
+	if (ci->fd < 0) {
+		fail(errno, "Could not connect to server (%s)!", getMPHost());
 	}
+
 	hidPrintline("Mixplay HID demo\n");
 	hidPrintline("%s", last);
 

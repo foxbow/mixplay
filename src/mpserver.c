@@ -176,7 +176,8 @@ static void *clientHandler(void *args) {
 	fd_set fds;
 	mpconfig_t *config;
 	httpstate state = req_none;
-	char *pos, *end, *arg;
+	char *pos = NULL;
+	char *end, *arg;
 	mpcmd_t cmd = mpc_idle;
 	static const char *mtype;
 	char line[MAXPATHLEN] = "";

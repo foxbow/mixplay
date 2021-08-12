@@ -1101,12 +1101,20 @@ void *reader(void *arg) {
 
 		if (FD_ISSET(p_error[fdset][0], &fds)) {
 			key = readline(line, MAXPATHLEN, p_error[fdset][0]);
-			if (strstr(line, "rror: ")) {
-				addMessage(-1, "%s", strstr(line, "rror: ") + 6);
-				control->watchdog = STREAM_TIMEOUT;
-			}
-			else if (key > 1) {
-				addMessage(0, "FE: %s", line);
+			if (key > 1) {
+				if (strstr(line, "rror: ")) {
+					addMessage(-1, "%s", strstr(line, "rror: ") + 6);
+					control->watchdog = STREAM_TIMEOUT;
+				}
+				else if (strstr(line, "Warning: ") == line) {
+					/* ignore content-type warnings */
+					if (!strstr(line, "content-type")) {
+						addMessage(0, "FE: %s", line);
+					}
+				}
+				else {
+					addMessage(1, "FE: %s", line);
+				}
 			}
 		}
 
