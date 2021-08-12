@@ -82,7 +82,7 @@ static int filePost(int sock, const char *fname) {
  */
 static char *strdec(char *target, const char *src) {
 	unsigned int i, j;
-	char buf;
+	char buf = 0;
 	int state = 0;
 
 	for (i = 0, j = 0; i < strlen(src); i++) {
@@ -186,7 +186,7 @@ static void *clientHandler(void *args) {
 	ssize_t recvd = 0;
 	static const char *fname;
 	static const unsigned char *fdata;
-	unsigned int flen;
+	unsigned int flen = 0;
 	int fullstat = MPCOMM_STAT;
 	int index = 0;
 	mptitle_t *title = NULL;
