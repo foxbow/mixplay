@@ -1300,8 +1300,6 @@ void *reader(void *arg) {
 						}
 						/* switching channels started */
 						control->mpmode |= PM_SWITCH;
-						/* stop the current play */
-						order = 0;
 						/* write database if needed */
 						dbWrite(0);
 						if (control->active < 0) {
