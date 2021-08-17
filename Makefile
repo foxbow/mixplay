@@ -4,8 +4,11 @@ SRCDIR=src
 OBJDIR=build
 
 CCFLAGS+=-DVERSION=\"$(VERSION)\"
-#CCFLAGS+=-std=gnu11 -Wall -Wextra -pedantic -Werror -I . -g
+ifdef MPDEBUG
+CCFLAGS+=-std=gnu11 -Wall -Wextra -pedantic -Werror -I . -g
+else
 CCFLAGS+=-std=gnu11 -Wall -Wextra -Werror -pedantic -I . -O2
+endif
 
 OBJS=$(addprefix $(OBJDIR)/,mpserver.o utils.o musicmgr.o database.o \
   config.o mpcomm.o json.o msgbuf.o mpinit.o mphid.o mpgutils.o player.o \
@@ -24,10 +27,8 @@ REFS=alsa
 # Install globally when called as root
 ifeq ("$(shell id -un)","root")
 BINDIR=/usr/local/bin
-SHAREDIR=/usr/local/share
 else
 BINDIR=$(HOME)/bin
-SHAREDIR=$(HOME)/.local/share
 endif
 
 LIBS+=$(shell pkg-config --libs $(REFS))
@@ -46,17 +47,13 @@ clean:
 	rm -f bin/mprcinit
 
 distclean: clean
-	rm -f static/*~
+	find . -name "*~" -exec rm \{\} \;
 	rm -f $(SRCDIR)/gmixplay_app.h
 	rm -f $(SRCDIR)/mprc_html.h
 	rm -f $(SRCDIR)/mixplayd_*.h
 	rm -f $(SRCDIR)/mpplayer_*.h
-	rm -f $(SRCDIR)/*~
 	rm -rf cov-int
-	rm -rf *cov.tgz
-	rm -f mixplayd
-	rm -f mixplay-hid
-	rm -f mprcinit
+	rm -f *cov.tgz
 	rm -f core
 
 new: clean all

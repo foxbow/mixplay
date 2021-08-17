@@ -33,6 +33,4 @@ mptitle_t *getTitleForRange(const mpcmd_t range, const char *name);
 void dbMarkDirty(void);
 int mp3Exists(const mptitle_t * title);
 
-/* void dbDump( const char *dbname, mptitle_t *root ); */
-
 #endif /* DATABASE_H_ */

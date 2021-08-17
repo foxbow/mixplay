@@ -782,16 +782,16 @@ static jsonObject *jsonFollowPath(jsonObject * jo, const char *key) {
  * looks for an errormessage and ignores the path to it.
  */
 static jsonObject *jsonFindKey(jsonObject * jo, const char *key) {
-	jsonObject *knot = NULL;
+	jsonObject *node = NULL;
 
 	while (jo != NULL) {
 		if (strcmp(jo->key, key) == 0) {
 			break;
 		}
 		if ((jo->type == json_object) || (jo->type == json_array)) {
-			knot = jsonFindKey((jsonObject *) jo->val, key);
-			if (knot != NULL) {
-				jo = knot;
+			node = jsonFindKey((jsonObject *) jo->val, key);
+			if (node != NULL) {
+				jo = node;
 				break;
 			}
 		}

@@ -235,7 +235,8 @@ static void *clientHandler(void *args) {
 				running &= ~CL_RUN;
 				break;
 			default:
-				addMessage(1, "Reaping dead connection (%i)", clientid);
+				addMessage(1, "Reaping dead connection (%i) on %i - %s",
+						   clientid, errno, strerror(errno));
 				running &= ~CL_RUN;
 			}
 		}

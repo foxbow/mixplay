@@ -59,14 +59,15 @@ int main(int argc, char **argv) {
 		fail(F_FAIL, "No mixplayd configuration found!");
 	}
 
+	if (argc == 2) {
+		setMPHost(argv[1]);
+	}
+
 	fd = getCurrentTitle(last, MAXPATHLEN);
 	if (fd < 0) {
 		fail(errno, "Could not get current title!");
 	}
 
-	if (argc == 2) {
-		setMPHost(argv[1]);
-	}
 	ci = getConnection(1);
 	if (ci->fd < 0) {
 		fail(errno, "Could not connect to server (%s)!", getMPHost());

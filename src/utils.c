@@ -94,10 +94,9 @@ char *strip(char *buff, const char *text, const size_t maxlen) {
  * The line is read until EOF or \n and then returned. The returned string
  * must be free()d. If no data is available the function returns NULL */
 char *fetchline(FILE * fp) {
-	char *line = falloc(256, 1);
-	char *rv = NULL;
+	char *line = NULL;
 	int len = 0;
-	int size = 256;
+	int size = 0;
 	int c;
 
 	c = fgetc(fp);
@@ -111,12 +110,7 @@ char *fetchline(FILE * fp) {
 		c = fgetc(fp);
 	}
 
-	if (len > 0) {
-		rv = strdup(line);
-	}
-	free(line);
-
-	return rv;
+	return line;
 }
 
 /**
@@ -304,7 +298,7 @@ void *frealloc(void *old, size_t size) {
 }
 
 /**
- * just free something if it actually exists
+ * just free something if it actually exists and set the pointer to NULL
  */
 void sfree(char **ptr) {
 	if (*ptr != NULL) {
@@ -414,7 +408,7 @@ int fileRevert(const char *path) {
 
 /* waits for a keypress
    timeout - timeout in ms
-	 returns character code of keypress or -1 on timeout */
+   returns character code of keypress or -1 on timeout */
 int getch(long timeout) {
 	int c = 0;
 	struct termios org_opts, new_opts;
