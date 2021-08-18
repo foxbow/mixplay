@@ -1033,7 +1033,7 @@ void *reader(void *arg) {
 									order--;
 								}
 								/* stop on end of playlist */
-								if (control->current->next == NULL) {
+								if (order > 0) {
 									control->status = mpc_idle;	/* stop */
 								}
 							}
@@ -1045,8 +1045,9 @@ void *reader(void *arg) {
 							if (control->mpmode == PM_DATABASE) {
 								plCheck(0);
 							}
-							order = 1;
 						}
+						/* always re-enable proper playorder after stop */
+						order = 1;
 						break;
 
 					case 1:	/* PAUSE */
