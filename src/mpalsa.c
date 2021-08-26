@@ -94,7 +94,9 @@ long controlVolume(long volume, int absolute) {
 	}
 
 	/* for some reason this can happen and lead to an assert error
-	 * Give a stern warning and return default */
+	 * Give a stern warning and return default
+	 * TODO with any luck this may become an assertion again if
+	 *      disconnecting alsa on restart does it right */
 	if (_elem == NULL) {
 		addMessage(-1, "Volume control is not fully initialized!");
 		return config->volume;

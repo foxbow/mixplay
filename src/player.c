@@ -556,6 +556,7 @@ static void killPlayers(pid_t pid[2], int p_command[2][2], int p_status[2][2],
 		}
 	}
 	activity(0, "Players stopped!");
+	closeAudio();
 	if (!asyncTest()) {
 		addMessage(1, "Shutting down on active async!");
 	}
@@ -1630,7 +1631,6 @@ void *reader(void *arg) {
 	/* stop player(s) gracefully */
 	killPlayers(pid, p_command, p_status, p_error, 0);
 	addMessage(0, "Players stopped");
-	closeAudio();
 
 	/* todo: should not be needed */
 	sleep(1);
