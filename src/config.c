@@ -1006,12 +1006,17 @@ void blockSigint() {
 	}
 }
 
+static unsigned numclients = 0;
+
 int getFreeClient(void) {
 	int i;
 
 	for (i = 0; i < MAXCLIENT; i++) {
 		if (getConfig()->client[i] == 0) {
 			getConfig()->client[i] = 1;
+			numclients++;
+			addMessage(1, "client %i connected, %i clients connected", i + 1,
+					   numclients);
 			return i + 1;
 		}
 	}
@@ -1021,10 +1026,32 @@ int getFreeClient(void) {
 	return -1;
 }
 
-void freeClient(int client) {
+/*
+ * whenever a client sends a message, it will reset it's idle counter and
+ * all other clients will be increased. If the idle counter hits a threshold
+ * the connection is considered dead
+ */
+void triggerClient(int client) {
+	int run;
+
 	client--;
-	if ((client >= 0) && (client < MAXCLIENT)) {
-		getConfig()->client[client] = 0;
+
+	for (run = 0; run < MAXCLIENT; run++) {
+		if (run == client) {
+			getConfig()->client[run] = 1;
+		}
+		else {
+			if (getConfig()->client[run] > 0) {
+				getConfig()->client[run]++;
+				if (getConfig()->client[run] > (2 * numclients)) {
+					getConfig()->client[run] = 0;
+					numclients--;
+					addMessage(1,
+							   "client %i disconnected, %i clients connected",
+							   run + 1, numclients);
+				}
+			}
+		}
 	}
 }
 

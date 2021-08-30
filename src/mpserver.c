@@ -157,10 +157,10 @@ static size_t serviceUnavailable(char *commdata) {
 	return strlen(commdata);
 }
 
+#define CL_STP 0
 #define CL_RUN 1
-#define CL_UPD 2
-#define CL_ONE 4
-#define CL_SRC 8
+#define CL_ONE 2
+#define CL_SRC 4
 
 /**
  * This will handle connection for each client
@@ -170,7 +170,7 @@ static void *clientHandler(void *args) {
 	size_t len = 0;
 	size_t sent, msglen;
 	struct timeval to;
-	unsigned running = CL_RUN;
+	unsigned running = CL_ONE;
 	char *commdata = NULL;
 	char *jsonLine = NULL;
 	fd_set fds;
@@ -191,6 +191,7 @@ static void *clientHandler(void *args) {
 	int index = 0;
 	mptitle_t *title = NULL;
 	struct stat sbuf;
+	int lastclient = 0;
 
 	/* for search polling */
 	struct timespec ts;
@@ -200,7 +201,6 @@ static void *clientHandler(void *args) {
 	char *manifest = NULL;
 	unsigned method = 0;
 	mpReqInfo reqInfo = { 0, NULL, 0 };
-	int clientid = 0;
 
 	commdata = (char *) falloc(commsize, sizeof (char));
 	sock = *(int *) args;
@@ -220,24 +220,26 @@ static void *clientHandler(void *args) {
 		if (select(FD_SETSIZE, &fds, NULL, NULL, &to) < 1) {
 			switch (errno) {
 			case EINTR:
-				addMessage(1, "select(%i): Interrupt", clientid);
+				addMessage(1, "select(%i): Interrupt", sock);
 				break;
 			case EBADF:
-				addMessage(1, "select(%i): Dead Socket", clientid);
-				running &= ~CL_RUN;
+				addMessage(1, "select(%i): Dead Socket", sock);
+				running = CL_STP;
 				break;
 			case EINVAL:
-				addMessage(1, "Invalid fds on %i", clientid);
-				running &= ~CL_RUN;
+				addMessage(1, "Invalid fds on %i", sock);
+				running = CL_STP;
 				break;
 			case ENOMEM:
-				addMessage(1, "select(%i): No memory", clientid);
-				running &= ~CL_RUN;
+				addMessage(1, "select(%i): No memory", sock);
+				running = CL_STP;
 				break;
 			default:
-				addMessage(1, "Reaping dead connection (%i) on %i - %s",
-						   clientid, errno, strerror(errno));
-				running &= ~CL_RUN;
+				/* Happens when a new request comes in while an old one is
+				 * still handled, so it is kind of a one-shot but with a
+				 * valid client id */
+				addMessage(2, "Reaping dead client %i", lastclient);
+				running = CL_STP;
 			}
 		}
 
@@ -262,13 +264,13 @@ static void *clientHandler(void *args) {
 					addMessage(1, "Truncated request (%li): %s",
 							   (long) (commsize - recvd), commdata);
 				}
-				running &= ~CL_RUN;
+				running = CL_STP;
 			}
 			/* an error occured, EAGAIN and EWOULDBLOCK are ignored */
 			else if ((retval == -1) &&
 					 (errno != EAGAIN) && (errno != EWOULDBLOCK)) {
 				addMessage(1, "Read error on socket!\n%s", strerror(errno));
-				running &= ~CL_RUN;
+				running = CL_STP;
 			}
 			/* all seems good.. */
 			else {
@@ -310,70 +312,25 @@ static void *clientHandler(void *args) {
 						}
 					}
 
-					/* known client send a request */
-					if (reqInfo.clientid > 0) {
-						/* but the handler is free */
-						if (clientid == 0) {
-							clientid = reqInfo.clientid;
-							/* is the original handler still active? */
-							if (trylockClient(reqInfo.clientid)) {
-								/* No, become new update handler */
-								running |= CL_UPD;
-								/* no initMsgCnt(clientid); as this may still be correct */
-								addNotify(clientid, MPCOMM_TITLES);
-								/* After a client reload the clientid/socket alignment is lost */
-								addMessage(1, "Recreate Update Handler for %i",
-										   reqInfo.clientid);
-							}
-							else {
-								/* treat as one-shot for now */
-								running = CL_ONE;
-								addMessage(1, "Temporary one-shot for %i",
-										   reqInfo.clientid);
-							}
-						}
-						if (clientid != reqInfo.clientid) {
-							addMessage(0,
-									   "Client mix up, expcted %i and got %i!",
-									   clientid, reqInfo.clientid);
-						}
-					}
-
+					/* new update client request */
 					if (reqInfo.clientid == -1) {
-						if (clientid == 0) {
-							/* a new update client! Good, that one should get status updates too! */
-							reqInfo.clientid = getFreeClient();
-							if (reqInfo.clientid == -1) {
-								/* no client - no service */
-								state = req_noservice;
-								break;
-							}
-							running |= CL_UPD;
-							clientid = reqInfo.clientid;
-							initMsgCnt(clientid);
-							addNotify(clientid, MPCOMM_TITLES);
-							addMessage(1,
-									   "Update Handler for client %i initialized",
-									   clientid);
+						reqInfo.clientid = getFreeClient();
+						if (reqInfo.clientid == -1) {
+							/* no client - no service */
+							state = req_noservice;
+							break;
 						}
-						else {
-							/* hopefully just a race condition ... */
-							addMessage(1, "Duplicate ID request for client %i",
-									   clientid);
-							reqInfo.clientid = clientid;
-						}
+						initMsgCnt(reqInfo.clientid);
+						addNotify(reqInfo.clientid, MPCOMM_TITLES);
+						addMessage(1,
+								   "Update Handler for client %i initialized",
+								   reqInfo.clientid);
 					}
 
-					/* Reload may reset the clientid/socket alignment */
-					if ((reqInfo.clientid == 0) && (clientid > 0)) {
-						addMessage(1, "One shot for client %i", clientid);
-						/* stopping the thread may be a bad idea.. */
-						/* running&=~CL_RUN; */
-					}
-
-					if (clientid == 0) {
-						addMessage(2, "One shot request");
-						running = CL_ONE;
+					if (reqInfo.clientid) {
+						running |= CL_RUN;
+						triggerClient(reqInfo.clientid);
+						lastclient = reqInfo.clientid;
 					}
 
 					if (end == NULL) {
@@ -420,7 +377,7 @@ static void *clientHandler(void *args) {
 								 "HTTP/1.0 404 Not Found\015\012\015\012", 25,
 								 0);
 							state = req_none;
-							running &= ~CL_RUN;
+							running = CL_STP;
 						}
 					}
 					else if (strstr(pos, "/version ") == pos) {
@@ -430,7 +387,7 @@ static void *clientHandler(void *args) {
 						send(sock, "HTTP/1.0 404 Not Found\015\012\015\012",
 							 25, 0);
 						state = req_none;
-						running &= ~CL_RUN;
+						running = CL_STP;
 					}
 					break;
 				case 2:		/* POST */
@@ -442,19 +399,14 @@ static void *clientHandler(void *args) {
 								   reqInfo.arg ? reqInfo.arg : "");
 						/* search is synchronous */
 						if (MPC_CMD(cmd) == mpc_search) {
-							if (setCurClient(clientid) == clientid) {
-								/* this client cannot already search! */
-								assert(getConfig()->found->state ==
-									   mpsearch_idle);
-								getConfig()->found->state = mpsearch_busy;
-								setCommand(cmd, reqInfo.arg ?
-										   strdup(reqInfo.arg) : NULL);
-								running |= CL_SRC;
-								state = req_update;
-							}
-							else {
-								state = req_noservice;
-							}
+							setCurClient(reqInfo.clientid);
+							/* this client cannot already search! */
+							assert(getConfig()->found->state == mpsearch_idle);
+							getConfig()->found->state = mpsearch_busy;
+							setCommand(cmd, reqInfo.arg ?
+									   strdup(reqInfo.arg) : NULL);
+							running |= CL_SRC;
+							state = req_update;
 						}
 					}
 					else {		/* unresolvable POST request */
@@ -462,7 +414,7 @@ static void *clientHandler(void *args) {
 							 "HTTP/1.0 406 Not Acceptable\015\012\015\012", 31,
 							 0);
 						state = req_none;
-						running &= ~CL_RUN;
+						running = CL_STP;
 					}
 					break;
 				case 3:		/* get file */
@@ -543,7 +495,7 @@ static void *clientHandler(void *args) {
 						send(sock, "HTTP/1.0 404 Not Found\015\012\015\012",
 							 25, 0);
 						state = req_none;
-						running &= ~CL_RUN;
+						running = CL_STP;
 					}
 					break;
 				case -1:
@@ -552,13 +504,13 @@ static void *clientHandler(void *args) {
 						 "HTTP/1.0 405 Method Not Allowed\015\012\015\012", 35,
 						 0);
 					state = req_none;
-					running &= ~CL_RUN;
+					running = CL_STP;
 					break;
 				case -2:		/* generic file not found */
 					send(sock, "HTTP/1.0 404 Not Found\015\012\015\012", 25,
 						 0);
 					state = req_none;
-					running &= ~CL_RUN;
+					running = CL_STP;
 					break;
 				default:
 					addMessage(0, "Unknown method %i!", method);
@@ -577,11 +529,11 @@ static void *clientHandler(void *args) {
 
 			case req_update:	/* get update */
 				/* add flags that have been set outside */
-				if (getNotify(clientid) != MPCOMM_STAT) {
+				if (getNotify(reqInfo.clientid) != MPCOMM_STAT) {
 					addMessage(2, "Notification %i for client %i applied",
-							   getNotify(clientid), clientid);
-					fullstat |= getNotify(clientid);
-					setNotify(clientid, MPCOMM_STAT);
+							   getNotify(reqInfo.clientid), reqInfo.clientid);
+					fullstat |= getNotify(reqInfo.clientid);
+					setNotify(reqInfo.clientid, MPCOMM_STAT);
 				}
 				/* only look at the search state if this is the searcher */
 				if ((running & CL_SRC)
@@ -592,7 +544,7 @@ static void *clientHandler(void *args) {
 						nanosleep(&ts, NULL);
 					}
 				}
-				jsonLine = serializeStatus(clientid, fullstat);
+				jsonLine = serializeStatus(reqInfo.clientid, fullstat);
 				if (jsonLine != NULL) {
 					sprintf(commdata,
 							"HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012",
@@ -619,7 +571,7 @@ static void *clientHandler(void *args) {
 					/* check commands that lock the reply channel */
 					if ((cmd == mpc_dbinfo) || (cmd == mpc_dbclean) ||
 						(cmd == mpc_doublets)) {
-						if (setCurClient(clientid) == -1) {
+						if (setCurClient(reqInfo.clientid) == -1) {
 							addMessage(1, "%s was blocked!", mpcString(cmd));
 							len = serviceUnavailable(commdata);
 							break;
@@ -720,10 +672,10 @@ static void *clientHandler(void *args) {
 				}
 				if (fullstat & MPCOMM_RESULT) {
 					config->found->state = mpsearch_idle;
-					if (clientid == 0) {
+					if (reqInfo.clientid == 0) {
 						addMessage(0, "Search reply goes to one-shot!");
 					}
-					unlockClient(clientid);
+					unlockClient(reqInfo.clientid);
 					/* clear result flag */
 					fullstat &= ~MPCOMM_RESULT;
 					/* done searching */
@@ -733,35 +685,20 @@ static void *clientHandler(void *args) {
 		}						/* if running */
 		if (config->status == mpc_quit) {
 			addMessage(0, "stopping handler");
-			running &= ~CL_RUN;
+			running = CL_STP;
 		}
 		reqInfo.cmd = 0;
 		sfree(&(reqInfo.arg));
 		reqInfo.clientid = 0;
 	} while (running & CL_RUN);
 
-	if (running & CL_UPD) {
-		if (clientid > 0) {
-			addMessage(1, "Update Handler (client %i) terminates", clientid);
-			freeClient(clientid);
-		}
-		else {
-			addMessage(0, "Update Handler for client 0 ?!");
-		}
-	}
-	else if (clientid) {
-		addMessage(1, "Updatehandler (client %i) got recycled", clientid);
-		freeClient(clientid);
-	}
-
 	addMessage(3, "Client handler exited");
-	if (isCurClient(clientid)) {
-		addMessage(1, "Unlocking client %i", clientid);
-		unlockClient(clientid);
-	}
-	if (running & CL_SRC) {
+	if (isCurClient(reqInfo.clientid)) {
+		addMessage(1, "Unlocking client %i", reqInfo.clientid);
+		unlockClient(reqInfo.clientid);
 		config->found->state = mpsearch_idle;
 	}
+
 	close(sock);
 	sfree(&manifest);
 	sfree(&commdata);
@@ -785,7 +722,7 @@ static void *mpserver(void *arg) {
 
 	blockSigint();
 
-	listen(mainsocket, 3);
+	listen(mainsocket, MAXCLIENT);
 	addMessage(1, "Listening on port %i", control->port);
 
 	/* redirect stdin/out/err in demon mode */

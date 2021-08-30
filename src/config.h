@@ -240,8 +240,8 @@ int playerIsBusy(void);
 void blockSigint();
 
 int getFreeClient(void);
-void freeClient(int);
 int trylockClient(int);
+void triggerClient(int);
 
 int getNotify(int);
 void setNotify(int, int);

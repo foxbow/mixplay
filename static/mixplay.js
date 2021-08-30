@@ -637,18 +637,11 @@ function sendCMDArg (cmd, arg) {
           fail('CMD Error: connection lost!')
           break
         case 204:
-          switch (activecmd) {
-            case 0x0d: /* vol+ */
-            case 0x0e: /* vol- */
-            case 0x1d: /* mute */
-              break
-            case 0x06: /* mpc_profile */
-              adaptUI(-1)
-              activecmd = -1
-              break
-            default:
-              activecmd = -1
+          if (activecmd === 0x06) {
+            adaptUI(-1)
           }
+          /* TODO: this is not correct! */
+          activecmd = -1
           if (doUpdate < 0) {
             document.location.reload()
           }
