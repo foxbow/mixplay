@@ -163,7 +163,22 @@ static size_t serviceUnavailable(char *commdata) {
 #define CL_SRC 4
 
 /**
- * This will handle connection for each client
+ * This will handle a connection
+ *
+ * since the context is HTTP the concept of a 'connection' does not really
+ * apply here. To keep the protocol as simple as possible, each client has
+ * has its own id and the clientHandler() will act according to this ID, not
+ * the socket as this may be shared in unsuspected ways. For example this
+ * allows two sessions in one browser.
+ *
+ * Since explicit disconnects are not really a thing in HTTP, we're using a
+ * watchdog mechanism to maintain active connections. See triggerClient()
+ *
+ * When the last handler stops, the last clientid will not be removed until a
+ * new client connects. This is not a real issue, as just the id of the last
+ * client will be locked but MAXCLIENT-1 others are still available. And after
+ * 2*clientnum triggerClient() calls the old client will be marked as dead
+ * again. It is not worth trying to clean up that id!
  */
 static void *clientHandler(void *args) {
 	int sock;
@@ -191,7 +206,6 @@ static void *clientHandler(void *args) {
 	int index = 0;
 	mptitle_t *title = NULL;
 	struct stat sbuf;
-	int lastclient = 0;
 
 	/* for search polling */
 	struct timespec ts;
@@ -217,9 +231,12 @@ static void *clientHandler(void *args) {
 
 		to.tv_sec = 2;
 		to.tv_usec = 0;
+		/* Either an error or a timeout */
 		if (select(FD_SETSIZE, &fds, NULL, NULL, &to) < 1) {
 			switch (errno) {
 			case EINTR:
+				/* the select was interrupted by a signal,
+				 * not worth bailing out */
 				addMessage(1, "select(%i): Interrupt", sock);
 				break;
 			case EBADF:
@@ -235,14 +252,13 @@ static void *clientHandler(void *args) {
 				running = CL_STP;
 				break;
 			default:
-				/* Happens when a new request comes in while an old one is
-				 * still handled, so it is kind of a one-shot but with a
-				 * valid client id */
-				addMessage(2, "Reaping dead client %i", lastclient);
+				/* timeout, no one was calling for two seconds */
+				addMessage(2, "Reaping unused clienthandler");
 				running = CL_STP;
 			}
 		}
 
+		/* fetch data if any */
 		if (FD_ISSET(sock, &fds)) {
 			memset(commdata, 0, commsize);
 			recvd = 0;
@@ -264,15 +280,18 @@ static void *clientHandler(void *args) {
 					addMessage(1, "Truncated request (%li): %s",
 							   (long) (commsize - recvd), commdata);
 				}
+				/* stop this client handler as we already have inconsistent
+				 * data at hand */
 				running = CL_STP;
 			}
 			/* an error occured, EAGAIN and EWOULDBLOCK are ignored */
 			else if ((retval == -1) &&
 					 (errno != EAGAIN) && (errno != EWOULDBLOCK)) {
 				addMessage(1, "Read error on socket!\n%s", strerror(errno));
+				/* The socket got broken so the client should terminate too */
 				running = CL_STP;
 			}
-			/* all seems good.. */
+			/* all seems good now parse the request.. */
 			else {
 				method = 0;
 				toLower(commdata);
@@ -316,21 +335,18 @@ static void *clientHandler(void *args) {
 					if (reqInfo.clientid == -1) {
 						reqInfo.clientid = getFreeClient();
 						if (reqInfo.clientid == -1) {
-							/* no client - no service */
+							/* no free clientid - no service */
 							state = req_noservice;
 							break;
 						}
 						initMsgCnt(reqInfo.clientid);
-						addNotify(reqInfo.clientid, MPCOMM_TITLES);
-						addMessage(1,
-								   "Update Handler for client %i initialized",
-								   reqInfo.clientid);
+						setNotify(reqInfo.clientid, MPCOMM_TITLES);
 					}
 
+					/* a valid client came in */
 					if (reqInfo.clientid) {
 						running |= CL_RUN;
 						triggerClient(reqInfo.clientid);
-						lastclient = reqInfo.clientid;
 					}
 
 					if (end == NULL) {
@@ -343,7 +359,13 @@ static void *clientHandler(void *args) {
 					}
 					/* everything else is treated like a GET <path> */
 					else {
-						method = 3;
+						if (method == 1) {
+							method = 3;
+						}
+						else {
+							addMessage(1, "Invalid POST request!");
+							method = -1;
+						}
 					}
 				}
 				switch (method) {
@@ -515,11 +537,13 @@ static void *clientHandler(void *args) {
 				default:
 					addMessage(0, "Unknown method %i!", method);
 					state = req_none;
+					running = CL_STP;
 					break;
 				}				/* switch(method) */
 			}					/* switch(retval) */
 		}						/* if fd_isset */
 
+		/* send a reply if needed */
 		if (running) {
 			memset(commdata, 0, commsize);
 			switch (state) {
@@ -533,7 +557,7 @@ static void *clientHandler(void *args) {
 					addMessage(2, "Notification %i for client %i applied",
 							   getNotify(reqInfo.clientid), reqInfo.clientid);
 					fullstat |= getNotify(reqInfo.clientid);
-					setNotify(reqInfo.clientid, MPCOMM_STAT);
+					clearNotify(reqInfo.clientid);
 				}
 				/* only look at the search state if this is the searcher */
 				if ((running & CL_SRC)

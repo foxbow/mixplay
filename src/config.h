@@ -245,7 +245,7 @@ void triggerClient(int);
 
 int getNotify(int);
 void setNotify(int, int);
-void addNotify(int, int);
+void clearNotify(int);
 
 unsigned long getMsgCnt(int);
 void setMsgCnt(int, unsigned long);

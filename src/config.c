@@ -1029,7 +1029,7 @@ int getFreeClient(void) {
 /*
  * whenever a client sends a message, it will reset it's idle counter and
  * all other clients will be increased. If the idle counter hits a threshold
- * the connection is considered dead
+ * the connection is considered dead.
  */
 void triggerClient(int client) {
 	int run;
@@ -1079,14 +1079,14 @@ int getNotify(int client) {
 void setNotify(int client, int state) {
 	client--;
 	if ((client >= 0) && (client < MAXCLIENT)) {
-		getConfig()->notify[client] = state;
+		getConfig()->notify[client] |= state;
 	}
 }
 
-void addNotify(int client, int state) {
+void clearNotify(int client) {
 	client--;
 	if ((client >= 0) && (client < MAXCLIENT)) {
-		getConfig()->notify[client] |= state;
+		getConfig()->notify[client] = MPCOMM_STAT;
 	}
 }
 

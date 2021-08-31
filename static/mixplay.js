@@ -566,8 +566,8 @@ function sendCMDArg (cmd, arg) {
     }
   }
 
-  /* ignore volume controls */
-  if ((cmd !== 0x0d) && (cmd !== 0x0e) && (cmd !== 0x1d)) {
+  /* ignore volume and progress controls */
+  if ((cmd !== 0x0d) && (cmd !== 0x0e) && (cmd !== 0x1d) && (cmd !== 0x0f) && (cmd !== 0x10)) {
     /* avoid stacking  */
     if (activecmd !== -1) {
       return
@@ -685,6 +685,15 @@ function volWheel (e) {
   }
 }
 
+function progWheel (e) {
+  e.preventDefault()
+  if (e.deltaY < 0) {
+    sendCMD(0x0f)
+  } else if (e.deltaY > 0) {
+    sendCMD(0x10)
+  }
+}
+
 /*
  * tap on the volume bar.
  * On mute just unmute, otherwise:
@@ -705,6 +714,16 @@ function ctrlVol (e) {
     } else {
       sendCMD(0x1d)
     }
+  }
+}
+
+function ctrlFF (e) {
+  const pos = e.clientX - this.offsetLeft
+  const half = this.clientWidth / 2
+  if (pos < half) {
+    sendCMD(0x10)
+  } else {
+    sendCMD(0x0f)
   }
 }
 
@@ -2009,8 +2028,9 @@ function initializeUI () {
   }
   addVolWheel('viewtabs')
   addVolWheel('extra0')
-  addVolWheel('playpack')
+  document.getElementById('progress').addEventListener('wheel', progWheel, { passive: false })
   document.getElementById('volume').addEventListener('click', ctrlVol, false)
+  document.getElementById('progress').addEventListener('click', ctrlFF, false)
   document.body.addEventListener('keypress', handleKey)
   document.body.addEventListener('keyup', blockSpace)
   document.body.addEventListener('click', function () { power(1) })
