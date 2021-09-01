@@ -139,19 +139,18 @@ static jsonObject *jsonAddTitles(jsonObject * jo, const char *key,
 	jo = jsonInitArr(jo, key);
 	/* check if something else is changing the playlist and if not lock it to
 	 * make sure it stays consistent */
-	if (trylockPlaylist() != EBUSY) {
-		while (pl != NULL) {
-			jsonTitle = jsonAddTitle(NULL, "title", pl);
-			jsonAddArrElement(jo, jsonTitle, json_object);
-			if (dir < 0) {
-				pl = pl->prev;
-			}
-			else {
-				pl = pl->next;
-			}
+	lockPlaylist();
+	while (pl != NULL) {
+		jsonTitle = jsonAddTitle(NULL, "title", pl);
+		jsonAddArrElement(jo, jsonTitle, json_object);
+		if (dir < 0) {
+			pl = pl->prev;
 		}
-		unlockPlaylist();
+		else {
+			pl = pl->next;
+		}
 	}
+	unlockPlaylist();
 
 	return jo;
 }

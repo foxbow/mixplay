@@ -91,10 +91,6 @@ void unlockPlaylist(void) {
 	pthread_mutex_unlock(&pllock);
 }
 
-int trylockPlaylist(void) {
-	return pthread_mutex_trylock(&pllock);
-}
-
 static void invokeHooks(_mpfunc * hooks) {
 	_mpfunc *pos = hooks;
 

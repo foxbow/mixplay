@@ -254,6 +254,5 @@ void initMsgCnt(int);
 
 void lockPlaylist(void);
 void unlockPlaylist(void);
-int trylockPlaylist(void);
 
 #endif /* _CONFIG_H_ */
