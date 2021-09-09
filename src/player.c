@@ -1194,9 +1194,8 @@ void *reader(void *arg) {
 		case mpc_prev:
 			/* This /may/ make sense on streamlists but so far a stream has no
 			 * previous or next title */
-			if (control->mpmode & PM_STREAM) {
+			if (control->mpmode & PM_STREAM)
 				break;
-			}
 			if (control->playtime > 3) {
 				toPlayer(p_command[fdset][1], "JUMP 0\n");
 				control->percent = 0;
@@ -1206,7 +1205,6 @@ void *reader(void *arg) {
 				order = -1;
 				if (control->argument != NULL) {
 					order = -atoi(control->argument);
-					sfree(&(control->argument));
 				}
 				toPlayer(p_command[fdset][1], "STOP\n");
 				pthread_mutex_unlock(&_asynclock);
@@ -1216,14 +1214,12 @@ void *reader(void *arg) {
 		case mpc_next:
 			/* This /may/ make sense on streamlists but so far a stream has no
 			 * previous or next title */
-			if (control->mpmode & PM_STREAM) {
+			if (control->mpmode & PM_STREAM)
 				break;
-			}
 			if ((control->current != NULL) && asyncTest()) {
 				order = 1;
 				if (control->argument != NULL) {
 					order = atoi(control->argument);
-					sfree(&(control->argument));
 				}
 				else {
 					skipped = 1;
@@ -1234,17 +1230,19 @@ void *reader(void *arg) {
 			break;
 
 		case mpc_doublets:
+			if (control->mpmode & PM_STREAM)
+				break;
 			if (checkPasswd()) {
 				asyncRun(plCheckDoublets);
 			}
-			sfree(&(control->argument));
 			break;
 
 		case mpc_dbclean:
+			if (control->mpmode & PM_STREAM)
+				break;
 			if (checkPasswd()) {
 				asyncRun(plDbClean);
 			}
-			sfree(&(control->argument));
 			break;
 
 		case mpc_stop:
@@ -1253,6 +1251,8 @@ void *reader(void *arg) {
 			break;
 
 		case mpc_dnp:
+			if (control->mpmode & PM_STREAM)
+				break;
 			if ((ctitle != NULL) && asyncTest()) {
 				if (ctitle == control->current->title) {
 					/* current title is affected, play the next one */
@@ -1266,6 +1266,8 @@ void *reader(void *arg) {
 			break;
 
 		case mpc_fav:
+			if (control->mpmode & PM_STREAM)
+				break;
 			if ((ctitle != NULL) && asyncTest()) {
 				handleRangeCmd(ctitle, control->command);
 				notifyChange(MPCOMM_TITLES);
@@ -1274,6 +1276,8 @@ void *reader(void *arg) {
 			break;
 
 		case mpc_repl:
+			if (control->mpmode & PM_STREAM)
+				break;
 			toPlayer(p_command[fdset][1], "JUMP 0\n");
 			control->percent = 0;
 			control->playtime = 0;
@@ -1286,7 +1290,6 @@ void *reader(void *arg) {
 				control->status = mpc_quit;
 				pthread_mutex_unlock(&_asynclock);
 			}
-			sfree(&(control->argument));
 			break;
 
 		case mpc_profile:
@@ -1318,7 +1321,6 @@ void *reader(void *arg) {
 					else {
 						addMessage(0, "Invalid profile %i", profile);
 					}
-					sfree(&(control->argument));
 				}
 				pthread_mutex_unlock(&_asynclock);
 			}
@@ -1356,6 +1358,33 @@ void *reader(void *arg) {
 				control->argument = NULL;
 				pthread_mutex_unlock(&_asynclock);
 				notifyChange(MPCOMM_CONFIG);
+			}
+			break;
+
+		case mpc_clone:
+			if ((control->current != NULL) && asyncTest()) {
+				if (control->argument == NULL) {
+					addMessage(-1, "No profile given!");
+				}
+				/* only clone profiles */
+				else if (control->active > 0) {
+					control->profiles++;
+					control->profile =
+						(profile_t **) frealloc(control->profile,
+												control->profiles *
+												sizeof (profile_t *));
+					control->profile[control->profiles - 1] =
+						createProfile(control->argument, NULL, 0,
+									  control->volume);
+					control->active = control->profiles;
+					writeList(mpc_fav);
+					writeList(mpc_dnp);
+
+					writeConfig(NULL);
+					control->argument = NULL;
+					pthread_mutex_unlock(&_asynclock);
+					notifyChange(MPCOMM_CONFIG);
+				}
 			}
 			break;
 
@@ -1420,7 +1449,6 @@ void *reader(void *arg) {
 					}
 					pthread_mutex_unlock(&_asynclock);
 				}
-				sfree(&(control->argument));
 			}
 			break;
 
@@ -1435,7 +1463,6 @@ void *reader(void *arg) {
 						stopPlay(p_command[fdset][1]);
 						sendplay(p_command[fdset][1]);
 					}
-					sfree(&(control->argument));
 				}
 				pthread_mutex_unlock(&_asynclock);
 			}
@@ -1452,21 +1479,26 @@ void *reader(void *arg) {
 			break;
 
 		case mpc_bskip:
+			if (control->mpmode & PM_STREAM)
+				break;
 			toPlayer(p_command[fdset][1], "JUMP -64\n");
 			break;
 
 		case mpc_fskip:
+			if (control->mpmode & PM_STREAM)
+				break;
 			toPlayer(p_command[fdset][1], "JUMP +64\n");
 			break;
 
 		case mpc_dbinfo:
+			if (control->mpmode & PM_STREAM)
+				break;
 			if ((control->argument) && checkPasswd()) {
 				asyncRun(plDbFix);
 			}
 			else if (asyncTest()) {
 				asyncRun(plDbInfo);
 			}
-			sfree(&(control->argument));
 			break;
 
 			/* this is kinda ugly as the logic needs to be all over the place
@@ -1475,6 +1507,8 @@ void *reader(void *arg) {
 			 * unlocking the server to send the reply and finally sets it to idle
 			 * again, unlocking the player */
 		case mpc_search:
+			if (control->mpmode & PM_STREAM)
+				break;
 			if (asyncTest()) {
 				/* if we mix two searches we're in trouble! */
 				assert(control->found->state != mpsearch_idle);
@@ -1498,21 +1532,20 @@ void *reader(void *arg) {
 				addMessage(1, "Results sent!");
 				pthread_mutex_unlock(&_asynclock);
 			}
-			sfree(&(control->argument));
 			break;
 
 		case mpc_insert:
+			if (control->mpmode & PM_STREAM)
+				break;
 			insert = 1;
 			/* fallthrough */
 
 		case mpc_append:
-			if (control->argument == NULL) {
-				addMessage(0, "No play info set!");
-			}
-			else {
+			if (control->mpmode & PM_STREAM)
+				break;
+			if (control->argument != NULL) {
 				playResults(MPC_RANGE(control->command), control->argument,
 							insert);
-				sfree(&(control->argument));
 			}
 			insert = 0;
 			break;
@@ -1520,29 +1553,32 @@ void *reader(void *arg) {
 		case mpc_setvol:
 			if (control->argument != NULL) {
 				setVolume(atoi(control->argument));
-				sfree(&(control->argument));
 			}
 			update = 1;
 			break;
 
 		case mpc_smode:
+			if (control->mpmode & PM_STREAM)
+				break;
 			control->searchDNP = ~(control->searchDNP);
 			break;
 
 		case mpc_deldnp:
 		case mpc_delfav:
+			if (control->mpmode & PM_STREAM)
+				break;
 			if (control->argument != NULL) {
 				delFromList(cmd, control->argument);
-				sfree(&(control->argument));
 			}
 			break;
 
 		case mpc_remove:
+			if (control->mpmode & PM_STREAM)
+				break;
 			if (control->argument != NULL) {
 				control->current =
 					remFromPLByKey(control->current, atoi(control->argument));
 				plCheck(0);
-				sfree(&(control->argument));
 			}
 			break;
 
@@ -1551,35 +1587,31 @@ void *reader(void *arg) {
 			break;
 
 		case mpc_favplay:
+			if (control->mpmode & PM_STREAM)
+				break;
 			if (asyncTest()) {
-				if (control->mpmode & PM_DATABASE) {
-					if (countTitles(MP_FAV, 0) < 21) {
-						addMessage(-1,
-								   "Need at least 21 Favourites to enable Favplay.");
-						break;
-					}
-
-					if (!toggleFavplay()) {
-						addMessage(1, "Disabling Favplay");
-					}
-					else {
-						addMessage(1, "Enabling Favplay");
-					}
-					cleanFavPlay(0);
-
-					writeConfig(NULL);
-
-					plCheck(0);
-					sendplay(p_command[fdset][1]);
+				if (countTitles(MP_FAV, 0) < 21) {
+					addMessage(-1,
+							   "Need at least 21 Favourites to enable Favplay.");
+					break;
+				}
+				if (toggleFavplay()) {
+					addMessage(1, "Enabling Favplay");
 				}
 				else {
-					addMessage(0, "Favplay only works in database mode!");
+					addMessage(1, "Disabling Favplay");
 				}
-				pthread_mutex_unlock(&_asynclock);
+				cleanFavPlay(0);
+				writeConfig(NULL);
+				plCheck(0);
+				sendplay(p_command[fdset][1]);
 			}
+			pthread_mutex_unlock(&_asynclock);
 			break;
 
 		case mpc_move:
+			if (control->mpmode & PM_STREAM)
+				break;
 			if (control->argument != NULL) {
 				t = strchr(control->argument, '/');
 				if (t != NULL) {
@@ -1591,8 +1623,6 @@ void *reader(void *arg) {
 					moveTitleByIndex(atoi(control->argument), 0);
 				}
 				notifyChange(MPCOMM_TITLES);
-
-				sfree(&(control->argument));
 			}
 			break;
 
@@ -1616,6 +1646,7 @@ void *reader(void *arg) {
 			break;
 		}
 
+		sfree(&(control->argument));
 		control->command = mpc_idle;
 		pthread_cond_signal(&_pcmdcond);
 

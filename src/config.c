@@ -80,6 +80,7 @@ static const char *mpccommand[] = {
 	"favplay",
 	"reset",
 	"pause",
+	"clone",
 	"idle"
 };
 

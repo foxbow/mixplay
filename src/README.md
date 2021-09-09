@@ -47,6 +47,9 @@ cmd = 0MSR RRRR 000C CCCC
 * 0x1c - remove title from playlist <key>
 * 0x1d - toggle mute
 * 0x1e - toggle favplay
-* 0x1f - idle / max command*
+* 0x1f - reset player
+* 0x20 - player is in pause state
+* 0x21 - clone current profile into <arg>
+* 0x22 - idle / max command*
 
 args are set with the '?' operator.

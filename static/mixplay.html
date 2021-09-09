@@ -78,7 +78,9 @@
         <div id='shortcuts'><em>No Shortcuts</em></div>
       </div>
       <div id='tools1' class='inactive'>
-        <button id='cprof' onclick='newActive()'>New Profile</button>
+        <button id='crprof' onclick='toggleKbd("ptext", function () {textCMD(0x16)})'>New Profile</button>
+        <button id='clprof' onclick='toggleKbd("ptext", function () {textCMD(0x21)})'>Clone Profile</button>
+        <input  id='ptext' type='text' style='display:none;'>
         <div id='profiles'><em>No profiles?</em></div>
       </div>
       <div id='tools2' class='inactive'>

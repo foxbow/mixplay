@@ -255,6 +255,10 @@ function adaptUI (keep) {
     minfont = 18
   }
 
+  if (kbddiv !== undefined) {
+    kbddiv.style.fontSize = Math.min(window.innerWidth / 24, window.innerHeight / 14) + 'px'
+  }
+
   /* lots of magic numbers here: the formula is:
    * lines_to_display - ( pixels_available / pixels_per_line )
    */
@@ -1406,10 +1410,12 @@ function playerUpdate (data) {
 
   if ((active === 0) && (isstream)) {
     enableElement('schan', 1)
-    enableElement('cprof', 0)
+    enableElement('clprof', 0)
+    enableElement('crprof', 0)
   } else {
     enableElement('schan', 0)
-    enableElement('cprof', 1)
+    enableElement('clprof', 1)
+    enableElement('crprof', 1)
   }
 
   /* mpc_play */
@@ -1702,11 +1708,10 @@ function loadURL2 (url) {
 
   /* check result from clipboard */
   if (checkURL(url)) {
-    if (!window.confirm('Load ' + parts[parts.length - 1] + '?')) {
-      url = window.prompt('Enter Address to load')
+    if (window.confirm('Load ' + parts[parts.length - 1] + '?')) {
+      sendCMDArg(0x17, url)
+      return
     }
-  } else {
-    url = window.prompt('Enter Address to load')
   }
 
   if (url) {
@@ -1724,44 +1729,48 @@ function loadURL2 (url) {
  * an empty string.
  */
 function loadURL () {
+  var url
   /* plain http on mobile causes readText() to never return
      this may hit us on desktop soon as well =/ */
   if ((document.location.protocol !== 'https:') &&
       (typeof window.orientation !== 'undefined')) {
-    loadURL2('')
+    url = ''
+  /* check if we have access to the clipboard */
   } else if ((!navigator.clipboard) ||
       (typeof navigator.clipboard.readText !== 'function')) {
-    loadURL2('')
+    url = ''
   } else {
+    /* we should be able to read the clipboard */
     navigator.clipboard.readText().then(function (clipText) {
-      loadURL2(clipText)
+      url = clipText
     }).catch(function (err) {
       debugLog('readText: ' + err)
-      loadURL2('')
+      url = ''
     })
+  }
+  /* If we did not get anything, pop up the keyboard, otherwise go on */
+  if (url === '') {
+    toggleKbd('ptext', function () { loadURL2('') })
+  } else {
+    loadURL2(url)
   }
 }
 
-function newActive () {
-  var name = ''
-  if (isstream && (active === 0)) {
-    name = document.getElementById('prev').innerText
+/*
+ * callback for toggleKbd
+ * takes the entered text sends it to the server as an argument to cmd
+ */
+function textCMD (cmd) {
+  const name = document.getElementById('ptext').value
+  document.getElementById('ptext').value = ''
+  if (!name) {
+    return
   }
-  if ((name.length < 3) || (!window.confirm('Save channel as ' + name + '?'))) {
-    if (isstream && (active === 0)) {
-      name = window.prompt('Save channel as:')
-    } else {
-      name = window.prompt('Name for new profile:')
-    }
-    if (!name) {
-      return
-    }
-    if (name.length < 3) {
-      window.alert('Please give a longer name')
-      return
-    }
+  if (name.length < 3) {
+    window.alert('Please give a longer name')
+    return
   }
-  sendCMDArg(0x16, name)
+  sendCMDArg(cmd, name)
 }
 
 /*
@@ -1918,7 +1927,9 @@ function touchendEL (event) {
       }
     }
   } else if (Math.max(distx, disty) < 5) {
-    event.target.fireEvent('onclick')
+    if (event.target.fireEvent !== undefined) {
+      event.target.fireEvent('onclick')
+    }
   }
 }
 
@@ -2058,7 +2069,7 @@ function dummy () {
   switchUI()
   download()
   isEnter()
-  newActive()
+  textCMD()
   loadURL()
   toggleSearch()
   clearPass()
