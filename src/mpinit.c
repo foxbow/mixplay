@@ -149,14 +149,10 @@ int initAll() {
 	pthread_create(&control->rtid, NULL, reader, NULL);
 	/* make sure the mpg123 instances have a chance to start up */
 	nanosleep(&ts, NULL);
-	if (NULL == control->root) {
-		/* Runs as thread to have updates in the UI */
-		pthread_create(&tid, NULL, setProfile, NULL);
-		pthread_detach(tid);
-	}
-	else {
-		setCommand(mpc_play, NULL);
-	}
+
+	/* Runs as thread to have updates in the UI */
+	pthread_create(&tid, NULL, setProfile, NULL);
+	pthread_detach(tid);
 
 	return 0;
 }

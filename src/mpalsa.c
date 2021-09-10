@@ -23,6 +23,7 @@ void closeAudio() {
 		snd_mixer_close(_handle);
 		snd_config_update_free_global();
 		_handle = NULL;
+		_elem = NULL;
 	}
 }
 
@@ -152,6 +153,11 @@ long toggleMute() {
 			return -1;
 		}
 	}
+	if (_elem == NULL) {
+		addMessage(-1, "Volume control is not fully initialized!");
+		return config->volume;
+	}
+
 	if (snd_mixer_selem_has_playback_switch(_elem)) {
 		snd_mixer_selem_get_playback_switch(_elem, SND_MIXER_SCHN_FRONT_LEFT,
 											&mswitch);

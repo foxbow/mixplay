@@ -123,15 +123,9 @@ void setCommand(mpcmd_t cmd, char *arg) {
 	}
 
 	if (pthread_mutex_trylock(&_pcmdlock) == EBUSY) {
-		/* these two have precedence and may come in while everything
-		 * else is blocked */
-		if ((cmd == mpc_reset) || (cmd == mpc_quit)) {
-			addMessage(-1, "Player blocked on %s(state: %s)",
-					   mpcString(config->command), mpcString(config->status));
-		}
-		else {
-			pthread_mutex_lock(&_pcmdlock);
-		}
+		/* Wait until someone unlocks */
+		addMessage(1, "%s waiting to be set", mpcString(cmd));
+		pthread_mutex_lock(&_pcmdlock);
 	}
 
 	/* wait for the last command to be handled */
@@ -145,23 +139,20 @@ void setCommand(mpcmd_t cmd, char *arg) {
 
 	/* player is being reset or about to quit - do not handle any commands */
 	if ((config->status != mpc_reset) && (config->status != mpc_quit)) {
+		addMessage(1, "Setting %s..", mpcString(cmd));
 		/* someone did not clean up! */
-		if (config->argument != NULL) {
-			addMessage(0, "Wiping leftover %s on %s!",
-					   config->argument, mpcString(cmd));
-			sfree(&(config->argument));
-		}
+		assert(config->argument == NULL);
 		config->command = cmd;
 		config->argument = arg;
 	}
 	else {
-		addMessage(-1, "%s blocked by %s!", mpcString(cmd),
+		addMessage(-1, "%s dropped for %s!", mpcString(cmd),
 				   mpcString(config->status));
 	}
 	pthread_mutex_unlock(&_pcmdlock);
 }
 
-static int64_t oactive = 1;
+static int oactive = 1;
 
 static int toPlayer(int fd, const char *msg) {
 	return dowrite(fd, msg, strlen(msg));
@@ -214,7 +205,6 @@ void *setProfile(void *arg) {
 	profile_t *profile;
 	int num;
 	int64_t active;
-	int64_t cactive;
 	static int lastact = 0;
 	mpconfig_t *control = getConfig();
 	char *home = getenv("HOME");
@@ -227,12 +217,12 @@ void *setProfile(void *arg) {
 	activity(0, "Changing profile");
 	addMessage(2, "New Thread: setProfile(%d)", control->active);
 
-	cactive = control->active;
+	active = control->active;
 	control->searchDNP = 0;
 
 	/* stream selected */
-	if (cactive < 0) {
-		active = -(cactive + 1);
+	if (active < 0) {
+		active = -(active + 1);
 		profile = control->stream[active];
 
 		if (active >= control->streams) {
@@ -244,8 +234,8 @@ void *setProfile(void *arg) {
 		setStream(profile->stream, profile->name);
 	}
 	/* profile selected */
-	else if (cactive > 0) {
-		active = cactive - 1;
+	else if (active > 0) {
+		active = active - 1;
 		addMessage(1, "Playmode=%u", control->mpmode);
 
 		if (active > control->profiles) {
@@ -1082,10 +1072,19 @@ void *reader(void *arg) {
 				case 'E':
 					addMessage(-1, "FG: %s!", line + 3);
 					if (control->current != NULL) {
-						addMessage(1, "FG: %i\n> Name: %s\n> Path: %s",
-								   control->current->title->key,
-								   control->current->title->display,
-								   fullpath(control->current->title->path));
+						if (control->mpmode & PM_STREAM) {
+							addMessage(1, "FG: %i -> %i\n Name: %s\n URL: %s",
+									   control->active, oactive,
+									   control->current->title->display,
+									   control->streamURL);
+						}
+						else {
+							addMessage(1, "FG: %i\n> Name: %s\n> Path: %s",
+									   control->current->title->key,
+									   control->current->title->display,
+									   fullpath(control->current->title->
+												path));
+						}
 					}
 					control->watchdog = STREAM_TIMEOUT;
 					break;
@@ -1320,9 +1319,9 @@ void *reader(void *arg) {
 					}
 					else {
 						addMessage(0, "Invalid profile %i", profile);
+						pthread_mutex_unlock(&_asynclock);
 					}
 				}
-				pthread_mutex_unlock(&_asynclock);
 			}
 			break;
 
@@ -1605,8 +1604,8 @@ void *reader(void *arg) {
 				writeConfig(NULL);
 				plCheck(0);
 				sendplay(p_command[fdset][1]);
+				pthread_mutex_unlock(&_asynclock);
 			}
-			pthread_mutex_unlock(&_asynclock);
 			break;
 
 		case mpc_move:
