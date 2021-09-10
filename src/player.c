@@ -122,6 +122,17 @@ void setCommand(mpcmd_t cmd, char *arg) {
 		return;
 	}
 
+	if (cmd == mpc_quit) {
+		config->watchdog = STREAM_TIMEOUT;
+		config->command = cmd;
+		return;
+	}
+
+	if (cmd == mpc_reset) {
+		config->command = cmd;
+		return;
+	}
+
 	if (pthread_mutex_trylock(&_pcmdlock) == EBUSY) {
 		/* Wait until someone unlocks */
 		addMessage(1, "%s waiting to be set", mpcString(cmd));
@@ -1082,8 +1093,8 @@ void *reader(void *arg) {
 							addMessage(1, "FG: %i\n> Name: %s\n> Path: %s",
 									   control->current->title->key,
 									   control->current->title->display,
-									   fullpath(control->current->title->
-												path));
+									   fullpath(control->current->
+												title->path));
 						}
 					}
 					control->watchdog = STREAM_TIMEOUT;
@@ -1646,8 +1657,15 @@ void *reader(void *arg) {
 		}
 
 		sfree(&(control->argument));
-		control->command = mpc_idle;
-		pthread_cond_signal(&_pcmdcond);
+
+		/* brute force cases that may have been set out of sync, so we keep
+		 * them. If those were already handled, then either control->status
+		 * is either already mpc_quit or killPlayers has snuffed everything 
+		 * already */
+		if ((control->command != mpc_quit) && (control->command != mpc_reset)) {
+			control->command = mpc_idle;
+			pthread_cond_signal(&_pcmdcond);
+		}
 
 		/* notify UI that something has changed */
 		if (update) {

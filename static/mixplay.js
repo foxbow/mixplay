@@ -570,8 +570,10 @@ function sendCMDArg (cmd, arg) {
     }
   }
 
-  /* ignore volume and progress controls */
-  if ((cmd !== 0x0d) && (cmd !== 0x0e) && (cmd !== 0x1d) && (cmd !== 0x0f) && (cmd !== 0x10)) {
+  /* ignore volume and progress controls as well as quit and reset */
+  if ((cmd !== 0x0d) && (cmd !== 0x0e) && (cmd !== 0x1d) && /* vol */
+      (cmd !== 0x0f) && (cmd !== 0x10) && /* FF/FR */
+      (cmd !== 0x07) && (cmd !== 0x1f)) {
     /* avoid stacking  */
     if (activecmd !== -1) {
       return
@@ -594,7 +596,6 @@ function sendCMDArg (cmd, arg) {
     replaceChild(e, text)
   }
 
-  /* all these commands have a progress */
   switch (cmd & 0x00ff) {
     case 0x18: /* mpc_remprof */
       if (!window.confirm('Remove ' + arg + '?')) {
@@ -602,6 +603,7 @@ function sendCMDArg (cmd, arg) {
         return
       }
       break
+    /* all these commands have a progress */
     case 0x13: /* mpc_search */
       if (cmdtosend === '') {
         switchView(3)
@@ -619,7 +621,6 @@ function sendCMDArg (cmd, arg) {
         replaceChild(e, text)
       }
     /* fallthrough */
-    case 0x07: /* mpc_quit */
     case 0x08: /* mpc_dbclean */
     case 0x0b: /* mpc_doublets */
     case 0x12: /* mpc_dbinfo */
