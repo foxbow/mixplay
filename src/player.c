@@ -56,7 +56,9 @@ static int asyncTest() {
 	int ret = 0;
 
 	if (pthread_mutex_trylock(&_asynclock) != EBUSY) {
-		addMessage(2, "Player is trylocked");
+		addMessage(1, "Locking for %s/%s",
+				   mpcString(getConfig()->command),
+				   mpcString(getConfig()->status));
 		ret = 1;
 	}
 	else {
@@ -122,13 +124,8 @@ void setCommand(mpcmd_t cmd, char *arg) {
 		return;
 	}
 
-	if (cmd == mpc_quit) {
-		config->watchdog = STREAM_TIMEOUT;
-		config->command = cmd;
-		return;
-	}
-
 	if (cmd == mpc_reset) {
+		config->watchdog = WATCHDOG_TIMEOUT;
 		config->command = cmd;
 		return;
 	}
@@ -196,7 +193,7 @@ static void sendplay(int fdset) {
 		fail(errno, "Could not write\n%s", line);
 	}
 	notifyChange(MPCOMM_TITLES);
-	addMessage(1, "CMD: %s", line);
+	addMessage(2, "CMD: %s", line);
 }
 
 static void startPlayer() {
@@ -216,7 +213,7 @@ void *setProfile(void *arg) {
 	profile_t *profile;
 	int num;
 	int64_t active;
-	static int lastact = 0;
+	static int lastact = 0;		/* last active profile (not channel!) */
 	mpconfig_t *control = getConfig();
 	char *home = getenv("HOME");
 
@@ -227,6 +224,10 @@ void *setProfile(void *arg) {
 	blockSigint();
 	activity(0, "Changing profile");
 	addMessage(2, "New Thread: setProfile(%d)", control->active);
+
+	if (control->active == 0) {
+		control->active = oactive;
+	}
 
 	active = control->active;
 	control->searchDNP = 0;
@@ -321,8 +322,8 @@ void *setProfile(void *arg) {
 		setVolume(profile->volume);
 	}
 	notifyChange(MPCOMM_CONFIG);
-	writeConfig(NULL);
 
+	sleep(1);
 	startPlayer();
 
 	/* make sure that progress messages are removed */
@@ -436,7 +437,6 @@ static void asyncRun(void *cmd(void *)) {
 	if (pthread_create(&pid, NULL, cmd, &_asynclock) < 0) {
 		addMessage(0, "Could not create async thread!");
 	}
-	pthread_mutex_unlock(&_asynclock);
 }
 
 /**
@@ -510,17 +510,52 @@ static int playResults(mpcmd_t range, const char *arg, const int insert) {
 	return 0;
 }
 
-static void killPlayers(pid_t pid[2], int p_command[2][2], int p_status[2][2],
-						int p_error[2][2], int restart) {
+static char *getProfileName(int profile) {
+	mpconfig_t *config = getConfig();
+
+	if (profile == 0) {
+		return "NONE";
+	}
+	if (profile < 0) {
+		profile = -(profile + 1);
+		return config->stream[profile]->name;
+	}
+	else {
+		profile = profile - 1;
+		return config->profile[profile]->name;
+	}
+}
+
+static void *killPlayers(pid_t pid[2], int p_command[2][2], int p_status[2][2],
+						 int p_error[2][2], int restart) {
 	uint64_t i;
 	mpconfig_t *control = getConfig();
 	unsigned players = (control->fade > 0) ? 2 : 1;
 
 	if (restart) {
 		addMessage(1, "kill and restart reader");
-		control->watchdog = STREAM_TIMEOUT;
+		control->watchdog = WATCHDOG_TIMEOUT;
 		if (control->current == NULL) {
 			addMessage(-1, "Restarting on empty player!");
+		}
+
+		/* if this is already a retry, fall back to something better */
+		if (control->status == mpc_start) {
+			if (oactive == control->active) {
+				addMessage(-1, "Switching to default profile");
+				control->active = 1;
+			}
+			else {
+				addMessage(-1, "Switching back to %s",
+						   getProfileName(oactive));
+				control->active = oactive;
+			}
+		}
+
+		/* Most likely an URL could not be loaded */
+		if (control->active == 0) {
+			addMessage(1, "Reverting to %s", getProfileName(oactive));
+			control->active = oactive;
 		}
 
 		/* starting on an error? Not good.. */
@@ -528,9 +563,6 @@ static void killPlayers(pid_t pid[2], int p_command[2][2], int p_status[2][2],
 			addMessage(-1, "Music database failure!");
 			control->status = mpc_quit;
 			control->watchdog = 0;
-		}
-		else {
-			control->status = mpc_idle;
 		}
 	}
 
@@ -565,6 +597,7 @@ static void killPlayers(pid_t pid[2], int p_command[2][2], int p_status[2][2],
 	control->command = mpc_idle;
 	pthread_cond_signal(&_pcmdcond);
 	activity(1, "All unlocked");
+	return NULL;
 }
 
 static void stopPlay(int channel) {
@@ -604,7 +637,7 @@ static void pausePlay(int channel) {
  * The original plan was to keep this UI independent so it could be used
  * in mixplay, gmixplay and probably other GUI variants (ie: web)
  */
-void *reader(void *arg) {
+void *reader() {
 	mpconfig_t *control = getConfig();
 	mptitle_t *ctitle = NULL;	/* the title commands should use */
 	fd_set fds;
@@ -731,25 +764,11 @@ void *reader(void *arg) {
 		 * changes - most likely due to a DSL reconnect - or if the stream host
 		 * fails.
 		 */
-		if (control->watchdog >= STREAM_TIMEOUT) {
+		if (control->watchdog >= WATCHDOG_TIMEOUT) {
 			addMessage(1, "Player restart! cmd:%s - status:%s",
 					   mpcString(control->command),
 					   mpcString(control->status));
-			/* if this is already a retry, fall back to something better */
-			if (control->status == mpc_start) {
-				if (oactive == control->active) {
-					addMessage(-1,
-							   "Stream error, switching to default profile");
-					control->active = 1;
-				}
-				else {
-					addMessage(-1,
-							   "Stream error, switching back to previous program");
-					control->active = oactive;
-				}
-			}
-			killPlayers(pid, p_command, p_status, p_error, 1);
-			return NULL;
+			return killPlayers(pid, p_command, p_status, p_error, 1);
 		}
 		if ((i == 0) && (control->mpmode & PM_STREAM) &&
 			(control->status != mpc_idle)) {
@@ -786,8 +805,8 @@ void *reader(void *arg) {
 										   fullpath(control->current->title->path));
 								/*  *INDENT-ON*  */
 							}
-							killPlayers(pid, p_command, p_status, p_error, 1);
-							return NULL;
+							return killPlayers(pid, p_command, p_status,
+											   p_error, 1);
 							break;
 						case 'F':
 							if (outvol > 0) {
@@ -1058,10 +1077,12 @@ void *reader(void *arg) {
 
 					case 2:	/* PLAY */
 						if (control->mpmode & PM_SWITCH) {
-							addMessage(1, "Playing profile #%i",
-									   control->active);
+							addMessage(1, "Playing profile #%i: %s",
+									   control->active,
+									   getProfileName(control->active));
 							control->mpmode &= ~PM_SWITCH;
 							if (control->active != 0) {
+								writeConfig(NULL);
 								oactive = control->active;
 							}
 						}
@@ -1084,8 +1105,9 @@ void *reader(void *arg) {
 					addMessage(-1, "FG: %s!", line + 3);
 					if (control->current != NULL) {
 						if (control->mpmode & PM_STREAM) {
-							addMessage(1, "FG: %i -> %i\n Name: %s\n URL: %s",
-									   control->active, oactive,
+							addMessage(1, "FG: %s <- %s\n Name: %s\n URL: %s",
+									   getProfileName(control->active),
+									   getProfileName(oactive),
 									   control->current->title->display,
 									   control->streamURL);
 						}
@@ -1093,11 +1115,11 @@ void *reader(void *arg) {
 							addMessage(1, "FG: %i\n> Name: %s\n> Path: %s",
 									   control->current->title->key,
 									   control->current->title->display,
-									   fullpath(control->current->
-												title->path));
+									   fullpath(control->current->title->
+												path));
 						}
 					}
-					control->watchdog = STREAM_TIMEOUT;
+					return killPlayers(pid, p_command, p_status, p_error, 1);
 					break;
 
 				default:
@@ -1116,7 +1138,7 @@ void *reader(void *arg) {
 			if (key > 1) {
 				if (strstr(line, "rror: ")) {
 					addMessage(-1, "%s", strstr(line, "rror: ") + 6);
-					control->watchdog = STREAM_TIMEOUT;
+					return killPlayers(pid, p_command, p_status, p_error, 1);
 				}
 				else if (strstr(line, "Warning: ") == line) {
 					/* ignore content-type warnings */
@@ -1392,9 +1414,9 @@ void *reader(void *arg) {
 
 					writeConfig(NULL);
 					control->argument = NULL;
-					pthread_mutex_unlock(&_asynclock);
 					notifyChange(MPCOMM_CONFIG);
 				}
+				pthread_mutex_unlock(&_asynclock);
 			}
 			break;
 
@@ -1648,8 +1670,7 @@ void *reader(void *arg) {
 		case mpc_reset:
 			addMessage(-1, "Force restart!");
 			control->status = mpc_reset;
-			killPlayers(pid, p_command, p_status, p_error, 1);
-			return NULL;
+			return killPlayers(pid, p_command, p_status, p_error, 1);
 
 		default:
 			addMessage(0, "Received illegal command %i", cmd);
@@ -1657,15 +1678,8 @@ void *reader(void *arg) {
 		}
 
 		sfree(&(control->argument));
-
-		/* brute force cases that may have been set out of sync, so we keep
-		 * them. If those were already handled, then either control->status
-		 * is either already mpc_quit or killPlayers has snuffed everything 
-		 * already */
-		if ((control->command != mpc_quit) && (control->command != mpc_reset)) {
-			control->command = mpc_idle;
-			pthread_cond_signal(&_pcmdcond);
-		}
+		control->command = mpc_idle;
+		pthread_cond_signal(&_pcmdcond);
 
 		/* notify UI that something has changed */
 		if (update) {
@@ -1677,11 +1691,5 @@ void *reader(void *arg) {
 	dbWrite(0);
 
 	/* stop player(s) gracefully */
-	killPlayers(pid, p_command, p_status, p_error, 0);
-	addMessage(0, "Players stopped");
-
-	/* todo: should not be needed */
-	sleep(1);
-
-	return arg;
+	return killPlayers(pid, p_command, p_status, p_error, 0);
 }

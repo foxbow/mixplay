@@ -344,7 +344,7 @@ static void *clientHandler(void *args) {
 					}
 
 					/* a valid client came in */
-					if (reqInfo.clientid) {
+					if (reqInfo.clientid > 0) {
 						running |= CL_RUN;
 						triggerClient(reqInfo.clientid);
 					}

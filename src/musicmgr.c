@@ -1455,7 +1455,7 @@ mpplaylist_t *addNewTitle(mpplaylist_t * pl, mptitle_t * root) {
 
 				if (runner == guard) {
 					pcount++;	/* allow more replays */
-					addMessage(1, "Increasing maxplaycount to %i (skip)",
+					addMessage(2, "Increasing maxplaycount to %i (skip)",
 							   pcount);
 				}
 			}
@@ -1465,11 +1465,11 @@ mpplaylist_t *addNewTitle(mpplaylist_t * pl, mptitle_t * root) {
 		if (++cycles > 10) {
 			cycles = 0;
 			pcount++;			/* temprorarily allow replays */
-			addMessage(1, "Increasing maxplaycount to %i (loop)", pcount);
+			addMessage(2, "Increasing maxplaycount to %i (loop)", pcount);
 		}
 	}							/* while( valid != 3 ) */
 	/*  *INDENT-OFF*  */
-	addMessage(1, "[+] (%i/%i/%c) %5d %s",
+	addMessage(2, "[+] (%i/%i/%c) %5d %s",
 			   (runner->flags & MP_FAV) ? runner->favpcount : runner->playcount,
 			   pcount, flagToChar(runner->flags), runner->key, runner->display);
 	/*  *INDENT-ON*  */
@@ -1801,90 +1801,6 @@ void dumpInfo(mptitle_t * root, int smooth) {
 	if (fixed) {
 		dbWrite(1);
 	}
-}
-
-/**
- * Copies the given title to the target and turns the name into 'track###.mp3'
- * with ### being the index.
- * Returns -1 when the target runs out of space.
- */
-static int copyTitle(mptitle_t * title, const char *target,
-					 const unsigned int index) {
-	int in = -1, out = -1, rv = -1;
-	size_t len;
-	char filename[MAXPATHLEN];
-	struct stat st;
-
-	snprintf(filename, MAXPATHLEN, "%strack%03i.mp3", target, index);
-
-	in = open(title->path, O_RDONLY);
-
-	if (-1 == in) {
-		addMessage(0, "Couldn't open %s for reading", title->path);
-		goto cleanup;
-	}
-
-	if (-1 == fstat(in, &st)) {
-		addMessage(0, "Couldn't stat %s", title->path);
-		goto cleanup;
-	}
-	len = st.st_size;
-
-	out = open(filename, O_CREAT | O_WRONLY | O_EXCL, 00544);
-
-	if (-1 == out) {
-		addMessage(0, "Couldn't open %s for writing", filename);
-		goto cleanup;
-	}
-
-	addMessage(1, "Copy %s to %s", title->display, filename);
-
-	rv = sendfile(out, in, NULL, len);
-	if (rv == -1) {
-		if (errno == EOVERFLOW) {
-			addMessage(0, "Target ran out of space!");
-		}
-		else {
-			addMessage(0, "Could not copy %s", title->path);
-		}
-	}
-
-  cleanup:
-	if (in != -1) {
-		close(in);
-	}
-	if (out != -1) {
-		close(out);
-	}
-
-	return rv;
-}
-
-/**
- * copies the titles in the current playlist onto the target
- * only favourites are copied
- *
- * TODO this does not make any sense with the new playlist structure
- */
-int fillstick(mptitle_t * root, const char *target) {
-	unsigned int index = 0;
-	mptitle_t *current;
-
-	current = root;
-
-	do {
-		activity(0, "Copy title #%03i", index);
-		if (current->flags & MP_FAV) {
-			if (copyTitle(current, target, index++) == -1) {
-				break;
-			}
-		}
-		current = current->next;
-	}
-	while (current != root);
-
-	addMessage(0, "Copied %i titles to %s", index, target);
-	return index;
 }
 
 int addRangePrefix(char *line, mpcmd_t cmd) {

@@ -1012,7 +1012,7 @@ int getFreeClient(void) {
 		if (getConfig()->client[i] == 0) {
 			getConfig()->client[i] = 1;
 			numclients++;
-			addMessage(1, "client %i connected, %i clients connected", i + 1,
+			addMessage(2, "client %i connected, %i clients connected", i + 1,
 					   numclients);
 			return i + 1;
 		}
@@ -1043,7 +1043,7 @@ void triggerClient(int client) {
 				if (getConfig()->client[run] > (2 * numclients)) {
 					getConfig()->client[run] = 0;
 					numclients--;
-					addMessage(1,
+					addMessage(2,
 							   "client %i disconnected, %i clients connected",
 							   run + 1, numclients);
 				}

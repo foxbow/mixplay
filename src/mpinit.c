@@ -52,8 +52,8 @@ int setArgument(const char *arg) {
 		return 1;
 	}
 
-	fail(F_FAIL, "Illegal argument '%s'!", arg);
-	return F_FAIL;
+	addMessage(-1, "Illegal argument '%s'!", arg);
+	return 0;
 }
 
 /*

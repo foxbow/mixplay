@@ -251,11 +251,11 @@ int main(int argc, char **argv) {
 			addMessage(1, "Waiting for reader to stop");
 			pthread_join(control->rtid, NULL);
 			addMessage(1, "Reader stopped");
-			if (control->watchdog >= STREAM_TIMEOUT) {
+			if (control->watchdog >= WATCHDOG_TIMEOUT) {
 				addMessage(1, "Restarting after timeout");
 				initAll();
 			}
-		} while (control->watchdog >= STREAM_TIMEOUT);
+		} while (control->watchdog >= WATCHDOG_TIMEOUT);
 		addMessage(1, "Waiting for server to stop");
 		pthread_join(control->stid, NULL);
 		if (hidtid > 0) {

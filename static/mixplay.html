@@ -78,45 +78,35 @@
         <div id='shortcuts'><em>No Shortcuts</em></div>
       </div>
       <div id='tools1' class='inactive'>
-        <button id='crprof' onclick='toggleKbd("ptext", function () {textCMD(0x16)})'>New Profile</button>
-        <button id='clprof' onclick='toggleKbd("ptext", function () {textCMD(0x21)})'>Clone Profile</button>
-        <input  id='ptext' type='text' style='display:none;'>
+        <button id='crprof' onclick='showKbd(0x16)'>New Profile</button>
+        <button id='clprof' onclick='showKbd(0x21)'>Clone Profile</button>
+        <button id='setfavplay' onclick='sendCMD(0x1e)'>Enable Favplay</button>
         <div id='profiles'><em>No profiles?</em></div>
       </div>
       <div id='tools2' class='inactive'>
-        <button id='lurl'  onclick='loadURL()'>Load URL</button>
+        <button id='lurl'  onclick='showKbd(function () { loadURL() })'>Load URL</button>
         <button id='schan' onclick='newActive()'>Save Channel</button>
         <div id='channels'><em>No Channels</em></div>
       </div>
       <div id='tools3' class='inactive'>
         <p id='active'>No active profile/channel</p>
         <p id='status' class='hide'></p>
-        <button id='setfavplay' onclick='sendCMD(0x1e)'>Enable Favplay</button><br>
         <button id='dbinfo' onclick='sendCMD(0x12)'>Show Playcount</button>
-        <button id='debug'   onclick='toggleDebug()'>Enable Debug</button><br>
+        <button id='debug'  onclick='toggleDebug()'>Enable Debug</button>
         <button id='reload' onclick='document.location.reload()'>Reload client</button>
-        <button id='reset'  onclick='confReset()'>Reset player</button><br>
-        <p id='login' class='show'>
-          <button onclick='toggleKbd("pass", function () {checkPass()})'>Unlock</button>
-          <input  id='pass' type='text' style='display:none;'><br>
-        </p>
-        <div id='admin' class='hide'>
-          <button id='playcnt' onclick='pwSendCMD(0x12)'>Fix playcount</button>
-          <button id='rescan'  onclick='pwSendCMD(0x08)'>Rescan</button>
-          <button id='doublet' onclick='pwSendCMD(0x0b)'>Doublets</button>
-          <button id='logout'  onclick='clearPass()'>Logout</button>
-        </div>
+        <br/>
+        <button id='reset'  onclick='confReset()'>Reset player</button>
+        <button id='playcnt' onclick='showKbd(0x12)'>Fix playcount</button>
+        <button id='rescan'  onclick='showKbd(0x08)'>Rescan</button>
+        <button id='doublet' onclick='showKbd(0x0b)'>Doublets</button>
         <div id='messages'></div>
       </div>
     </div>
     <!-- Search view -->
     <div id='extra3' class='inactive' >
-      <em>Search:</em>
-      <button id='searchmode' onclick='toggleSearch()'>Active</button><br/>
-      <button onclick='toggleKbd("text", function () { sendArg(0x2e13) })'>&#x2328;</button>
-      <input  id='text' type='text' onkeydown='isEnter(event,0x2e13)'>
-      <button id='search' onclick='sendArg(0x2e13)'>Search</button>
-      <button id='fuzzy'  onclick='sendArg(0x4e13)'>Fuzzy</button>
+      <button id='search' onclick='showKbd(0x2e13)'>Search</button> /
+      <button id='fuzzy'  onclick='showKbd(0x4e13)'>Fuzzy</button> in
+      <button id='searchmode' onclick='toggleSearch()'>Active</button>
       </br>
       <button id='csearch0' class='active'   onclick='switchTab(this)'>&#x2630; Titles</button>
       <button id='csearch1' class='inactive' onclick='switchTab(this)'>&#x2630; Artists</button>
@@ -143,5 +133,11 @@
     </div>
     <!-- keyboard -->
     <div id='textkbd' class='hide'></div>
+    <!-- confirm -->
+    <div id='confirm' class='hide'>
+        <p id='confmsg'></p>
+        <button id='confcanc' onclick='confHide()'>Cancel</button>
+        <button id='confok'   onclick='confOK()'>Okay</button>
+    </div>
   </body>
 </html>

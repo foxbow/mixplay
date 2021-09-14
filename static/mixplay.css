@@ -73,6 +73,14 @@ div#textkbd {
 	width: 100%;
 }
 
+div#confirm {
+	text-align: center;
+	background-image: radial-gradient( circle at 90% -30%, black, darkblue 2%, lightblue 100%);
+	position: absolute;
+	height: 50%;
+	width: 100%;
+}
+
 input#kbdtext {
 	margin: .5em;
 	background: darkblue;

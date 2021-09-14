@@ -25,10 +25,9 @@ var currentPop = ''
 var debug = false
 const layout = ['1234567890', 'qwertzuiop', 'asdfghjkl\'', 'yxcvbnm-', 'XC BO']
 var kbddiv
-var kbdcurrent
 var kbdokay = function () {}
+var confokay = function () {}
 var clientid = -1
-var upactive = 1
 var shortcuts = []
 var curvol = 0
 var inUpdate = 0
@@ -51,11 +50,13 @@ function sendKey (key) {
     case 'C': // clear
       e.value = ''
       break
-    case 'O': // Okay/return
-      // should never happen
+    case 'O': // Okay
+      kbddiv.className = 'hide'
+      kbdokay()
       break
     case 'X': // cancel
-      toggleKbd('', '')
+      e.value = ''
+      kbddiv.className = 'hide'
       break
     default:
       e.value = text + key
@@ -66,14 +67,8 @@ function createKbdKey (name, key) {
   var btn = document.createElement('button')
   btn.innerHTML = name
   btn.className = 'kbdkey'
-  if (key.length === 0) {
-    btn.onclick = function () {
-      toggleKbd(kbdcurrent.id, '')
-      kbdokay()
-    }
-  } else {
-    btn.onclick = function () { sendKey(key) }
-  }
+  btn.onclick = function () { sendKey(key) }
+
   if (key === ' ') {
     btn.className = 'kbdspace'
   } else if (key !== name) {
@@ -84,10 +79,11 @@ function createKbdKey (name, key) {
 
 function kbdRealkey (event) {
   if (event.keyCode === 13) {
-    toggleKbd(kbdcurrent.id, '')
+    kbddiv.className = 'hide'
     kbdokay()
     return false
   }
+  debugLog('Event is ' + event.keyCode)
   return true
 }
 
@@ -95,7 +91,7 @@ function initKbdDiv () {
   var row, col, btnrow, btn, element
   const e = document.getElementById('textkbd')
   if (!e) {
-    window.alert('No keyboard div!')
+    showConfirm('No keyboard div!')
   }
   wipeElements(e)
   element = document.createElement('label')
@@ -120,7 +116,7 @@ function initKbdDiv () {
           btn = createKbdKey('CLR', 'C')
           break
         case 'O':
-          btn = createKbdKey('&#x2714;', '')
+          btn = createKbdKey('&#x2714;', 'O')
           break
         case 'X':
           btn = createKbdKey('X', 'X')
@@ -138,29 +134,74 @@ function initKbdDiv () {
   kbddiv = e
 }
 
-function toggleKbd (id, ok) {
-  /* the target textfield */
-  var e
-  if (!kbddiv) {
-    window.alert('Keyboard was not initialized!')
-    return
+/*
+ * default callback for showKbd
+ * takes the entered text sends it to the server as an argument to cmd
+ * if clear is set, the entered value is unset after evaluating it
+ */
+function sendArg (cmd) {
+  if (isstream) return
+  const term = document.getElementById('kbdtext').value
+
+  if (term.length > 1) {
+    document.getElementById('kbdtext').value = ''
+    sendCMDArg(cmd, term)
+  } else {
+    showConfirm('Need at least two letters!')
   }
-  if (id.length > 0) {
-    e = document.getElementById(id)
+}
+
+function showConfirm (msg, ok) {
+  const cdiv = document.getElementById('confirm')
+  if (cdiv.className === 'hide') {
+    document.getElementById('confmsg').innerHTML = msg
+    cdiv.className = ''
+    if (!ok) {
+      confokay = function () { confHide() }
+      enableElement('confcanc', 0)
+    } else {
+      if (ok > 0) {
+        confokay = function () { sendArg(ok) }
+      } else {
+        confokay = ok
+      }
+      enableElement('confcanc', 1)
+    }
+  } else {
+    document.getElementById('confmsg').innerHTML += '<br/>' + msg
+  }
+}
+
+function confOK () {
+  confHide()
+  confokay()
+}
+
+function confHide () {
+  document.getElementById('confirm').className = 'hide'
+}
+
+/*
+ * display on-screen keyboard and set callback on 'okay'
+ */
+function showKbd (ok) {
+  /* the target textfield */
+  if (!kbddiv) {
+    showConfirm('Keyboard was not initialized!')
+    return
   }
   /* the keyboard textfield */
   const t = document.getElementById('kbdtext')
   if (kbddiv.className === 'hide') {
     kbddiv.className = ''
-    t.value = e.value
-    kbdcurrent = e
-    kbdokay = ok
+    if (ok > 0) {
+      kbdokay = function () { sendArg(ok) }
+    } else {
+      kbdokay = ok
+    }
     t.focus()
   } else {
-    if (id.length > 0) {
-      e.value = t.value
-    }
-    kbddiv.className = 'hide'
+    debugLog('Keyboard already open!')
   }
 }
 
@@ -255,8 +296,10 @@ function adaptUI (keep) {
     minfont = 18
   }
 
+  const reqfs = Math.min(window.innerWidth / 24, window.innerHeight / 14) + 'px'
+  document.getElementById('confirm').style.fontSize = reqfs
   if (kbddiv !== undefined) {
-    kbddiv.style.fontSize = Math.min(window.innerWidth / 24, window.innerHeight / 14) + 'px'
+    kbddiv.style.fontSize = reqfs
   }
 
   /* lots of magic numbers here: the formula is:
@@ -384,12 +427,9 @@ function initScrolls () {
  * stop updates and make sure that error messages do not stack
  */
 function fail (msg) {
-  if (doUpdate < 0) {
-    activecmd = -1
-  } else {
+  if (doUpdate >= 0) {
     toval = 5000
     doUpdate = -1
-    activecmd = -1
     setElement('prev', '')
     setElement('artist', '')
     setElement('title', 'Connection lost!')
@@ -397,6 +437,7 @@ function fail (msg) {
     setElement('next', '')
     adaptUI(-1)
   }
+  activecmd = -1
 }
 
 /*
@@ -459,23 +500,8 @@ function switchView (element) {
   adaptUI(1)
 }
 
-/*
- * stop the server
- */
-function pwSendCMD (cmd) {
-  var reply = document.getElementById('pass').value
-  if ((reply !== null) && (reply !== '')) {
-    sendCMDArg(cmd, reply)
-  } else {
-    /* this is worth an alert as someone messed with the flow */
-    window.alert('No password set!')
-  }
-}
-
 function confReset () {
-  if (window.confirm('Confirm restart')) {
-    sendCMD(0x1f)
-  }
+  showConfirm('Confirm restart', 0x1f)
 }
 
 /*
@@ -519,6 +545,8 @@ function sendCMDArg (cmd, arg) {
   var e
   var text
 
+  debugLog('send ' + cmd + ' - ' + arg)
+
   /* do not send commands if we know that we are offline */
   if (doUpdate < 0) {
     return
@@ -537,22 +565,25 @@ function sendCMDArg (cmd, arg) {
   }
 
   if (cmd === 'shortcut') {
-    const id = Number(arg)
+    arg = arg + ''
     for (var i = 0; i < shortcuts.length; i++) {
-      if (id === shortcuts[i]) return
+      if (arg === shortcuts[i]) return
     }
-    shortcuts.push(id)
+    shortcuts.push(arg)
     setCookies()
     doUpdate |= 8
     return
   }
 
   if (cmd === 'remsc') {
-    const pos = shortcuts.indexOf(arg)
+    arg = arg + ''
+    var pos = shortcuts.indexOf(arg + '')
     if (~pos) {
       shortcuts.splice(pos, 1)
       setCookies()
       doUpdate |= 8
+    } else {
+      showConfirm(arg + ' is no shortcut in ' + shortcuts + '?!')
     }
     return
   }
@@ -598,10 +629,10 @@ function sendCMDArg (cmd, arg) {
 
   switch (cmd & 0x00ff) {
     case 0x18: /* mpc_remprof */
-      if (!window.confirm('Remove ' + arg + '?')) {
-        activecmd = -1
-        return
-      }
+      showConfirm('Remove ' + arg + '?', 0x98)
+      return
+    case 0x98: /* confirm remprof */
+      cmd = 0x18
       break
     /* all these commands have a progress */
     case 0x13: /* mpc_search */
@@ -628,7 +659,7 @@ function sendCMDArg (cmd, arg) {
         cmdtosend = cmd
         argtosend = arg
       } else {
-        window.alert('Busy, sorry.')
+        showConfirm('Busy, sorry.')
       }
       activecmd = -1
       clearBody('busy')
@@ -652,7 +683,7 @@ function sendCMDArg (cmd, arg) {
           }
           break
         case 503:
-          window.alert('Sorry, we\'re busy!')
+          showConfirm('Sorry, we\'re busy!')
           activecmd = -1
           break
         default:
@@ -664,8 +695,7 @@ function sendCMDArg (cmd, arg) {
     }
   }
 
-  /* cmds are one-shots, so clientid is 0 to make sure no new update thread
-     is started */
+  /* one shots - fire and forget */
   var json = JSON.stringify({ cmd: cmd, arg: arg, clientid: 0 })
   debugLog('oreq: ' + json)
 
@@ -1358,6 +1388,7 @@ function playerUpdate (data) {
     enableElement('playcnt', !isstream)
     enableElement('doublet', !isstream)
     enableElement('fav', !isstream)
+    enableElement('clprof', !isstream)
   }
 
   if (data.mpmode & 8) {
@@ -1411,12 +1442,8 @@ function playerUpdate (data) {
 
   if ((active === 0) && (isstream)) {
     enableElement('schan', 1)
-    enableElement('clprof', 0)
-    enableElement('crprof', 0)
   } else {
     enableElement('schan', 0)
-    enableElement('clprof', 1)
-    enableElement('crprof', 1)
   }
 
   /* mpc_play */
@@ -1450,7 +1477,7 @@ function playerUpdate (data) {
 
   if (data.msg !== '') {
     if (data.msg.startsWith('ALERT:')) {
-      addText('* ' + data.msg.substring(6))
+      showConfirm('* ' + data.msg.substring(6))
     } else if (data.msg.startsWith('ACT:')) {
       setElement('title', '..' + data.msg.substring(4) + '..')
       adaptUI(1)
@@ -1470,7 +1497,6 @@ function updateUI () {
   var xmlhttp = new window.XMLHttpRequest()
   var json
 
-  upactive = 0
   xmlhttp.onreadystatechange = function () {
     var data
     if (xmlhttp.readyState === 4) {
@@ -1479,40 +1505,37 @@ function updateUI () {
           fail('CMD Error: connection lost!')
           break
         case 200:
-          /* elCheapo locking */
-          if (inUpdate++ > 1) {
-            /* TODO turn this into debugLog */
-            addText('Active update!')
-            /* do not poison local data */
-            var buffData = JSON.parse(xmlhttp.responseText)
-            /* rinse, repeat .. */
-            doUpdate |= buffData.type
-            return
-          }
           data = JSON.parse(xmlhttp.responseText)
           if (data !== undefined) {
-            /* standard update */
-            playerUpdate(data)
-            /* full update */
-            if (data.type & 1) {
-              fullUpdate(data)
+            /* elCheapo locking */
+            if (inUpdate++ > 1) {
+              /* TODO turn this into debugLog */
+              addText('Active update!')
+              doUpdate |= data.type
+            } else {
+              /* standard update */
+              playerUpdate(data)
+              /* full update */
+              if (data.type & 1) {
+                fullUpdate(data)
+              }
+              /* search results */
+              if (data.type & 2) {
+                searchUpdate(data)
+              }
+              /* dnp/fav lists */
+              if (data.type & 4) {
+                dnpfavUpdate(data)
+              }
+              /* config */
+              if (data.type & 8) {
+                updateConfig(data)
+              }
             }
-            /* search results */
-            if (data.type & 2) {
-              searchUpdate(data)
-            }
-            /* dnp/fav lists */
-            if (data.type & 4) {
-              dnpfavUpdate(data)
-            }
-            /* config */
-            if (data.type & 8) {
-              updateConfig(data)
-            }
+            inUpdate--
           } else {
-            debugLog('JSON-less reply!')
+            debugLog('JSON-less reply on status 200!')
           }
-          inUpdate = 0
           /* fallthrough */
         case 204:
           if (doUpdate < 0) {
@@ -1520,7 +1543,7 @@ function updateUI () {
           }
           break
         case 503:
-          window.alert('Sorry, we\'re busy!')
+          showConfirm('Sorry, we\'re busy!')
           break
         default:
           fail('Received Error ' + xmlhttp.status)
@@ -1529,17 +1552,13 @@ function updateUI () {
       if (doUpdate < 0) {
         document.body.className = 'disconnect'
       }
-      if (!upactive) {
-        upactive = 1
-        setTimeout(function () { updateUI() }, toval)
-      } else {
-        addText('Too many updates!')
-      }
-    }
-  }
+
+      setTimeout(function () { updateUI() }, toval)
+    } /* replyState === 4 */
+  } /* readyState callback */
 
   if (cmdtosend !== '') {
-    /* snchronous command */
+    /* 'synchronous' command - reply has info */
     json = JSON.stringify({ cmd: cmdtosend, arg: argtosend, clientid: clientid })
     debugLog('areq: ' + json)
     xmlhttp.open('POST', '/mpctrl/cmd?' + json, true)
@@ -1548,9 +1567,10 @@ function updateUI () {
   } else {
     if (doUpdate >= 0) {
       json = JSON.stringify({ cmd: doUpdate, clientid: clientid })
-      debugLog('ureq: ' + json)
       doUpdate = 0
+      debugLog('ureq: ' + json)
     } else {
+      /* reconnect and fetch new clientID */
       clientid = -1
       json = JSON.stringify({ cmd: 0, clientid: clientid })
       debugLog('rreq: ' + json)
@@ -1560,6 +1580,10 @@ function updateUI () {
   xmlhttp.send()
 }
 
+/*
+ * update the local shortcuts from cookie-data
+ * config data is needed to align shortcut IDs with actual profiles/channels
+ */
 function updateShortcuts (data) {
   const e = document.getElementById('shortcuts')
   var items = []
@@ -1598,6 +1622,9 @@ function updateShortcuts (data) {
   tabify(e, 'sclist', items, 11)
 }
 
+/*
+ * update basic configuration valöues from the reply
+ */
 function updateConfig (data) {
   var e
   var items = []
@@ -1678,132 +1705,47 @@ function updateConfig (data) {
 }
 
 /*
- * send command with argument set in the 'text' element(Search)
+ * sanity check for URL format
+ * the player does the same but it's nicer to check before sending the
+ * command
  */
-function sendArg (cmd) {
-  if (isstream) return
-  var term = document.getElementById('text').value
-  if (term.length > 1) {
-    sendCMDArg(cmd, term)
-  } else {
-    window.alert('Need at least two letters!')
-  }
-}
-
 function checkURL (url) {
-  if (url.toLowerCase().startsWith('http') &&
-     !url.endsWith('/') &&
+  if (!url.endsWith('/') &&
      (url.indexOf('?') === -1) &&
-     (url.indexOf('&') === -1)) {
+     (url.indexOf('&') === -1) &&
+     (url.indexOf(' ') === -1) &&
+     (url.indexOf(',') === -1) &&
+     (url.indexOf('!') === -1) &&
+     (url.indexOf('.') !== -1)) {
     return true
   }
   return false
 }
 
-function loadURL2 (url) {
-  if (!url) {
-    debugLog('loadURL() returned an invalid value!')
-    url = ''
+function loadURL () {
+  var url = document.getElementById('kbdtext').value
+  if (url === '') {
+    return
   }
-  const parts = url.split('/')
 
+  /* prefix http:// if needed */
+  if (!url.toLowerCase().startsWith('http')) {
+    url = 'http://' + url
+  }
   /* check result from clipboard */
   if (checkURL(url)) {
-    if (window.confirm('Load ' + parts[parts.length - 1] + '?')) {
-      sendCMDArg(0x17, url)
-      return
-    }
-  }
-
-  if (url) {
-    if (checkURL(url)) {
-      sendCMDArg(0x17, url)
-      return
-    }
-    window.alert('Invalid Address!')
-  }
-}
-
-/*
- * try to peek the clipboard. If the clipboard can be read forward
- * the contents to the actual loadURL function. Otherwise just send
- * an empty string.
- */
-function loadURL () {
-  var url
-  /* plain http on mobile causes readText() to never return
-     this may hit us on desktop soon as well =/ */
-  if ((document.location.protocol !== 'https:') &&
-      (typeof window.orientation !== 'undefined')) {
-    url = ''
-  /* check if we have access to the clipboard */
-  } else if ((!navigator.clipboard) ||
-      (typeof navigator.clipboard.readText !== 'function')) {
-    url = ''
+    sendCMDArg(0x17, url)
   } else {
-    /* we should be able to read the clipboard */
-    navigator.clipboard.readText().then(function (clipText) {
-      url = clipText
-    }).catch(function (err) {
-      debugLog('readText: ' + err)
-      url = ''
-    })
+    showConfirm('Invalid Address!')
   }
-  /* If we did not get anything, pop up the keyboard, otherwise go on */
-  if (url === '') {
-    toggleKbd('ptext', function () { loadURL2('') })
-  } else {
-    loadURL2(url)
-  }
-}
-
-/*
- * callback for toggleKbd
- * takes the entered text sends it to the server as an argument to cmd
- */
-function textCMD (cmd) {
-  const name = document.getElementById('ptext').value
-  document.getElementById('ptext').value = ''
-  if (!name) {
-    return
-  }
-  if (name.length < 3) {
-    window.alert('Please give a longer name')
-    return
-  }
-  sendCMDArg(cmd, name)
 }
 
 /*
  * download a title by key(0=current)
  */
 function download (key) {
-  if (window.confirm('Download title?')) {
-    window.location = '/mpctrl/title/' + key
-  }
+  window.location = '/mpctrl/title/' + key
   doUpdate |= 1
-}
-
-/**
- * helper function to react on enter in a text
- * input without form
- */
-function isEnter (event, cmd) {
-  if (event.keyCode === 13) {
-    sendArg(cmd)
-    return false
-  }
-}
-
-function checkPass () {
-  const pwd = document.getElementById('pass').value
-  enableElement('admin', (pwd !== ''))
-  enableElement('login', (pwd === ''))
-}
-
-function clearPass () {
-  document.getElementById('pass').value = ''
-  checkPass()
 }
 
 function switchUI () {
@@ -1866,9 +1808,6 @@ function handleKey (event) {
       break
     case ',':
       sendCMD(0x0e)
-      break
-    case 'Q':
-      pwSendCMD(0x07)
       break
     case 'G':
       toggleDebug()
@@ -2069,11 +2008,12 @@ function dummy () {
   initializeUI()
   switchUI()
   download()
-  isEnter()
-  textCMD()
   loadURL()
   toggleSearch()
-  clearPass()
   togglePopupDB()
   confReset()
+  showKbd()
+  showConfirm()
+  confOK()
+  confCancel()
 }

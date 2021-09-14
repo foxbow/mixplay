@@ -13,7 +13,7 @@
 #define VOLSTEP 2
 
 void setCommand(mpcmd_t cmd, char *arg);
-void *reader(void *);
+void *reader();
 void *setProfile(void *);
 void setStream(const char *const stream, const char *const name);
 
