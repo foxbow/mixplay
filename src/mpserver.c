@@ -162,6 +162,8 @@ static size_t serviceUnavailable(char *commdata) {
 #define CL_ONE 2
 #define CL_SRC 4
 
+#define ROUNDUP(a,b) (((a/b)+1)*b)
+
 /**
  * This will handle a connection
  *
@@ -196,7 +198,10 @@ static void *clientHandler(void *args) {
 	mpcmd_t cmd = mpc_idle;
 	static const char *mtype;
 	char line[MAXPATHLEN] = "";
-	ssize_t commsize = MP_BLKSIZE;
+
+	/* commsize needs at least to be large enough to hold the javascript file.
+	 * Round that size up to the next multiple of MP_BLOCKSIZE */
+	ssize_t commsize = ROUNDUP(static_mixplay_js_len, MP_BLKSIZE);
 	ssize_t retval = 0;
 	ssize_t recvd = 0;
 	static const char *fname;

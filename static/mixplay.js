@@ -151,6 +151,13 @@ function sendArg (cmd) {
   }
 }
 
+/*
+ * show confirmation dialog with message msg
+ * ok is the callback on confirmation:
+ *  - undefined        : no cancel button, no callback on okay
+ *  - <num>            : sendCMD(<num>) on okay
+ *  - function() {...} : callback to invoke on okay
+ */
 function showConfirm (msg, ok) {
   const cdiv = document.getElementById('confirm')
   if (cdiv.className === 'hide') {
@@ -161,13 +168,14 @@ function showConfirm (msg, ok) {
       enableElement('confcanc', 0)
     } else {
       if (ok > 0) {
-        confokay = function () { sendArg(ok) }
+        confokay = function () { sendCMD(ok) }
       } else {
         confokay = ok
       }
       enableElement('confcanc', 1)
     }
   } else {
+    /* dialog is already open, add msg. */
     document.getElementById('confmsg').innerHTML += '<br/>' + msg
   }
 }
@@ -1477,7 +1485,7 @@ function playerUpdate (data) {
 
   if (data.msg !== '') {
     if (data.msg.startsWith('ALERT:')) {
-      showConfirm('* ' + data.msg.substring(6))
+      showConfirm(data.msg.substring(6))
     } else if (data.msg.startsWith('ACT:')) {
       setElement('title', '..' + data.msg.substring(4) + '..')
       adaptUI(1)
@@ -2015,5 +2023,4 @@ function dummy () {
   showKbd()
   showConfirm()
   confOK()
-  confCancel()
 }
