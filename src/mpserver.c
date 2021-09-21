@@ -30,7 +30,7 @@
 #include "build/mpplayer_js.h"
 #include "build/mixplayd_html.h"
 #include "build/mprc_html.h"
-#include "build/mixplayd_js.h"
+#include "build/mixplayd_min_js.h"
 #include "build/mixplayd_css.h"
 #include "build/mixplayd_svg.h"
 #include "build/mixplayd_png.h"
@@ -201,7 +201,7 @@ static void *clientHandler(void *args) {
 
 	/* commsize needs at least to be large enough to hold the javascript file.
 	 * Round that size up to the next multiple of MP_BLOCKSIZE */
-	ssize_t commsize = ROUNDUP(static_mixplay_js_len, MP_BLKSIZE);
+	ssize_t commsize = ROUNDUP(build_mixplay_min_js_len, MP_BLKSIZE);
 	ssize_t retval = 0;
 	ssize_t recvd = 0;
 	static const char *fname;
@@ -471,9 +471,9 @@ static void *clientHandler(void *args) {
 					}
 					else if (strstr(pos, "/mixplay.js ") == pos) {
 						pthread_mutex_lock(&_sendlock);
-						fname = "static/mixplay.js";
-						fdata = static_mixplay_js;
-						flen = static_mixplay_js_len;
+						fname = "build/mixplay_min.js";
+						fdata = build_mixplay_min_js;
+						flen = build_mixplay_min_js_len;
 						mtype = "application/javascript; charset=utf-8";
 					}
 					else if (strstr(pos, "/mixplay.svg ") == pos) {

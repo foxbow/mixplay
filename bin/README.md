@@ -9,17 +9,20 @@ the mixplay server
 ### mprcinit
 utility to create a valid configuration and learn about a remote control. This shall move into the web interface.
 
-### mpstop
-script that will terminate a running mixplayd. May become an init script of sorts.
-
 ### mixplay-hid
 example standalone client that connects to a mixplay server, shows the current title and allows basic commands like the 'mixplay -d' HID interface.
 
 ### mixplay-scr
 screen saver client for embedded set-ups that turns off the screen via DPMS after 10 minutes of idle time.
 
+### minify
+simple Javascript minifier that may also work on CSS, only needed during build
+
 ## Mixplay helper scripts
 some bash scripts that depend on third party utilities but may come in handy for certain use cases. These are static and will not be touched by any make target build.
+
+### mpstop
+script that will terminate a running mixplayd. May become an init script of sorts.
 
 ### gainer.sh
 depends on 'mp3gain' to add Radio/Mix gain tags to all mp3 files in the tree down from the current directory.

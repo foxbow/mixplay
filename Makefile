@@ -45,6 +45,7 @@ clean:
 	rm -f bin/mixplayd
 	rm -f bin/mixplay-*
 	rm -f bin/mprcinit
+	rm -f bin/minify
 
 distclean: clean
 	find . -name "*~" -exec rm \{\} \;
@@ -59,6 +60,9 @@ distclean: clean
 new: clean all
 
 clients: bin/mixplay-hid bin/mixplay-scr
+
+bin/minify: $(SRCDIR)/minify.c
+	$(CC) $^ -o $@
 
 bin/mixplayd: $(OBJDIR)/mixplayd.o $(OBJS)
 	$(CC) $^ -o $@ $(LIBS)
@@ -94,8 +98,11 @@ $(OBJDIR)/mprc_html.h: static/mprc.html
 $(OBJDIR)/mixplayd_css.h: static/mixplay.css
 	xxd -i static/mixplay.css > $(OBJDIR)/mixplayd_css.h
 
-$(OBJDIR)/mixplayd_js.h: static/mixplay.js
-	xxd -i static/mixplay.js > $(OBJDIR)/mixplayd_js.h
+$(OBJDIR)/mixplay_min.js: bin/minify static/mixplay.js
+	cat static/mixplay.js | bin/minify > $(OBJDIR)/mixplay_min.js
+
+$(OBJDIR)/mixplayd_min_js.h: $(OBJDIR)/mixplay_min.js
+	xxd -i $(OBJDIR)/mixplay_min.js > $(OBJDIR)/mixplayd_min_js.h
 
 $(OBJDIR)/mixplayd_svg.h: static/mixplay.svg
 	xxd -i static/mixplay.svg > $(OBJDIR)/mixplayd_svg.h

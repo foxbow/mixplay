@@ -15,7 +15,7 @@ cmd = 0MSR RRRR 000C CCCC
 * 0x10 - display
 * 0x1f - path
 
-### C - the actual commands:
+### C - the actual commands/states:
 * 0x00 - play/pause
 * 0x01 - stop
 * 0x02 - previous title

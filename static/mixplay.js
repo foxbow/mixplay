@@ -612,7 +612,8 @@ function sendCMDArg (cmd, arg) {
   /* ignore volume and progress controls as well as quit and reset */
   if ((cmd !== 0x0d) && (cmd !== 0x0e) && (cmd !== 0x1d) && /* vol */
       (cmd !== 0x0f) && (cmd !== 0x10) && /* FF/FR */
-      (cmd !== 0x07) && (cmd !== 0x1f)) {
+      (cmd !== 0x07) && (cmd !== 0x1f) &&
+      (cmd === 0x18) && (!(cmd & 0x80))) {
     /* avoid stacking  */
     if (activecmd !== -1) {
       return
@@ -680,6 +681,9 @@ function sendCMDArg (cmd, arg) {
         case 0:
           fail('CMD Error: connection lost!')
           break
+        case 200:
+          showConfirm('command ' + activecmd + 'returned unexpected data!<br>' + xmlhttp.responseText)
+          /* fallthrough */
         case 204:
           if (activecmd === 0x06) {
             adaptUI(-1)
@@ -1250,12 +1254,12 @@ function searchUpdate (data) {
     switchTabByRef('search', 1)
     for (i = 0; i < data.artists.length; i++) {
       choices = []
-      choices.push(['&#x26b2;', 0x4213]) // search
+      choices.push(['&#x26b2;', 0x0213]) // search
       if (!favplay || data.searchDNP) {
-        choices.push(['&#x2665;', 0x4209]) // fav
+        choices.push(['&#x2665;', 0x0209]) // fav
       }
       if (!data.searchDNP) {
-        choices.push(['&#x2620;', 0x420a]) // dnp
+        choices.push(['&#x2620;', 0x020a]) // dnp
       }
       items[i] = popselect(choices,
         data.artists[i],
