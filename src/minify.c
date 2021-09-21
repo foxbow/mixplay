@@ -36,7 +36,7 @@
 #include <stdio.h>
 #include <ctype.h>
 
-char fetchChar(char next) {
+int fetchChar(int next) {
 	while (isblank(next)) {
 		next = getchar();
 	}
@@ -44,7 +44,7 @@ char fetchChar(char next) {
 }
 
 int main(int argc, char **argv) {
-	char this, next;
+	int this, next;
 	unsigned code = 0;			// does the current line need a semicolon at the end?
 	unsigned mode = 0;			// 1 - //, 2 - /* */, 3 - '', 4 - ""
 	int assign = -1;
@@ -250,4 +250,5 @@ int main(int argc, char **argv) {
 		}
 		this = next;
 	}
+	return 0;
 }
