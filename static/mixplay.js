@@ -2009,22 +2009,4 @@ function initializeUI () {
   clocktime()
   /* attach virtual keyboard */
   initKbdDiv()
-  /* everything below is to silence unused function warnings */
-  if (!document.body) {
-    dummy()
-  }
-}
-
-/* these listeners are added in the HTML code */
-function dummy () {
-  initializeUI()
-  switchUI()
-  download()
-  loadURL()
-  toggleSearch()
-  togglePopupDB()
-  confReset()
-  showKbd()
-  showConfirm()
-  confOK()
 }

@@ -89,14 +89,20 @@ $(OBJDIR)/mpplayer_html.h: static/mpplayer.html
 $(OBJDIR)/mpplayer_js.h: static/mpplayer.js
 	xxd -i static/mpplayer.js > $(OBJDIR)/mpplayer_js.h
 
-$(OBJDIR)/mixplayd_html.h: static/mixplay.html
-	xxd -i static/mixplay.html > $(OBJDIR)/mixplayd_html.h
-
 $(OBJDIR)/mprc_html.h: static/mprc.html
 	xxd -i static/mprc.html > $(OBJDIR)/mprc_html.h
 
-$(OBJDIR)/mixplayd_css.h: static/mixplay.css
-	xxd -i static/mixplay.css > $(OBJDIR)/mixplayd_css.h
+$(OBJDIR)/mixplay_min.html: bin/minify static/mixplay.html
+	cat static/mixplay.html | bin/minify > $(OBJDIR)/mixplay_min.html
+
+$(OBJDIR)/mixplayd_min_html.h: $(OBJDIR)/mixplay_min.html
+	xxd -i $(OBJDIR)/mixplay_min.html > $(OBJDIR)/mixplayd_min_html.h
+
+$(OBJDIR)/mixplay_min.css: bin/minify static/mixplay.css
+	cat static/mixplay.css | bin/minify > $(OBJDIR)/mixplay_min.css
+
+$(OBJDIR)/mixplayd_min_css.h: $(OBJDIR)/mixplay_min.css
+	xxd -i $(OBJDIR)/mixplay_min.css > $(OBJDIR)/mixplayd_min_css.h
 
 $(OBJDIR)/mixplay_min.js: bin/minify static/mixplay.js
 	cat static/mixplay.js | bin/minify > $(OBJDIR)/mixplay_min.js

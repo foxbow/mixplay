@@ -7,8 +7,8 @@
  * Broken code behind
  *
  * Very simple javascript minifier that takes wild guesses about code
- * structures from simple characters to filter out linebreaks, comments and
- * hitespaces from the original code, ending up with a single line of
+ * structures from single characters to filter out linebreaks, comments and
+ * whitespaces from the original code, ending up with a single line of
  * spaghetti code.
  *
  * It works as a filter just because I am too lazy to add file handling
@@ -18,14 +18,12 @@
  * on constructs like "system.log( '/* comment in quotes *\/' )" - unlike Atom
  * for instance which needs the backslash to 'escape' the last slash..
  *
- * There still are some stray semicolons and most likely some constructs
- * will still break the result. But it reduces the filesize of mixplayd.js
- * by 30% which is kind of worth it.
+ * There may stil be some stray semicolons and most likely some constructs
+ * will break the result. But it reduces the filesize of mixplayd.js
+ * to 64% which is kind of worth it. CSS (~75%) and HTML (~80%) results are
+ * okay'ish as expected.
  *
- * This even seems to work on CSS sheets.
- *
- * HTML minification apparently needs some tweaking but nothing too exciting
- * it seems. But that would need command line parsing, meh...
+ * This even seems to work on CSS sheets and HTML documents.
  *
  * Next iteration (if ever) will tokenize the code and probably even shorten
  * function and variable names, which is where the fat lies.
@@ -47,10 +45,14 @@ int main(int argc, char **argv) {
 	int this, next;
 	unsigned code = 0;			// does the current line need a semicolon at the end?
 	unsigned mode = 0;			// 1 - //, 2 - /* */, 3 - '', 4 - ""
+	unsigned html = 0;
 	int assign = -1;
 	unsigned blevel[10];
 
 	this = getchar();
+	if (this == '<') {
+		html = 1;
+	}
 	while ((int) this != -1) {
 		next = getchar();
 		switch (mode) {
@@ -67,21 +69,23 @@ int main(int argc, char **argv) {
 				}
 				break;
 			case '=':
-				if (next != '=') {
-					assign++;
-					if (assign > 9) {
-						fprintf(stderr,
-								"ERROR: more than 10 assignment levels!\n");
-						return 1;
+				if (!html) {
+					if (next != '=') {
+						assign++;
+						if (assign > 9) {
+							fprintf(stderr,
+									"ERROR: more than 10 assignment levels!\n");
+							return 1;
+						}
+						blevel[assign] = 0;
 					}
-					blevel[assign] = 0;
-				}
-				else {
-					/* effing '===' operator! */
-					while (next == '=') {
-						putchar('=');
-						this = next;
-						next = getchar();
+					else {
+						/* effing '===' operator! */
+						while (next == '=') {
+							putchar('=');
+							this = next;
+							next = getchar();
+						}
 					}
 				}
 			case '&':			// no whitespaces between this and the rest
@@ -90,6 +94,11 @@ int main(int argc, char **argv) {
 			case ',':			// statement
 			case '>':
 			case '<':
+				if (html && (next == '!')) {
+					mode = 1;
+					this = 0;
+					break;
+				}
 			case ':':
 				next = fetchChar(next);
 				code = 0;
@@ -243,6 +252,15 @@ int main(int argc, char **argv) {
 				mode = 0;
 				code = 1;
 			}
+			break;
+		case 5:
+			if ((this == '-') && (next == '-')) {
+				next = getchar();
+				if (next == '>') {
+					mode = 0;
+				}
+			}
+			this = 0;
 			break;
 		}
 		if (this) {
