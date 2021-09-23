@@ -28,12 +28,12 @@
 
 #include "build/mpplayer_html.h"
 #include "build/mpplayer_js.h"
-#include "build/mixplayd_min_html.h"
+#include "build/mixplay_html.h"
 #include "build/mprc_html.h"
-#include "build/mixplayd_min_js.h"
-#include "build/mixplayd_min_css.h"
-#include "build/mixplayd_svg.h"
-#include "build/mixplayd_png.h"
+#include "build/mixplay_js.h"
+#include "build/mixplay_css.h"
+#include "build/mixplay_svg.h"
+#include "build/mixplay_png.h"
 #include "build/manifest_json.h"
 
 /* the kind of request that came in */
@@ -201,7 +201,7 @@ static void *clientHandler(void *args) {
 
 	/* commsize needs at least to be large enough to hold the javascript file.
 	 * Round that size up to the next multiple of MP_BLOCKSIZE */
-	ssize_t commsize = ROUNDUP(build_mixplay_min_js_len, MP_BLKSIZE);
+	ssize_t commsize = ROUNDUP(static_mixplay_js_len, MP_BLKSIZE);
 	ssize_t retval = 0;
 	ssize_t recvd = 0;
 	static const char *fname;
@@ -449,9 +449,9 @@ static void *clientHandler(void *args) {
 					if ((strstr(pos, "/ ") == pos) ||
 						(strstr(pos, "/index.html ") == pos)) {
 						pthread_mutex_lock(&_sendlock);
-						fname = "build/mixplay_min.html";
-						fdata = build_mixplay_min_html;
-						flen = build_mixplay_min_html_len;
+						fname = "static/mixplay.html";
+						fdata = static_mixplay_html;
+						flen = static_mixplay_html_len;
 						mtype = "text/html; charset=utf-8";
 					}
 					else if ((strstr(pos, "/rc ") == pos) ||
@@ -464,16 +464,16 @@ static void *clientHandler(void *args) {
 					}
 					else if (strstr(pos, "/mixplay.css ") == pos) {
 						pthread_mutex_lock(&_sendlock);
-						fname = "build/mixplay_min.css";
-						fdata = build_mixplay_min_css;
-						flen = build_mixplay_min_css_len;
+						fname = "static/mixplay.css";
+						fdata = static_mixplay_css;
+						flen = static_mixplay_css_len;
 						mtype = "text/css; charset=utf-8";
 					}
 					else if (strstr(pos, "/mixplay.js ") == pos) {
 						pthread_mutex_lock(&_sendlock);
-						fname = "build/mixplay_min.js";
-						fdata = build_mixplay_min_js;
-						flen = build_mixplay_min_js_len;
+						fname = "static/mixplay.js";
+						fdata = static_mixplay_js;
+						flen = static_mixplay_js_len;
 						mtype = "application/javascript; charset=utf-8";
 					}
 					else if (strstr(pos, "/mixplay.svg ") == pos) {

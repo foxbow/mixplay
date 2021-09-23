@@ -33,10 +33,45 @@
  */
 #include <stdio.h>
 #include <ctype.h>
+#include <string.h>
 
-int fetchChar(int next) {
+/*
+ * scans for the next character that is neither blank or tab to skip
+ * whitespaces.
+ */
+static int scanChar(int next) {
 	while (isblank(next)) {
 		next = getchar();
+	}
+	return next;
+}
+
+/*
+ * scans and prints a number of characters
+ * used to identify <pre> and </pre> tags
+ * as long as the scanned characters match the pattern, the print and print
+ * will continue. If the pattern matches, the next character is returned. If
+ * it it does not match, the negative if the first unmatched character is
+ * returned.
+ * The -1 for EOF is forwarded as is.
+ */
+static int scanFor(const char *pat, int next) {
+	int i;
+
+	// sanity check
+	if (next == -1)
+		return -1;
+	for (i = 0; i < strlen(pat); i++) {
+		if (tolower(next) == tolower(pat[i])) {
+			putchar(next);
+			next = getchar();
+			if (next == -1) {
+				return next;
+			}
+		}
+		else {
+			return -next;
+		}
 	}
 	return next;
 }
@@ -44,7 +79,7 @@ int fetchChar(int next) {
 int main(int argc, char **argv) {
 	int this, next;
 	unsigned code = 0;			// does the current line need a semicolon at the end?
-	unsigned mode = 0;			// 1 - //, 2 - /* */, 3 - '', 4 - ""
+	unsigned mode = 0;			// 1 - //, 2 - /* */, 3 - '', 4 - "", 5 - <!--, 6 - <pre>
 	unsigned html = 0;
 	int assign = -1;
 	unsigned blevel[10];
@@ -53,7 +88,7 @@ int main(int argc, char **argv) {
 	if (this == '<') {
 		html = 1;
 	}
-	while ((int) this != -1) {
+	while (this != -1) {
 		next = getchar();
 		switch (mode) {
 		case 0:				// standard
@@ -67,6 +102,40 @@ int main(int argc, char **argv) {
 					mode = 2;
 					this = 0;
 				}
+				break;
+			case '<':
+				if (html) {
+					switch (next) {
+					case '!':
+						next = getchar();
+						if (next == '-') {
+							mode = 5;
+							this = 0;
+						}
+						else {
+							putchar(this);
+							putchar('!');
+							this = next;
+						}
+						break;
+					case 'p':
+						putchar(this);
+						next = scanFor("pre>", next);
+						if (next > 0) {
+							mode = 6;
+						}
+						else {
+							next = -next;
+						}
+						this = next;
+						break;
+					}
+				}
+				else {
+					next = scanChar(next);
+					code = 0;
+				}
+				break;
 				break;
 			case '=':
 				if (!html) {
@@ -88,19 +157,14 @@ int main(int argc, char **argv) {
 						}
 					}
 				}
-			case '&':			// no whitespaces between this and the rest
+				/* fallthrough */
+			case '&':			// no whitespaces between these and the rest
 			case '*':			// no semicolon either when these are at the
 			case '|':			// end of a line, most likely a broken up
 			case ',':			// statement
 			case '>':
-			case '<':
-				if (html && (next == '!')) {
-					mode = 1;
-					this = 0;
-					break;
-				}
 			case ':':
-				next = fetchChar(next);
+				next = scanChar(next);
 				code = 0;
 				break;
 			case '+':			// special case a++ will most likely need a ';'
@@ -113,7 +177,7 @@ int main(int argc, char **argv) {
 				else {
 					code = 0;
 				}
-				next = fetchChar(next);
+				next = scanChar(next);
 				break;
 			case '-':			// same for a--
 				if (next == '-') {
@@ -125,10 +189,10 @@ int main(int argc, char **argv) {
 				else {
 					code = 0;
 				}
-				next = fetchChar(next);
+				next = scanChar(next);
 				break;
 			case '\n':
-				next = fetchChar(next);
+				next = scanChar(next);
 				if (assign > -1) {
 					if (blevel[assign] == 0) {
 						code = 1;
@@ -145,7 +209,7 @@ int main(int argc, char **argv) {
 				else {
 					this = 0;
 				}
-				next = fetchChar(next);
+				next = scanChar(next);
 				break;
 			case '\'':
 				mode = 3;
@@ -155,10 +219,10 @@ int main(int argc, char **argv) {
 				break;
 			case '(':
 			case '{':
-				next = fetchChar(next);
+				next = scanChar(next);
 				if (next == '\n') {
 					next = getchar();
-					next = fetchChar(next);
+					next = scanChar(next);
 				}
 				if (assign > -1) {
 					blevel[assign]++;
@@ -166,7 +230,7 @@ int main(int argc, char **argv) {
 				break;
 			case ')':
 			case '}':
-				next = fetchChar(next);
+				next = scanChar(next);
 				if (assign > -1) {
 					blevel[assign]--;
 					if ((blevel[assign] == 0) && (next != '{')) {
@@ -181,7 +245,7 @@ int main(int argc, char **argv) {
 						assign--;
 					}
 				}
-				next = fetchChar(next);
+				next = scanChar(next);
 				if (next == '\n') {
 					code = 0;
 				}
@@ -200,7 +264,10 @@ int main(int argc, char **argv) {
 				case '{':
 				case '&':
 				case '|':
+				case '\\':
 					code = 0;
+					this = 0;
+					break;
 				case '/':
 				case '}':
 				case ')':
@@ -233,7 +300,12 @@ int main(int argc, char **argv) {
 			break;
 		case 3:				// single quotes
 			if (this == '\\') {
-				putchar(this);
+				if (next == '\n') {
+					next = getchar();
+				}
+				else {
+					putchar(this);
+				}
 				this = next;
 				next = getchar();
 			}
@@ -244,7 +316,12 @@ int main(int argc, char **argv) {
 			break;
 		case 4:				// double quotes
 			if (this == '\\') {
-				putchar(this);
+				if (next == '\n') {
+					next = getchar();
+				}
+				else {
+					putchar(this);
+				}
 				this = next;
 				next = getchar();
 			}
@@ -257,10 +334,24 @@ int main(int argc, char **argv) {
 			if ((this == '-') && (next == '-')) {
 				next = getchar();
 				if (next == '>') {
+					next = getchar();
 					mode = 0;
 				}
 			}
 			this = 0;
+			break;
+		case 6:
+			if (this == '<') {
+				putchar(this);
+				next = scanFor("/pre>", next);
+				if (next > 0) {
+					mode = 0;
+				}
+				else {
+					next = -next;
+				}
+				this = next;
+			}
 			break;
 		}
 		if (this) {

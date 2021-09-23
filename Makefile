@@ -46,12 +46,14 @@ clean:
 	rm -f bin/mixplay-*
 	rm -f bin/mprcinit
 	rm -f bin/minify
+	rm -f static/mixplay.html
+	rm -f static/mixplay.css
+	rm -f static/mixplay.js
 
 distclean: clean
 	find . -name "*~" -exec rm \{\} \;
-	rm -f $(SRCDIR)/gmixplay_app.h
 	rm -f $(SRCDIR)/mprc_html.h
-	rm -f $(SRCDIR)/mixplayd_*.h
+	rm -f $(SRCDIR)/mixplay_*.h
 	rm -f $(SRCDIR)/mpplayer_*.h
 	rm -rf cov-int
 	rm -f *cov.tgz
@@ -79,10 +81,29 @@ bin/mprcinit: $(OBJDIR)/mprcinit.o $(OBJS)
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CCFLAGS) -c -o $@ $<
 
-install: mixplayd
+install: all
 	install -d $(BINDIR)
-	install -s -m 0755 mixplayd $(BINDIR)
+	install -s -m 0755 bin/mixplayd $(BINDIR)
+	install -s -m 0755 bin/mpstop $(BINDIR)
+	install -s -m 0755 bin/mprcinit $(BINDIR)
+	install -s -m 0755 bin/mixplay-hid $(BINDIR)
+	install -s -m 0755 bin/mixplay-scr $(BINDIR)
+	install -s -m 0755 bin/mpflirc.sh $(BINDIR)
+	install -s -m 0755 bin/mpstream.sh $(BINDIR)
+	install -s -m 0755 bin/mpgainer.sh $(BINDIR)
+	install -s -m 0755 bin/mixplay-hid $(BINDIR)
 
+# minified files
+static/mixplay.html: bin/minify src/mixplay.html
+	cat src/mixplay.html | bin/minify > static/mixplay.html
+
+static/mixplay.js: bin/minify src/mixplay.js
+	cat src/mixplay.js | bin/minify > static/mixplay.js
+
+static/mixplay.css: bin/minify src/mixplay.css
+	cat src/mixplay.css | bin/minify > static/mixplay.css
+
+# minor files
 $(OBJDIR)/mpplayer_html.h: static/mpplayer.html
 	xxd -i static/mpplayer.html > $(OBJDIR)/mpplayer_html.h
 
@@ -92,32 +113,24 @@ $(OBJDIR)/mpplayer_js.h: static/mpplayer.js
 $(OBJDIR)/mprc_html.h: static/mprc.html
 	xxd -i static/mprc.html > $(OBJDIR)/mprc_html.h
 
-$(OBJDIR)/mixplay_min.html: bin/minify static/mixplay.html
-	cat static/mixplay.html | bin/minify > $(OBJDIR)/mixplay_min.html
+$(OBJDIR)/mixplay_svg.h: static/mixplay.svg
+	xxd -i static/mixplay.svg > $(OBJDIR)/mixplay_svg.h
 
-$(OBJDIR)/mixplayd_min_html.h: $(OBJDIR)/mixplay_min.html
-	xxd -i $(OBJDIR)/mixplay_min.html > $(OBJDIR)/mixplayd_min_html.h
-
-$(OBJDIR)/mixplay_min.css: bin/minify static/mixplay.css
-	cat static/mixplay.css | bin/minify > $(OBJDIR)/mixplay_min.css
-
-$(OBJDIR)/mixplayd_min_css.h: $(OBJDIR)/mixplay_min.css
-	xxd -i $(OBJDIR)/mixplay_min.css > $(OBJDIR)/mixplayd_min_css.h
-
-$(OBJDIR)/mixplay_min.js: bin/minify static/mixplay.js
-	cat static/mixplay.js | bin/minify > $(OBJDIR)/mixplay_min.js
-
-$(OBJDIR)/mixplayd_min_js.h: $(OBJDIR)/mixplay_min.js
-	xxd -i $(OBJDIR)/mixplay_min.js > $(OBJDIR)/mixplayd_min_js.h
-
-$(OBJDIR)/mixplayd_svg.h: static/mixplay.svg
-	xxd -i static/mixplay.svg > $(OBJDIR)/mixplayd_svg.h
-
-$(OBJDIR)/mixplayd_png.h: static/mixplay.png
-	xxd -i static/mixplay.png > $(OBJDIR)/mixplayd_png.h
+$(OBJDIR)/mixplay_png.h: static/mixplay.png
+	xxd -i static/mixplay.png > $(OBJDIR)/mixplay_png.h
 
 $(OBJDIR)/manifest_json.h: static/manifest.json
 	xxd -i static/manifest.json > $(OBJDIR)/manifest_json.h
+
+$(OBJDIR)/mixplay_html.h: static/mixplay.html
+	xxd -i static/mixplay.html > $(OBJDIR)/mixplay_html.h
+
+$(OBJDIR)/mixplay_css.h: static/mixplay.css
+	xxd -i static/mixplay.css > $(OBJDIR)/mixplay_css.h
+
+$(OBJDIR)/mixplay_js.h: static/mixplay.js
+	xxd -i static/mixplay.js > $(OBJDIR)/mixplay_js.h
+
 
 prepare:
 	apt-get install mpg123 libmpg123-dev libasound-dev
