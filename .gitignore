@@ -28,7 +28,7 @@ mprcinit
 minify
 core
 
-#minified web content
+# minified web content
 static/mixplay.html
 static/mixplay.js
 static/mixplay.css
