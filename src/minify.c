@@ -94,13 +94,15 @@ int main(int argc, char **argv) {
 		case 0:				// standard
 			switch (this) {
 			case '/':			// may start a comment
-				if (next == '/') {
-					mode = 1;
-					this = 0;
-				}
-				if (next == '*') {
-					mode = 2;
-					this = 0;
+				if (!html) {
+					if (next == '/') {
+						mode = 1;
+						this = 0;
+					}
+					if (next == '*') {
+						mode = 2;
+						this = 0;
+					}
 				}
 				break;
 			case '<':
@@ -116,26 +118,64 @@ int main(int argc, char **argv) {
 							putchar(this);
 							putchar('!');
 							this = next;
+							next = getchar();
 						}
 						break;
 					case 'p':
 						putchar(this);
 						next = scanFor("pre>", next);
 						if (next > 0) {
+							next = scanChar(next);
+							if (next == '\n') {
+								next = scanChar(getchar());
+							}
 							mode = 6;
 						}
 						else {
 							next = -next;
 						}
 						this = next;
+						next = scanChar(getchar());
+						break;
+					case 's':
+						putchar(this);
+						next = scanFor("script>", next);
+						if (next > 0) {
+							next = scanChar(next);
+							if (next == '\n') {
+								next = scanChar(getchar());
+							}
+							html = 0;
+						}
+						else {
+							next = -next;
+						}
+						this = next;
+						next = scanChar(getchar());
 						break;
 					}
+				}
+				else if (next == '/') {
+					putchar(this);
+					next = scanFor("/script>", next);
+					if (next > 0) {
+						next = scanChar(next);
+						if (next == '\n') {
+							next = scanChar(getchar());
+						}
+						html = 1;
+					}
+					else {
+						next = -next;
+					}
+					this = next;
+					next = scanChar(getchar());
+					break;
 				}
 				else {
 					next = scanChar(next);
 					code = 0;
 				}
-				break;
 				break;
 			case '=':
 				if (!html) {
@@ -246,7 +286,7 @@ int main(int argc, char **argv) {
 					}
 				}
 				next = scanChar(next);
-				if (next == '\n') {
+				if ((next == '\n') || (next == '}')) {
 					code = 0;
 				}
 				break;

@@ -455,7 +455,9 @@ static void *clientHandler(void *args) {
 						mtype = "text/html; charset=utf-8";
 					}
 					else if ((strstr(pos, "/rc ") == pos) ||
-							 (strstr(pos, "/rc.html ") == pos)) {
+							 (strstr(pos, "/mprc ") == pos) ||
+							 (strstr(pos, "/rc.html ") == pos) ||
+							 (strstr(pos, "/mprc.html ") == pos)) {
 						pthread_mutex_lock(&_sendlock);
 						fname = "static/mprc.html";
 						fdata = static_mprc_html;
@@ -476,7 +478,8 @@ static void *clientHandler(void *args) {
 						flen = static_mixplay_js_len;
 						mtype = "application/javascript; charset=utf-8";
 					}
-					else if (strstr(pos, "/mixplay.svg ") == pos) {
+					else if ((strstr(pos, "/mixplay.svg ") == pos) ||
+							 (strstr(pos, "/favicon.ico ") == pos)) {
 						pthread_mutex_lock(&_sendlock);
 						fname = "static/mixplay.svg";
 						fdata = static_mixplay_svg;
@@ -490,7 +493,8 @@ static void *clientHandler(void *args) {
 						flen = static_mixplay_png_len;
 						mtype = "image/png";
 					}
-					else if (strstr(pos, "/mpplayer.html ") == pos) {
+					else if ((strstr(pos, "/mpplayer.html ") == pos) ||
+							 (strstr(pos, "/mpplayer ") == pos)) {
 						pthread_mutex_lock(&_sendlock);
 						fname = "static/mpplayer.html";
 						fdata = static_mpplayer_html;
@@ -511,16 +515,10 @@ static void *clientHandler(void *args) {
 						flen = static_manifest_json_len;
 						mtype = "application/manifest+json; charset=utf-8";
 					}
-					else if (strstr(pos, "/favicon.ico ") == pos) {
-						/* ignore for now */
-						send(sock, "HTTP/1.1 204 No Content\015\012\015\012",
-							 28, 0);
-						state = req_none;
-					}
 					else {
 						addMessage(1, "Illegal get %s", pos);
 						send(sock, "HTTP/1.0 404 Not Found\015\012\015\012",
-							 25, 0);
+							 26, 0);
 						state = req_none;
 						running = CL_STP;
 					}
