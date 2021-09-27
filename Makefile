@@ -93,25 +93,17 @@ install: all
 	install -s -m 0755 bin/mpgainer.sh $(BINDIR)
 	install -s -m 0755 bin/mixplay-hid $(BINDIR)
 
-# minified files
-static/mixplay.html: bin/minify src/mixplay.html
-	cat src/mixplay.html | bin/minify > static/mixplay.html
+$(OBJDIR)/%_html.h: $(SRCDIR)/%.html bin/minify
+	cat $< | bin/minify > static/$(notdir $<)
+	xxd -i static/$(notdir $<) > $@
 
-static/mixplay.js: bin/minify src/mixplay.js
-	cat src/mixplay.js | bin/minify > static/mixplay.js
+$(OBJDIR)/%_js.h: $(SRCDIR)/%.js bin/minify
+	cat $< | bin/minify > static/$(notdir $<)
+	xxd -i static/$(notdir $<) > $@
 
-static/mixplay.css: bin/minify src/mixplay.css
-	cat src/mixplay.css | bin/minify > static/mixplay.css
-
-# minor files
-$(OBJDIR)/mpplayer_html.h: static/mpplayer.html
-	xxd -i static/mpplayer.html > $(OBJDIR)/mpplayer_html.h
-
-$(OBJDIR)/mpplayer_js.h: static/mpplayer.js
-	xxd -i static/mpplayer.js > $(OBJDIR)/mpplayer_js.h
-
-$(OBJDIR)/mprc_html.h: static/mprc.html
-	xxd -i static/mprc.html > $(OBJDIR)/mprc_html.h
+$(OBJDIR)/%_css.h: $(SRCDIR)/%.css bin/minify
+	cat $< | bin/minify > static/$(notdir $<)
+	xxd -i static/$(notdir $<) > $@
 
 $(OBJDIR)/mixplay_svg.h: static/mixplay.svg
 	xxd -i static/mixplay.svg > $(OBJDIR)/mixplay_svg.h
@@ -121,16 +113,6 @@ $(OBJDIR)/mixplay_png.h: static/mixplay.png
 
 $(OBJDIR)/manifest_json.h: static/manifest.json
 	xxd -i static/manifest.json > $(OBJDIR)/manifest_json.h
-
-$(OBJDIR)/mixplay_html.h: static/mixplay.html
-	xxd -i static/mixplay.html > $(OBJDIR)/mixplay_html.h
-
-$(OBJDIR)/mixplay_css.h: static/mixplay.css
-	xxd -i static/mixplay.css > $(OBJDIR)/mixplay_css.h
-
-$(OBJDIR)/mixplay_js.h: static/mixplay.js
-	xxd -i static/mixplay.js > $(OBJDIR)/mixplay_js.h
-
 
 prepare:
 	apt-get install mpg123 libmpg123-dev libasound-dev

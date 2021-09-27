@@ -596,10 +596,9 @@ int search(const char *pat, const mpcmd_t range) {
 			/* now interpret the value of 'found' */
 
 			if (MPC_ISARTIST(found)) {
-				/* check for new artist - checksim to group typos and collabs
-				 * TDOD: check if this is really as beneficial as expected */
+				/* check for new artist */
 				for (i = 0; (i < res->anum)
-					 && !checkSim(res->artists[i], runner->artist); i++);
+					 && strcmp(res->artists[i], runner->artist); i++);
 				if (i == res->anum) {
 					res->anum++;
 					res->artists =

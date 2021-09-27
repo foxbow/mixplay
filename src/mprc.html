@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mixplay RC</title>
+  </head>
+  <body>
+    <script>
+	function sendCMD( cmd ) {
+		var xmlhttp=new XMLHttpRequest();
+
+		xmlhttp.onreadystatechange=function() {
+			if ( xmlhttp.readyState==4 && xmlhttp.status!=204 ) {
+				if( xmlhttp.status == 0 ) {
+					alert("Error: connection lost!");
+				} else {
+					alert( "Received Error "+xmlhttp.status+" after sending 0x"+code );
+				}
+			}
+		}
+
+    var json = JSON.stringify({ cmd: cmd, clientid: 0 })
+
+    xmlhttp.open('POST', '/mpctrl/cmd?' + json)
+		xmlhttp.send();
+	}
+    </script>
+    <button onclick='sendCMD(0x02)'>&lt;</button>
+    <button onclick='sendCMD(0x00)'>&#x25B6;</button>
+    <button onclick='sendCMD(0x03)'>&gt;</button>
+    <br/>
+    <button onclick='sendCMD(0x100a)'>DNP</button>
+    <button onclick='sendCMD(0x1009)'>FAV</button>
+    <br/>
+    <button onclick='sendCMD(0x0e)'>-</button>
+    <button onclick='sendCMD(0x0d)'>+</button>
+  </body>
+</html>

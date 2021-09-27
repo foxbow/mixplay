@@ -103,6 +103,7 @@ int main(int argc, char **argv) {
 						mode = 2;
 						this = 0;
 					}
+					next = scanChar(next);
 				}
 				break;
 			case '<':
@@ -127,6 +128,7 @@ int main(int argc, char **argv) {
 						if (next > 0) {
 							next = scanChar(next);
 							if (next == '\n') {
+								// todo: this may mess up things
 								next = scanChar(getchar());
 							}
 							mode = 6;
@@ -135,7 +137,7 @@ int main(int argc, char **argv) {
 							next = -next;
 						}
 						this = next;
-						next = scanChar(getchar());
+						next = getchar();
 						break;
 					case 's':
 						putchar(this);
@@ -151,7 +153,7 @@ int main(int argc, char **argv) {
 							next = -next;
 						}
 						this = next;
-						next = scanChar(getchar());
+						next = getchar();
 						break;
 					}
 				}
@@ -159,21 +161,16 @@ int main(int argc, char **argv) {
 					putchar(this);
 					next = scanFor("/script>", next);
 					if (next > 0) {
-						next = scanChar(next);
-						if (next == '\n') {
-							next = scanChar(getchar());
-						}
 						html = 1;
 					}
 					else {
 						next = -next;
 					}
 					this = next;
-					next = scanChar(getchar());
+					next = getchar();
 					break;
 				}
 				else {
-					next = scanChar(next);
 					code = 0;
 				}
 				break;
@@ -202,9 +199,19 @@ int main(int argc, char **argv) {
 			case '*':			// no semicolon either when these are at the
 			case '|':			// end of a line, most likely a broken up
 			case ',':			// statement
-			case '>':
 			case ':':
-				next = scanChar(next);
+				if (!html) {
+					next = scanChar(next);
+				}
+				code = 0;
+				break;
+			case '>':
+				if (html && (next == '\n')) {
+					next = getchar();
+				}
+				if (!html) {
+					next = scanChar(next);
+				}
 				code = 0;
 				break;
 			case '+':			// special case a++ will most likely need a ';'
@@ -233,6 +240,9 @@ int main(int argc, char **argv) {
 				break;
 			case '\n':
 				next = scanChar(next);
+				while (next == '\n') {
+					next = (scanChar(getchar()));
+				}
 				if (assign > -1) {
 					if (blevel[assign] == 0) {
 						code = 1;
@@ -245,6 +255,9 @@ int main(int argc, char **argv) {
 				if (code == 1) {
 					this = ';';
 					code = 0;
+				}
+				else if (html) {
+					this = ' ';
 				}
 				else {
 					this = 0;
@@ -291,32 +304,39 @@ int main(int argc, char **argv) {
 				}
 				break;
 			case ' ':
-				switch (next) {
-				case ' ':
-				case '=':
-				case '+':
-				case '-':
-				case '*':
-				case '(':
-				case ',':
-				case '>':
-				case '<':
-				case '{':
-				case '&':
-				case '|':
-				case '\\':
-					code = 0;
+				if ((html) && (next == ' ')) {
 					this = 0;
-					break;
-				case '/':
-				case '}':
-				case ')':
-					this = 0;
-					break;
+				}
+				else {
+					switch (next) {
+					case '>':
+					case '=':
+					case '+':
+					case '-':
+					case '*':
+					case '(':
+					case ',':
+					case '<':
+					case '{':
+					case '&':
+					case '|':
+					case '\\':
+					case ' ':
+						code = 0;
+						this = 0;
+						break;
+					case '/':
+					case '}':
+					case ')':
+						this = 0;
+						break;
+					}
 				}
 				break;
 			default:
-				code = 1;
+				if (!html) {
+					code = 1;
+				}
 			}
 			break;
 		case 1:				// line comment

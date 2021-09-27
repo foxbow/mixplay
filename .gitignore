@@ -32,6 +32,9 @@ core
 static/mixplay.html
 static/mixplay.js
 static/mixplay.css
+static/mprc.html
+static/mpplayer.html
+static/mpplayer.js
 
 # Object files
 *.o
