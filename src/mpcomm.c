@@ -137,9 +137,6 @@ static jsonObject *jsonAddTitles(jsonObject * jo, const char *key,
 	jsonObject *jsonTitle = NULL;
 
 	jo = jsonInitArr(jo, key);
-	/* check if something else is changing the playlist and if not lock it to
-	 * make sure it stays consistent */
-	lockPlaylist();
 	while (pl != NULL) {
 		jsonTitle = jsonAddTitle(NULL, "title", pl);
 		jsonAddArrElement(jo, jsonTitle, json_object);
@@ -150,7 +147,6 @@ static jsonObject *jsonAddTitles(jsonObject * jo, const char *key,
 			pl = pl->next;
 		}
 	}
-	unlockPlaylist();
 
 	return jo;
 }
@@ -193,16 +189,20 @@ char *serializeStatus(int clientid, int type) {
 	jo = jsonAddInt(jo, "type", type);
 
 	if (type & MPCOMM_TITLES) {
-		if (current != NULL) {
+		int lock = trylockPlaylist();
+
+		jsonAddTitle(jo, "current", current);
+		if (current && lock) {
 			jsonAddTitles(jo, "prev", current->prev, -1);
-			jsonAddTitle(jo, "current", current);
 			jsonAddTitles(jo, "next", current->next, 1);
 		}
 		else {
+			// todo: not nice but better than blocking on plCheck()
 			jsonAddTitles(jo, "prev", NULL, -1);
-			jsonAddTitle(jo, "current", NULL);
 			jsonAddTitles(jo, "next", NULL, 1);
 		}
+		if (lock)
+			unlockPlaylist();
 	}
 	if (type & MPCOMM_RESULT) {
 		jsonAddTitles(jo, "titles", data->found->titles, 1);

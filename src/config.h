@@ -235,7 +235,6 @@ char *fullpath(const char *file);
 
 mpplaylist_t *wipePlaylist(mpplaylist_t * pl, int recursive);
 mptitle_t *wipeTitles(mptitle_t * root);
-void wipePTLists(mpconfig_t * config);
 marklist_t *wipeList(marklist_t * root);
 int playerIsBusy(void);
 void blockSigint();
@@ -253,6 +252,7 @@ void setMsgCnt(int, unsigned long);
 void incMsgCnt(int);
 void initMsgCnt(int);
 
+int trylockPlaylist(void);
 void lockPlaylist(void);
 void unlockPlaylist(void);
 

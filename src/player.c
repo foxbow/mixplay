@@ -90,6 +90,7 @@ static int checkPasswd(void) {
 void setStream(char const *const stream, char const *const name) {
 	mpconfig_t *control = getConfig();
 
+	lockPlaylist();
 	control->current =
 		wipePlaylist(control->current, control->mpmode & PM_STREAM);
 	control->mpmode = PM_STREAM | PM_SWITCH;
@@ -109,6 +110,7 @@ void setStream(char const *const stream, char const *const name) {
 	control->streamURL =
 		(char *) frealloc(control->streamURL, strlen(stream) + 1);
 	strcpy(control->streamURL, stream);
+	unlockPlaylist();
 	addMessage(1, "Play Stream %s (%s)", name, stream);
 }
 
@@ -298,7 +300,6 @@ void *setProfile(void *arg) {
 			applyLists(1);
 			lastact = control->active;
 		}
-
 		plCheck(0);
 
 		addMessage(1, "Profile set to %s.", profile->name);

@@ -92,6 +92,10 @@ void unlockPlaylist(void) {
 	pthread_mutex_unlock(&pllock);
 }
 
+int trylockPlaylist(void) {
+	return (pthread_mutex_trylock(&pllock) != EBUSY);
+}
+
 static void invokeHooks(_mpfunc * hooks) {
 	_mpfunc *pos = hooks;
 
@@ -615,6 +619,21 @@ void freeConfigContents() {
 	msgBuffDiscard(_cconfig->msg);
 }
 
+/*
+ * wrapper to clean up player. If no database was loaded, the titles in the
+ * playlist should be free()'d  too. If a database is loaded the titles in
+ * the playlist must not be free()'d
+ */
+static void wipePTLists(mpconfig_t * control) {
+	if (control->root != NULL) {
+		control->root = wipeTitles(control->root);
+		control->current = wipePlaylist(control->current, 0);
+	}
+	else {
+		control->current = wipePlaylist(control->current, 1);
+	}
+}
+
 /**
  * recursive free() to clean up all of the configuration
  */
@@ -910,11 +929,12 @@ mpplaylist_t *wipePlaylist(mpplaylist_t * pl, int recursive) {
 		return NULL;
 	}
 
+	int unlock = trylockPlaylist();
+
 	while (pl->prev != NULL) {
 		pl = pl->prev;
 	}
 
-	lockPlaylist();
 	while (pl != NULL) {
 		next = pl->next;
 		if (recursive) {
@@ -923,24 +943,9 @@ mpplaylist_t *wipePlaylist(mpplaylist_t * pl, int recursive) {
 		free(pl);
 		pl = next;
 	}
-	unlockPlaylist();
-
+	if (unlock)
+		unlockPlaylist();
 	return NULL;
-}
-
-/*
- * wrapper to clean up player. If no database was loaded, the titles in the
- * playlist should be free()'d  too. If a database is loaded the titles in
- * the playlist must not be free()'d
- */
-void wipePTLists(mpconfig_t * control) {
-	if (control->root != NULL) {
-		control->root = wipeTitles(control->root);
-		control->current = wipePlaylist(control->current, 0);
-	}
-	else {
-		control->current = wipePlaylist(control->current, 1);
-	}
 }
 
 /**

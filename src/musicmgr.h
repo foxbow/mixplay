@@ -70,7 +70,6 @@ struct marklist_s {
 /**
  * playlist functions
  */
-mpplaylist_t *appendToPL(mptitle_t * title, mpplaylist_t * pl, const int mark);
 mpplaylist_t *addToPL(mptitle_t * title, mpplaylist_t * target,
 					  const int mark);
 mpplaylist_t *remFromPLByKey(mpplaylist_t * root, const unsigned key);

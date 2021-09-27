@@ -170,10 +170,14 @@ mpplaylist_t *addPLDummy(mpplaylist_t * pl, const char *name) {
  * if pl is NULL a new Playlist is created
  * this function either returns pl or the head of the new playlist
  */
-mpplaylist_t *appendToPL(mptitle_t * title, mpplaylist_t * pl, const int mark) {
+static mpplaylist_t *appendToPL(mptitle_t * title, mpplaylist_t * pl,
+								const int mark) {
 	mpplaylist_t *runner = pl;
 
 	if (runner != NULL) {
+		if (runner->title == NULL) {
+			addMessage(-1, "Found an empty entry!");
+		}
 		while (runner->next != NULL) {
 			runner = runner->next;
 		}
@@ -271,6 +275,7 @@ int playCount(mptitle_t * title, int skip) {
 mpplaylist_t *remFromPLByKey(mpplaylist_t * root, const unsigned key) {
 	mpplaylist_t *pl = root;
 
+	lockPlaylist();
 	if (pl == NULL) {
 		addMessage(0, "Cannot remove titles from an empty playlist");
 		return NULL;
@@ -316,7 +321,7 @@ mpplaylist_t *remFromPLByKey(mpplaylist_t * root, const unsigned key) {
 	else {
 		addMessage(0, "No title with key %i in playlist!", key);
 	}
-
+	unlockPlaylist();
 	return root;
 }
 
