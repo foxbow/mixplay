@@ -189,20 +189,17 @@ char *serializeStatus(int clientid, int type) {
 	jo = jsonAddInt(jo, "type", type);
 
 	if (type & MPCOMM_TITLES) {
-		int lock = trylockPlaylist();
-
 		jsonAddTitle(jo, "current", current);
-		if (current && lock) {
+		if (current && trylockPlaylist()) {
 			jsonAddTitles(jo, "prev", current->prev, -1);
 			jsonAddTitles(jo, "next", current->next, 1);
+			unlockPlaylist();
 		}
 		else {
 			// todo: not nice but better than blocking on plCheck()
 			jsonAddTitles(jo, "prev", NULL, -1);
 			jsonAddTitles(jo, "next", NULL, 1);
 		}
-		if (lock)
-			unlockPlaylist();
 	}
 	if (type & MPCOMM_RESULT) {
 		jsonAddTitles(jo, "titles", data->found->titles, 1);

@@ -13,7 +13,6 @@ var numscrolls = 0
 var favplay = 0
 var cmdtosend = ''
 var argtosend = ''
-var activecmd = -1
 var smallUI = 0
 var active = 0
 var swipest = []
@@ -445,7 +444,6 @@ function fail (msg) {
     setElement('next', '')
     adaptUI(-1)
   }
-  activecmd = -1
 }
 
 /*
@@ -609,20 +607,6 @@ function sendCMDArg (cmd, arg) {
     }
   }
 
-  /* ignore volume and progress controls as well as quit and reset */
-  if ((cmd !== 0x0d) && (cmd !== 0x0e) && (cmd !== 0x1d) && /* vol */
-      (cmd !== 0x0f) && (cmd !== 0x10) && /* FF/FR */
-      (cmd !== 0x07) && (cmd !== 0x1f) &&
-      (cmd === 0x18) && (!(cmd & 0x80))) {
-    /* avoid stacking  */
-    if (activecmd !== -1) {
-      return
-    }
-    activecmd = cmd
-    /* give visual feedback that the command is being progressed */
-    setBody('busy')
-  }
-
   while (code.length < 4) {
     code = '0' + code
   }
@@ -637,6 +621,9 @@ function sendCMDArg (cmd, arg) {
   }
 
   switch (cmd & 0x00ff) {
+    case 0x06: /* mpc_profile */
+      adaptUI(-1)
+      break
     case 0x18: /* mpc_remprof */
       showConfirm('Remove ' + arg + '?', 0x98)
       return
@@ -670,8 +657,6 @@ function sendCMDArg (cmd, arg) {
       } else {
         showConfirm('Busy, sorry.')
       }
-      activecmd = -1
-      clearBody('busy')
       return
   }
 
@@ -682,27 +667,19 @@ function sendCMDArg (cmd, arg) {
           fail('CMD Error: connection lost!')
           break
         case 200:
-          showConfirm('command ' + activecmd + 'returned unexpected data!<br>' + xmlhttp.responseText)
+          showConfirm('One shot command returned unexpected data!<br>' + xmlhttp.responseText)
           /* fallthrough */
         case 204:
-          if (activecmd === 0x06) {
-            adaptUI(-1)
-          }
           /* TODO: this is not correct! */
-          activecmd = -1
           if (doUpdate < 0) {
             document.location.reload()
           }
           break
         case 503:
           showConfirm('Sorry, we\'re busy!')
-          activecmd = -1
           break
         default:
           fail('Received Error ' + xmlhttp.status + ' after sending 0x' + code)
-      }
-      if (activecmd === -1) {
-        clearBody('busy')
       }
     }
   }
@@ -1404,13 +1381,9 @@ function playerUpdate (data) {
   }
 
   if (data.mpmode & 8) {
-    activecmd = -2
     setBody('busy')
   } else {
-    if (activecmd === -2) {
-      activecmd = -1
-      clearBody('busy')
-    }
+    clearBody('busy')
   }
 
   if ((data.clientid > 0) && (clientid !== data.clientid)) {
@@ -1560,7 +1533,6 @@ function updateUI () {
         default:
           fail('Received Error ' + xmlhttp.status)
       }
-
       if (doUpdate < 0) {
         document.body.className = 'disconnect'
       }
