@@ -643,9 +643,11 @@ void dbWrite(int force) {
 	mptitle_t *runner = root;
 
 	if (!force && (getConfig()->dbDirty == 0)) {
+		addMessage(1, "No change in database.");
 		return;
 	}
 
+	addMessage(1, "Saving database.");
 	/* this should never happen, if it does, then there is a logic fail
 	 * somewhere */
 	if (force && getFavplay()) {

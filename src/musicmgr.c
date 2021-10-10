@@ -1407,26 +1407,22 @@ static mptitle_t *skipPcount( mptitle_t *guard, unsigned int pcount, unsigned lo
  *
  * returns the head/current of the (new/current) playlist or NULL on error
  */
-mpplaylist_t *addNewTitle(mpplaylist_t * pl1, mptitle_t * root) {
+static mpplaylist_t *addNewTitle( void ) {
 	mptitle_t *runner = NULL;
 	mptitle_t *guard = NULL;
 	unsigned long num = 0;
 	char *lastpat = NULL;
 	unsigned int pcount = 0;
 	unsigned int cycles = 0;
-	mpplaylist_t *pl = getConfig()->current;
 
-	/* 0 - nothing checked
-	 * 1 - namecheck okay
-	 * 2 - playcount okay
-	 * 3 - all okay
-	 */
+	mpplaylist_t *pl = getConfig()->current;
+	mptitle_t *root = getConfig()->root;
 
 	if (pl == NULL) {
 		runner = root;
 	}
 	else {
-		runner = pl1->title;
+		runner = pl->title;
 	}
 
 	/* select a random title from the database */
@@ -1447,10 +1443,11 @@ mpplaylist_t *addNewTitle(mpplaylist_t * pl1, mptitle_t * root) {
 	pcount = getPlaycount(0);
 	runner = skipPcount(runner, pcount, num);
 	if (lastpat == NULL) {
-		return appendToPL(runner, pl1, -1);
+		return appendToPL(runner, pl, -1);
 	}
 
-	while (pl->next != NULL) {
+	/* step through the playlist */
+	do {
 		lastpat = pl->title->artist;
 		while (guard != runner) {
 			guard = runner;
@@ -1458,7 +1455,6 @@ mpplaylist_t *addNewTitle(mpplaylist_t * pl1, mptitle_t * root) {
 				addMessage(3, "%s = %s", runner->artist, lastpat);
 				activity(1, "Nameskipping");
 				runner = skipPcount(runner->next, pcount, num);
-
 				/* 10 may not be enough in practice */
 				if (++cycles > 10) {
 					cycles = 0;
@@ -1467,15 +1463,21 @@ mpplaylist_t *addNewTitle(mpplaylist_t * pl1, mptitle_t * root) {
 				}
 			}
 		}
+		if (guard != runner) {
+			/* title did not fix, start again from the beginning */
+			pl = getConfig()->current;
+		}
+		else {
+			pl = pl->next;
+		}
 		guard=NULL;
-		pl = pl->next;
-	}
+	} while (pl != NULL);
 	/*  *INDENT-OFF*  */
 	addMessage(2, "[+] (%i/%i/%c) %5d %s",
 			   (runner->flags & MP_FAV) ? runner->favpcount : runner->playcount,
 			   pcount, flagToChar(runner->flags), runner->key, runner->display);
 	/*  *INDENT-ON*  */
-	return appendToPL(runner, pl1, -1);
+	return appendToPL(runner, pl, -1);
 }
 
 /**
@@ -1598,10 +1600,10 @@ void plCheck(int del) {
 	/* fill up the playlist with new titles */
 	while (cnt < 10) {
 		if (getConfig()->current == NULL) {
-			getConfig()->current = addNewTitle(NULL, getConfig()->root);
+			getConfig()->current = addNewTitle();
 		}
 		else {
-			addNewTitle(getConfig()->current, getConfig()->root);
+			addNewTitle();
 		}
 		cnt++;
 	}
