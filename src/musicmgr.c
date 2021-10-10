@@ -1423,6 +1423,8 @@ static int addNewTitle( void ) {
 	}
 	else {
 		runner = pl->title;
+		/* just to set lastpat != NULL */
+		lastpat = runner->artist;
 	}
 
 	/* select a random title from the database */
