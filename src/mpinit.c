@@ -65,7 +65,7 @@ int getArgs(int argc, char **argv) {
 
 	/* parse command line options */
 	/* using unsigned char c to work around getopt quirk on ARM */
-	while ((c = getopt(argc, argv, "vVfdF:h:p:Wm")) != -1) {
+	while ((c = getopt(argc, argv, "VfdF:hp:Wm")) != -1) {
 		switch (c) {
 
 		case 'V':
@@ -103,7 +103,6 @@ int getArgs(int argc, char **argv) {
 
 		case '?':
 			switch (optopt) {
-			case 'h':
 			case 'p':
 			case 'F':
 				fprintf(stderr, "Option -%c requires an argument!\n", optopt);

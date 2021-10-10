@@ -11,8 +11,8 @@ This is destined to run on a headless box and supply the stereo with a constant 
 * Jumping forward backward during play
 * favourites
 * do-not-play lists
-* shuffle play that avoids the same artist twice in a row
-* shuffle will play each title before shuffling again
+* shuffle play that avoids the same artist twice in ten titles
+* shuffle will play each title once before playing them again
 * URL stream play
 * playlist support
 * MP3 tag suport with guessing mechanism on missing tags
