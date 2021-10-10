@@ -1407,7 +1407,7 @@ static mptitle_t *skipPcount( mptitle_t *guard, unsigned int pcount, unsigned lo
  *
  * returns the head/current of the (new/current) playlist or NULL on error
  */
-static mpplaylist_t *addNewTitle( void ) {
+static int addNewTitle( void ) {
 	mptitle_t *runner = NULL;
 	mptitle_t *guard = NULL;
 	unsigned long num = 0;
@@ -1431,38 +1431,38 @@ static mpplaylist_t *addNewTitle( void ) {
 		countTitles(getFavplay()? MP_FAV : MP_ALL, MP_DBL | MP_DNP | MP_MARK);
 	if (num == 0) {
 		addMessage(-1, "No titles to be played!");
-		return NULL;
+		return 0;
 	}
 	runner = skipTitles(runner, random() % num);
 
 	if (runner == NULL) {
 		addMessage(-1, "No titles in the database!?");
-		return NULL;
+		return 0;
 	}
 
 	pcount = getPlaycount(0);
 	runner = skipPcount(runner, pcount, num);
 	if (lastpat == NULL) {
-		return appendToPL(runner, pl, -1);
+		getConfig()->current=appendToPL(runner, NULL, -1);
+		return 1;
 	}
 
 	/* step through the playlist */
 	do {
 		lastpat = pl->title->artist;
-		while (guard != runner) {
-			guard = runner;
-			while (checkSim(runner->artist, lastpat)) {
-				addMessage(3, "%s = %s", runner->artist, lastpat);
-				activity(1, "Nameskipping");
-				runner = skipPcount(runner->next, pcount, num);
-				/* 10 may not be enough in practice */
-				if (++cycles > 10) {
-					cycles = 0;
-					pcount++;			/* temprorarily allow replays */
-					addMessage(2, "Increasing maxplaycount to %i (loop)", pcount);
-				}
+		guard = runner;
+		while (checkSim(runner->artist, lastpat)) {
+			addMessage(3, "%s = %s", runner->artist, lastpat);
+			activity(1, "Nameskipping");
+			runner = skipPcount(runner->next, pcount, num);
+			/* 10 may not be enough in practice */
+			if (++cycles > 10) {
+				cycles = 0
+				pcount++;			/* temprorarily allow replays */
+				addMessage(2, "Increasing maxplaycount to %i (loop)", pcount);
 			}
 		}
+
 		if (guard != runner) {
 			/* title did not fix, start again from the beginning */
 			pl = getConfig()->current;
@@ -1470,14 +1470,14 @@ static mpplaylist_t *addNewTitle( void ) {
 		else {
 			pl = pl->next;
 		}
-		guard=NULL;
 	} while (pl != NULL);
 	/*  *INDENT-OFF*  */
 	addMessage(2, "[+] (%i/%i/%c) %5d %s",
 			   (runner->flags & MP_FAV) ? runner->favpcount : runner->playcount,
 			   pcount, flagToChar(runner->flags), runner->key, runner->display);
 	/*  *INDENT-ON*  */
-	return appendToPL(runner, pl, -1);
+	appendToPL(runner, getConfig()->current, -1);
+	return 1;
 }
 
 /**
@@ -1599,12 +1599,7 @@ void plCheck(int del) {
 
 	/* fill up the playlist with new titles */
 	while (cnt < 10) {
-		if (getConfig()->current == NULL) {
-			getConfig()->current = addNewTitle();
-		}
-		else {
-			addNewTitle();
-		}
+		addNewTitle();
 		cnt++;
 	}
 
