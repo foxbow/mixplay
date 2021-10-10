@@ -25,14 +25,17 @@ size_t strtcpy(char *t, const char *s, size_t l) {
 }
 
 /*
- * like strncat but len is the max len of the target string, not the number of
- * bytes to copy.
+ * like strncat but len is the max len of the target string (w/o NUL), not the
+ * number of bytes to copy.
  */
 size_t strtcat(char *t, const char *s, size_t l) {
-	l = MIN(strlen(t) + strlen(s), l) - strlen(t);
-	if (l > 0) {
-		strncat(t, s, l);
+	size_t pos = strlen(t);
+	size_t end = pos + strlen(s);
+	if (end > l) end = l;
+	for ( l=0;pos < end; pos++, l++) {
+		t[pos]=s[l];
 	}
+	t[pos]=0;
 	return strlen(t);
 }
 

@@ -1345,6 +1345,60 @@ static char flagToChar(int flag) {
 }
 
 /**
+ * returns a title that fits the given playcount.
+ */
+static mptitle_t *skipPcount( mptitle_t *guard, unsigned int pcount, unsigned long num  ) {
+	mptitle_t *runner = guard;
+	unsigned count = 0;
+
+	do {
+		if (runner->flags & MP_FAV) {
+			/* favplay just uses favpcount */
+			if (getFavplay()) {
+				if (runner->favpcount <= pcount) {
+					break;
+				}
+			}
+			/* normal play on favourite uses both */
+			else if (runner->playcount + runner->favpcount <= 2 * pcount) {
+				break;
+			}
+		}
+		/* not a fav, standard rule */
+		else if (runner->playcount <= pcount) {
+			break;
+		}
+
+		/* title did not fit, fetch next one */
+		activity(1, "Playcountskipping");
+		if ( count < 10 ) {
+			/* Pick a random title, but not the one we started with */
+			while (runner != guard) {
+				runner = skipTitles( runner, rand()%num );
+			}
+			count++;
+		}
+		else {
+			if (count == 10) {
+				count++;
+				guard = runner;
+			}
+			/* We tried at random but failed, so we take the next one */
+			runner = skipTitles(runner, 1);
+			/* Nothing fits!? Then increase playcount and start again */
+			if (runner == guard) {
+				count = 1;
+				pcount++;
+				addMessage(0, "Increasing maxplaycount to %i (pcount)", pcount);
+				runner = skipTitles( runner, rand()%num );
+			}
+		}
+	} while (1);
+
+	return runner;
+}
+
+/**
  * adds a new title to the current playlist
  *
  * Core functionality of the mixplay architecture:
@@ -1360,7 +1414,6 @@ mpplaylist_t *addNewTitle(mpplaylist_t * pl, mptitle_t * root) {
 	char *lastpat = NULL;
 	unsigned int pcount = 0;
 	unsigned int cycles = 0;
-	int valid = 0;
 
 	/* 0 - nothing checked
 	 * 1 - namecheck okay
@@ -1376,7 +1429,6 @@ mpplaylist_t *addNewTitle(mpplaylist_t * pl, mptitle_t * root) {
 		lastpat = pl->title->artist;
 	}
 	else {
-		valid = 1;
 		runner = root;
 	}
 
@@ -1396,88 +1448,31 @@ mpplaylist_t *addNewTitle(mpplaylist_t * pl, mptitle_t * root) {
 	}
 
 	pcount = getPlaycount(0);
-
-	cycles = 0;
-	while ((valid & 3) != 3) {
-		if (lastpat == NULL)
-			valid |= 1;
-		/* title did not pass namecheck */
-		if ((valid & 1) != 1) {
-			guard = runner;
-
-			while (checkSim(runner->artist, lastpat)) {
-				addMessage(3, "%s = %s", runner->artist, lastpat);
-				activity(1, "Nameskipping");
-				/* If we put pcount check here, we could simplify everything.. */
-				runner = skipOver(runner->next, 1);
-
-				/* hopefully this will not happen */
-				if ((runner == guard) || (runner == NULL)) {
-					addMessage(0, "Only %s left..", lastpat);
-					return (addNewTitle(pl, root));
-				}
-			}
-			addMessage(3, "%s != %s", runner->artist, lastpat);
-
-			if (guard != runner) {
-				/* we skipped and need to check playcount */
-				valid = 1;
-			}
-			else {
-				/* we did not skip, so if playcount was fine it's still fine */
-				valid |= 1;
-			}
-		}
-
+	runner = skipPcount(runner, pcount, num);
+	if (lastpat == NULL) {
 		guard = runner;
-		/* title did not pass playcountcheck */
-		while ((valid & 2) != 2) {
-			if (runner->flags & MP_FAV) {
-				/* favplay just uses favpcount */
-				if (getFavplay()) {
-					if (runner->favpcount <= pcount) {
-						valid |= 2;
-					}
-				}
-				/* normal play on favourite uses both */
-				else if (runner->playcount + runner->favpcount <= 2 * pcount) {
-					valid |= 2;
-				}
-			}
-			/* not a fav, standard rule */
-			else if (runner->playcount <= pcount) {
-				valid |= 2;
-			}
+	}
 
-			if ((valid & 2) != 2) {
-				valid = 0;
-				activity(1, "Playcountskipping");
-				/* simply pick a new title at random to avoid edge cases */
-				/* runner=skipTitles( runner, rand()%num ); */
-				/* TODO check if this is better or worse.. */
-				runner = skipTitles(runner, 1);
+	while (guard != runner) {
+		guard = runner;
+		while (checkSim(runner->artist, lastpat)) {
+			addMessage(3, "%s = %s", runner->artist, lastpat);
+			activity(1, "Nameskipping");
+			runner = skipPcount(runner->next, pcount, num);
 
-				if (runner == guard) {
-					pcount++;	/* allow more replays */
-					addMessage(2, "Increasing maxplaycount to %i (skip)",
-							   pcount);
-				}
+			/* 10 may not be enough in practice */
+			if (++cycles > 10) {
+				cycles = 0;
+				pcount++;			/* temprorarily allow replays */
+				addMessage(2, "Increasing maxplaycount to %i (loop)", pcount);
 			}
 		}
-
-		/* 10 may not be enough in practice */
-		if (++cycles > 10) {
-			cycles = 0;
-			pcount++;			/* temprorarily allow replays */
-			addMessage(2, "Increasing maxplaycount to %i (loop)", pcount);
-		}
-	}							/* while( valid != 3 ) */
+	}
 	/*  *INDENT-OFF*  */
 	addMessage(2, "[+] (%i/%i/%c) %5d %s",
 			   (runner->flags & MP_FAV) ? runner->favpcount : runner->playcount,
 			   pcount, flagToChar(runner->flags), runner->key, runner->display);
 	/*  *INDENT-ON*  */
-	/* count again in case this is a favourite */
 	return appendToPL(runner, pl, -1);
 }
 
