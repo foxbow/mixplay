@@ -1407,13 +1407,14 @@ static mptitle_t *skipPcount( mptitle_t *guard, unsigned int pcount, unsigned lo
  *
  * returns the head/current of the (new/current) playlist or NULL on error
  */
-mpplaylist_t *addNewTitle(mpplaylist_t * pl, mptitle_t * root) {
+mpplaylist_t *addNewTitle(mpplaylist_t * pl1, mptitle_t * root) {
 	mptitle_t *runner = NULL;
 	mptitle_t *guard = NULL;
 	unsigned long num = 0;
 	char *lastpat = NULL;
 	unsigned int pcount = 0;
 	unsigned int cycles = 0;
+	mpplaylist_t *pl = getConfig()->current;
 
 	/* 0 - nothing checked
 	 * 1 - namecheck okay
@@ -1425,7 +1426,7 @@ mpplaylist_t *addNewTitle(mpplaylist_t * pl, mptitle_t * root) {
 		runner = root;
 	}
 	else {
-		runner = root;
+		runner = pl1->title;
 	}
 
 	/* select a random title from the database */
@@ -1446,7 +1447,7 @@ mpplaylist_t *addNewTitle(mpplaylist_t * pl, mptitle_t * root) {
 	pcount = getPlaycount(0);
 	runner = skipPcount(runner, pcount, num);
 	if (lastpat == NULL) {
-		return appendToPL(runner, pl, -1);
+		return appendToPL(runner, pl1, -1);
 	}
 
 	while (pl->next != NULL) {
@@ -1474,7 +1475,7 @@ mpplaylist_t *addNewTitle(mpplaylist_t * pl, mptitle_t * root) {
 			   (runner->flags & MP_FAV) ? runner->favpcount : runner->playcount,
 			   pcount, flagToChar(runner->flags), runner->key, runner->display);
 	/*  *INDENT-ON*  */
-	return appendToPL(runner, pl, -1);
+	return appendToPL(runner, pl1, -1);
 }
 
 /**
