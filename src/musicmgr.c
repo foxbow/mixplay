@@ -1421,12 +1421,8 @@ mpplaylist_t *addNewTitle(mpplaylist_t * pl, mptitle_t * root) {
 	 * 3 - all okay
 	 */
 
-	if (pl != NULL) {
-		while (pl->next != NULL) {
-			pl = pl->next;
-		}
-		runner = pl->title;
-		lastpat = pl->title->artist;
+	if (pl == NULL) {
+		runner = root;
 	}
 	else {
 		runner = root;
@@ -1450,23 +1446,28 @@ mpplaylist_t *addNewTitle(mpplaylist_t * pl, mptitle_t * root) {
 	pcount = getPlaycount(0);
 	runner = skipPcount(runner, pcount, num);
 	if (lastpat == NULL) {
-		guard = runner;
+		return appendToPL(runner, pl, -1);
 	}
 
-	while (guard != runner) {
-		guard = runner;
-		while (checkSim(runner->artist, lastpat)) {
-			addMessage(3, "%s = %s", runner->artist, lastpat);
-			activity(1, "Nameskipping");
-			runner = skipPcount(runner->next, pcount, num);
+	while (pl->next != NULL) {
+		lastpat = pl->title->artist;
+		while (guard != runner) {
+			guard = runner;
+			while (checkSim(runner->artist, lastpat)) {
+				addMessage(3, "%s = %s", runner->artist, lastpat);
+				activity(1, "Nameskipping");
+				runner = skipPcount(runner->next, pcount, num);
 
-			/* 10 may not be enough in practice */
-			if (++cycles > 10) {
-				cycles = 0;
-				pcount++;			/* temprorarily allow replays */
-				addMessage(2, "Increasing maxplaycount to %i (loop)", pcount);
+				/* 10 may not be enough in practice */
+				if (++cycles > 10) {
+					cycles = 0;
+					pcount++;			/* temprorarily allow replays */
+					addMessage(2, "Increasing maxplaycount to %i (loop)", pcount);
+				}
 			}
 		}
+		guard=NULL;
+		pl = pl->next;
 	}
 	/*  *INDENT-OFF*  */
 	addMessage(2, "[+] (%i/%i/%c) %5d %s",
