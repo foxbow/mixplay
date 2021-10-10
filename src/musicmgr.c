@@ -1457,7 +1457,7 @@ static int addNewTitle( void ) {
 			runner = skipPcount(runner->next, pcount, num);
 			/* 10 may not be enough in practice */
 			if (++cycles > 10) {
-				cycles = 0
+				cycles = 0;
 				pcount++;			/* temprorarily allow replays */
 				addMessage(2, "Increasing maxplaycount to %i (loop)", pcount);
 			}
