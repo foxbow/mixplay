@@ -31,11 +31,13 @@ size_t strtcpy(char *t, const char *s, size_t l) {
 size_t strtcat(char *t, const char *s, size_t l) {
 	size_t pos = strlen(t);
 	size_t end = pos + strlen(s);
-	if (end > l) end = l;
-	for ( l=0;pos < end; pos++, l++) {
-		t[pos]=s[l];
+
+	if (end > l)
+		end = l;
+	for (l = 0; pos < end; pos++, l++) {
+		t[pos] = s[l];
 	}
-	t[pos]=0;
+	t[pos] = 0;
 	return strlen(t);
 }
 

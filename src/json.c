@@ -19,8 +19,8 @@ int jsonFail(jsonObject * jo, const char *msg, ...)
 	__attribute__ ((__format__(__printf__, 2, 3)));
 
 /* forward definitions of cyclic dependencies in static functions */
-static char *jsonWriteObj(jsonObject * jo, char *json, size_t * len);
-static char *jsonWriteArr(jsonObject * jo, char *json, size_t * len);
+static char *jsonWriteObj(jsonObject * jo, char *json, size_t *len);
+static char *jsonWriteArr(jsonObject * jo, char *json, size_t *len);
 static int jsonParseObject(char *json, jsonObject ** jo);
 static int jsonParseArray(char *json, jsonObject ** jo);
 
@@ -1196,7 +1196,7 @@ jsonObject *jsonRead(char *json) {
 	return jo;
 }
 
-static char *sizeCheck(char *json, size_t * len) {
+static char *sizeCheck(char *json, size_t *len) {
 	char *ret = NULL;
 
 	/* an if *should* be enough */
@@ -1213,7 +1213,7 @@ static char *sizeCheck(char *json, size_t * len) {
  * encodes a value into JSON notation
  * "strval"|numval|{objval}|[arr],[val]
  */
-static char *jsonWriteVal(jsonObject * jo, char *json, size_t * len) {
+static char *jsonWriteVal(jsonObject * jo, char *json, size_t *len) {
 	json = sizeCheck(json, len);
 	switch (jo->type) {
 	case json_string:
@@ -1253,7 +1253,7 @@ static char *jsonWriteVal(jsonObject * jo, char *json, size_t * len) {
  * encodes a stream of key,value tupels into JSON notation
  * "key":value[,"key":value]*
  */
-static char *jsonWriteKeyVal(jsonObject * jo, char *json, size_t * len) {
+static char *jsonWriteKeyVal(jsonObject * jo, char *json, size_t *len) {
 	while (jo != NULL) {
 		json = sizeCheck(json, len);
 		strcat(json, "\"");
@@ -1274,7 +1274,7 @@ static char *jsonWriteKeyVal(jsonObject * jo, char *json, size_t * len) {
  * encodes an array into JSON notation
  * [val],[val],...
  */
-static char *jsonWriteArr(jsonObject * jo, char *json, size_t * len) {
+static char *jsonWriteArr(jsonObject * jo, char *json, size_t *len) {
 	json = sizeCheck(json, len);
 	strcat(json, "[");
 	while (jo != NULL) {
@@ -1292,7 +1292,7 @@ static char *jsonWriteArr(jsonObject * jo, char *json, size_t * len) {
  * encodes an object into JSON notation
  * {key,value}
  */
-static char *jsonWriteObj(jsonObject * jo, char *json, size_t * len) {
+static char *jsonWriteObj(jsonObject * jo, char *json, size_t *len) {
 	json = sizeCheck(json, len);
 	strcat(json, "{");
 	json = jsonWriteKeyVal(jo, json, len);

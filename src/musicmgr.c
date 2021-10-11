@@ -1347,8 +1347,9 @@ static char flagToChar(int flag) {
 /**
  * returns a title that fits the given playcount.
  */
-static mptitle_t *skipPcount( mptitle_t *guard, unsigned int pcount, unsigned long num  ) {
-	mptitle_t *runner = guard;
+static mptitle_t *skipPcount(mptitle_t * guard, unsigned int pcount,
+							 unsigned long num) {
+	mptitle_t *runner = skipOver(guard, 1);
 	unsigned count = 0;
 
 	do {
@@ -1371,10 +1372,10 @@ static mptitle_t *skipPcount( mptitle_t *guard, unsigned int pcount, unsigned lo
 
 		/* title did not fit, fetch next one */
 		activity(1, "Playcountskipping");
-		if ( count < 10 ) {
+		if (count < 10) {
 			/* Pick a random title, but not the one we started with */
 			while (runner != guard) {
-				runner = skipTitles( runner, rand()%num );
+				runner = skipTitles(runner, rand() % num);
 			}
 			count++;
 		}
@@ -1389,8 +1390,9 @@ static mptitle_t *skipPcount( mptitle_t *guard, unsigned int pcount, unsigned lo
 			if (runner == guard) {
 				count = 1;
 				pcount++;
-				addMessage(0, "Increasing maxplaycount to %i (pcount)", pcount);
-				runner = skipTitles( runner, rand()%num );
+				addMessage(0, "Increasing maxplaycount to %i (pcount)",
+						   pcount);
+				runner = skipTitles(runner, rand() % num);
 			}
 		}
 	} while (1);
@@ -1440,15 +1442,13 @@ mpplaylist_t *addNewTitle(mpplaylist_t * pl, mptitle_t * root) {
 		addMessage(-1, "No titles to be played!");
 		return NULL;
 	}
-	runner = skipTitles(runner, random() % num);
 
+	pcount = getPlaycount(0);
+	runner = skipPcount(runner, pcount, random() % num);
 	if (runner == NULL) {
 		addMessage(-1, "No titles in the database!?");
 		return NULL;
 	}
-
-	pcount = getPlaycount(0);
-	runner = skipPcount(runner, pcount, num);
 	if (lastpat == NULL) {
 		guard = runner;
 	}
@@ -1463,7 +1463,7 @@ mpplaylist_t *addNewTitle(mpplaylist_t * pl, mptitle_t * root) {
 			/* 10 may not be enough in practice */
 			if (++cycles > 10) {
 				cycles = 0;
-				pcount++;			/* temprorarily allow replays */
+				pcount++;		/* temprorarily allow replays */
 				addMessage(2, "Increasing maxplaycount to %i (loop)", pcount);
 			}
 		}
