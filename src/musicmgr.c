@@ -1346,6 +1346,8 @@ static char flagToChar(int flag) {
 
 /**
  * returns a title that fits the given playcount.
+ * Could be inlined into addNewTitle() but has been
+ * pulled out to hopefully increase readability.
  */
 static mptitle_t *skipPcount(mptitle_t * guard, unsigned int pcount,
 							 unsigned long num) {
@@ -1404,12 +1406,12 @@ static mptitle_t *skipPcount(mptitle_t * guard, unsigned int pcount,
  * adds a new title to the current playlist
  *
  * Core functionality of the mixplay architecture:
- * - does not play the same artist twice in a row
+ * - does not play the same artist twice in the list
  * - prefers titles with lower playcount
  *
  * returns the head/current of the (new/current) playlist or NULL on error
  */
-mpplaylist_t *addNewTitle(mpplaylist_t * pl, mptitle_t * root) {
+static int addNewTitle(void) {
 	mptitle_t *runner = NULL;
 	mptitle_t *guard = NULL;
 	unsigned long num = 0;
@@ -1417,49 +1419,45 @@ mpplaylist_t *addNewTitle(mpplaylist_t * pl, mptitle_t * root) {
 	unsigned int pcount = 0;
 	unsigned int cycles = 0;
 
-	/* 0 - nothing checked
-	 * 1 - namecheck okay
-	 * 2 - playcount okay
-	 * 3 - all okay
-	 */
+	mpplaylist_t *pl = getConfig()->current;
+	mptitle_t *root = getConfig()->root;
 
-	if (pl != NULL) {
-		while (pl->next != NULL) {
-			pl = pl->next;
-		}
-		runner = pl->title;
-		lastpat = pl->title->artist;
-	}
-	else {
+	if (pl == NULL) {
 		runner = root;
 	}
+	else {
+		runner = pl->title;
+		/* just to set lastpat != NULL */
+		lastpat = runner->artist;
+	}
 
-	/* select a random title from the database */
-	/* skip forward until a title is found that is neither DNP nor MARK */
+	/* how many titles are there? */
 	num =
 		countTitles(getFavplay()? MP_FAV : MP_ALL, MP_DBL | MP_DNP | MP_MARK);
 	if (num == 0) {
 		addMessage(-1, "No titles to be played!");
-		return NULL;
+		return 0;
 	}
 
 	pcount = getPlaycount(0);
 	runner = skipPcount(runner, pcount, random() % num);
 	if (runner == NULL) {
 		addMessage(-1, "No titles in the database!?");
-		return NULL;
+		return 0;
 	}
 	if (lastpat == NULL) {
-		guard = runner;
+		getConfig()->current = appendToPL(runner, NULL, -1);
+		return 1;
 	}
 
-	while (guard != runner) {
+	/* step through the playlist and check for repeats */
+	do {
+		lastpat = pl->title->artist;
 		guard = runner;
 		while (checkSim(runner->artist, lastpat)) {
 			addMessage(3, "%s = %s", runner->artist, lastpat);
 			activity(1, "Nameskipping");
-			runner = skipPcount(runner->next, pcount, num);
-
+			runner = skipPcount(runner->next, pcount);
 			/* 10 may not be enough in practice */
 			if (++cycles > 10) {
 				cycles = 0;
@@ -1467,13 +1465,23 @@ mpplaylist_t *addNewTitle(mpplaylist_t * pl, mptitle_t * root) {
 				addMessage(2, "Increasing maxplaycount to %i (loop)", pcount);
 			}
 		}
-	}
+
+		if (guard != runner) {
+			/* title did not fit, start again from the beginning
+			 * with the new one */
+			pl = getConfig()->current;
+		}
+		else {
+			pl = pl->next;
+		}
+	} while (pl != NULL);
 	/*  *INDENT-OFF*  */
 	addMessage(2, "[+] (%i/%i/%c) %5d %s",
 			   (runner->flags & MP_FAV) ? runner->favpcount : runner->playcount,
 			   pcount, flagToChar(runner->flags), runner->key, runner->display);
 	/*  *INDENT-ON*  */
-	return appendToPL(runner, pl, -1);
+	appendToPL(runner, getConfig()->current, -1);
+	return 1;
 }
 
 /**
@@ -1595,12 +1603,7 @@ void plCheck(int del) {
 
 	/* fill up the playlist with new titles */
 	while (cnt < 10) {
-		if (getConfig()->current == NULL) {
-			getConfig()->current = addNewTitle(NULL, getConfig()->root);
-		}
-		else {
-			addNewTitle(getConfig()->current, getConfig()->root);
-		}
+		addNewTitle();
 		cnt++;
 	}
 
