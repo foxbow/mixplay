@@ -1460,7 +1460,7 @@ static int addNewTitle(void) {
 			activity(1, "Nameskipping");
 			runner = skipPcount(runner->next, pcount, num);
 			/* 10 may not be enough in practice */
-			if (++cycles > 10) {
+			if (++cycles > (num - 20)) {
 				cycles = 0;
 				pcount++;		/* temprorarily allow replays */
 				addMessage(2, "Increasing maxplaycount to %i (loop)", pcount);
