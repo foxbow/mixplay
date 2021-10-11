@@ -1440,11 +1440,12 @@ static int addNewTitle(void) {
 	}
 
 	pcount = getPlaycount(0);
-	runner = skipPcount(runner, pcount, random() % num);
+	runner = skipTitles(runner, random() % num);
 	if (runner == NULL) {
 		addMessage(-1, "No titles in the database!?");
 		return 0;
 	}
+	runner = skipPcount(runner, pcount, num);
 	if (lastpat == NULL) {
 		getConfig()->current = appendToPL(runner, NULL, -1);
 		return 1;
@@ -1457,7 +1458,7 @@ static int addNewTitle(void) {
 		while (checkSim(runner->artist, lastpat)) {
 			addMessage(3, "%s = %s", runner->artist, lastpat);
 			activity(1, "Nameskipping");
-			runner = skipPcount(runner->next, pcount);
+			runner = skipPcount(runner->next, pcount, num);
 			/* 10 may not be enough in practice */
 			if (++cycles > 10) {
 				cycles = 0;
