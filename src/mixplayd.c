@@ -23,6 +23,7 @@
 #include "mphid.h"
 #include "mpflirc.h"
 #include "mpserver.h"
+#include "database.h"
 
 /**
  * TODO: create a dedicated signal handler thread.
@@ -30,6 +31,7 @@
 static void sigint( __attribute__ ((unused))
 				   int signo) {
 	unlink(PIDPATH);
+	dbWrite(1);
 	abort();
 }
 

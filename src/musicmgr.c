@@ -757,7 +757,7 @@ static int applyFAVlist(marklist_t * favourites) {
 						runner->flags =
 							(runner->flags & MP_MARK) | MP_FAV | range;
 						/* This is correct! Both counters get increased once every round */
-						runner->favpcount = runner->playcount;
+						runner->favpcount = runner->playcount - 1;
 						cnt++;
 					}
 					ptr = NULL;
@@ -1344,6 +1344,12 @@ static char flagToChar(int flag) {
 	}
 }
 
+static unsigned _rounds = 0;
+static unsigned _prounds = 0;
+
+/* try 2% of titles randomly */
+#define PCYCLES (num/50)
+
 /**
  * returns a title that fits the given playcount.
  * Could be inlined into addNewTitle() but has been
@@ -1355,34 +1361,26 @@ static mptitle_t *skipPcount(mptitle_t * guard, unsigned int pcount,
 	unsigned count = 0;
 
 	do {
-		if (runner->flags & MP_FAV) {
-			/* favplay just uses favpcount */
-			if (getFavplay()) {
-				if (runner->favpcount <= pcount) {
-					break;
-				}
-			}
-			/* normal play on favourite uses both */
-			else if (runner->playcount + runner->favpcount <= 2 * pcount) {
-				break;
-			}
+		if (count > _prounds) {
+			_prounds = count;
 		}
-		/* not a fav, standard rule */
-		else if (runner->playcount <= pcount) {
+		if (!getFavplay() && (runner->playcount <= pcount)) {
+			break;
+		}
+		if ((runner->flags & MP_FAV) && (runner->favpcount <= pcount)) {
 			break;
 		}
 
 		/* title did not fit, fetch next one */
-		activity(1, "Playcountskipping");
-		if (count < 10) {
-			/* Pick a random title, but not the one we started with */
-			while (runner != guard) {
-				runner = skipTitles(runner, rand() % num);
-			}
+		activity(1, "Playcountskipping %u/%lu", count, PCYCLES);
+		if (count < PCYCLES) {
+			/* try some random title ... */
+			runner = skipTitles(runner, rand() % num);
 			count++;
 		}
 		else {
-			if (count == 10) {
+			if (count == PCYCLES) {
+				addMessage(1, "Hit %u playcount cycles", count);
 				count++;
 				guard = runner;
 			}
@@ -1390,11 +1388,12 @@ static mptitle_t *skipPcount(mptitle_t * guard, unsigned int pcount,
 			runner = skipTitles(runner, 1);
 			/* Nothing fits!? Then increase playcount and start again */
 			if (runner == guard) {
-				count = 1;
+				count = 0;
 				pcount++;
-				addMessage(0, "Increasing maxplaycount to %i (pcount)",
+				addMessage(1, "Increasing maxplaycount to %i (pcount)",
 						   pcount);
 				runner = skipTitles(runner, rand() % num);
+				guard = runner;
 			}
 		}
 	} while (1);
@@ -1431,7 +1430,7 @@ static int addNewTitle(void) {
 		lastpat = runner->artist;
 	}
 
-	/* how many titles are there? */
+	/* how many playable titles are there? */
 	num =
 		countTitles(getFavplay()? MP_FAV : MP_ALL, MP_DBL | MP_DNP | MP_MARK);
 	if (num == 0) {
@@ -1439,6 +1438,7 @@ static int addNewTitle(void) {
 		return 0;
 	}
 
+	/* lowest playcount */
 	pcount = getPlaycount(0);
 	runner = skipTitles(runner, random() % num);
 	if (runner == NULL) {
@@ -1457,13 +1457,17 @@ static int addNewTitle(void) {
 		guard = runner;
 		while (checkSim(runner->artist, lastpat)) {
 			addMessage(3, "%s = %s", runner->artist, lastpat);
-			activity(1, "Nameskipping");
+			activity(1, "Nameskipping %u", cycles);
 			runner = skipPcount(runner->next, pcount, num);
-			/* 10 may not be enough in practice */
-			if (++cycles > (num - 20)) {
+			/* Chances are we tried about every playable title! */
+			if (cycles++ > PCYCLES) {
+				pcount++;		/* temporarily allow replays */
+				addMessage(1, "Increasing maxplaycount to %u/%u (loop)",
+						   pcount, cycles);
 				cycles = 0;
-				pcount++;		/* temprorarily allow replays */
-				addMessage(2, "Increasing maxplaycount to %i (loop)", pcount);
+			}
+			if (cycles > _rounds) {
+				_rounds = cycles;
 			}
 		}
 
@@ -1481,6 +1485,9 @@ static int addNewTitle(void) {
 			   (runner->flags & MP_FAV) ? runner->favpcount : runner->playcount,
 			   pcount, flagToChar(runner->flags), runner->key, runner->display);
 	/*  *INDENT-ON*  */
+	if (_rounds || _prounds) {
+		addMessage(1, "Max Cycles: %u - pCycles: %u", _rounds, _prounds);
+	}
 	appendToPL(runner, getConfig()->current, -1);
 	return 1;
 }

@@ -27,8 +27,11 @@ static pthread_mutex_t _pcmdlock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t _pcmdcond = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t _asynclock = PTHREAD_MUTEX_INITIALIZER;
 
-/* clean up when switching Favplay mode */
-static void cleanFavPlay(int flags) {
+/* clean up when switching mode
+ * if flags is true, all title flags will be cleared, only
+ * MP_DBL will be kept.
+ */
+static void cleanTitles(int flags) {
 	mpconfig_t *control = getConfig();
 	mptitle_t *runner = control->root;
 
@@ -40,10 +43,11 @@ static void cleanFavPlay(int flags) {
 		return;
 	}
 	do {
-		runner->favpcount = runner->playcount;
+		runner->favpcount = runner->playcount - 1;
 		runner = runner->next;
 		if (flags) {
-			runner->flags &= ~MP_DBL;
+			/* just keep MP_DBL */
+			runner->flags &= MP_DBL;
 		}
 	} while (runner != control->root);
 }
@@ -287,7 +291,7 @@ void *setProfile(void *arg) {
 		}
 		/* last database play was a different profile, so clean up all */
 		else {
-			cleanFavPlay(1);
+			cleanTitles(1);
 			control->mpmode = PM_DATABASE | PM_SWITCH;
 			control->dnplist = wipeList(control->dnplist);
 			control->favlist = wipeList(control->favlist);
@@ -1635,7 +1639,7 @@ void *reader() {
 				else {
 					addMessage(1, "Disabling Favplay");
 				}
-				cleanFavPlay(0);
+				cleanTitles(0);
 				writeConfig(NULL);
 				plCheck(0);
 				sendplay(p_command[fdset][1]);
