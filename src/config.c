@@ -33,6 +33,8 @@ static pthread_mutex_t _addmsglock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t _cblock = PTHREAD_MUTEX_INITIALIZER;
 static mpconfig_t *_cconfig = NULL;
 
+#define MPV 10
+
 /**
  * the progress function list
  */
@@ -117,7 +119,7 @@ const char *mpcString(mpcmd_t rawcmd) {
 		return mpccommand[cmd];
 	}
 	else {
-		addMessage(1, "Unknown command code %i", cmd);
+		addMessage(MPV + 1, "Unknown command code %i", cmd);
 		return "mpc_idle";
 	}
 }
@@ -133,7 +135,7 @@ mpcmd_t mpcCommand(const char *name) {
 			break;
 	}
 	if (i > mpc_idle) {
-		addMessage(1, "Unknown command %s!", name);
+		addMessage(MPV + 1, "Unknown command %s!", name);
 		return mpc_idle;
 	}
 	return (mpcmd_t) i;
@@ -462,7 +464,7 @@ void writeConfig(const char *musicpath) {
 	FILE *fp;
 	char *home = NULL;
 
-	addMessage(1, "Saving config");
+	addMessage(MPV + 1, "Saving config");
 	assert(_cconfig != NULL);
 
 	home = getenv("HOME");
@@ -1017,8 +1019,8 @@ int getFreeClient(void) {
 		if (getConfig()->client[i] == 0) {
 			getConfig()->client[i] = 1;
 			numclients++;
-			addMessage(2, "client %i connected, %i clients connected", i + 1,
-					   numclients);
+			addMessage(MPV + 2, "client %i connected, %i clients connected",
+					   i + 1, numclients);
 			return i + 1;
 		}
 	}
@@ -1048,7 +1050,7 @@ void triggerClient(int client) {
 				if (getConfig()->client[run] > (2 * numclients)) {
 					getConfig()->client[run] = 0;
 					numclients--;
-					addMessage(2,
+					addMessage(MPV + 2,
 							   "client %i disconnected, %i clients connected",
 							   run + 1, numclients);
 				}
@@ -1066,7 +1068,7 @@ int trylockClient(int client) {
 		}
 		return 0;
 	}
-	addMessage(1, "Client id %i out of range!", client + 1);
+	addMessage(MPV + 1, "Client id %i out of range!", client + 1);
 	return -1;
 }
 
@@ -1120,3 +1122,5 @@ void initMsgCnt(int client) {
 		getConfig()->msgcnt[client] = msgBufGetLastRead(getConfig()->msg);
 	}
 }
+
+#undef MPV

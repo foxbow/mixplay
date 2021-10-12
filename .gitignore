@@ -27,6 +27,7 @@ mixplay-scr
 mprcinit
 minify
 core
+test
 
 # minified web content
 static/mixplay.html

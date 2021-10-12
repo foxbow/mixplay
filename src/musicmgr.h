@@ -11,12 +11,17 @@
 /* do not return more than 100 titles */
 #define MAXSEARCH 100
 
+/* similarity index for checksim */
+#define SIMGUARD 70
+
 /* flags */
 #define MP_FAV   1				/* Favourite */
 #define MP_DNP   2				/* do not play */
 #define MP_DBL   4				/* doublet */
 #define MP_MARK  8				/* was added normally to the playlist */
+#define MP_DARK 16				/* does not fit the playlist */
 #define MP_ALL   31
+#define MP_HIDE  (MP_DNP|MP_DBL|MP_MARK|MP_DARK)
 
 typedef struct mptitle_s mptitle_t;
 struct mptitle_s {
@@ -85,6 +90,7 @@ int search(const char *pat, const mpcmd_t range);
 
 void moveTitleByIndex(unsigned from, unsigned before);
 
+void resetFavpcount(mptitle_t * title);
 int playCount(mptitle_t * title, int skip);
 void applyLists(int clean);
 int searchPlay(const char *pat, unsigned num, const int global);
@@ -105,4 +111,7 @@ int fillstick(mptitle_t * root, const char *target);
 int getPlaylists(const char *cd, struct dirent ***pllist);
 unsigned long countTitles(const unsigned int inc, const unsigned int exc);
 unsigned getPlaycount(int high);
+
+/* exported for unittests */
+int checkSim(const char *text, const char *pat);
 #endif /* _MUSICMGR_H_ */

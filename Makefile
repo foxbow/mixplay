@@ -46,6 +46,7 @@ clean:
 	rm -f bin/mixplay-*
 	rm -f bin/mprcinit
 	rm -f bin/minify
+	rm -f bin/test
 	rm -f static/mixplay.html
 	rm -f static/mixplay.css
 	rm -f static/mixplay.js
@@ -67,6 +68,9 @@ bin/minify: $(SRCDIR)/minify.c
 	$(CC) $^ -o $@
 
 bin/mixplayd: $(OBJDIR)/mixplayd.o $(OBJS)
+	$(CC) $^ -o $@ $(LIBS)
+
+bin/test: $(OBJDIR)/test.o $(OBJS)
 	$(CC) $^ -o $@ $(LIBS)
 
 bin/mixplay-hid: $(OBJDIR)/mixplay-hid.o $(HCOBJS)

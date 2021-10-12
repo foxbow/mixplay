@@ -31,7 +31,7 @@
 static void sigint( __attribute__ ((unused))
 				   int signo) {
 	unlink(PIDPATH);
-	dbWrite(1);
+	dbWrite(0);
 	abort();
 }
 

@@ -20,6 +20,8 @@
 static pthread_mutex_t _clientlock = PTHREAD_MUTEX_INITIALIZER;
 static int _curclient = -1;
 
+#define MPV 10
+
 /*
  * all of the next messages will only be sent to this client
  * other requests to set an exclusive client will be blocked
@@ -31,15 +33,16 @@ static int _curclient = -1;
 int setCurClient(int client) {
 	if (pthread_mutex_trylock(&_clientlock) == EBUSY) {
 		if (_curclient == client) {
-			addMessage(1, "Client %i is already locked!", client);
+			addMessage(MPV + 1, "Client %i is already locked!", client);
 			return client;
 		}
 		else {
-			addMessage(1, "Client %i is blocked by %i!", client, _curclient);
+			addMessage(MPV + 1, "Client %i is blocked by %i!", client,
+					   _curclient);
 		}
 		return -1;
 	}
-	addMessage(1, "Locking %i!", client);
+	addMessage(MPV + 1, "Locking %i!", client);
 	_curclient = client;
 	return client;
 }
@@ -67,14 +70,14 @@ void unlockClient(int client) {
 
 	if (client == _curclient) {
 		_curclient = -1;
-		addMessage(1, "Unlocking %i", client);
+		addMessage(MPV + 1, "Unlocking %i", client);
 		pthread_mutex_unlock(&_clientlock);
 	}
 	else if (_curclient != -1) {
 		addMessage(0, "Client %i is not %i", client, _curclient);
 	}
 	else {
-		addMessage(1, "Client %i was not locked!", client);
+		addMessage(MPV + 1, "Client %i was not locked!", client);
 	}
 }
 
@@ -270,3 +273,5 @@ char *serializeStatus(int clientid, int type) {
 	jsonDiscard(jo);
 	return rv;
 }
+
+#undef MPV
