@@ -261,6 +261,11 @@ int playCount(mptitle_t * title, int skip) {
 	}
 	else {
 		title->playcount++;
+		/* the main playcount increased, so the favplaycount gets set to the
+		 * default. For normal titles favpcount must always by playcount-1
+		 * so it gets increased on normal play, for favourites it may be equal
+		 * so it will stay untouched */
+		title->favpcount = title->playcount - 1;
 		dbMarkDirty();
 	}
 
