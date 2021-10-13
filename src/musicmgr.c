@@ -206,8 +206,13 @@ static mpplaylist_t *remFromPL(mpplaylist_t * pltitle) {
 	return ret;
 }
 
-inline void resetFavpcount(mptitle_t * title) {
-	title->favpcount = (title->playcount > 0) ? (title->playcount - 1) : 0;
+void resetFavpcount(mptitle_t * title) {
+	if (getFavplay()) {
+		title->favpcount = 0;
+	}
+	else {
+		title->favpcount = title->playcount;
+	}
 }
 
 /**
@@ -271,11 +276,9 @@ int playCount(mptitle_t * title, int skip) {
 	}
 	else {
 		title->playcount++;
-		/* the main playcount increased, so the favplaycount gets set to the
-		 * default. For normal titles favpcount must always by playcount-1
-		 * so it gets increased on normal play, for favourites it may be equal
-		 * so it will stay untouched */
-		resetFavpcount(title);
+		if (!(title->flags & MP_FAV)) {
+			resetFavpcount(title);
+		}
 		dbMarkDirty();
 	}
 

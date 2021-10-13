@@ -601,8 +601,17 @@ static void *killPlayers(pid_t pid[2], int p_command[2][2], int p_status[2][2],
 		addMessage(MPV + 1, "Shutting down on active async!");
 	}
 	pthread_mutex_unlock(&_asynclock);
-	control->command = mpc_idle;
-	pthread_cond_signal(&_pcmdcond);
+	/* drain command queue */
+	while (pthread_mutex_trylock(&_pcmdlock) == EBUSY) {
+		control->command = mpc_idle;
+		if (control->argument) {
+			free(control->argument);
+			control->argument = NULL;
+		}
+		pthread_cond_signal(&_pcmdcond);
+	}
+	pthread_mutex_unlock(&_pcmdlock);
+
 	activity(1, "All unlocked");
 	return NULL;
 }

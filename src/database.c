@@ -150,7 +150,7 @@ static void db2entry(dbentry_t * dbentry, mptitle_t * entry) {
 	strtcat(entry->display, dbentry->title, MAXPATHLEN - 1);
 	entry->playcount = dbentry->playcount;
 	entry->skipcount = dbentry->skipcount;
-	entry->favpcount = (dbentry->playcount ? dbentry->playcount - 1 : 0);
+	entry->favpcount = dbentry->playcount;
 }
 
 /**
