@@ -1328,38 +1328,6 @@ static mptitle_t *skipOver(mptitle_t * current, int dir) {
 	return marker;
 }
 
-/**
- * skips the given number of titles
- * returns NULL if no more titles are available!
- */
-static mptitle_t *skipTitles(mptitle_t * guard, long num) {
-	mptitle_t *current = guard;
-
-	if (NULL == current) {
-		return NULL;
-	}
-
-	if (num == 0) {
-		return current;
-	}
-
-	for (; num > 0; num--) {
-		current = skipOver(current->next, 1);
-		if (current == NULL) {
-			return NULL;
-		}
-	}
-
-	for (; num < 0; num++) {
-		current = skipOver(current->prev, -1);
-		if (current == NULL) {
-			return NULL;
-		}
-	}
-
-	return current;
-}
-
 static char flagToChar(int flag) {
 	if (flag & MP_DNP) {
 		if (flag & MP_DBL)
@@ -1398,17 +1366,16 @@ static void flaginfo(mptitle_t * guard) {
 }
 
 /**
- * returns a title that fits the given playcount.
- * Could be inlined into addNewTitle() but has been
- * pulled out to hopefully increase readability.
+ * skips steps titles that match playcount pcount.
  */
-static mptitle_t *skipPcount(mptitle_t * guard, unsigned int *pcount,
-							 unsigned long maxcount) {
+static mptitle_t *skipPcount(mptitle_t * guard, unsigned int steps,
+							 unsigned int *pcount, unsigned long maxcount) {
 	mptitle_t *runner = guard;
 	unsigned count = 0;
 
-	do {
-		runner = skipTitles(runner, 1);
+	while (steps > 0) {
+		/* fetch the next */
+		runner = skipOver(runner->next, 1);
 		/* Nothing fits!? Then increase playcount and try again */
 		if (runner == NULL) {
 			count = 0;
@@ -1420,25 +1387,23 @@ static mptitle_t *skipPcount(mptitle_t * guard, unsigned int *pcount,
 				addMessage(-1, "No. More. Titles. Available?!");
 				return guard;
 			}
-			runner = skipTitles(guard, 1);
+			runner = skipOver(guard, 1);
 			if (runner == NULL) {
 				flaginfo(guard);
-				fail(F_FAIL, "Check skipTitles!");
+				fail(F_FAIL, "Check skipPcount!");
 			}
 		}
 
-		if (!getFavplay() && (runner->playcount <= *pcount)) {
-			break;
+		/* Does it fit the playcount? */
+		if ((!getFavplay() && (runner->playcount <= *pcount)) ||
+			((runner->flags & MP_FAV) && (runner->favpcount <= *pcount))) {
+			steps--;
 		}
-		if ((runner->flags & MP_FAV) && (runner->favpcount <= *pcount)) {
-			break;
+		else {
+			runner->flags |= MP_PDARK;
 		}
-
-		/* title did not fit, try next one */
-		activity(1, "Playcountskipping %u", ++count);
-		runner->flags |= MP_PDARK;
-	} while (1);
-
+		activity(1, "Playcountskipping (%u/%u) ", steps, ++count);
+	}
 	return runner;
 }
 
@@ -1488,31 +1453,28 @@ static int addNewTitle(void) {
 		return 0;
 	}
 	maxnum = MIN(num / 15, 15);
-	addMessage(1, "%lu titles available, avoiding %u repeats", num, maxnum);
+	addMessage(2, "%lu titles available, avoiding %u repeats", num, maxnum);
 
-	addMessage(1, "%lu titles without playcount marker",
+	addMessage(2, "%lu titles without playcount marker",
 			   countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE | MP_PDARK));
 
 	/* remember playcount bounds */
 	pcount = getPlaycount(0);
 	maxpcount = getPlaycount(1);
-	addMessage(1, "Playcount [%u:%u]", pcount, maxpcount);
+	addMessage(2, "Playcount [%u:%u]", pcount, maxpcount);
 
 	/* start with some random title */
 	steps = random() % (num / 2);
-	addMessage(1, "skipping %lu titles from %u", steps, runner->key);
-	runner = skipTitles(runner, steps);
+	addMessage(2, "skipping %lu titles from %u", steps, runner->key);
+	runner = skipPcount(runner, steps, &pcount, maxpcount);
 	if (runner == NULL) {
 		flaginfo(runner);
 		fail(F_FAIL, "No titles in the database?!");
 		addMessage(-1, "No titles in the database!?");
 		return 0;
 	}
-	addMessage(1, ".. ended up at %u", runner->key);
+	addMessage(2, "\n.. ended up at %u ", runner->key);
 
-	/* if needed, fetch a title that fits the playcount */
-	runner = skipPcount(runner, &pcount, maxpcount);
-	addMessage(1, ".. and skipped to %u", runner->key);
 	if (lastpat == NULL) {
 		/* No titles in the playlist yet, we're done! */
 		getConfig()->current = appendToPL(runner, NULL, 1);
@@ -1530,7 +1492,7 @@ static int addNewTitle(void) {
 			runner->flags |= MP_TDARK;
 			activity(1, "Nameskipping %u", cycles);
 			/* get another with a matching playcount */
-			runner = skipPcount(runner->next, &pcount, maxpcount);
+			runner = skipPcount(runner, 1, &pcount, maxpcount);
 			/* We tried about every playable title! */
 			if (cycles++ > num) {
 				if (pcount < maxpcount) {
@@ -1569,7 +1531,7 @@ static int addNewTitle(void) {
 	} while ((pl != NULL) && (tnum++ < maxnum));
 
 	/*  *INDENT-OFF*  */
-	addMessage(2, "[+] (%i/%i/%c) %5d %s",
+	addMessage(3, "[+] (%i/%i/%c) %5d %s",
 			   (runner->flags & MP_FAV) ? runner->favpcount : runner->playcount,
 			   pcount, flagToChar(runner->flags), runner->key, runner->display);
 	/*  *INDENT-ON*  */
@@ -1797,7 +1759,7 @@ void dumpInfo(mptitle_t * root, int smooth) {
 			addMessage(0, "%5i doublets", dbl);
 	}
 	if (marked)
-		addMessage(0, "%5i marked", marked);
+		addMessage(0, "%5i in playlist", marked);
 	addMessage(0, "-- Playcount --");
 
 	while (pl <= maxplayed) {
@@ -1822,6 +1784,7 @@ void dumpInfo(mptitle_t * root, int smooth) {
 					favcnt++;
 				}
 				if (current->flags & MP_INPL) {
+					addMessage(1, "%s is in playlist", current->display);
 					markcnt++;
 				}
 			}
