@@ -19,7 +19,7 @@
  * error - errno that was set
  *		 F_FAIL = print message w/o errno and exit
  */
-void fail(const int error, const char *msg, ...) {
+void fail(const int32_t error, const char *msg, ...) {
 	va_list args;
 
 	fprintf(stdout, "\n");
@@ -34,8 +34,8 @@ void fail(const int error, const char *msg, ...) {
 	exit(0);
 }
 
-int main(int argc, char **argv) {
-	int res = 0;
+int32_t main(int32_t argc, char **argv) {
+	int32_t res = 0;
 	mpconfig_t *config = readConfig();
 
 	config->debug = 9;

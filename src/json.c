@@ -15,19 +15,19 @@
 /* for hexval  */
 #include "utils.h"
 
-int jsonFail(jsonObject * jo, const char *msg, ...)
+int32_t jsonFail(jsonObject * jo, const char *msg, ...)
 	__attribute__ ((__format__(__printf__, 2, 3)));
 
 /* forward definitions of cyclic dependencies in static functions */
 static char *jsonWriteObj(jsonObject * jo, char *json, size_t *len);
 static char *jsonWriteArr(jsonObject * jo, char *json, size_t *len);
-static int jsonParseObject(char *json, jsonObject ** jo);
-static int jsonParseArray(char *json, jsonObject ** jo);
+static int32_t jsonParseObject(char *json, jsonObject ** jo);
+static int32_t jsonParseArray(char *json, jsonObject ** jo);
 
 /*
  * error handling functions
  */
-int jsonFail(jsonObject * jo, const char *msg, ...) {
+int32_t jsonFail(jsonObject * jo, const char *msg, ...) {
 	char jsonError[1025];
 	va_list args;
 
@@ -44,8 +44,8 @@ int jsonFail(jsonObject * jo, const char *msg, ...) {
 /**
  * simple wrapper to keep old messages
  */
-int jsonParseFail(jsonObject * jo, const char *func, const char *str,
-				  const int i, const int state) {
+int32_t jsonParseFail(jsonObject * jo, const char *func, const char *str,
+					  const int32_t i, const int32_t state) {
 	if (jo == NULL) {
 		return -1;
 	}
@@ -61,7 +61,7 @@ int jsonParseFail(jsonObject * jo, const char *func, const char *str,
 static char *jsonEncode(const char *val) {
 	size_t len = 0;
 	char *ret = NULL;
-	unsigned ip, op;
+	uint32_t ip, op;
 
 	if (val == NULL) {
 		return NULL;
@@ -124,7 +124,7 @@ static char *jsonEncode(const char *val) {
 			break;
 		default:
 			/* filter out unprintable characters */
-			if ((unsigned char) val[ip] > 31) {
+			if ((uint8_t) val[ip] > 31) {
 				ret[op++] = val[ip];
 			}
 		}
@@ -136,9 +136,9 @@ static char *jsonEncode(const char *val) {
 
 /* decodes a unicode hex value into a unicode binary string
    according to RFC 3629 */
-static int utfDecode(const char *in, char *out) {
+static int32_t utfDecode(const char *in, char *out) {
 	uint64_t unicode = 0;
-	int i;
+	int32_t i;
 
 	if (strlen(in) < 4) {
 		return -1;
@@ -182,10 +182,10 @@ static int utfDecode(const char *in, char *out) {
 /*
  * todo proper testing of \uXXXX
  */
-static int jsonDecodeInto(const char *val, char *ret, size_t len) {
-	unsigned ip = 0;
-	unsigned op = 0;
-	int rv = 0;
+static int32_t jsonDecodeInto(const char *val, char *ret, size_t len) {
+	uint32_t ip = 0;
+	uint32_t op = 0;
+	int32_t rv = 0;
 
 	while ((ip < strlen(val)) && (op < len - 1)) {
 		if (val[ip] == '\\') {
@@ -275,10 +275,10 @@ static jsonObject *jsonInit(void) {
  * parses a number
  * we allow leading zeroes, even if JSON forbids that
  */
-static int jsonParseNum(char *json, char **val) {
-	int len = 64 < strlen(json) ? 64 : strlen(json);
-	int i = 0;
-	int state = 0;
+static int32_t jsonParseNum(char *json, char **val) {
+	int32_t len = 64 < strlen(json) ? 64 : strlen(json);
+	int32_t i = 0;
+	int32_t state = 0;
 	char *start = json;
 	char buf[65] = "";
 
@@ -362,11 +362,11 @@ static int jsonParseNum(char *json, char **val) {
 /*
  * parsechecks a string value, this does no decoding!
  */
-static int jsonParseString(char *json, char **val) {
-	int len = strlen(json);
-	int ip = 0;
-	int j = 0;
-	int state = 0;
+static int32_t jsonParseString(char *json, char **val) {
+	int32_t len = strlen(json);
+	int32_t ip = 0;
+	int32_t j = 0;
+	int32_t state = 0;
 	char *start = NULL;
 
 	*val = NULL;
@@ -437,10 +437,10 @@ static int jsonParseString(char *json, char **val) {
  * n is probably null
  * everything else is either a number or illegal.
  */
-static int jsonParseValue(char *json, jsonObject * jo) {
-	int jpos = 0;
-	int state = 0;
-	int rv = 0;
+static int32_t jsonParseValue(char *json, jsonObject * jo) {
+	int32_t jpos = 0;
+	int32_t state = 0;
+	int32_t rv = 0;
 
 	switch (json[jpos]) {
 	case ' ':
@@ -538,11 +538,11 @@ static int jsonParseValue(char *json, jsonObject * jo) {
 /*
  * parses a JSON key,value tupel
  */
-static int jsonParseKeyVal(char *json, jsonObject ** jo) {
-	int jpos = 0;
-	int state = 0;
-	int len = strlen(json);
-	int rv;
+static int32_t jsonParseKeyVal(char *json, jsonObject ** jo) {
+	int32_t jpos = 0;
+	int32_t state = 0;
+	int32_t len = strlen(json);
+	int32_t rv;
 
 	*jo = jsonInit();
 
@@ -598,7 +598,7 @@ static int jsonParseKeyVal(char *json, jsonObject ** jo) {
 /*
  * helperfunction to set numeric indices on array objects
  */
-static int setIndex(jsonObject * jo, int i) {
+static int32_t setIndex(jsonObject * jo, int32_t i) {
 	char buf[20];
 
 	sprintf(buf, "%i", i);
@@ -610,12 +610,12 @@ static int setIndex(jsonObject * jo, int i) {
 /*
  * parses a JSON array
  */
-static int jsonParseArray(char *json, jsonObject ** jo) {
-	int jpos = 0;
-	int state = 0;
-	int len = strlen(json);
-	int index = 0;
-	int rv = 0;
+static int32_t jsonParseArray(char *json, jsonObject ** jo) {
+	int32_t jpos = 0;
+	int32_t state = 0;
+	int32_t len = strlen(json);
+	int32_t index = 0;
+	int32_t rv = 0;
 	jsonObject **current = jo;
 
 	while (jpos < len) {
@@ -680,12 +680,12 @@ static int jsonParseArray(char *json, jsonObject ** jo) {
 /*
  * parses a JSON object
  */
-static int jsonParseObject(char *json, jsonObject ** jo) {
-	int jpos = 0;
-	int state = 0;
-	int len = strlen(json);
+static int32_t jsonParseObject(char *json, jsonObject ** jo) {
+	int32_t jpos = 0;
+	int32_t state = 0;
+	int32_t len = strlen(json);
 	jsonObject **current = jo;
-	int rv = 0;
+	int32_t rv = 0;
 
 	while (jpos < len) {
 		switch (state) {
@@ -837,7 +837,7 @@ jsonType jsonPeek(jsonObject * jo, const char *key) {
 	return jo->type;
 }
 
-unsigned jsonGetBool(jsonObject * jo, const char *key) {
+uint32_t jsonGetBool(jsonObject * jo, const char *key) {
 	jsonObject *pos = jo;
 
 	pos = jsonFollowPath(jo, key);
@@ -849,9 +849,9 @@ unsigned jsonGetBool(jsonObject * jo, const char *key) {
 }
 
 /*
- * returns the int value of key
+ * returns the int32_t value of key
  */
-int jsonGetInt(jsonObject * jo, const char *key) {
+int32_t jsonGetInt(jsonObject * jo, const char *key) {
 	jsonObject *pos = jo;
 
 	pos = jsonFollowPath(jo, key);
@@ -874,7 +874,7 @@ char *jsonGetStr(jsonObject * jo, const char *key) {
 	return jsonDecode((char *) jo->val);
 }
 
-int jsonStrcpy(char *target, jsonObject * jo, const char *key, int len) {
+int32_t jsonStrcpy(char *target, jsonObject * jo, const char *key, int32_t len) {
 	jo = jsonFollowPath(jo, key);
 	if (jo == NULL) {
 		target[0] = 0;
@@ -886,7 +886,7 @@ int jsonStrcpy(char *target, jsonObject * jo, const char *key, int len) {
 /*
  * helper function to resolve a JSON array index
  */
-static void *jsonGetByIndex(jsonObject * jo, int i) {
+static void *jsonGetByIndex(jsonObject * jo, int32_t i) {
 	char buf[20];
 
 	sprintf(buf, "%i", i);
@@ -897,8 +897,8 @@ static void *jsonGetByIndex(jsonObject * jo, int i) {
 /**
  * copy the array of strings into the vals pointer
  */
-char **jsonGetStrs(jsonObject * jo, const char *key, int *num) {
-	int i;
+char **jsonGetStrs(jsonObject * jo, const char *key, int32_t * num) {
+	int32_t i;
 	char **vals = NULL;
 	char *val;
 	jsonObject *pos = NULL;
@@ -965,7 +965,7 @@ static jsonObject *jsonAppend(jsonObject * jo, const char *key) {
 /**
  * creates a new JSON boolean object and appends it to the end of the given root object chain
  */
-jsonObject *jsonAddBool(jsonObject * jo, const char *key, const unsigned val) {
+jsonObject *jsonAddBool(jsonObject * jo, const char *key, const uint32_t val) {
 	jo = jsonAppend(jo, key);
 	if (val) {
 		jo->val = (void *) 1;
@@ -1008,11 +1008,11 @@ jsonObject *jsonAddStr(jsonObject * jo, const char *key, const char *val) {
  * creates a new JSON (string) array object and appends it to the end of the given root object chain
  */
 jsonObject *jsonAddStrs(jsonObject * jo, const char *key, char **vals,
-						const int num) {
+						const int32_t num) {
 	jsonObject *buf = NULL;
 	jsonObject *val = NULL;
 	char buffer[20];
-	int i;
+	int32_t i;
 
 	for (i = 0; i < num; i++) {
 		sprintf(buffer, "%i", i);
@@ -1028,7 +1028,7 @@ jsonObject *jsonAddStrs(jsonObject * jo, const char *key, char **vals,
 /**
  * creates a new JSON integer (number) object and appends it to the end of the given root object chain
  */
-jsonObject *jsonAddInt(jsonObject * jo, const char *key, const int val) {
+jsonObject *jsonAddInt(jsonObject * jo, const char *key, const int32_t val) {
 	char buf[64];
 
 	jo = jsonAppend(jo, key);
@@ -1056,8 +1056,8 @@ jsonObject *jsonAddObj(jsonObject * jo, const char *key, jsonObject * val) {
 	 will be followed. If the resulting object does not exist, is no array
 	 and neither an object the function returns -1.
 */
-int jsonGetLength(jsonObject * jo, char *key) {
-	int len = 0;
+int32_t jsonGetLength(jsonObject * jo, char *key) {
+	int32_t len = 0;
 
 	if (key != NULL) {
 		jo = jsonFetch(jo, key);
@@ -1083,9 +1083,9 @@ int jsonGetLength(jsonObject * jo, char *key) {
  *          0 on error
  *          1 on success
  */
-int jsonAddArrElement(jsonObject * jo, void *val, jsonType type) {
+int32_t jsonAddArrElement(jsonObject * jo, void *val, jsonType type) {
 	char key[20];
-	int index = 0;
+	int32_t index = 0;
 
 	if (jo == NULL) {
 		return -1;
@@ -1130,7 +1130,7 @@ int jsonAddArrElement(jsonObject * jo, void *val, jsonType type) {
 			jo->val = jsonAddStr(NULL, key, (char *) val);
 			break;
 		case json_boolean:
-			jo->val = jsonAddBool(NULL, key, (unsigned long) val);
+			jo->val = jsonAddBool(NULL, key, (uint64_t) val);
 			break;
 		case json_null:
 			jo->val = jsonAddObj(NULL, key, NULL);
@@ -1159,7 +1159,7 @@ int jsonAddArrElement(jsonObject * jo, void *val, jsonType type) {
 			jsonAddStr(jo, key, (char *) val);
 			break;
 		case json_boolean:
-			jsonAddBool(jo, key, (unsigned long) val);
+			jsonAddBool(jo, key, (uint64_t) val);
 			break;
 		case json_null:
 			jsonAddObj(jo, key, NULL);

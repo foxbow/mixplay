@@ -12,7 +12,7 @@
 #include "mpclient.h"
 #include "utils.h"
 
-static int _mpport = MP_PORT;
+static int32_t _mpport = MP_PORT;
 static char _mphost[16] = "127.0.0.1";
 
 /*
@@ -22,7 +22,7 @@ static char _mphost[16] = "127.0.0.1";
  * error - errno that was set
  *		 F_FAIL = print message w/o errno and exit
  */
-void fail(const int error, const char *msg, ...) {
+void fail(const int32_t error, const char *msg, ...) {
 	va_list args;
 
 	fprintf(stdout, "\n");
@@ -37,7 +37,7 @@ void fail(const int error, const char *msg, ...) {
 	exit(error);
 }
 
-int setMPPort(int port) {
+int32_t setMPPort(int32_t port) {
 	if ((port < 1025) || (port > 65535)) {
 		return -1;
 	}
@@ -46,7 +46,7 @@ int setMPPort(int port) {
 }
 
 /* this is misleading! host is an IP address.. */
-int setMPHost(const char *host) {
+int32_t setMPHost(const char *host) {
 	if (strlen(host) > 16) {
 		return -1;
 	}
@@ -70,7 +70,7 @@ static char *sendRequest(clientInfo * usefd, const char *path) {
 	size_t rlen = 0;
 	size_t ilen = 0;
 	size_t clen = 0;
-	int rv = 0;
+	int32_t rv = 0;
 	fd_set fds;
 	struct timeval to;
 	clientInfo *ci;
@@ -185,10 +185,10 @@ static char *sendRequest(clientInfo * usefd, const char *path) {
 	 on error and the socket on success.
 	 also registers an update handler when keep is non null.
 */
-clientInfo *getConnection(int keep) {
+clientInfo *getConnection(int32_t keep) {
 	struct sockaddr_in server;
-	int fd;
-	int cid = 0;
+	int32_t fd;
+	int32_t cid = 0;
 	clientInfo *ci;
 	jsonObject *jo = NULL;
 
@@ -237,7 +237,7 @@ clientInfo *getConnection(int keep) {
 	  0 - server busy
 	 -1 - failure on send
 */
-int sendCMD(clientInfo * usefd, mpcmd_t cmd) {
+int32_t sendCMD(clientInfo * usefd, mpcmd_t cmd) {
 	char req[1024];
 	char *reply;
 	jsonObject *jo = NULL;
@@ -266,7 +266,7 @@ int sendCMD(clientInfo * usefd, mpcmd_t cmd) {
  * copies the currently pplayed title into the given string and returns
  * the stringlength or -1 on error.
  */
-int getCurrentTitle(char *title, unsigned tlen) {
+int32_t getCurrentTitle(char *title, uint32_t tlen) {
 	char *line;
 
 	line = sendRequest(NULL, "title/info");
@@ -285,7 +285,7 @@ int getCurrentTitle(char *title, unsigned tlen) {
  * or a single json_integer object with the HTTP status code or
  * -1 on a fatal error
  */
-jsonObject *getStatus(clientInfo * usefd, int flags) {
+jsonObject *getStatus(clientInfo * usefd, int32_t flags) {
 	char *reply;
 	char req[1024];
 	jsonObject *jo = NULL;
@@ -325,7 +325,7 @@ jsonObject *getStatus(clientInfo * usefd, int flags) {
 /*
  * helperfunction to fetch a title from the given jsonObject tree
  */
-int jsonGetTitle(jsonObject * jo, const char *key, mptitle_t * title) {
+int32_t jsonGetTitle(jsonObject * jo, const char *key, mptitle_t * title) {
 	assert(title != NULL);
 	if (jsonPeek(jo, key) != json_object) {
 		title->key = 0;

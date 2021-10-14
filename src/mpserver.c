@@ -59,8 +59,8 @@ static pthread_mutex_t _sendlock = PTHREAD_MUTEX_INITIALIZER;
 /**
  * send a static file
  */
-static int filePost(int sock, const char *fname) {
-	int fd;
+static int32_t filePost(int32_t sock, const char *fname) {
+	int32_t fd;
 
 	fd = open(fname, O_RDONLY);
 	if (fd != -1) {
@@ -84,9 +84,9 @@ static int filePost(int sock, const char *fname) {
  * also considers \n or \r to be line end characters
  */
 static char *strdec(char *target, const char *src) {
-	unsigned int i, j;
+	uint32_t i, j;
 	char buf = 0;
-	int state = 0;
+	int32_t state = 0;
 
 	for (i = 0, j = 0; i < strlen(src); i++) {
 		switch (state) {
@@ -124,10 +124,10 @@ static char *strdec(char *target, const char *src) {
 	return target;
 }
 
-static int fillReqInfo(mpReqInfo * info, char *line) {
+static int32_t fillReqInfo(mpReqInfo * info, char *line) {
 	jsonObject *jo = NULL;
 	char *jsonLine = calloc(strlen(line), 1);
-	int rc = 0;
+	int32_t rc = 0;
 
 	strdec(jsonLine, line);
 	addMessage(3, "received request: %s", jsonLine);
@@ -186,11 +186,11 @@ static size_t serviceUnavailable(char *commdata) {
  * again. It is not worth trying to clean up that id!
  */
 static void *clientHandler(void *args) {
-	int sock;
+	int32_t sock;
 	size_t len = 0;
 	size_t sent, msglen;
 	struct timeval to;
-	unsigned running = CL_ONE;
+	uint32_t running = CL_ONE;
 	char *commdata = NULL;
 	char *jsonLine = NULL;
 	fd_set fds;
@@ -208,10 +208,10 @@ static void *clientHandler(void *args) {
 	ssize_t retval = 0;
 	ssize_t recvd = 0;
 	static const char *fname;
-	static const unsigned char *fdata;
-	unsigned int flen = 0;
-	int fullstat = MPCOMM_STAT;
-	int index = 0;
+	static const uint8_t *fdata;
+	uint32_t flen = 0;
+	int32_t fullstat = MPCOMM_STAT;
+	int32_t index = 0;
 	mptitle_t *title = NULL;
 	struct stat sbuf;
 
@@ -221,11 +221,11 @@ static void *clientHandler(void *args) {
 	ts.tv_nsec = 250000;
 	ts.tv_sec = 0;
 	char *manifest = NULL;
-	unsigned method = 0;
+	uint32_t method = 0;
 	mpReqInfo reqInfo = { 0, NULL, 0 };
 
 	commdata = (char *) falloc(commsize, sizeof (char));
-	sock = *(int *) args;
+	sock = *(int32_t *) args;
 	free(args);
 
 	config = getConfig();
@@ -581,7 +581,7 @@ static void *clientHandler(void *args) {
 				if (jsonLine != NULL) {
 					sprintf(commdata,
 							"HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012",
-							(int) strlen(jsonLine));
+							(int32_t) strlen(jsonLine));
 					while ((ssize_t) (strlen(jsonLine) + strlen(commdata) + 8)
 						   > commsize) {
 						commsize += MP_BLKSIZE;
@@ -658,7 +658,7 @@ static void *clientHandler(void *args) {
 			case req_version:	/* get current build version */
 				sprintf(commdata,
 						"HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
-						(int) strlen(VERSION), VERSION);
+						(int32_t) strlen(VERSION), VERSION);
 				len = strlen(commdata);
 				break;
 
@@ -685,7 +685,7 @@ static void *clientHandler(void *args) {
 				}
 				sprintf(commdata,
 						"HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
-						(int) strlen(line), line);
+						(int32_t) strlen(line), line);
 				len = strlen(commdata);
 				break;
 
@@ -748,11 +748,11 @@ static void *clientHandler(void *args) {
 static void *mpserver(void *arg) {
 	fd_set fds;
 	struct timeval to;
-	int mainsocket = (int) (long) arg;
-	int client_sock, alen, *new_sock;
+	int32_t mainsocket = (int32_t) (long) arg;
+	int32_t client_sock, alen, *new_sock;
 	struct sockaddr_in client;
 	mpconfig_t *control = getConfig();
-	int devnull = 0;
+	int32_t devnull = 0;
 
 	blockSigint();
 
@@ -794,7 +794,7 @@ static void *mpserver(void *arg) {
 			addMessage(MPV + 3, "Connection accepted");
 
 			/* free()'d in clientHandler() */
-			new_sock = (int *) falloc(1, sizeof (int));
+			new_sock = (int32_t *) falloc(1, sizeof (int32_t));
 			*new_sock = client_sock;
 
 			/* todo collect pids?
@@ -818,11 +818,11 @@ static void *mpserver(void *arg) {
  * this call blocks until the server socket was successfuly bound
  * so that nothing else happens on fail()
  */
-int startServer() {
+int32_t startServer() {
 	mpconfig_t *control = getConfig();
 	struct sockaddr_in server;
-	int mainsocket = -1;
-	int val = 1;
+	int32_t mainsocket = -1;
+	int32_t val = 1;
 
 	memset(&server, 0, sizeof (server));
 
@@ -832,8 +832,8 @@ int startServer() {
 		addError(errno);
 		return -1;
 	}
-	if (setsockopt(mainsocket, SOL_SOCKET, SO_REUSEADDR, &val, sizeof (int)) <
-		0) {
+	if (setsockopt
+		(mainsocket, SOL_SOCKET, SO_REUSEADDR, &val, sizeof (int32_t)) < 0) {
 		addMessage(0, "Could not set SO_REUSEADDR on socket!");
 		addError(errno);
 	}

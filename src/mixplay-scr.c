@@ -12,9 +12,9 @@
 #include "mpclient.h"
 #include "utils.h"
 
-static int displayPower(int on) {
-	int dummy;
-	int rv = -1;
+static int32_t displayPower(int32_t on) {
+	int32_t dummy;
+	int32_t rv = -1;
 	Display *dpy;
 	char *disp = ":0";
 
@@ -43,10 +43,10 @@ static int displayPower(int on) {
 }
 
 /* returns 1 if the DPMSstate of the display is on */
-static int getDisplayState() {
-	int dummy;
+static int32_t getDisplayState() {
+	int32_t dummy;
 	BOOL dummy2;
-	int rv = -1;
+	int32_t rv = -1;
 	Display *dpy;
 	char *disp = ":0";
 	CARD16 level;
@@ -73,13 +73,13 @@ static int getDisplayState() {
 	return rv;
 }
 
-int main() {
+int32_t main() {
 	jsonObject *jo = NULL;
-	int to = -6;
-	int timer = 0;
+	int32_t to = -6;
+	int32_t timer = 0;
 	mpcmd_t state = mpc_idle;
-	int sstate;
-	int dstate = getDisplayState();
+	int32_t sstate;
+	int32_t dstate = getDisplayState();
 
 	sstate = dstate;
 	if (sstate < 0) {

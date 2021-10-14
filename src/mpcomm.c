@@ -18,7 +18,7 @@
 #include "utils.h"
 
 static pthread_mutex_t _clientlock = PTHREAD_MUTEX_INITIALIZER;
-static int _curclient = -1;
+static int32_t _curclient = -1;
 
 #define MPV 10
 
@@ -30,7 +30,7 @@ static int _curclient = -1;
  * Even if it may look tempting, queuing the calls is not
  * worth the effort!
  */
-int setCurClient(int client) {
+int32_t setCurClient(int32_t client) {
 	if (pthread_mutex_trylock(&_clientlock) == EBUSY) {
 		if (_curclient == client) {
 			addMessage(MPV + 1, "Client %i is already locked!", client);
@@ -47,11 +47,11 @@ int setCurClient(int client) {
 	return client;
 }
 
-int isCurClient(int client) {
+int32_t isCurClient(int32_t client) {
 	return (_curclient == client);
 }
 
-int getCurClient() {
+int32_t getCurClient() {
 	return _curclient;
 }
 
@@ -61,7 +61,7 @@ int getCurClient() {
  * only unlock if we really are the current client. Otherwise this is just a clean-up
  * call to avoid a deadlock.
  */
-void unlockClient(int client) {
+void unlockClient(int32_t client) {
 	/* a little nasty but needed to end progress when it's unknown which client
 	 * is the current one */
 	if (client == -1) {
@@ -82,8 +82,8 @@ void unlockClient(int client) {
 }
 
 static jsonObject *jsonAddProfiles(jsonObject * jo, const char *key,
-								   profile_t ** vals, const int num) {
-	int i;
+								   profile_t ** vals, const int32_t num) {
+	int32_t i;
 
 	jo = jsonInitArr(jo, key);
 	for (i = 0; i < num; i++) {
@@ -136,7 +136,7 @@ static jsonObject *jsonAddTitle(jsonObject * jo, const char *key,
  * this needs to be checked over the time
  */
 static jsonObject *jsonAddTitles(jsonObject * jo, const char *key,
-								 mpplaylist_t * pl, int dir) {
+								 mpplaylist_t * pl, int32_t dir) {
 	jsonObject *jsonTitle = NULL;
 
 	jo = jsonInitArr(jo, key);
@@ -180,7 +180,7 @@ static jsonObject *jsonAddList(jsonObject * jo, const char *key,
  * put data to be sent over into the buff
  * adds messages only if any are available for the client
 **/
-char *serializeStatus(int clientid, int type) {
+char *serializeStatus(int32_t clientid, int32_t type) {
 	mpconfig_t *data = getConfig();
 	jsonObject *jo = NULL;
 	mpplaylist_t *current = data->current;

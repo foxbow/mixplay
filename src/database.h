@@ -16,21 +16,21 @@ typedef struct {
 	char title[NAMELEN];		/* Title info (from mp3) */
 	char album[NAMELEN];		/* Album info (from mp3) */
 	char genre[NAMELEN];		/* Album info (from mp3) */
-	unsigned int playcount;		/* play counter */
-	unsigned int skipcount;		/* skip counter */
+	uint32_t playcount;			/* play counter */
+	uint32_t skipcount;			/* skip counter */
 } dbentry_t;
 
 #define DBESIZE sizeof(dbentry_t)
 #define ESIZE sizeof(mptitle_t)
 
 mptitle_t *dbGetMusic(void);
-int dbCheckExist(void);
-int dbAddTitles(char *basedir);
-void dbWrite(int);
-int dbNameCheck(void);
-mptitle_t *getTitleByIndex(unsigned int index);
+int32_t dbCheckExist(void);
+int32_t dbAddTitles(char *basedir);
+void dbWrite(int32_t);
+int32_t dbNameCheck(void);
+mptitle_t *getTitleByIndex(uint32_t index);
 mptitle_t *getTitleForRange(const mpcmd_t range, const char *name);
 void dbMarkDirty(void);
-int mp3Exists(const mptitle_t * title);
+int32_t mp3Exists(const mptitle_t * title);
 
 #endif /* DATABASE_H_ */

@@ -33,7 +33,7 @@ static pthread_mutex_t _asynclock = PTHREAD_MUTEX_INITIALIZER;
  * if flags is true, all title flags will be cleared, only
  * MP_DBL will be kept.
  */
-static void cleanTitles(int flags) {
+static void cleanTitles(int32_t flags) {
 	mpconfig_t *control = getConfig();
 	mptitle_t *runner = control->root;
 
@@ -58,8 +58,8 @@ static void cleanTitles(int flags) {
  * returns TRUE when no asynchronous operation is running but does not
  * block on async operations.
  */
-static int asyncTest() {
-	int ret = 0;
+static int32_t asyncTest() {
+	int32_t ret = 0;
 
 	if (pthread_mutex_trylock(&_asynclock) != EBUSY) {
 		addMessage(MPV + 1, "Locking for %s/%s",
@@ -73,7 +73,7 @@ static int asyncTest() {
 	return ret;
 }
 
-static int checkPasswd(void) {
+static int32_t checkPasswd(void) {
 	char *pass = getConfig()->argument;
 
 	if (asyncTest()) {
@@ -168,16 +168,16 @@ void setCommand(mpcmd_t cmd, char *arg) {
 	pthread_mutex_unlock(&_pcmdlock);
 }
 
-static int oactive = 1;
+static int32_t oactive = 1;
 
-static int toPlayer(int fd, const char *msg) {
+static int32_t toPlayer(int32_t fd, const char *msg) {
 	return dowrite(fd, msg, strlen(msg));
 }
 
 /**
  * make mpeg123 play the given title
  */
-static void sendplay(int fdset) {
+static void sendplay(int32_t fdset) {
 	char line[MAXPATHLEN + 13] = "load ";
 	mpconfig_t *control = getConfig();
 
@@ -219,9 +219,9 @@ static void startPlayer() {
  */
 void *setProfile(void *arg) {
 	profile_t *profile;
-	int num;
+	int32_t num;
 	int64_t active;
-	static int lastact = 0;		/* last active profile (not channel!) */
+	static int32_t lastact = 0;	/* last active profile (not channel!) */
 	mpconfig_t *control = getConfig();
 	char *home = getenv("HOME");
 
@@ -345,7 +345,7 @@ void *setProfile(void *arg) {
  */
 static void *plCheckDoublets(void *arg) {
 	pthread_mutex_t *lock = (pthread_mutex_t *) arg;
-	int i;
+	int32_t i;
 
 	addMessage(0, "Checking for doublets..");
 	/* update database with current playcount etc */
@@ -368,7 +368,7 @@ static void *plCheckDoublets(void *arg) {
 static void *plDbClean(void *arg) {
 	mpconfig_t *control = getConfig();
 	pthread_mutex_t *lock = (pthread_mutex_t *) arg;
-	int i;
+	int32_t i;
 
 	addMessage(0, "Database Cleanup");
 
@@ -450,12 +450,13 @@ static void asyncRun(void *cmd(void *)) {
  * arg - either a title key or a string
  * insert - play next or append to the end of the playlist
  */
-static int playResults(mpcmd_t range, const char *arg, const int insert) {
+static int32_t playResults(mpcmd_t range, const char *arg,
+						   const int32_t insert) {
 	mpconfig_t *config = getConfig();
 	mpplaylist_t *pos = config->current;
 	mpplaylist_t *res = config->found->titles;
 	mptitle_t *title = NULL;
-	int key = atoi(arg);
+	int32_t key = atoi(arg);
 
 	/* insert results at current pos or at the end? */
 	if ((pos != NULL) && (insert == 0)) {
@@ -515,7 +516,7 @@ static int playResults(mpcmd_t range, const char *arg, const int insert) {
 	return 0;
 }
 
-static char *getProfileName(int profile) {
+static char *getProfileName(int32_t profile) {
 	mpconfig_t *config = getConfig();
 
 	if (profile == 0) {
@@ -531,11 +532,12 @@ static char *getProfileName(int profile) {
 	}
 }
 
-static void *killPlayers(pid_t pid[2], int p_command[2][2], int p_status[2][2],
-						 int p_error[2][2], int restart) {
+static void *killPlayers(pid_t pid[2], int32_t p_command[2][2],
+						 int32_t p_status[2][2], int32_t p_error[2][2],
+						 int32_t restart) {
 	uint64_t i;
 	mpconfig_t *control = getConfig();
-	unsigned players = (control->fade > 0) ? 2 : 1;
+	uint32_t players = (control->fade > 0) ? 2 : 1;
 
 	if (restart) {
 		addMessage(MPV + 1, "kill and restart reader");
@@ -614,7 +616,7 @@ static void *killPlayers(pid_t pid[2], int p_command[2][2], int p_status[2][2],
 	return NULL;
 }
 
-static void stopPlay(int channel) {
+static void stopPlay(int32_t channel) {
 	mpconfig_t *control = getConfig();
 
 	if (control->status == mpc_stop) {
@@ -630,7 +632,7 @@ static void stopPlay(int channel) {
 
 /* stops the current title. That means send a stop to a stream and a pause
  * to a database title. */
-static void pausePlay(int channel) {
+static void pausePlay(int32_t channel) {
 	mpconfig_t *control = getConfig();
 
 	if (control->status == mpc_play) {
@@ -658,24 +660,24 @@ void *reader() {
 	struct timeval to;
 	struct timespec ts;
 	int64_t i, key;
-	int invol = 80;
-	int outvol = 80;
-	int fdset = 0;
-	int profile;
+	int32_t invol = 80;
+	int32_t outvol = 80;
+	int32_t fdset = 0;
+	int32_t profile;
 	char line[MAXPATHLEN];
 	char *a, *t;
-	int order = 1;
+	int32_t order = 1;
 	float intime = 0.0;
 	float oldtime = 0.0;
-	int fading = 1;
-	int p_status[2][2];			/* status pipes to mpg123 */
-	int p_command[2][2];		/* command pipes to mpg123 */
-	int p_error[2][2];			/* error pipes to mpg123 */
+	int32_t fading = 1;
+	int32_t p_status[2][2];		/* status pipes to mpg123 */
+	int32_t p_command[2][2];	/* command pipes to mpg123 */
+	int32_t p_error[2][2];		/* error pipes to mpg123 */
 	pid_t pid[2];
 	mpcmd_t cmd = mpc_idle;
-	unsigned update = 0;
-	unsigned insert = 0;
-	unsigned skipped = 0;
+	uint32_t update = 0;
+	uint32_t insert = 0;
+	uint32_t skipped = 0;
 
 	blockSigint();
 
@@ -860,7 +862,7 @@ void *reader() {
 					addMessage(MPV + 3, "P+ %s", line);
 				}
 				switch (line[1]) {
-					int cmd;
+					int32_t cmd;
 					float rem;
 
 				case 'R':		/* startup */
@@ -931,8 +933,8 @@ void *reader() {
 					break;
 
 				case 'F':		/* Status message during playing (frame info) */
-					/* $1   = framecount (int)
-					 * $2   = frames left this song (int)
+					/* $1   = framecount (int32_t)
+					 * $2   = frames left this song (int32_t)
 					 * in  = seconds (float)
 					 * rem = seconds left (float)
 					 */
@@ -964,11 +966,11 @@ void *reader() {
 						break;
 					}
 
-					control->playtime = (unsigned) roundf(intime);
+					control->playtime = (uint32_t) roundf(intime);
 					/* file play */
 					if (!(control->mpmode & PM_STREAM)) {
 						control->percent = (100 * intime) / (rem + intime);
-						control->remtime = (unsigned) roundf(rem);
+						control->remtime = (uint32_t) roundf(rem);
 
 						/* we could just be switching from playlist to database */
 						if (control->current == NULL) {

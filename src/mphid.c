@@ -42,9 +42,9 @@ const char *_mprccmdstrings[MPRC_NUM] = {
 	"Decrease volume"
 };
 
-mpcmd_t hidCMD(int c) {
+mpcmd_t hidCMD(int32_t c) {
 	const char keys[MPRC_NUM + 1] = " pnfd-Q.,";
-	int i;
+	int32_t i;
 	mpcmd_t cmd = mpc_idle;
 
 	for (i = 0; i < MPRC_NUM; i++) {

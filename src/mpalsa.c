@@ -72,9 +72,9 @@ static long openAudio(char const *const channel) {
  * if abs is 0 'volume' is regarded as a relative value
  * if ALSA does not work or the current card cannot be selected -1 is returned
  */
-long controlVolume(long volume, int absolute) {
+long controlVolume(long volume, int32_t absolute) {
 	long min, max;
-	int mswitch = 0;
+	int32_t mswitch = 0;
 	long retval = 0;
 	char *channel;
 	mpconfig_t *config;
@@ -140,7 +140,7 @@ long controlVolume(long volume, int absolute) {
  */
 long toggleMute() {
 	mpconfig_t *config = getConfig();
-	int mswitch;
+	int32_t mswitch;
 
 	if (config->volume == -1) {
 		return -1;

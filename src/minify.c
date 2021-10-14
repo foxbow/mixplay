@@ -34,12 +34,13 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#include <stdint.h>
 
 /*
  * scans for the next character that is neither blank or tab to skip
  * whitespaces.
  */
-static int scanChar(int next) {
+static int32_t scanChar(int32_t next) {
 	while (isblank(next)) {
 		next = getchar();
 	}
@@ -55,8 +56,8 @@ static int scanChar(int next) {
  * returned.
  * The -1 for EOF is forwarded as is.
  */
-static int scanFor(const char *pat, int next) {
-	int i;
+static int32_t scanFor(const char *pat, int32_t next) {
+	int32_t i;
 
 	// sanity check
 	if (next == -1)
@@ -76,13 +77,13 @@ static int scanFor(const char *pat, int next) {
 	return next;
 }
 
-int main(int argc, char **argv) {
-	int this, next;
-	unsigned code = 0;			// does the current line need a semicolon at the end?
-	unsigned mode = 0;			// 1 - //, 2 - /* */, 3 - '', 4 - "", 5 - <!--, 6 - <pre>
-	unsigned html = 0;
-	int assign = -1;
-	unsigned blevel[10];
+int32_t main(int32_t argc, char **argv) {
+	int32_t this, next;
+	uint32_t code = 0;			// does the current line need a semicolon at the end?
+	uint32_t mode = 0;			// 1 - //, 2 - /* */, 3 - '', 4 - "", 5 - <!--, 6 - <pre>
+	uint32_t html = 0;
+	int32_t assign = -1;
+	uint32_t blevel[10];
 
 	this = getchar();
 	if (this == '<') {

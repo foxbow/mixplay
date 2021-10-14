@@ -10,6 +10,6 @@
 
 #include "musicmgr.h"
 
-int fillTagInfo(mptitle_t * title);
+int32_t fillTagInfo(mptitle_t * title);
 
 #endif /* MPGUTILS_H_ */

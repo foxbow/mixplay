@@ -22,7 +22,7 @@ msgbuf_t *msgBuffInit() {
  * adds message 'line' to the buffer.
  * returns the current message number
  */
-unsigned long msgBuffAdd(msgbuf_t * msgbuf, char *line) {
+uint64_t msgBuffAdd(msgbuf_t * msgbuf, char *line) {
 	clmessage *msg = falloc(1, sizeof (clmessage));
 
 	msg->msg = strdup(line);
@@ -77,9 +77,9 @@ clmessage *msgBuffGet(msgbuf_t * msgbuf) {
  * Return pointer MUST NOT be free'd after use!
  * Caveat: Returns "" if no messages are available
  */
-const clmessage *msgBuffPeek(msgbuf_t * msgbuf, unsigned long msgno) {
+const clmessage *msgBuffPeek(msgbuf_t * msgbuf, uint64_t msgno) {
 	const clmessage *retval = NULL;
-	int pos;
+	int32_t pos;
 
 	pthread_mutex_lock(msgbuf->msgLock);
 	if (msgno < msgbuf->count) {
@@ -105,7 +105,7 @@ const clmessage *msgBuffPeek(msgbuf_t * msgbuf, unsigned long msgno) {
  * Caveat: Returns NULL if no messages are available
  */
 char *msgBuffAll(msgbuf_t * msgbuf) {
-	int i, lineno;
+	int32_t i, lineno;
 	char *buff;
 	size_t len = 256;
 
@@ -129,7 +129,7 @@ char *msgBuffAll(msgbuf_t * msgbuf) {
 }
 
 /* returns the number of the last unread message */
-unsigned long msgBufGetLastRead(msgbuf_t * msgbuf) {
+uint64_t msgBufGetLastRead(msgbuf_t * msgbuf) {
 	return msgbuf->count - msgbuf->unread;
 }
 

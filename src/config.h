@@ -11,6 +11,7 @@
 #include <pthread.h>
 #include <sys/types.h>
 #include <inttypes.h>
+#include <stdint.h>
 #include "msgbuf.h"
 
 #define MP_MSGLEN 512
@@ -96,10 +97,10 @@ const char *_mprccmdstrings[MPRC_NUM];
  * 0FSR RRRR 000C CCCC
  */
 /* extract raw command */
-#define MPC_CMD(x)   (mpcmd_t)((int)x&0x00ff)
+#define MPC_CMD(x)   (mpcmd_t)((int32_t)x&0x00ff)
 /* determine range */
-#define MPC_RANGE(x) (mpcmd_t)((int)x&MPC_DFRANGE)
-#define MPC_MODE(x)  (mpcmd_t)((int)x&0xff00)
+#define MPC_RANGE(x) (mpcmd_t)((int32_t)x&MPC_DFRANGE)
+#define MPC_MODE(x)  (mpcmd_t)((int32_t)x&0xff00)
 /* check for set range */
 #define MPC_ISTITLE(x) ((x) & mpc_title)
 #define MPC_ISARTIST(x) ((x) & mpc_artist)
@@ -132,8 +133,8 @@ const char *_mprccmdstrings[MPRC_NUM];
 typedef struct {
 	char *name;					/* name to display */
 	char *stream;				/* URL to load if any */
-	int volume;					/* last volume */
-	unsigned favplay;			/* favplay flag for profiles */
+	int32_t volume;				/* last volume */
+	uint32_t favplay;			/* favplay flag for profiles */
 } profile_t;
 
 /**
@@ -142,10 +143,10 @@ typedef struct {
 typedef struct {
 	char *musicdir;				/* path to the music */
 	char *password;				/* password to lock up quit, scan and info */
-	int active;					/* active >0 = profile / 0=none / <0 = stream */
-	int profiles;				/* number of profiles */
+	int32_t active;				/* active >0 = profile / 0=none / <0 = stream */
+	int32_t profiles;			/* number of profiles */
 	profile_t **profile;		/* profiles */
-	int streams;				/* number of streams */
+	int32_t streams;			/* number of streams */
 	profile_t **stream;			/*streams */
 	mptitle_t *root;			/* the root title */
 	searchresults_t *found;		/* buffer list to contain searchresults etc */
@@ -154,37 +155,37 @@ typedef struct {
 	marklist_t *favlist;		/* favourites */
 	marklist_t *dnplist;		/* DNPlist */
 	marklist_t *dbllist;		/* doublets */
-	unsigned playtime;			/* seconds time into song */
-	unsigned remtime;			/* seconds remaining */
-	int percent;				/* how many percent of the song have been played */
+	uint32_t playtime;			/* seconds time into song */
+	uint32_t remtime;			/* seconds remaining */
+	int32_t percent;			/* how many percent of the song have been played */
 	mpcmd_t command;			/* command to the player */
 	char *argument;				/* arguments to command */
 	mpcmd_t status;				/* status of the player/system */
 	pthread_t rtid;				/* thread ID of the reader */
 	pthread_t stid;				/* thread ID of the server */
-	unsigned skipdnp;			/* how many skips mean dnp? */
-	int volume;					/* current volume [0..100] */
+	uint32_t skipdnp;			/* how many skips mean dnp? */
+	int32_t volume;				/* current volume [0..100] */
 	char *channel;				/* the name of the ALSA master channel */
-	int debug;
+	int32_t debug;
 	char *streamURL;
 	msgbuf_t *msg;				/* generic message buffer */
-	int port;
-	unsigned mpmode;			/* playmode, see PM_* */
-	unsigned sleepto;			/* idle timeout for clients */
-	unsigned dbDirty;
+	int32_t port;
+	uint32_t mpmode;			/* playmode, see PM_* */
+	uint32_t sleepto;			/* idle timeout for clients */
+	uint32_t dbDirty;
 	/* flags for mpmode */
-	unsigned searchDNP:1;
+	uint32_t searchDNP:1;
 	/* other flags */
-	unsigned fade;				/* controls fading between titles */
-	unsigned isDaemon:1;
-	unsigned inUI:1;			/* flag to show if the UI is active */
-	unsigned list:1;			/* remote playlist */
+	uint32_t fade;				/* controls fading between titles */
+	uint32_t isDaemon:1;
+	uint32_t inUI:1;			/* flag to show if the UI is active */
+	uint32_t list:1;			/* remote playlist */
 	char *rcdev;				/* device by-id of the remote control */
-	int rccodes[MPRC_NUM];		/* command codes for the remote */
-	unsigned client[MAXCLIENT];	/* glabal clientID marker */
-	unsigned notify[MAXCLIENT];	/* next state per client */
-	unsigned long msgcnt[MAXCLIENT];
-	int watchdog;
+	int32_t rccodes[MPRC_NUM];	/* command codes for the remote */
+	uint32_t client[MAXCLIENT];	/* glabal clientID marker */
+	uint32_t notify[MAXCLIENT];	/* next state per client */
+	uint64_t msgcnt[MAXCLIENT];
+	int32_t watchdog;
 } mpconfig_t;
 
 /* message request types */
@@ -205,27 +206,27 @@ mpconfig_t *getConfig(void);
 mpconfig_t *createConfig(void);
 void freeConfig(void);
 void freeConfigContents(void);
-int getFavplay();
-int toggleFavplay();
+int32_t getFavplay();
+int32_t toggleFavplay();
 profile_t *createProfile(const char *name, const char *stream,
-						 const unsigned favplay, const int vol);
+						 const uint32_t favplay, const int32_t vol);
 void freeProfile(profile_t * profile);
 mpplaylist_t *getCurrent();
 
 void incDebug(void);
-int getDebug(void);
-void addMessage(int v, const char *msg, ...)
+int32_t getDebug(void);
+void addMessage(int32_t v, const char *msg, ...)
 	__attribute__ ((__format__(__printf__, 2, 3)));
 
 #define addError(x) addMessage( 0, "%i - %s", x, strerror(x) );
 
 char *getCurrentActivity(void);
-void activity(int v, const char *msg, ...)
+void activity(int32_t v, const char *msg, ...)
 	__attribute__ ((__format__(__printf__, 2, 3)));
 
 void updateUI(void);
 
-void notifyChange(int state);
+void notifyChange(int32_t state);
 
 void addProgressHook(void (*)(void *), void *id);
 void addUpdateHook(void (*)());
@@ -234,26 +235,26 @@ const char *mpcString(mpcmd_t rawcmd);
 mpcmd_t mpcCommand(const char *val);
 char *fullpath(const char *file);
 
-mpplaylist_t *wipePlaylist(mpplaylist_t * pl, int recursive);
+mpplaylist_t *wipePlaylist(mpplaylist_t * pl, int32_t recursive);
 mptitle_t *wipeTitles(mptitle_t * root);
 marklist_t *wipeList(marklist_t * root);
-int playerIsBusy(void);
+int32_t playerIsBusy(void);
 void blockSigint();
 
-int getFreeClient(void);
-int trylockClient(int);
-void triggerClient(int);
+int32_t getFreeClient(void);
+int32_t trylockClient(int32_t);
+void triggerClient(int32_t);
 
-int getNotify(int);
-void setNotify(int, int);
-void clearNotify(int);
+int32_t getNotify(int32_t);
+void setNotify(int32_t, int32_t);
+void clearNotify(int32_t);
 
-unsigned long getMsgCnt(int);
-void setMsgCnt(int, unsigned long);
-void incMsgCnt(int);
-void initMsgCnt(int);
+uint64_t getMsgCnt(int32_t);
+void setMsgCnt(int32_t, uint64_t);
+void incMsgCnt(int32_t);
+void initMsgCnt(int32_t);
 
-int trylockPlaylist(void);
+int32_t trylockPlaylist(void);
 void lockPlaylist(void);
 void unlockPlaylist(void);
 

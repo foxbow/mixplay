@@ -40,9 +40,7 @@ size_t strtcat(char *t, const char *s, size_t l) {
 		t[pos] = s[pos - start];
 	}
 	t[end] = 0;
-	if (strlen(t) > l) {
-		fail(F_FAIL, "%s is longer that %lu", t, (unsigned long) l);
-	}
+
 	return strlen(t);
 }
 
@@ -73,8 +71,8 @@ char *abspath(char *path, const char *basedir, const size_t len) {
  * @todo: take proper care of wide characters!
 **/
 char *strip(char *buff, const char *text, const size_t maxlen) {
-	int len = strlen(text);
-	int tpos = 0;
+	int32_t len = strlen(text);
+	int32_t tpos = 0;
 
 	/* clear target buffer */
 	memset(buff, 0, maxlen + 1);
@@ -84,7 +82,7 @@ char *strip(char *buff, const char *text, const size_t maxlen) {
 	}
 
 	/* Cut off leading spaces and special chars */
-	while ((tpos < len) && ((unsigned char) text[tpos] < 32)) {
+	while ((tpos < len) && ((uint8_t) text[tpos] < 32)) {
 		tpos++;
 	}
 
@@ -92,7 +90,7 @@ char *strip(char *buff, const char *text, const size_t maxlen) {
 	strtcpy(buff, text + tpos, len + 1);
 
 	/* Cut off trailing spaces and special chars */
-	while ((len > 0) && ((unsigned char) text[tpos] < 32)) {
+	while ((len > 0) && ((uint8_t) text[tpos] < 32)) {
 		buff[len] = 0;
 		len--;
 	}
@@ -105,12 +103,12 @@ char *strip(char *buff, const char *text, const size_t maxlen) {
  * must be free()d. If no data is available the function returns NULL */
 char *fetchline(FILE * fp) {
 	char *line = NULL;
-	int len = 0;
-	int size = 0;
-	int c;
+	int32_t len = 0;
+	int32_t size = 0;
+	int32_t c;
 
 	c = fgetc(fp);
-	while ((c != EOF) && (c != (int) '\n')) {
+	while ((c != EOF) && (c != (int32_t) '\n')) {
 		if (len >= size - 2) {
 			size = size + 256;
 			line = frealloc(line, size);
@@ -128,7 +126,7 @@ char *fetchline(FILE * fp) {
  * comes or the fd stops sending characters.
  * returns number of read bytes or -1 on overflow.
  */
-int readline(char *line, size_t len, int fd) {
+int32_t readline(char *line, size_t len, int32_t fd) {
 	size_t cnt = 0;
 	char c;
 
@@ -163,8 +161,8 @@ int readline(char *line, size_t len, int fd) {
  * checks if text ends with suffix
  * this function is case insensitive
  */
-int endsWith(const char *text, const char *suffix) {
-	int i, tlen, slen;
+int32_t endsWith(const char *text, const char *suffix) {
+	int32_t i, tlen, slen;
 
 	tlen = strlen(text);
 	slen = strlen(suffix);
@@ -186,8 +184,8 @@ int endsWith(const char *text, const char *suffix) {
  * checks if text starts with prefix
  * this function is case insensitive
  */
-int startsWith(const char *text, const char *prefix) {
-	int i, tlen, plen;
+int32_t startsWith(const char *text, const char *prefix) {
+	int32_t i, tlen, plen;
 
 	tlen = strlen(text);
 	plen = strlen(prefix);
@@ -208,7 +206,7 @@ int startsWith(const char *text, const char *prefix) {
 /**
  * Check if a file is a music file
  */
-int isMusic(const char *name) {
+int32_t isMusic(const char *name) {
 	return endsWith(name, ".mp3");
 	/*
 	 * if( endsWith( name, ".mp3" ) || endsWith( name, ".ogg" ) ) return 1;
@@ -221,7 +219,7 @@ int isMusic(const char *name) {
  * Check if the given string is an URL
  * We just allow http/s and no parameters
  */
-int isURL(const char *uri) {
+int32_t isURL(const char *uri) {
 	if (!startsWith(uri, "http://") && !startsWith(uri, "https://")) {
 		return 0;
 	}
@@ -251,7 +249,7 @@ char *toLower(char *text) {
 /**
  * works like strtcpy but turns every character to lowercase
  */
-int strltcpy(char *dest, const char *src, const size_t len) {
+int32_t strltcpy(char *dest, const char *src, const size_t len) {
 	strtcpy(dest, src, len);
 	dest = toLower(dest);
 	return strlen(dest);
@@ -260,7 +258,7 @@ int strltcpy(char *dest, const char *src, const size_t len) {
 /**
  * works like strtcat but turns every character to lowercase
  */
-int strltcat(char *dest, const char *src, const size_t len) {
+int32_t strltcat(char *dest, const char *src, const size_t len) {
 	strtcat(dest, src, len);
 	dest = toLower(dest);
 	return strlen(dest);
@@ -269,7 +267,7 @@ int strltcat(char *dest, const char *src, const size_t len) {
 /**
  * checks if the given path is an accessible directory
  */
-int isDir(const char *path) {
+int32_t isDir(const char *path) {
 	struct stat st;
 
 	if (!stat(path, &st) && S_ISDIR(st.st_mode)) {
@@ -348,7 +346,7 @@ void dumpbin(const void *data, size_t len) {
 /**
  * treats a single character as a hex value
  */
-int hexval(const char c) {
+int32_t hexval(const char c) {
 	if ((c >= '0') && (c <= '9')) {
 		return c - '0';
 	}
@@ -368,7 +366,7 @@ int hexval(const char c) {
  * wrapper for the standard write() which handles partial writes and allows
  * ignoring the return value
  */
-int dowrite(const int fd, const char *buf, const size_t buflen) {
+int32_t dowrite(const int32_t fd, const char *buf, const size_t buflen) {
 	const char *pos = buf;
 	size_t sent = 0;
 	ssize_t ret = 0;
@@ -387,7 +385,7 @@ int dowrite(const int fd, const char *buf, const size_t buflen) {
 /**
  * move the current file file into a backup
  */
-int fileBackup(const char *name) {
+int32_t fileBackup(const char *name) {
 	char backupname[MAXPATHLEN + 1] = "";
 
 	strtcpy(backupname, name, MAXPATHLEN);
@@ -403,7 +401,7 @@ int fileBackup(const char *name) {
 /**
  * move the backup file file back to the current file
  */
-int fileRevert(const char *path) {
+int32_t fileRevert(const char *path) {
 	char backup[MAXPATHLEN + 1];
 
 	strtcpy(backup, path, MAXPATHLEN);
@@ -419,8 +417,8 @@ int fileRevert(const char *path) {
 /* waits for a keypress
    timeout - timeout in ms
    returns character code of keypress or -1 on timeout */
-int getch(long timeout) {
-	int c = 0;
+int32_t getch(long timeout) {
+	int32_t c = 0;
 	struct termios org_opts, new_opts;
 	fd_set fds;
 	struct timeval to;
@@ -461,11 +459,12 @@ int getch(long timeout) {
  * code will be set to the scancode of the key on release and to the
  * negative scancode on repeat.
  */
-int getEventCode(int *code, int fd, unsigned timeout, int repeat) {
+int32_t getEventCode(int32_t * code, int32_t fd, uint32_t timeout,
+					 int32_t repeat) {
 	fd_set fds;
 	struct timeval to;
 	struct input_event ie;
-	int emergency = 0;
+	int32_t emergency = 0;
 
 	*code = 0;
 
