@@ -210,6 +210,7 @@ int toggleFavplay();
 profile_t *createProfile(const char *name, const char *stream,
 						 const unsigned favplay, const int vol);
 void freeProfile(profile_t * profile);
+mpplaylist_t *getCurrent();
 
 void incDebug(void);
 int getDebug(void);

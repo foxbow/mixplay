@@ -153,6 +153,10 @@ mpconfig_t *getConfig() {
 	return _cconfig;
 }
 
+inline mpplaylist_t *getCurrent() {
+	return getConfig()->current;
+}
+
 /**
  * parses a multi-string config value in the form of:
  * val1;val2;val3;

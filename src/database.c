@@ -507,6 +507,7 @@ int dbNameCheck(void) {
 	char rmpath[MAXPATHLEN + 1];
 
 	/* not using the live database as we need the marker */
+	/* TODO: this is no longer true, check! */
 	root = dbGetMusic();
 	if (root == NULL) {
 		addMessage(-1, "No music in database!");

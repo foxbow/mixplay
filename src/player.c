@@ -812,7 +812,7 @@ void *reader() {
 							break;
 						case 'E':
 							if (control->current == NULL) {
-								addMessage(-1, "BG: %s", line);
+								addMessage(0, "BG: %s", line);
 							}
 							else {
 								/*  *INDENT-OFF*  */
@@ -1120,7 +1120,7 @@ void *reader() {
 					break;
 
 				case 'E':
-					addMessage(-1, "FG: %s!", line + 3);
+					addMessage(0, "FG: %s!", line + 3);
 					if (control->current != NULL) {
 						if (control->mpmode & PM_STREAM) {
 							addMessage(MPV + 1,

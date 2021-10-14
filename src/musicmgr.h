@@ -18,11 +18,12 @@
 #define MP_FAV   1				/* Favourite */
 #define MP_DNP   2				/* do not play */
 #define MP_DBL   4				/* doublet */
-#define MP_MARK  8				/* was added normally to the playlist */
+#define MP_INPL  8				/* was added normally to the playlist */
 #define MP_PDARK 16				/* does not fit the playcount */
 #define MP_TDARK 32				/* does not fit the titles */
 #define MP_ALL   63
-#define MP_HIDE  (MP_DNP|MP_DBL|MP_MARK|MP_TDARK)
+#define MP_MARK  64
+#define MP_HIDE  (MP_DNP|MP_DBL|MP_INPL|MP_TDARK)
 
 typedef struct mptitle_s mptitle_t;
 struct mptitle_s {
