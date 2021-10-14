@@ -4,10 +4,17 @@ SRCDIR=src
 OBJDIR=build
 
 CCFLAGS+=-DVERSION=\"$(VERSION)\"
+
 ifdef MPDEBUG
+# force compilation with -g
 CCFLAGS+=-std=gnu11 -Wall -Wextra -pedantic -Werror -I . -g
 else
+# master branch is built with -O2, dev branches with -g
+ifeq ($(shell git rev-parse --abbrev-ref HEAD),master)
 CCFLAGS+=-std=gnu11 -Wall -Wextra -Werror -pedantic -I . -O2
+else
+CCFLAGS+=-std=gnu11 -Wall -Wextra -pedantic -Werror -I . -g
+endif
 endif
 
 OBJS=$(addprefix $(OBJDIR)/,mpserver.o utils.o musicmgr.o database.o \

@@ -793,16 +793,23 @@ static int applyFAVlist(marklist_t * favourites) {
 	return cnt;
 }
 
+/* reset the given flags on all titles */
+static void unsetFlags(mptitle_t * guard, unsigned flags) {
+	mptitle_t *runner = guard;
+
+	do {
+		runner->flags &= ~flags;
+		runner = runner->next;
+	} while (runner != guard);
+}
+
 void applyLists(int clean) {
 	mpconfig_t *control = getConfig();
 	mptitle_t *title = control->root;
 
 	lockPlaylist();
 	if (clean) {
-		do {
-			title->flags &= ~(MPC_DFRANGE | MP_FAV | MP_DNP);
-			title = title->next;
-		} while (title != control->root);
+		unsetFlags(title, MPC_DFRANGE | MP_FAV | MP_DNP);
 	}
 	applyFAVlist(control->favlist);
 	applyDNPlist(control->dnplist, 0);
@@ -1294,15 +1301,6 @@ unsigned getPlaycount(int high) {
 	return high ? max : min;
 }
 
-static void unDark(mptitle_t * guard) {
-	mptitle_t *runner = guard;
-
-	do {
-		runner->flags &= ~MP_DARK;
-		runner = runner->next;
-	} while (runner != guard);
-}
-
 /**
  * skips the global list until a title is found that has not been hidden
  * is not in the current playlist and is not marked as DNP/DBL
@@ -1315,7 +1313,7 @@ static mptitle_t *skipOver(mptitle_t * current, int dir) {
 		return NULL;
 	}
 
-	while ((marker->flags & MP_HIDE) ||
+	while ((marker->flags & (MP_HIDE | MP_PDARK)) ||
 		   (getFavplay() && !(marker->flags & MP_FAV))) {
 		if (dir > 0) {
 			marker = marker->next;
@@ -1325,7 +1323,7 @@ static mptitle_t *skipOver(mptitle_t * current, int dir) {
 		}
 
 		if (marker == current) {
-			addMessage(0, "Ran out of titles!");
+			addMessage(2, "Ran out of titles!");
 			return current;
 		}
 	}
@@ -1378,11 +1376,24 @@ static char flagToChar(int flag) {
 	}
 }
 
-static unsigned _rounds = 0;
-static unsigned _prounds = 0;
+static unsigned countflag(mptitle_t * guard, unsigned flag) {
+	unsigned ret = 0;
+	mptitle_t *runner = guard;
 
-/* try 2% of titles randomly */
-#define PCYCLES MAX((num/50),10)
+	do {
+		if (runner->flags & flag) {
+			ret++;
+		}
+	} while (runner != guard);
+	return ret;
+}
+
+static void flaginfo(mptitle_t * guard) {
+	addMessage(0, "%5u titles are MP_MARK", countflag(guard, MP_MARK));
+	addMessage(0, "%5u titles are MP_PDARK", countflag(guard, MP_PDARK));
+	addMessage(0, "%5u titles are MP_TDARK", countflag(guard, MP_TDARK));
+	addMessage(0, "%5u titles are MP_HIDE", countflag(guard, MP_HIDE));
+}
 
 /**
  * returns a title that fits the given playcount.
@@ -1390,14 +1401,9 @@ static unsigned _prounds = 0;
  * pulled out to hopefully increase readability.
  */
 static mptitle_t *skipPcount(mptitle_t * guard, unsigned int pcount,
-							 __attribute__ ((unused))
-							 unsigned long num) {
+							 unsigned long maxcount) {
 	mptitle_t *runner = skipOver(guard, 1);
-
 	unsigned count = 0;
-	unsigned int maxcount = getPlaycount(1);
-
-	guard = runner;
 
 	do {
 		if (!getFavplay() && (runner->playcount <= pcount)) {
@@ -1408,34 +1414,25 @@ static mptitle_t *skipPcount(mptitle_t * guard, unsigned int pcount,
 		}
 
 		/* title did not fit, fetch next one */
-		activity(1, "Playcountskipping %u/%lu", count, PCYCLES);
-		if (count < PCYCLES) {
-			/* try some random title ... */
-			runner = skipTitles(runner, rand() % num);
-			count++;
-			if (count > _prounds) {
-				_prounds = count;
+		activity(1, "Playcountskipping %u", ++count);
+		runner->flags |= MP_PDARK;
+		guard = runner;
+		runner = skipOver(runner->next, 1);
+		/* Nothing fits!? Then increase playcount and start again */
+		if (runner == guard) {
+			count = 0;
+			pcount++;
+			/* remove MP_PDARK as the playcount changed */
+			unsetFlags(runner, MP_PDARK);
+			addMessage(1, "Increasing maxplaycount to %i (pcount)", pcount);
+			if (pcount > maxcount) {
+				addMessage(-1, "No. More. Titles. Available?!");
+				return guard;
 			}
-		}
-		else {
-			if (count == PCYCLES) {
-				addMessage(3, "Hit %u playcount cycles", count);
-				count++;
-				guard = runner;
-			}
-			/* We tried at random but failed, so we take the next one */
-			runner = skipOver(runner->next, 1);
-			/* Nothing fits!? Then increase playcount and start again */
+			runner = skipTitles(runner, 1);
 			if (runner == guard) {
-				count = 0;
-				pcount++;
-				addMessage(2, "Increasing maxplaycount to %i (pcount)",
-						   pcount);
-				if (pcount > maxcount) {
-					addMessage(-1, "No. More. Titles. Available?!");
-					return guard;
-				}
-				runner = skipTitles(runner, rand() % num);
+				flaginfo(runner);
+				fail(F_FAIL, "Check skipTitles!");
 			}
 		}
 	} while (1);
@@ -1481,10 +1478,12 @@ static int addNewTitle(void) {
 	/* how many playable titles are there? */
 	num = countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE);
 	if (num == 0) {
+		flaginfo(runner);
+		fail(F_FAIL, "No titles to be played!");
 		addMessage(-1, "No titles to be played!");
 		return 0;
 	}
-	maxnum = num / 15;
+	maxnum = MIN(num / 15, 15);
 	addMessage(1, "%lu titles available, avoiding %u repeats", num, maxnum);
 
 	/* lowest playcount */
@@ -1499,7 +1498,7 @@ static int addNewTitle(void) {
 	}
 
 	/* if needed, fetch a title that fits the playcount */
-	runner = skipPcount(runner, pcount, num);
+	runner = skipPcount(runner, pcount, maxpcount);
 	if (lastpat == NULL) {
 		/* No titles in the playlist yet, we're done! */
 		getConfig()->current = appendToPL(runner, NULL, -1);
@@ -1514,14 +1513,15 @@ static int addNewTitle(void) {
 		while (checkSim(runner->artist, lastpat)) {
 			addMessage(3, "%s = %s", runner->artist, lastpat);
 			/* don't try this one again */
-			runner->flags |= MP_DARK;
+			runner->flags |= MP_TDARK;
 			activity(1, "Nameskipping %u", cycles);
 			/* get another with a matching playcount */
-			runner = skipPcount(runner->next, pcount, num);
+			runner = skipPcount(runner->next, pcount, maxpcount);
 			/* We tried about every playable title! */
 			if (cycles++ > num) {
 				if (pcount < maxpcount) {
 					pcount++;	/* temporarily allow replays */
+					unsetFlags(runner, MP_PDARK);
 					addMessage(1, "Increasing maxplaycount to %u/%u (loop)",
 							   pcount, cycles);
 				}
@@ -1529,6 +1529,7 @@ static int addNewTitle(void) {
 					if (maxnum > 1) {
 						maxnum--;
 						pcount = getPlaycount(0);
+						unsetFlags(runner, MP_TDARK);
 						addMessage(1, "Reducing repeat to %u ", maxnum);
 					}
 					else {
@@ -1538,14 +1539,11 @@ static int addNewTitle(void) {
 				}
 				cycles = 0;
 			}
-			if (cycles > _rounds) {
-				_rounds = cycles;
-			}
 		}
 
 		if (guard != runner) {
 			/* title did not fit, start again from the beginning
-			 * with the new one */
+			 * with the new one that fits here */
 			while (pl->next != NULL) {
 				pl = pl->next;
 			}
@@ -1561,11 +1559,9 @@ static int addNewTitle(void) {
 			   (runner->flags & MP_FAV) ? runner->favpcount : runner->playcount,
 			   pcount, flagToChar(runner->flags), runner->key, runner->display);
 	/*  *INDENT-ON*  */
-	if (_rounds || _prounds) {
-		addMessage(2, "Max Cycles: %u - pCycles: %u", _rounds, _prounds);
-	}
-
-	unDark(runner);
+	/* next time we come in, at least one title is missing and we can check
+	 * again from the start */
+	unsetFlags(runner, MP_TDARK);
 	appendToPL(runner, getConfig()->current, -1);
 	return 1;
 }
