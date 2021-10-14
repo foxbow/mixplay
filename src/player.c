@@ -404,22 +404,20 @@ static void *plDbClean(void *arg) {
 }
 
 static void *plDbFix(void *arg) {
-	mpconfig_t *control = getConfig();
 	pthread_mutex_t *lock = (pthread_mutex_t *) arg;
 
 	addMessage(0, "Database smooth");
-	dumpInfo(control->root, 1);
+	dumpInfo(1);
 	unlockClient(-1);
 	pthread_mutex_unlock(lock);
 	return NULL;
 }
 
 static void *plDbInfo(void *arg) {
-	mpconfig_t *control = getConfig();
 	pthread_mutex_t *lock = (pthread_mutex_t *) arg;
 
 	addMessage(0, "Database Info");
-	dumpInfo(control->root, 0);
+	dumpInfo(0);
 	unlockClient(-1);
 	pthread_mutex_unlock(lock);
 	return NULL;

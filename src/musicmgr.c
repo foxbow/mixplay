@@ -1552,6 +1552,8 @@ void plCheck(int del) {
 	mpplaylist_t *pl;
 	mpplaylist_t *buf;
 
+	dumpInfo(0);
+
 	/* make sure the playlist is not modifid elsewhere right now */
 	lockPlaylist();
 
@@ -1653,6 +1655,7 @@ void plCheck(int del) {
 
 	unlockPlaylist();
 	notifyChange(MPCOMM_TITLES);
+	dumpInfo(0);
 }
 
 /*
@@ -1712,7 +1715,8 @@ mptitle_t *recurse(char *curdir, mptitle_t * files) {
  * does a database scan and dumps information about playrate
  * favourites and DNPs
  */
-void dumpInfo(mptitle_t * root, int smooth) {
+void dumpInfo(int smooth) {
+	mptitle_t *root = getConfig()->root;
 	mptitle_t *current = root;
 	unsigned maxplayed = 0;
 	unsigned pl = 0;

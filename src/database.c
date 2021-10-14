@@ -151,6 +151,7 @@ static void db2entry(dbentry_t * dbentry, mptitle_t * entry) {
 	entry->playcount = dbentry->playcount;
 	entry->skipcount = dbentry->skipcount;
 	entry->favpcount = dbentry->playcount;
+	entry->flags = 0;
 }
 
 /**
