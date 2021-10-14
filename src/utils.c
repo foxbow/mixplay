@@ -29,15 +29,20 @@ size_t strtcpy(char *t, const char *s, size_t l) {
  * number of bytes to copy.
  */
 size_t strtcat(char *t, const char *s, size_t l) {
-	size_t pos = strlen(t);
-	size_t end = pos + strlen(s);
+	size_t start = strlen(t);
+	size_t end = start + strlen(s);
+	size_t pos;
 
 	if (end > l)
 		end = l;
-	for (l = 0; pos < end; pos++, l++) {
-		t[pos] = s[l];
+
+	for (pos = start; pos < end; pos++) {
+		t[pos] = s[pos - start];
 	}
-	t[pos] = 0;
+	t[end] = 0;
+	if (strlen(t) > l) {
+		fail(F_FAIL, "%s is longer that %lu", t, (unsigned long) l);
+	}
 	return strlen(t);
 }
 
