@@ -1130,7 +1130,7 @@ int32_t jsonAddArrElement(jsonObject * jo, void *val, jsonType type) {
 			jo->val = jsonAddStr(NULL, key, (char *) val);
 			break;
 		case json_boolean:
-			jo->val = jsonAddBool(NULL, key, (uint64_t) val);
+			jo->val = jsonAddBool(NULL, key, (val == NULL) ? 0 : 1);
 			break;
 		case json_null:
 			jo->val = jsonAddObj(NULL, key, NULL);
@@ -1159,7 +1159,7 @@ int32_t jsonAddArrElement(jsonObject * jo, void *val, jsonType type) {
 			jsonAddStr(jo, key, (char *) val);
 			break;
 		case json_boolean:
-			jsonAddBool(jo, key, (uint64_t) val);
+			jsonAddBool(jo, key, (val == NULL) ? 0 : 1);
 			break;
 		case json_null:
 			jsonAddObj(jo, key, NULL);
