@@ -1369,14 +1369,14 @@ static void flaginfo(mptitle_t * guard) {
 /**
  * skips steps titles that match playcount pcount.
  */
-static mptitle_t *skipPcount(mptitle_t * guard, uint32_t steps,
+static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 							 uint32_t * pcount, uint64_t maxcount) {
 	mptitle_t *runner = guard;
 	uint32_t count = 0;
 
-	while (steps > 0) {
+	while (steps != 0) {
 		/* fetch the next */
-		runner = skipOver(runner->next, 1);
+		runner = skipOver(runner->next, (steps > 0) ? 1 : -1);
 		/* Nothing fits!? Then increase playcount and try again */
 		if (runner == NULL) {
 			count = 0;
@@ -1388,7 +1388,7 @@ static mptitle_t *skipPcount(mptitle_t * guard, uint32_t steps,
 				addMessage(-1, "No. More. Titles. Available?!");
 				return guard;
 			}
-			runner = skipOver(guard, 1);
+			runner = skipOver(guard, (steps > 0) ? 1 : -1);
 			if (runner == NULL) {
 				flaginfo(guard);
 				fail(F_FAIL, "Check skipPcount!");
@@ -1398,7 +1398,10 @@ static mptitle_t *skipPcount(mptitle_t * guard, uint32_t steps,
 		/* Does it fit the playcount? */
 		if ((!getFavplay() && (runner->playcount <= *pcount)) ||
 			((runner->flags & MP_FAV) && (runner->favpcount <= *pcount))) {
-			steps--;
+			if (steps > 0)
+				steps--;
+			if (steps < 0)
+				steps++;
 		}
 		else {
 			runner->flags |= MP_PDARK;
@@ -1427,7 +1430,6 @@ static int32_t addNewTitle(void) {
 	uint32_t cycles = 0;
 	uint32_t tnum = 0;
 	uint32_t maxnum = 0;
-	uint64_t steps;
 
 	mpplaylist_t *pl = getCurrent();
 	mptitle_t *root;
@@ -1454,28 +1456,22 @@ static int32_t addNewTitle(void) {
 		return 0;
 	}
 	maxnum = MIN(num / 15, 15);
+
 	addMessage(2, "%" PRIu64 " titles available, avoiding %u repeats", num,
 			   maxnum);
 
-	addMessage(2, "%" PRIu64 " titles without playcount marker",
-			   countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE | MP_PDARK));
+	num = countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE | MP_PDARK);
+	addMessage(2, "%" PRIu64 " titles without playcount marker", num);
 
 	/* remember playcount bounds */
 	pcount = getPlaycount(0);
 	maxpcount = getPlaycount(1);
 	addMessage(2, "Playcount [%u:%u]", pcount, maxpcount);
 
-	/* start with some random title */
-	steps = random() % (num / 2);
-	addMessage(2, "skipping %" PRIu64 " titles from %u", steps, runner->key);
-	runner = skipPcount(runner, steps, &pcount, maxpcount);
-	if (runner == NULL) {
-		flaginfo(runner);
-		fail(F_FAIL, "No titles in the database?!");
-		addMessage(-1, "No titles in the database!?");
-		return 0;
-	}
-	addMessage(2, "\n.. ended up at %u ", runner->key);
+	/* start with some 'random' title */
+	runner =
+		skipPcount(runner, (int32_t) ((num / 2) - (random() % num)), &pcount,
+				   maxpcount);
 
 	if (lastpat == NULL) {
 		/* No titles in the playlist yet, we're done! */
@@ -1493,11 +1489,16 @@ static int32_t addNewTitle(void) {
 			/* don't try this one again */
 			runner->flags |= MP_TDARK;
 			activity(1, "Nameskipping %u", cycles);
-			/* get another with a matching playcount */
-			runner = skipPcount(runner, 1, &pcount, maxpcount);
+			/* get another with a matching playcount
+			 * these are expensive, so we try to keep the steps
+			 * somewhat reasonable.. */
+			runner =
+				skipPcount(runner, (int32_t) ((num / 2) - (random() % num)),
+						   &pcount, maxpcount);
 			/* We tried about every playable title! */
 			if (cycles++ > num) {
 				if (pcount < maxpcount) {
+					num = countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE);
 					pcount++;	/* temporarily allow replays */
 					unsetFlags(runner, MP_PDARK);
 					addMessage(1, "Increasing maxplaycount to %u/%u (loop)",
@@ -1533,7 +1534,7 @@ static int32_t addNewTitle(void) {
 	} while ((pl != NULL) && (tnum++ < maxnum));
 
 	/*  *INDENT-OFF*  */
-	addMessage(3, "[+] (%i/%i/%c) %5d %s",
+	addMessage(2, "[+] (%i/%i/%c) %5d %s",
 			   (runner->flags & MP_FAV) ? runner->favpcount : runner->playcount,
 			   pcount, flagToChar(runner->flags), runner->key, runner->display);
 	/*  *INDENT-ON*  */
@@ -1553,8 +1554,6 @@ void plCheck(int32_t del) {
 	int32_t cnt = 0;
 	mpplaylist_t *pl;
 	mpplaylist_t *buf;
-
-	dumpInfo(0);
 
 	/* make sure the playlist is not modifid elsewhere right now */
 	lockPlaylist();
@@ -1657,7 +1656,6 @@ void plCheck(int32_t del) {
 
 	unlockPlaylist();
 	notifyChange(MPCOMM_TITLES);
-	dumpInfo(0);
 }
 
 /*
