@@ -421,7 +421,7 @@ static int32_t tsort(const struct dirent **d1, const struct dirent **d2) {
 /**
  * loads all playlists in cd into pllist
  */
-int32_t getPlaylists(const char *cd, struct dirent ***pllist) {
+int32_t getPlaylists(const char *cd, struct dirent *** pllist) {
 	return scandir(cd, pllist, plsel, tsort);
 }
 
@@ -1376,7 +1376,12 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 
 	while (steps != 0) {
 		/* fetch the next */
-		runner = skipOver(runner->next, (steps > 0) ? 1 : -1);
+		if (steps > 0) {
+			runner = skipOver(runner->next, 1);
+		}
+		else {
+			runner = skipOver(runner->prev, -1);
+		}
 		/* Nothing fits!? Then increase playcount and try again */
 		if (runner == NULL) {
 			count = 0;
@@ -1389,7 +1394,7 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 				addMessage(-1, "No. More. Titles. Available?!");
 				return guard;
 			}
-			runner = skipOver(guard, (steps > 0) ? 1 : -1);
+			runner = skipOver(guard, steps);
 			if (runner == NULL) {
 				flaginfo(guard);
 				fail(F_FAIL, "Check skipPcount!");
@@ -1407,9 +1412,10 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 		else {
 			runner->flags |= MP_PDARK;
 		}
-		activity(1, "Playcountskipping (%" PRIu32 "/%" PRIi32 ") ", steps,
+		activity(1, "Playcountskipping (%" PRIi32 "/%" PRIu32 ") ", steps,
 				 ++count);
 	}
+
 	return runner;
 }
 

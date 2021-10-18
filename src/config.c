@@ -40,7 +40,7 @@ static mpconfig_t *_cconfig = NULL;
  */
 typedef struct _mpfunc_t _mpfunc;
 struct _mpfunc_t {
-	void (*func)(void *);
+	void (*func) (void *);
 	void *arg;
 	_mpfunc *next;
 };
@@ -783,7 +783,7 @@ char *getCurrentActivity(void) {
 	return _curact;
 }
 
-static void addHook(void (*func)(void *), void *arg, _mpfunc ** list) {
+static void addHook(void (*func) (void *), void *arg, _mpfunc ** list) {
 	_mpfunc *pos = *list;
 
 	pthread_mutex_lock(&_cblock);
@@ -805,7 +805,7 @@ static void addHook(void (*func)(void *), void *arg, _mpfunc ** list) {
 }
 
 #if 0
-static void removeHook(void (*func)(void *), void *arg, _mpfunc ** list) {
+static void removeHook(void (*func) (void *), void *arg, _mpfunc ** list) {
 	_mpfunc *pos = *list;
 	_mpfunc *pre = NULL;
 
@@ -842,7 +842,7 @@ static void removeHook(void (*func)(void *), void *arg, _mpfunc ** list) {
 /**
  * register an update function, called on minor updates like playtime
  */
-void addUpdateHook(void (*func)()) {
+void addUpdateHook(void (*func) ()) {
 	addHook(func, NULL, &_ufunc);
 }
 
@@ -943,6 +943,7 @@ mpplaylist_t *wipePlaylist(mpplaylist_t * pl, int32_t recursive) {
 
 	while (pl != NULL) {
 		next = pl->next;
+		pl->title->flags &= ~MP_INPL;
 		if (recursive) {
 			free(pl->title);
 		}

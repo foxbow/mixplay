@@ -51,6 +51,10 @@ static void cleanTitles(int32_t flags) {
 			/* just keep MP_DBL */
 			runner->flags &= MP_DBL;
 		}
+		else {
+			/* new list, nothing should be matching */
+			runner->flags &= ~MP_TDARK;
+		}
 	} while (runner != control->root);
 }
 
