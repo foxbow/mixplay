@@ -1383,7 +1383,8 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 			(*pcount)++;
 			/* remove MP_PDARK as the playcount changed */
 			unsetFlags(guard, MP_PDARK);
-			addMessage(2, "Increasing maxplaycount to %i (pcount)", *pcount);
+			addMessage(2, "Increasing maxplaycount to %" PRIi32 " (pcount)",
+					   *pcount);
 			if (*pcount > maxcount) {
 				addMessage(-1, "No. More. Titles. Available?!");
 				return guard;
@@ -1406,7 +1407,8 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 		else {
 			runner->flags |= MP_PDARK;
 		}
-		activity(1, "Playcountskipping (%u/%u) ", steps, ++count);
+		activity(1, "Playcountskipping (%" PRIu32 "/%" PRIi32 ") ", steps,
+				 ++count);
 	}
 	return runner;
 }
@@ -1466,7 +1468,7 @@ static int32_t addNewTitle(void) {
 	/* remember playcount bounds */
 	pcount = getPlaycount(0);
 	maxpcount = getPlaycount(1);
-	addMessage(2, "Playcount [%u:%u]", pcount, maxpcount);
+	addMessage(2, "Playcount [%" PRIu32 ":%" PRIu32 "]", pcount, maxpcount);
 
 	/* start with some 'random' title */
 	runner =
@@ -1488,12 +1490,12 @@ static int32_t addNewTitle(void) {
 			addMessage(3, "%s = %s", runner->artist, lastpat);
 			/* don't try this one again */
 			runner->flags |= MP_TDARK;
-			activity(1, "Nameskipping %u", cycles);
+			activity(1, "Nameskipping %" PRIu32, cycles);
 			/* get another with a matching playcount
 			 * these are expensive, so we try to keep the steps
 			 * somewhat reasonable.. */
 			runner =
-				skipPcount(runner, (int32_t) ((num / 2) - (random() % num)),
+				skipPcount(runner, (num / 2) - (random() % num),
 						   &pcount, maxpcount);
 			/* We tried about every playable title! */
 			if (cycles++ > num) {
@@ -1534,7 +1536,7 @@ static int32_t addNewTitle(void) {
 	} while ((pl != NULL) && (tnum++ < maxnum));
 
 	/*  *INDENT-OFF*  */
-	addMessage(2, "[+] (%i/%i/%c) %5d %s",
+	addMessage(2, "[+] (%i/%i/%c) %5"PRIu32" %s",
 			   (runner->flags & MP_FAV) ? runner->favpcount : runner->playcount,
 			   pcount, flagToChar(runner->flags), runner->key, runner->display);
 	/*  *INDENT-ON*  */
