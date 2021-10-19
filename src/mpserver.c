@@ -130,7 +130,7 @@ static int32_t fillReqInfo(mpReqInfo * info, char *line) {
 	int32_t rc = 0;
 
 	strdec(jsonLine, line);
-	addMessage(3, "received request: %s", jsonLine);
+	addMessage(MPV + 3, "received request: %s", jsonLine);
 	jo = jsonRead(jsonLine);
 	free(jsonLine);
 	if (jsonPeek(jo, "cmd") == json_error) {
@@ -248,7 +248,7 @@ static void *clientHandler(void *args) {
 				addMessage(MPV + 1, "select(%i): Interrupt", sock);
 				break;
 			case EBADF:
-				addMessage(MPV + MPV + 1, "select(%i): Dead Socket", sock);
+				addMessage(MPV + 1, "select(%i): Dead Socket", sock);
 				running = CL_STP;
 				break;
 			case EINVAL:
@@ -304,10 +304,10 @@ static void *clientHandler(void *args) {
 			else {
 				method = 0;
 				toLower(commdata);
-				addMessage(3, "%s", commdata);
+				addMessage(MPV + 3, "%s", commdata);
 				end = strchr(commdata, ' ');
 				if (end == NULL) {
-					addMessage(MPV + MPV + 1, "Malformed HTTP: %s", commdata);
+					addMessage(MPV + 1, "Malformed HTTP: %s", commdata);
 					method = -1;
 				}
 				else {

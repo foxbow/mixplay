@@ -119,6 +119,8 @@ int32_t getPlaylists(const char *cd, struct dirent ***pllist);
 uint64_t countTitles(const uint32_t inc, const uint32_t exc);
 uint32_t getPlaycount(int32_t high);
 
+void dumpState(void);
+
 /* exported for unittests */
 int32_t checkSim(const char *text, const char *pat);
 #endif /* _MUSICMGR_H_ */

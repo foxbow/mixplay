@@ -277,7 +277,7 @@ int32_t playCount(mptitle_t * title, int32_t skip) {
 	else {
 		title->playcount++;
 		if (!(title->flags & MP_FAV)) {
-			resetFavpcount(title);
+			title->favpcount++;
 		}
 		dbMarkDirty();
 	}
@@ -405,18 +405,25 @@ static int32_t plsel(const struct dirent *entry) {
 			(entry->d_type == DT_REG) && endsWith(entry->d_name, ".m3u"));
 }
 
+#define isnum(x) (((x)>'0') && ((x)<'9'))
 /**
  * helperfunction for scandir() sorts entries numerically first then
  * alphabetical
  */
 static int32_t tsort(const struct dirent **d1, const struct dirent **d2) {
-	int32_t res = atoi((*d1)->d_name) - atoi((*d2)->d_name);
+	int32_t res = 0;
 
+	/* only do a numerical compare if both titles start with a number */
+	if (isnum((*d1)->d_name[0]) && isnum((*d2)->d_name[0])) {
+		res = atoi((*d1)->d_name) - atoi((*d2)->d_name);
+	}
 	if (res == 0) {
 		res = strcasecmp((*d1)->d_name, (*d2)->d_name);
 	}
 	return res;
 }
+
+#undef isnum
 
 /**
  * loads all playlists in cd into pllist
@@ -705,7 +712,7 @@ int32_t applyDNPlist(marklist_t * list, int32_t dbl) {
 			while (ptr) {
 				range = matchTitle(pos, ptr->dir);
 				if (range > MPC_RANGE(pos->flags)) {
-					addMessage(3, "[D] %s: %s", ptr->dir, pos->display);
+					addMessage(4, "[D] %s: %s", ptr->dir, pos->display);
 					pos->flags = (range | MP_DNP);
 					if (dbl)
 						pos->flags = (MPC_DFRANGE | MP_DBL);
@@ -771,7 +778,7 @@ static int32_t applyFAVlist(marklist_t * favourites) {
 				range = matchTitle(runner, ptr->dir);
 				if (range > MPC_RANGE(runner->flags)) {
 					if (!(runner->flags & MP_FAV)) {
-						addMessage(3, "[F] %s: %s", ptr->dir, runner->display);
+						addMessage(4, "[F] %s: %s", ptr->dir, runner->display);
 						/* Save MP_INPL */
 						runner->flags =
 							(runner->flags & MP_INPL) | MP_FAV | range;
@@ -1347,25 +1354,6 @@ static char flagToChar(int32_t flag) {
 	}
 }
 
-static uint32_t countflag(mptitle_t * guard, uint32_t flag) {
-	uint32_t ret = 0;
-	mptitle_t *runner = guard;
-
-	do {
-		if (runner->flags & flag) {
-			ret++;
-		}
-	} while (runner != guard);
-	return ret;
-}
-
-static void flaginfo(mptitle_t * guard) {
-	addMessage(0, "%5u titles are MP_INPL", countflag(guard, MP_INPL));
-	addMessage(0, "%5u titles are MP_PDARK", countflag(guard, MP_PDARK));
-	addMessage(0, "%5u titles are MP_TDARK", countflag(guard, MP_TDARK));
-	addMessage(0, "%5u titles are MP_HIDE", countflag(guard, MP_HIDE));
-}
-
 /**
  * skips steps titles that match playcount pcount.
  */
@@ -1396,7 +1384,7 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 			}
 			runner = skipOver(guard, steps);
 			if (runner == NULL) {
-				flaginfo(guard);
+				dumpState();
 				fail(F_FAIL, "Check skipPcount!");
 			}
 		}
@@ -1458,7 +1446,7 @@ static int32_t addNewTitle(void) {
 	/* how many playable titles are there? */
 	num = countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE);
 	if (num == 0) {
-		flaginfo(runner);
+		dumpState();
 		fail(F_FAIL, "No titles to be played!");
 		addMessage(-1, "No titles to be played!");
 		return 0;
@@ -1796,7 +1784,6 @@ void dumpInfo(int32_t smooth) {
 					favcnt++;
 				}
 				if (current->flags & MP_INPL) {
-					addMessage(1, "%s is in playlist", current->display);
 					markcnt++;
 				}
 			}
@@ -1859,6 +1846,41 @@ void dumpInfo(int32_t smooth) {
 
 	if (fixed) {
 		dbWrite(1);
+	}
+}
+
+static uint32_t countflag(mptitle_t * guard, uint32_t flag) {
+	uint32_t ret = 0;
+	mptitle_t *runner = guard;
+
+	do {
+		if (runner->flags & flag) {
+			ret++;
+		}
+	} while (runner != guard);
+	return ret;
+}
+
+/**
+ * big debug dump, used on ctrl-c or whenever something is fishy
+ */
+void dumpState() {
+	mpconfig_t *conf = getConfig();
+	mptitle_t *guard = conf->root;
+
+	addMessage(0, "Status: %s - Command: %s (%s)", mpcString(conf->status),
+			   mpcString(conf->command),
+			   (conf->argument) ? conf->argument : "-none-");
+	addMessage(0, "database: %p - mode: 0x%02x", (void *) guard, conf->mpmode);
+	if ((guard != NULL) && (conf->mpmode & PM_DATABASE)) {
+		addMessage(0, "%5u titles are MP_INPL", countflag(guard, MP_INPL));
+		addMessage(0, "%5u titles are MP_PDARK", countflag(guard, MP_PDARK));
+		addMessage(0, "%5u titles are MP_TDARK", countflag(guard, MP_TDARK));
+		addMessage(0, "%5u titles are MP_HIDE", countflag(guard, MP_HIDE));
+		dumpInfo(0);
+	}
+	else {
+		addMessage(0, "No title database");
 	}
 }
 
