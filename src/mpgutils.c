@@ -60,7 +60,7 @@ static const char *const genres[192] = {
  * either it's a number or a literal. If it's a number, the
  * predefined tag will be returned otherwise the literal text
  */
-static const char *getGenre(const unsigned char num) {
+static const char *getGenre(const uint8_t num) {
 	if (num > 191) {
 		return "invalid";
 	}
@@ -83,7 +83,7 @@ static size_t txtlen(const char *line) {
 /**
  * helperfunction to copy V2 tag data
  */
-static int tagCopy(char *target, mpg123_string * tag) {
+static int32_t tagCopy(char *target, mpg123_string * tag) {
 	if (NULL == tag) {
 		addMessage(3, "Empty Tag!");
 		return 0;
@@ -105,7 +105,7 @@ static int tagCopy(char *target, mpg123_string * tag) {
 static void genPathName(mptitle_t * entry) {
 	char *p;
 	char curdir[MAXPATHLEN];
-	int blen = 0;
+	int32_t blen = 0;
 
 	blen = strlen(entry->path);
 
@@ -159,10 +159,10 @@ static void genPathName(mptitle_t * entry) {
 static void fillInfo(mpg123_handle * mh, mptitle_t * title) {
 	mpg123_id3v1 *v1;
 	mpg123_id3v2 *v2;
-	int meta;
+	int32_t meta;
 	char path[MAXPATHLEN] = "";
 	char *p, *b;
-	int aisset = 0;
+	int32_t aisset = 0;
 
 	/* Set some default values as tag info may be incomplete */
 	genPathName(title);
@@ -305,7 +305,7 @@ static void fillInfo(mpg123_handle * mh, mptitle_t * title) {
 /**
  * read tags for a single title
  */
-int fillTagInfo(mptitle_t * title) {
+int32_t fillTagInfo(mptitle_t * title) {
 	mpg123_handle *mh;
 
 	/* Do not try to scan non mp3 files */

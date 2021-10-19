@@ -13,13 +13,13 @@
 
 char last[MAXPATHLEN + 1] = "";
 
-static int drawAll(clientInfo * ci) {
+static int32_t drawAll(clientInfo * ci) {
 	jsonObject *jo = NULL;
 	char *text = NULL;
 	mptitle_t title;
 	char current[MAXPATHLEN + 5];
-	int rv;
-	int state;
+	int32_t rv;
+	int32_t state;
 
 	jo = getStatus(ci, MPCOMM_STAT);
 	text = jsonGetError(jo);
@@ -48,10 +48,10 @@ static int drawAll(clientInfo * ci) {
 	return state;
 }
 
-int main(int argc, char **argv) {
+int32_t main(int32_t argc, char **argv) {
 	char c = 0;
-	int running = 1;
-	int fd = 0;
+	int32_t running = 1;
+	int32_t fd = 0;
 	clientInfo *ci;
 	mpcmd_t cmd = mpc_idle;
 

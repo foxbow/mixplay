@@ -29,7 +29,7 @@ static void printUsage(char *name) {
  * this is also called after initialization, so the PM_SWITCH flag does
  * actually make sense here.
  */
-int setArgument(const char *arg) {
+int32_t setArgument(const char *arg) {
 	char line[MAXPATHLEN + 1];
 	mpconfig_t *control = getConfig();
 
@@ -59,12 +59,12 @@ int setArgument(const char *arg) {
 /*
  * parses the given flags and arguments
  */
-int getArgs(int argc, char **argv) {
+int32_t getArgs(int32_t argc, char **argv) {
 	mpconfig_t *config = getConfig();
-	int c, changed = 0;
+	int32_t c, changed = 0;
 
 	/* parse command line options */
-	/* using unsigned char c to work around getopt quirk on ARM */
+	/* using uint8_t c to work around getopt quirk on ARM */
 	while ((c = getopt(argc, argv, "VfdF:hp:Wm")) != -1) {
 		switch (c) {
 
@@ -135,7 +135,7 @@ int getArgs(int argc, char **argv) {
  *
  * this will also start the communication thread is remote=2
  */
-int initAll() {
+int32_t initAll() {
 	mpconfig_t *control;
 	pthread_t tid;
 	struct timespec ts;

@@ -45,23 +45,24 @@ struct jsonObject_s {
 char *jsonGetError(jsonObject * jo);
 
 jsonType jsonPeek(jsonObject * jo, const char *key);
-int jsonGetInt(jsonObject * jo, const char *key);
+int32_t jsonGetInt(jsonObject * jo, const char *key);
 char *jsonGetStr(jsonObject * jo, const char *key);
-int jsonStrcpy(char *target, jsonObject * jo, const char *key, int len);
-char **jsonGetStrs(jsonObject * jo, const char *key, int *num);
-unsigned jsonGetBool(jsonObject * jo, const char *key);
+int32_t jsonStrcpy(char *target, jsonObject * jo, const char *key,
+				   int32_t len);
+char **jsonGetStrs(jsonObject * jo, const char *key, int32_t * num);
+uint32_t jsonGetBool(jsonObject * jo, const char *key);
 jsonObject *jsonGetObj(jsonObject * jo, const char *key);
-int jsonGetLength(jsonObject * jo, char *key);
+int32_t jsonGetLength(jsonObject * jo, char *key);
 
 jsonObject *jsonAddStr(jsonObject * jo, const char *key, const char *val);
 jsonObject *jsonAddStrs(jsonObject * jo, const char *key, char **vals,
-						const int num);
-jsonObject *jsonAddInt(jsonObject * jo, const char *key, const int val);
+						const int32_t num);
+jsonObject *jsonAddInt(jsonObject * jo, const char *key, const int32_t val);
 jsonObject *jsonAddObj(jsonObject * jo, const char *key, jsonObject * val);
-jsonObject *jsonAddBool(jsonObject * jo, const char *key, const unsigned val);
+jsonObject *jsonAddBool(jsonObject * jo, const char *key, const uint32_t val);
 
 jsonObject *jsonInitArr(jsonObject * jo, const char *key);
-int jsonAddArrElement(jsonObject * jo, void *element, jsonType type);
+int32_t jsonAddArrElement(jsonObject * jo, void *element, jsonType type);
 
 jsonObject *jsonRead(char *json);
 char *jsonToString(jsonObject * jo);

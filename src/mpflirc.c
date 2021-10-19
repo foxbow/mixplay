@@ -11,8 +11,8 @@
  * handles key events from the reserved HID device
  */
 static void *_mpFLIRC(void *arg) {
-	int code, i;
-	int fd = (int) (long) arg;
+	int32_t code, i;
+	int32_t fd = (int32_t) (long) arg;
 	mpcmd_t cmd = mpc_idle;
 
 	/* wait for the initialization to be done */
@@ -48,7 +48,7 @@ static void *_mpFLIRC(void *arg) {
 	return NULL;
 }
 
-pthread_t startFLIRC(int fd) {
+pthread_t startFLIRC(int32_t fd) {
 	pthread_t tid;
 
 	if (pthread_create(&tid, NULL, _mpFLIRC, (void *) (long) fd) != 0) {
@@ -61,8 +61,8 @@ pthread_t startFLIRC(int fd) {
 /*
  * check for a HID device and try to reserve it.
  */
-int initFLIRC() {
-	int fd = -1;
+int32_t initFLIRC() {
+	int32_t fd = -1;
 	char device[MAXPATHLEN];
 
 	if (getConfig()->rcdev == NULL) {

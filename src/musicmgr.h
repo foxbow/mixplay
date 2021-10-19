@@ -11,12 +11,24 @@
 /* do not return more than 100 titles */
 #define MAXSEARCH 100
 
-/* flags */
-#define MP_FAV   1				/* Favourite */
-#define MP_DNP   2				/* do not play */
-#define MP_DBL   4				/* doublet */
-#define MP_MARK  8				/* was added normally to the playlist */
-#define MP_ALL   31
+/* similarity index for checksim */
+#define SIMGUARD 70
+
+/* flags - keep clear of range bits! */
+#define MP_FAV   0x0001			/* Favourite */
+#define MP_DNP   0x0002			/* do not play */
+#define MP_DBL   0x0004			/* doublet */
+#define MP_INPL  0x0008			/* was added normally to the playlist */
+#define MP_PDARK 0x0010			/* does not fit the playcount */
+#define MP_TDARK 0x0020			/* does not fit the titles */
+#define MP_ALL   0x003f
+#define MP_MARK  0x0040
+// mpc_genre     0x0100
+// mpc_artist    0x0200
+// mpc_album     0x0400
+// mpc_title     0x0800
+// mpc_display   0x1000
+#define MP_HIDE  (MP_DNP|MP_DBL|MP_INPL|MP_TDARK)
 
 typedef struct mptitle_s mptitle_t;
 struct mptitle_s {
@@ -24,13 +36,13 @@ struct mptitle_s {
 	char artist[NAMELEN];		/* Artist info */
 	char title[NAMELEN];		/* Title info (from mp3) */
 	char album[NAMELEN];		/* Album info (from mp3) */
-	unsigned playcount;			/* play counter */
-	unsigned favpcount;			/* transient favplaycount */
-	unsigned skipcount;			/* skip counter */
+	uint32_t playcount;			/* play counter */
+	uint32_t favpcount;			/* transient favplaycount */
+	uint32_t skipcount;			/* skip counter */
 	char genre[NAMELEN];
-	unsigned key;				/* DB key/index  - internal */
+	uint32_t key;				/* DB key/index  - internal */
 	char display[MAXPATHLEN];	/* Title display - internal */
-	unsigned flags;				/* FAV/DNP       - internal */
+	uint32_t flags;				/* FAV/DNP       - internal */
 	mptitle_t *prev;			/* database pointers */
 	mptitle_t *next;
 };
@@ -49,9 +61,9 @@ typedef enum {
 } mpsearch_t;
 
 typedef struct {
-	unsigned tnum;
-	unsigned anum;
-	unsigned lnum;
+	uint32_t tnum;
+	uint32_t anum;
+	uint32_t lnum;
 	mpplaylist_t *titles;
 	char **artists;
 	char **albums;
@@ -71,38 +83,44 @@ struct marklist_s {
  * playlist functions
  */
 mpplaylist_t *addToPL(mptitle_t * title, mpplaylist_t * target,
-					  const int mark);
-mpplaylist_t *remFromPLByKey(mpplaylist_t * root, const unsigned key);
+					  const int32_t mark);
+mpplaylist_t *remFromPLByKey(mpplaylist_t * root, const uint32_t key);
 mpplaylist_t *addPLDummy(mpplaylist_t * pl, const char *name);
-void plCheck(int del);
-int writePlaylist(mpplaylist_t * pl, const char *name);
+void plCheck(int32_t del);
+int32_t writePlaylist(mpplaylist_t * pl, const char *name);
 
 mptitle_t *recurse(char *curdir, mptitle_t * files);
 mptitle_t *rewindTitles(mptitle_t * base);
 mptitle_t *loadPlaylist(const char *path);
 mptitle_t *insertTitle(mptitle_t * base, const char *path);
-int search(const char *pat, const mpcmd_t range);
+int32_t search(const char *pat, const mpcmd_t range);
 
-void moveTitleByIndex(unsigned from, unsigned before);
+void moveTitleByIndex(uint32_t from, uint32_t before);
 
-int playCount(mptitle_t * title, int skip);
-void applyLists(int clean);
-int searchPlay(const char *pat, unsigned num, const int global);
-int handleRangeCmd(mptitle_t * title, mpcmd_t cmd);
-int handleDBL(mptitle_t * title);
-int applyDNPlist(marklist_t * list, int dbl);
-int addRangePrefix(char *line, mpcmd_t cmd);
-int getListPath(char path[MAXPATHLEN], mpcmd_t cmd);
+void resetFavpcount(mptitle_t * title);
+int32_t playCount(mptitle_t * title, int32_t skip);
+void applyLists(int32_t clean);
+int32_t searchPlay(const char *pat, uint32_t num, const int32_t global);
+int32_t handleRangeCmd(mptitle_t * title, mpcmd_t cmd);
+int32_t handleDBL(mptitle_t * title);
+int32_t applyDNPlist(marklist_t * list, int32_t dbl);
+int32_t addRangePrefix(char *line, mpcmd_t cmd);
+int32_t getListPath(char path[MAXPATHLEN], mpcmd_t cmd);
 
 marklist_t *loadList(const mpcmd_t cmd);
-int delFromList(const mpcmd_t cmp, const char *line);
-int writeList(const mpcmd_t cmd);
+int32_t delFromList(const mpcmd_t cmp, const char *line);
+int32_t writeList(const mpcmd_t cmd);
 
-int isMusic(const char *name);
-void dumpTitles(mptitle_t * root, const int pl);
-void dumpInfo(mptitle_t * root, int smooth);
-int fillstick(mptitle_t * root, const char *target);
-int getPlaylists(const char *cd, struct dirent ***pllist);
-unsigned long countTitles(const unsigned int inc, const unsigned int exc);
-unsigned getPlaycount(int high);
+int32_t isMusic(const char *name);
+void dumpTitles(mptitle_t * root, const int32_t pl);
+void dumpInfo(int32_t smooth);
+int32_t fillstick(mptitle_t * root, const char *target);
+int32_t getPlaylists(const char *cd, struct dirent ***pllist);
+uint64_t countTitles(const uint32_t inc, const uint32_t exc);
+uint32_t getPlaycount(int32_t high);
+
+void dumpState(void);
+
+/* exported for unittests */
+int32_t checkSim(const char *text, const char *pat);
 #endif /* _MUSICMGR_H_ */

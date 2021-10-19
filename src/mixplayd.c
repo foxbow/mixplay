@@ -23,13 +23,16 @@
 #include "mphid.h"
 #include "mpflirc.h"
 #include "mpserver.h"
+#include "database.h"
 
 /**
  * TODO: create a dedicated signal handler thread.
  **/
 static void sigint( __attribute__ ((unused))
-				   int signo) {
+				   int32_t signo) {
 	unlink(PIDPATH);
+	dbWrite(0);
+	dumpState();
 	abort();
 }
 
@@ -40,7 +43,7 @@ static void sigint( __attribute__ ((unused))
  * error - errno that was set
  *		 F_FAIL = print message w/o errno and exit
  */
-void fail(const int error, const char *msg, ...) {
+void fail(const int32_t error, const char *msg, ...) {
 	va_list args;
 
 	fprintf(stdout, "\n");
@@ -102,7 +105,7 @@ static void _debugHidUpdateHook() {
 
 /* the most simple HID implementation for -d */
 static void *debugHID() {
-	int c;
+	int32_t c;
 	mpconfig_t *config = getConfig();
 	mpcmd_t cmd;
 
@@ -125,13 +128,13 @@ static void *debugHID() {
 	return NULL;
 }
 
-int main(int argc, char **argv) {
+int32_t main(int32_t argc, char **argv) {
 	mpconfig_t *control;
 	FILE *pidlog = NULL;
 	struct timeval tv;
-	int hidfd = -1;
-	int rv = 0;
-	int res = 0;
+	int32_t hidfd = -1;
+	int32_t rv = 0;
+	int32_t res = 0;
 	pthread_t hidtid = 0;
 
 	/* first of all check if there isn't already another instance running */

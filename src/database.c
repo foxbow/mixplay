@@ -15,7 +15,7 @@
 /**
  * closes the database file
  */
-static void dbClose(int db) {
+static void dbClose(int32_t db) {
 	close(db);
 	return;
 }
@@ -35,7 +35,7 @@ void dbMarkDirty(void) {
 	}
 }
 
-mptitle_t *getTitleByIndex(unsigned int index) {
+mptitle_t *getTitleByIndex(uint32_t index) {
 	mptitle_t *root = getConfig()->root;
 	mptitle_t *run = root;
 
@@ -113,7 +113,7 @@ static mptitle_t *findTitle(mptitle_t * base, const char *path) {
 /**
  * checks if a given title still exists on the filesystem
  */
-int mp3Exists(const mptitle_t * title) {
+int32_t mp3Exists(const mptitle_t * title) {
 	return (access(fullpath(title->path), F_OK) == 0);
 }
 
@@ -150,7 +150,8 @@ static void db2entry(dbentry_t * dbentry, mptitle_t * entry) {
 	strtcat(entry->display, dbentry->title, MAXPATHLEN - 1);
 	entry->playcount = dbentry->playcount;
 	entry->skipcount = dbentry->skipcount;
-	entry->favpcount = 0;
+	entry->favpcount = dbentry->playcount;
+	entry->flags = 0;
 }
 
 /**
@@ -170,8 +171,8 @@ static void entry2db(mptitle_t * entry, dbentry_t * dbentry) {
 /**
  * opens the database file
  */
-static int dbOpen() {
-	int db = -1;
+static int32_t dbOpen() {
+	int32_t db = -1;
 	char *path = getConfig()->dbname;
 
 	db = open(path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
@@ -188,7 +189,7 @@ static int dbOpen() {
 /**
  * adds/overwrites a title to/in the database
  */
-static int dbPutTitle(int db, mptitle_t * title) {
+static int32_t dbPutTitle(int32_t db, mptitle_t * title) {
 	dbentry_t dbentry;
 
 	assert(0 != db);
@@ -216,7 +217,7 @@ static int dbPutTitle(int db, mptitle_t * title) {
  * if there is no list, a new one will be created
  */
 static mptitle_t *addDBTitle(dbentry_t * dbentry, mptitle_t * root,
-							 unsigned int index) {
+							 uint32_t index) {
 	mptitle_t *entry;
 
 	entry = (mptitle_t *) falloc(1, sizeof (mptitle_t));
@@ -244,9 +245,9 @@ static mptitle_t *addDBTitle(dbentry_t * dbentry, mptitle_t * root,
  */
 mptitle_t *dbGetMusic() {
 	dbentry_t dbentry;
-	unsigned int index = 1;		/* index 0 is reserved for titles not in the db! */
+	uint32_t index = 1;			/* index 0 is reserved for titles not in the db! */
 	mptitle_t *dbroot = NULL;
-	int db;
+	int32_t db;
 	size_t len;
 
 	db = dbOpen();
@@ -292,10 +293,10 @@ mptitle_t *dbGetMusic() {
  * checks for removed entries in the database
  * i.e. titles that are in the database but no longer on the medium
  */
-int dbCheckExist(void) {
+int32_t dbCheckExist(void) {
 	mptitle_t *root;
 	mptitle_t *runner;
-	int num = 0;
+	int32_t num = 0;
 
 	root = getConfig()->root;
 	if (root == NULL) {
@@ -332,7 +333,7 @@ int dbCheckExist(void) {
 	return num;
 }
 
-static int dbAddTitle(int db, mptitle_t * title) {
+static int32_t dbAddTitle(int32_t db, mptitle_t * title) {
 	dbentry_t dbentry;
 
 	assert(0 != db);
@@ -353,14 +354,14 @@ static int dbAddTitle(int db, mptitle_t * title) {
  * adds new titles to the database
  * the new titles will have a playcount set to blend into the mix
  */
-int dbAddTitles(char *basedir) {
+int32_t dbAddTitles(char *basedir) {
 	mptitle_t *fsroot;
 	mptitle_t *fsnext;
 	mptitle_t *dbroot;
 	mptitle_t *dbrunner;
-	unsigned count = 0, mean = 0;
-	unsigned index = 0;
-	int num = 0, db = 0;
+	uint32_t count = 0, mean = 0;
+	uint32_t index = 0;
+	int32_t num = 0, db = 0;
 
 	dbroot = getConfig()->root;
 	if (dbroot == NULL) {
@@ -468,7 +469,7 @@ int dbAddTitles(char *basedir) {
 	return num;
 }
 
-static int checkPath(mptitle_t * entry, int range) {
+static int32_t checkPath(mptitle_t * entry, int32_t range) {
 	char path[MAXPATHLEN];
 	char check[NAMELEN] = "";
 	char *pos;
@@ -496,17 +497,18 @@ static int checkPath(mptitle_t * entry, int range) {
 /**
  * This should probably move to musicmgr..
  */
-int dbNameCheck(void) {
+int32_t dbNameCheck(void) {
 	mptitle_t *root;
 	mptitle_t *currentEntry;
 	mptitle_t *runner;
-	int count = 0;
-	int qcnt = 0;
+	int32_t count = 0;
+	int32_t qcnt = 0;
 	FILE *fp;
-	int match;
+	int32_t match;
 	char rmpath[MAXPATHLEN + 1];
 
 	/* not using the live database as we need the marker */
+	/* TODO: this is no longer true, check! */
 	root = dbGetMusic();
 	if (root == NULL) {
 		addMessage(-1, "No music in database!");
@@ -635,9 +637,9 @@ int dbNameCheck(void) {
  * if force is set, the database is written without checking the dbDirty
  * flag.
  */
-void dbWrite(int force) {
-	int db;
-	unsigned int index = 1;
+void dbWrite(int32_t force) {
+	int32_t db;
+	uint32_t index = 1;
 	const char *dbname = getConfig()->dbname;
 	mptitle_t *root = getConfig()->root;
 	mptitle_t *runner = root;

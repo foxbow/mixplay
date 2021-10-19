@@ -1,4 +1,4 @@
 #include <pthread.h>
 
-pthread_t startFLIRC(int fd);
-int initFLIRC();
+pthread_t startFLIRC(int32_t fd);
+int32_t initFLIRC();

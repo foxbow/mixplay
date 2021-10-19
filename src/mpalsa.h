@@ -7,8 +7,9 @@
 
 #ifndef _MPAUDIO_H_
 #define _MPAUDIO_H_
+#include <stdint.h>
 
-long controlVolume(long volume, int absolute);
+long controlVolume(long volume, int32_t absolute);
 long toggleMute();
 void closeAudio();
 

@@ -10,7 +10,7 @@
 /**
  * helperfunction for scandir()
  */
-static int devsel(const struct dirent *entry) {
+static int32_t devsel(const struct dirent *entry) {
 	return ((entry->d_name[0] != '.') && endsWith(entry->d_name, "kbd"));
 }
 
@@ -21,7 +21,7 @@ static int devsel(const struct dirent *entry) {
  * error - errno that was set
  *		 F_FAIL = print message w/o errno and exit
  */
-void fail(const int error, const char *msg, ...) {
+void fail(const int32_t error, const char *msg, ...) {
 	va_list args;
 
 	fprintf(stdout, "\n");
@@ -36,11 +36,11 @@ void fail(const int error, const char *msg, ...) {
 	exit(error);
 }
 
-int main() {
-	int numdev = 0;
-	int c = -1;
-	int fd = -1;
-	int i;
+int32_t main() {
+	int32_t numdev = 0;
+	int32_t c = -1;
+	int32_t fd = -1;
+	int32_t i;
 	mpconfig_t *config = NULL;
 	struct dirent **devices;
 

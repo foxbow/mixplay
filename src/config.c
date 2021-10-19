@@ -33,12 +33,14 @@ static pthread_mutex_t _addmsglock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t _cblock = PTHREAD_MUTEX_INITIALIZER;
 static mpconfig_t *_cconfig = NULL;
 
+#define MPV 10
+
 /**
  * the progress function list
  */
 typedef struct _mpfunc_t _mpfunc;
 struct _mpfunc_t {
-	void (*func)(void *);
+	void (*func) (void *);
 	void *arg;
 	_mpfunc *next;
 };
@@ -92,7 +94,7 @@ void unlockPlaylist(void) {
 	pthread_mutex_unlock(&pllock);
 }
 
-int trylockPlaylist(void) {
+int32_t trylockPlaylist(void) {
 	return (pthread_mutex_trylock(&pllock) != EBUSY);
 }
 
@@ -117,7 +119,7 @@ const char *mpcString(mpcmd_t rawcmd) {
 		return mpccommand[cmd];
 	}
 	else {
-		addMessage(1, "Unknown command code %i", cmd);
+		addMessage(MPV + 1, "Unknown command code %i", cmd);
 		return "mpc_idle";
 	}
 }
@@ -126,14 +128,14 @@ const char *mpcString(mpcmd_t rawcmd) {
  * transform a string literal into an mpcmd value
  */
 mpcmd_t mpcCommand(const char *name) {
-	int i;
+	int32_t i;
 
 	for (i = 0; i <= mpc_idle; i++) {
 		if (strstr(name, mpccommand[i]))
 			break;
 	}
 	if (i > mpc_idle) {
-		addMessage(1, "Unknown command %s!", name);
+		addMessage(MPV + 1, "Unknown command %s!", name);
 		return mpc_idle;
 	}
 	return (mpcmd_t) i;
@@ -151,16 +153,20 @@ mpconfig_t *getConfig() {
 	return _cconfig;
 }
 
+inline mpplaylist_t *getCurrent() {
+	return getConfig()->current;
+}
+
 /**
  * parses a multi-string config value in the form of:
  * val1;val2;val3;
  *
  * returns the number of found values
  */
-static int scanparts(char *line, char ***target) {
-	unsigned int i;
+static int32_t scanparts(char *line, char ***target) {
+	uint32_t i;
 	char *pos;
-	unsigned int num = 0;
+	uint32_t num = 0;
 
 	/* count number of entries */
 	for (i = 0; i < strlen(line); i++) {
@@ -193,9 +199,9 @@ static int scanparts(char *line, char ***target) {
  * scans a number on names into newly created profile entries
  * this must happen before urls or volumes get parsed!
  */
-static int scanpronames(char *input, profile_t *** target, int max) {
+static int32_t scanpronames(char *input, profile_t *** target, int32_t max) {
 	char **line;
-	int i, num;
+	int32_t i, num;
 
 	num = scanparts(input, &line);
 	if (max > 0) {
@@ -226,9 +232,9 @@ static int scanpronames(char *input, profile_t *** target, int max) {
 	return max;
 }
 
-static int scanpropaths(char *input, profile_t *** target) {
+static int32_t scanpropaths(char *input, profile_t *** target) {
 	char **line;
-	int i, num;
+	int32_t i, num;
 
 	num = scanparts(input, &line);
 
@@ -245,9 +251,9 @@ static int scanpropaths(char *input, profile_t *** target) {
 	return num;
 }
 
-static int scanprovols(char *input, profile_t ** target, int max) {
+static int32_t scanprovols(char *input, profile_t ** target, int32_t max) {
 	char **line;
-	int i, num;
+	int32_t i, num;
 
 	num = scanparts(input, &line);
 	for (i = 0; i < MIN(max, num); i++) {
@@ -259,9 +265,9 @@ static int scanprovols(char *input, profile_t ** target, int max) {
 	return (num == max);
 }
 
-static int scancodes(char *input, int *codes) {
+static int32_t scancodes(char *input, int32_t * codes) {
 	char **line;
-	int i, num;
+	int32_t i, num;
 
 	num = scanparts(input, &line);
 	if (num > 0) {
@@ -291,7 +297,7 @@ mpconfig_t *readConfig(void) {
 	char *pos;
 	char *home = NULL;
 	FILE *fp;
-	int i;
+	int32_t i;
 
 	home = getenv("HOME");
 	if (home == NULL) {
@@ -458,11 +464,11 @@ mpconfig_t *readConfig(void) {
  */
 void writeConfig(const char *musicpath) {
 	char conffile[MAXPATHLEN + 1];	/*  = "mixplay.conf"; */
-	int i;
+	int32_t i;
 	FILE *fp;
 	char *home = NULL;
 
-	addMessage(1, "Saving config");
+	addMessage(MPV + 1, "Saving config");
 	assert(_cconfig != NULL);
 
 	home = getenv("HOME");
@@ -595,7 +601,7 @@ void freeProfile(profile_t * profile) {
  * frees the static parts of the config
  */
 void freeConfigContents() {
-	int i;
+	int32_t i;
 
 	assert(_cconfig != NULL);
 
@@ -668,7 +674,7 @@ void freeConfig() {
  * If debug > v the message is printed on the console (to avoid verbosity
  * 0 messages to always appear in the debug stream.
  */
-void addMessage(int v, const char *msg, ...) {
+void addMessage(int32_t v, const char *msg, ...) {
 	va_list args;
 	char *line;
 
@@ -718,14 +724,14 @@ void incDebug(void) {
 	_cconfig->debug++;
 }
 
-int getDebug(void) {
+int32_t getDebug(void) {
 	assert(_cconfig != NULL);
 	return _cconfig->debug;
 }
 
 /* returns true if the player is not normally playing */
-int playerIsBusy(void) {
-	int res = 0;
+int32_t playerIsBusy(void) {
+	int32_t res = 0;
 	mpconfig_t *control = getConfig();
 
 	res = (control->status == mpc_start) ||
@@ -740,13 +746,13 @@ static char _curact[MP_ACTLEN] = "startup";
  * show activity roller on console
  * this will only show if debug mode is enabled
  */
-void activity(int v, const char *msg, ...) {
+void activity(int32_t v, const char *msg, ...) {
 	char roller[5] = "|/-\\";
-	int pos = 0;
-	int i;
+	int32_t pos = 0;
+	int32_t i;
 	va_list args;
 	char newact[MP_ACTLEN] = "";
-	static unsigned _ftrpos = 0;
+	static uint32_t _ftrpos = 0;
 
 	va_start(args, msg);
 	vsnprintf(newact, MP_ACTLEN, msg, args);
@@ -757,7 +763,7 @@ void activity(int v, const char *msg, ...) {
 		newact[i] = ' ';
 	}
 	_curact[MP_ACTLEN - 1] = 0;
-	/* _ftrpos is unsigned so an overflow does not cause issues later */
+	/* _ftrpos is uint32_t so an overflow does not cause issues later */
 	++_ftrpos;
 
 	/* Update the current action for the client */
@@ -777,7 +783,7 @@ char *getCurrentActivity(void) {
 	return _curact;
 }
 
-static void addHook(void (*func)(void *), void *arg, _mpfunc ** list) {
+static void addHook(void (*func) (void *), void *arg, _mpfunc ** list) {
 	_mpfunc *pos = *list;
 
 	pthread_mutex_lock(&_cblock);
@@ -799,7 +805,7 @@ static void addHook(void (*func)(void *), void *arg, _mpfunc ** list) {
 }
 
 #if 0
-static void removeHook(void (*func)(void *), void *arg, _mpfunc ** list) {
+static void removeHook(void (*func) (void *), void *arg, _mpfunc ** list) {
 	_mpfunc *pos = *list;
 	_mpfunc *pre = NULL;
 
@@ -836,15 +842,15 @@ static void removeHook(void (*func)(void *), void *arg, _mpfunc ** list) {
 /**
  * register an update function, called on minor updates like playtime
  */
-void addUpdateHook(void (*func)()) {
+void addUpdateHook(void (*func) ()) {
 	addHook(func, NULL, &_ufunc);
 }
 
 /**
  * notify all clients that a bigger update is needed
  */
-void notifyChange(int state) {
-	int i;
+void notifyChange(int32_t state) {
+	int32_t i;
 
 	pthread_mutex_lock(&_cblock);
 	for (i = 0; i < MAXCLIENT; i++) {
@@ -878,14 +884,14 @@ char *fullpath(const char *file) {
 	return pbuff;
 }
 
-int getFavplay() {
+int32_t getFavplay() {
 	if (getConfig()->active > 0) {
 		return getConfig()->profile[getConfig()->active - 1]->favplay;
 	}
 	return 0;
 }
 
-int toggleFavplay() {
+int32_t toggleFavplay() {
 	profile_t *profile;
 
 	if (getConfig()->active > 0) {
@@ -897,7 +903,7 @@ int toggleFavplay() {
 }
 
 profile_t *createProfile(const char *name, const char *stream,
-						 const unsigned favplay, const int vol) {
+						 const uint32_t favplay, const int32_t vol) {
 	profile_t *profile = (profile_t *) falloc(1, sizeof (profile_t));
 
 	if (name) {
@@ -922,14 +928,14 @@ profile_t *createProfile(const char *name, const char *stream,
  * this is not in musicmanager.c to keep cross-dependecies in
  * config.c low
  */
-mpplaylist_t *wipePlaylist(mpplaylist_t * pl, int recursive) {
+mpplaylist_t *wipePlaylist(mpplaylist_t * pl, int32_t recursive) {
 	mpplaylist_t *next = NULL;
 
 	if (pl == NULL) {
 		return NULL;
 	}
 
-	int unlock = trylockPlaylist();
+	int32_t unlock = trylockPlaylist();
 
 	while (pl->prev != NULL) {
 		pl = pl->prev;
@@ -937,6 +943,7 @@ mpplaylist_t *wipePlaylist(mpplaylist_t * pl, int recursive) {
 
 	while (pl != NULL) {
 		next = pl->next;
+		pl->title->flags &= ~MP_INPL;
 		if (recursive) {
 			free(pl->title);
 		}
@@ -1008,17 +1015,17 @@ void blockSigint() {
 	}
 }
 
-static unsigned numclients = 0;
+static uint32_t numclients = 0;
 
-int getFreeClient(void) {
-	int i;
+int32_t getFreeClient(void) {
+	int32_t i;
 
 	for (i = 0; i < MAXCLIENT; i++) {
 		if (getConfig()->client[i] == 0) {
 			getConfig()->client[i] = 1;
 			numclients++;
-			addMessage(2, "client %i connected, %i clients connected", i + 1,
-					   numclients);
+			addMessage(MPV + 2, "client %i connected, %i clients connected",
+					   i + 1, numclients);
 			return i + 1;
 		}
 	}
@@ -1033,8 +1040,8 @@ int getFreeClient(void) {
  * all other clients will be increased. If the idle counter hits a threshold
  * the connection is considered dead.
  */
-void triggerClient(int client) {
-	int run;
+void triggerClient(int32_t client) {
+	int32_t run;
 
 	client--;
 
@@ -1048,7 +1055,7 @@ void triggerClient(int client) {
 				if (getConfig()->client[run] > (2 * numclients)) {
 					getConfig()->client[run] = 0;
 					numclients--;
-					addMessage(2,
+					addMessage(MPV + 2,
 							   "client %i disconnected, %i clients connected",
 							   run + 1, numclients);
 				}
@@ -1057,7 +1064,7 @@ void triggerClient(int client) {
 	}
 }
 
-int trylockClient(int client) {
+int32_t trylockClient(int32_t client) {
 	client--;
 	if ((client >= 0) && (client < MAXCLIENT)) {
 		if (getConfig()->client[client] == 0) {
@@ -1066,11 +1073,11 @@ int trylockClient(int client) {
 		}
 		return 0;
 	}
-	addMessage(1, "Client id %i out of range!", client + 1);
+	addMessage(MPV + 1, "Client id %i out of range!", client + 1);
 	return -1;
 }
 
-int getNotify(int client) {
+int32_t getNotify(int32_t client) {
 	client--;
 	if ((client >= 0) && (client < MAXCLIENT)) {
 		return getConfig()->notify[client];
@@ -1078,21 +1085,21 @@ int getNotify(int client) {
 	return 0;
 }
 
-void setNotify(int client, int state) {
+void setNotify(int32_t client, int32_t state) {
 	client--;
 	if ((client >= 0) && (client < MAXCLIENT)) {
 		getConfig()->notify[client] |= state;
 	}
 }
 
-void clearNotify(int client) {
+void clearNotify(int32_t client) {
 	client--;
 	if ((client >= 0) && (client < MAXCLIENT)) {
 		getConfig()->notify[client] = MPCOMM_STAT;
 	}
 }
 
-unsigned long getMsgCnt(int client) {
+uint64_t getMsgCnt(int32_t client) {
 	client--;
 	if ((client >= 0) && (client < MAXCLIENT)) {
 		return getConfig()->msgcnt[client];
@@ -1100,23 +1107,25 @@ unsigned long getMsgCnt(int client) {
 	return 0;
 }
 
-void setMsgCnt(int client, unsigned long count) {
+void setMsgCnt(int32_t client, uint64_t count) {
 	client--;
 	if ((client >= 0) && (client < MAXCLIENT)) {
 		getConfig()->msgcnt[client] = count;
 	}
 }
 
-void incMsgCnt(int client) {
+void incMsgCnt(int32_t client) {
 	client--;
 	if ((client >= 0) && (client < MAXCLIENT)) {
 		getConfig()->msgcnt[client]++;
 	}
 }
 
-void initMsgCnt(int client) {
+void initMsgCnt(int32_t client) {
 	client--;
 	if ((client >= 0) && (client < MAXCLIENT)) {
 		getConfig()->msgcnt[client] = msgBufGetLastRead(getConfig()->msg);
 	}
 }
+
+#undef MPV

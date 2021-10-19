@@ -36,6 +36,9 @@
 #include "build/mixplay_png.h"
 #include "build/manifest_json.h"
 
+/* message offset */
+#define MPV 10
+
 /* the kind of request that came in */
 typedef enum {
 	req_none = 0,
@@ -56,8 +59,8 @@ static pthread_mutex_t _sendlock = PTHREAD_MUTEX_INITIALIZER;
 /**
  * send a static file
  */
-static int filePost(int sock, const char *fname) {
-	int fd;
+static int32_t filePost(int32_t sock, const char *fname) {
+	int32_t fd;
 
 	fd = open(fname, O_RDONLY);
 	if (fd != -1) {
@@ -81,9 +84,9 @@ static int filePost(int sock, const char *fname) {
  * also considers \n or \r to be line end characters
  */
 static char *strdec(char *target, const char *src) {
-	unsigned int i, j;
+	uint32_t i, j;
 	char buf = 0;
-	int state = 0;
+	int32_t state = 0;
 
 	for (i = 0, j = 0; i < strlen(src); i++) {
 		switch (state) {
@@ -121,13 +124,13 @@ static char *strdec(char *target, const char *src) {
 	return target;
 }
 
-static int fillReqInfo(mpReqInfo * info, char *line) {
+static int32_t fillReqInfo(mpReqInfo * info, char *line) {
 	jsonObject *jo = NULL;
 	char *jsonLine = calloc(strlen(line), 1);
-	int rc = 0;
+	int32_t rc = 0;
 
 	strdec(jsonLine, line);
-	addMessage(3, "received request: %s", jsonLine);
+	addMessage(MPV + 3, "received request: %s", jsonLine);
 	jo = jsonRead(jsonLine);
 	free(jsonLine);
 	if (jsonPeek(jo, "cmd") == json_error) {
@@ -143,9 +146,9 @@ static int fillReqInfo(mpReqInfo * info, char *line) {
 			}
 		}
 		info->clientid = jsonGetInt(jo, "clientid");
-		addMessage(3, "cmd: %i", info->cmd);
-		addMessage(3, "arg: %s", info->arg ? info->arg : "(NULL)");
-		addMessage(3, "cid: %i", info->clientid);
+		addMessage(MPV + 3, "cmd: %i", info->cmd);
+		addMessage(MPV + 3, "arg: %s", info->arg ? info->arg : "(NULL)");
+		addMessage(MPV + 3, "cid: %i", info->clientid);
 	}
 	jsonDiscard(jo);
 	return rc;
@@ -183,11 +186,11 @@ static size_t serviceUnavailable(char *commdata) {
  * again. It is not worth trying to clean up that id!
  */
 static void *clientHandler(void *args) {
-	int sock;
+	int32_t sock;
 	size_t len = 0;
 	size_t sent, msglen;
 	struct timeval to;
-	unsigned running = CL_ONE;
+	uint32_t running = CL_ONE;
 	char *commdata = NULL;
 	char *jsonLine = NULL;
 	fd_set fds;
@@ -205,10 +208,10 @@ static void *clientHandler(void *args) {
 	ssize_t retval = 0;
 	ssize_t recvd = 0;
 	static const char *fname;
-	static const unsigned char *fdata;
-	unsigned int flen = 0;
-	int fullstat = MPCOMM_STAT;
-	int index = 0;
+	static const uint8_t *fdata;
+	uint32_t flen = 0;
+	int32_t fullstat = MPCOMM_STAT;
+	int32_t index = 0;
 	mptitle_t *title = NULL;
 	struct stat sbuf;
 
@@ -218,18 +221,18 @@ static void *clientHandler(void *args) {
 	ts.tv_nsec = 250000;
 	ts.tv_sec = 0;
 	char *manifest = NULL;
-	unsigned method = 0;
+	uint32_t method = 0;
 	mpReqInfo reqInfo = { 0, NULL, 0 };
 
 	commdata = (char *) falloc(commsize, sizeof (char));
-	sock = *(int *) args;
+	sock = *(int32_t *) args;
 	free(args);
 
 	config = getConfig();
 
 	/* this one may terminate all willy nilly */
 	pthread_detach(pthread_self());
-	addMessage(3, "Client handler started");
+	addMessage(MPV + 3, "Client handler started");
 	do {
 		FD_ZERO(&fds);
 		FD_SET(sock, &fds);
@@ -242,23 +245,23 @@ static void *clientHandler(void *args) {
 			case EINTR:
 				/* the select was interrupted by a signal,
 				 * not worth bailing out */
-				addMessage(1, "select(%i): Interrupt", sock);
+				addMessage(MPV + 1, "select(%i): Interrupt", sock);
 				break;
 			case EBADF:
-				addMessage(1, "select(%i): Dead Socket", sock);
+				addMessage(MPV + 1, "select(%i): Dead Socket", sock);
 				running = CL_STP;
 				break;
 			case EINVAL:
-				addMessage(1, "Invalid fds on %i", sock);
+				addMessage(MPV + 1, "Invalid fds on %i", sock);
 				running = CL_STP;
 				break;
 			case ENOMEM:
-				addMessage(1, "select(%i): No memory", sock);
+				addMessage(MPV + 1, "select(%i): No memory", sock);
 				running = CL_STP;
 				break;
 			default:
 				/* timeout, no one was calling for two seconds */
-				addMessage(2, "Reaping unused clienthandler");
+				addMessage(MPV + 2, "Reaping unused clienthandler");
 				running = CL_STP;
 			}
 		}
@@ -279,10 +282,10 @@ static void *clientHandler(void *args) {
 			/* data available but zero bytes read */
 			if (retval == 0) {
 				if (recvd == 0) {
-					addMessage(1, "Client disconnected");
+					addMessage(MPV + 1, "Client disconnected");
 				}
 				else {
-					addMessage(1, "Truncated request (%li): %s",
+					addMessage(MPV + 1, "Truncated request (%li): %s",
 							   (long) (commsize - recvd), commdata);
 				}
 				/* stop this client handler as we already have inconsistent
@@ -292,7 +295,8 @@ static void *clientHandler(void *args) {
 			/* an error occured, EAGAIN and EWOULDBLOCK are ignored */
 			else if ((retval == -1) &&
 					 (errno != EAGAIN) && (errno != EWOULDBLOCK)) {
-				addMessage(1, "Read error on socket!\n%s", strerror(errno));
+				addMessage(MPV + 1, "Read error on socket!\n%s",
+						   strerror(errno));
 				/* The socket got broken so the client should terminate too */
 				running = CL_STP;
 			}
@@ -300,10 +304,10 @@ static void *clientHandler(void *args) {
 			else {
 				method = 0;
 				toLower(commdata);
-				addMessage(3, "%s", commdata);
+				addMessage(MPV + 3, "%s", commdata);
 				end = strchr(commdata, ' ');
 				if (end == NULL) {
-					addMessage(1, "Malformed HTTP: %s", commdata);
+					addMessage(MPV + 1, "Malformed HTTP: %s", commdata);
 					method = -1;
 				}
 				else {
@@ -330,7 +334,8 @@ static void *clientHandler(void *args) {
 							*arg = 0;
 							arg++;
 							if (fillReqInfo(&reqInfo, arg)) {
-								addMessage(1, "Malformed arguments: %s", arg);
+								addMessage(MPV + 1, "Malformed arguments: %s",
+										   arg);
 								method = -1;
 							}
 						}
@@ -355,7 +360,7 @@ static void *clientHandler(void *args) {
 					}
 
 					if (end == NULL) {
-						addMessage(1, "Malformed request %s", pos);
+						addMessage(MPV + 1, "Malformed request %s", pos);
 						method = -1;
 					}
 					/* control command */
@@ -368,7 +373,7 @@ static void *clientHandler(void *args) {
 							method = 3;
 						}
 						else {
-							addMessage(1, "Invalid POST request!");
+							addMessage(MPV + 1, "Invalid POST request!");
 							method = -1;
 						}
 					}
@@ -379,7 +384,7 @@ static void *clientHandler(void *args) {
 						state = req_update;
 						/* make sure no one asks for searchresults */
 						fullstat |= (reqInfo.cmd & ~MPCOMM_RESULT);
-						addMessage(3, "Statusrequest: %i", fullstat);
+						addMessage(MPV + 3, "Statusrequest: %i", fullstat);
 					}
 					else if (strstr(pos, "/title/") == pos) {
 						pos += 7;
@@ -421,7 +426,7 @@ static void *clientHandler(void *args) {
 					if (strstr(pos, "/cmd") == pos) {
 						state = req_command;
 						cmd = (mpcmd_t) reqInfo.cmd;
-						addMessage(1, "Got command 0x%04x - %s %s", cmd,
+						addMessage(MPV + 1, "Got command 0x%04x - %s %s", cmd,
 								   mpcString(cmd),
 								   reqInfo.arg ? reqInfo.arg : "");
 						/* search is synchronous */
@@ -516,7 +521,7 @@ static void *clientHandler(void *args) {
 						mtype = "application/manifest+json; charset=utf-8";
 					}
 					else {
-						addMessage(1, "Illegal get %s", pos);
+						addMessage(MPV + 1, "Illegal get %s", pos);
 						send(sock, "HTTP/1.0 404 Not Found\015\012\015\012",
 							 26, 0);
 						state = req_none;
@@ -524,7 +529,7 @@ static void *clientHandler(void *args) {
 					}
 					break;
 				case -1:
-					addMessage(1, "Illegal method %s", commdata);
+					addMessage(MPV + 1, "Illegal method %s", commdata);
 					send(sock,
 						 "HTTP/1.0 405 Method Not Allowed\015\012\015\012", 35,
 						 0);
@@ -557,7 +562,8 @@ static void *clientHandler(void *args) {
 			case req_update:	/* get update */
 				/* add flags that have been set outside */
 				if (getNotify(reqInfo.clientid) != MPCOMM_STAT) {
-					addMessage(2, "Notification %i for client %i applied",
+					addMessage(MPV + 2,
+							   "Notification %i for client %i applied",
 							   getNotify(reqInfo.clientid), reqInfo.clientid);
 					fullstat |= getNotify(reqInfo.clientid);
 					clearNotify(reqInfo.clientid);
@@ -575,7 +581,7 @@ static void *clientHandler(void *args) {
 				if (jsonLine != NULL) {
 					sprintf(commdata,
 							"HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012",
-							(int) strlen(jsonLine));
+							(int32_t) strlen(jsonLine));
 					while ((ssize_t) (strlen(jsonLine) + strlen(commdata) + 8)
 						   > commsize) {
 						commsize += MP_BLKSIZE;
@@ -599,7 +605,8 @@ static void *clientHandler(void *args) {
 					if ((cmd == mpc_dbinfo) || (cmd == mpc_dbclean) ||
 						(cmd == mpc_doublets)) {
 						if (setCurClient(reqInfo.clientid) == -1) {
-							addMessage(1, "%s was blocked!", mpcString(cmd));
+							addMessage(MPV + 1, "%s was blocked!",
+									   mpcString(cmd));
 							len = serviceUnavailable(commdata);
 							break;
 						}
@@ -651,7 +658,7 @@ static void *clientHandler(void *args) {
 			case req_version:	/* get current build version */
 				sprintf(commdata,
 						"HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
-						(int) strlen(VERSION), VERSION);
+						(int32_t) strlen(VERSION), VERSION);
 				len = strlen(commdata);
 				break;
 
@@ -678,7 +685,7 @@ static void *clientHandler(void *args) {
 				}
 				sprintf(commdata,
 						"HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
-						(int) strlen(line), line);
+						(int32_t) strlen(line), line);
 				len = strlen(commdata);
 				break;
 
@@ -694,7 +701,7 @@ static void *clientHandler(void *args) {
 					}
 					else {
 						sent = len;
-						addMessage(1, "send failed");
+						addMessage(MPV + 1, "send failed");
 					}
 				}
 				if (fullstat & MPCOMM_RESULT) {
@@ -719,9 +726,9 @@ static void *clientHandler(void *args) {
 		reqInfo.clientid = 0;
 	} while (running & CL_RUN);
 
-	addMessage(3, "Client handler exited");
+	addMessage(MPV + 3, "Client handler exited");
 	if (isCurClient(reqInfo.clientid)) {
-		addMessage(1, "Unlocking client %i", reqInfo.clientid);
+		addMessage(MPV + 1, "Unlocking client %i", reqInfo.clientid);
 		unlockClient(reqInfo.clientid);
 		config->found->state = mpsearch_idle;
 	}
@@ -741,16 +748,16 @@ static void *clientHandler(void *args) {
 static void *mpserver(void *arg) {
 	fd_set fds;
 	struct timeval to;
-	int mainsocket = (int) (long) arg;
-	int client_sock, alen, *new_sock;
+	int32_t mainsocket = (int32_t) (long) arg;
+	int32_t client_sock, alen, *new_sock;
 	struct sockaddr_in client;
 	mpconfig_t *control = getConfig();
-	int devnull = 0;
+	int32_t devnull = 0;
 
 	blockSigint();
 
 	listen(mainsocket, MAXCLIENT);
-	addMessage(1, "Listening on port %i", control->port);
+	addMessage(MPV + 1, "Listening on port %i", control->port);
 
 	/* redirect stdin/out/err in demon mode */
 	if (control->isDaemon) {
@@ -784,10 +791,10 @@ static void *mpserver(void *arg) {
 				addMessage(0, "accept() failed!");
 				continue;
 			}
-			addMessage(3, "Connection accepted");
+			addMessage(MPV + 3, "Connection accepted");
 
 			/* free()'d in clientHandler() */
-			new_sock = (int *) falloc(1, sizeof (int));
+			new_sock = (int32_t *) falloc(1, sizeof (int32_t));
 			*new_sock = client_sock;
 
 			/* todo collect pids?
@@ -811,11 +818,11 @@ static void *mpserver(void *arg) {
  * this call blocks until the server socket was successfuly bound
  * so that nothing else happens on fail()
  */
-int startServer() {
+int32_t startServer() {
 	mpconfig_t *control = getConfig();
 	struct sockaddr_in server;
-	int mainsocket = -1;
-	int val = 1;
+	int32_t mainsocket = -1;
+	int32_t val = 1;
 
 	memset(&server, 0, sizeof (server));
 
@@ -825,12 +832,12 @@ int startServer() {
 		addError(errno);
 		return -1;
 	}
-	if (setsockopt(mainsocket, SOL_SOCKET, SO_REUSEADDR, &val, sizeof (int)) <
-		0) {
+	if (setsockopt
+		(mainsocket, SOL_SOCKET, SO_REUSEADDR, &val, sizeof (int32_t)) < 0) {
 		addMessage(0, "Could not set SO_REUSEADDR on socket!");
 		addError(errno);
 	}
-	addMessage(1, "Socket created");
+	addMessage(MPV + 1, "Socket created");
 
 	server.sin_family = AF_INET;
 	server.sin_addr.s_addr = INADDR_ANY;
@@ -842,9 +849,11 @@ int startServer() {
 		close(mainsocket);
 		return -1;
 	}
-	addMessage(1, "bind() done");
+	addMessage(MPV + 1, "bind() done");
 
 	pthread_create(&control->stid, NULL, mpserver, (void *) (long) mainsocket);
 
 	return 0;
 }
+
+#undef MPV

@@ -12,11 +12,11 @@
 #define MP_BLKSIZE 512
 
 typedef struct {
-	int cmd;
+	int32_t cmd;
 	char *arg;
-	int clientid;
+	int32_t clientid;
 } mpReqInfo;
 
-int startServer();
+int32_t startServer();
 
 #endif /* _MPSERVER_H_ */
