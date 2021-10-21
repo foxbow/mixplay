@@ -506,10 +506,6 @@ function switchView (element) {
   adaptUI(1)
 }
 
-function confReset () {
-  showConfirm('Confirm restart', 0x1f)
-}
-
 /*
  * add a line of text to the message pane. Acts as ringbuffer
  */
@@ -1688,12 +1684,16 @@ function updateConfig (data) {
   }
 }
 
-/*
- * sanity check for URL format
- * the player does the same but it's nicer to check before sending the
- * command
- */
-function checkURL (url) {
+function loadURL () {
+  var url = document.getElementById('kbdtext').value
+  if (url === '') {
+    return
+  }
+  /* prefix http:// if needed */
+  if (!url.toLowerCase().startsWith('http')) {
+    url = 'http://' + url
+  }
+  /* check link format, this may be too strict */
   if (!url.endsWith('/') &&
      (url.indexOf('?') === -1) &&
      (url.indexOf('&') === -1) &&
@@ -1701,23 +1701,6 @@ function checkURL (url) {
      (url.indexOf(',') === -1) &&
      (url.indexOf('!') === -1) &&
      (url.indexOf('.') !== -1)) {
-    return true
-  }
-  return false
-}
-
-function loadURL () {
-  var url = document.getElementById('kbdtext').value
-  if (url === '') {
-    return
-  }
-
-  /* prefix http:// if needed */
-  if (!url.toLowerCase().startsWith('http')) {
-    url = 'http://' + url
-  }
-  /* check result from clipboard */
-  if (checkURL(url)) {
     sendCMDArg(0x17, url)
   } else {
     showConfirm('Invalid Address!')
@@ -1732,6 +1715,12 @@ function download (key) {
   doUpdate |= 1
 }
 
+/*
+ * cycle through UI modes:
+ * 0 - prev title, current title, next title
+ * 1 - current title
+ * 2 - clock
+ */
 function switchUI () {
   smallUI = (smallUI + 1) % 3
   if (smallUI === 2) {
@@ -1742,6 +1731,10 @@ function switchUI () {
   }
 }
 
+/*
+ * block the space key default event, so the page won't scroll when pausing
+ * or entering text - this happens on keyup, so it can't be done in handleKey()
+ */
 function blockSpace (event) {
   /* only do this if the main or playlist view is visible! */
   if (isPlay() && (event.key === ' ')) {
@@ -1757,10 +1750,13 @@ function toggleDebug () {
   } else {
     setElement('debug', 'Enable Debug')
   }
-  enableElement('status', debug)
+  enableElement('debugdiv', debug)
   doUpdate |= 1
 }
 
+/*
+ * handle keydown events
+ */
 function handleKey (event) {
   var prevent = 1
   /* only do this if the main or playlist view is visible! */

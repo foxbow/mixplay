@@ -12,7 +12,7 @@
   <body onload='initializeUI()' onresize='adaptUI(0)'>
     <div id='viewtabs' class='buttonbar'>
       <button id='cextra0' class='active'   onclick='switchView(0)' accesskey='1'>&#x25B6;</button>
-      <button id='cextra1' class='inactive' onclick='switchView(1)' accesskey='2'>&#x2630;</button>
+      <button id='cextra1' class='inactive' onclick='switchView(1)' accesskey='2'>&#x266b;</button>
       <button id='cextra2' class='inactive' onclick='switchView(2)' accesskey='3'>&#x2692;</button>
       <button id='cextra3' class='inactive' onclick='switchView(3)' accesskey='4'>&#x26b2;</button>
       <div    id='volume'  class='progress'>
@@ -70,36 +70,38 @@
     </div>
     <!-- Tools view -->
     <div id='extra2' class='inactive' >
-      <button id='ctools0' class='active'   onclick='switchTab(this)'>&#x2630; Shortcuts</button>
-      <button id='ctools1' class='inactive' onclick='switchTab(this)'>&#x2630; Profiles</button>
-      <button id='ctools2' class='inactive' onclick='switchTab(this)'>&#x2630; Channels</button>
-      <button id='ctools3' class='inactive' onclick='switchTab(this)'>&#x2630; Tools</button>
+      <button id='ctools0' class='active'   onclick='switchTab(this)'>&#x2630; Tools</button>
+      <button id='ctools1' class='inactive' onclick='switchTab(this)'>&#x2630; Shortcuts</button>
+      <button id='ctools2' class='inactive' onclick='switchTab(this)'>&#x2630; Profiles</button>
+      <button id='ctools3' class='inactive' onclick='switchTab(this)'>&#x2630; Channels</button>
       <div id='tools0' class='active'>
-        <div id='shortcuts'><em>No Shortcuts</em></div>
+        <p id='active'>No active profile/channel</p>
+        <button id='dbinfo' onclick='sendCMD(0x12)'>Show Playcount</button>
+        <button id='reload' onclick='document.location.reload()'>Reload client</button>
+        <button id='debug'  onclick='toggleDebug()'>Enable Debug</button>
+        <div id='debugdiv' class='hide'>
+          <p id='status' class='hide'></p>
+          <button id='reset'   onclick='showConfirm("Confirm restart", 0x1f)'>Reset player</button>
+          <button id='playcnt' onclick='showKbd(0x12)'>Fix playcount</button>
+          <button id='rescan'  onclick='showKbd(0x08)'>Rescan</button>
+          <button id='doublet' onclick='showKbd(0x0b)'>Doublets</button>
+        </div>
+        <br/>
+        <div id='messages'></div>
       </div>
       <div id='tools1' class='inactive'>
+        <div id='shortcuts'><em>No Shortcuts</em></div>
+      </div>
+      <div id='tools2' class='inactive'>
         <button id='crprof' onclick='showKbd(0x16)'>New Profile</button>
         <button id='clprof' onclick='showKbd(0x21)'>Clone Profile</button>
         <button id='setfavplay' onclick='sendCMD(0x1e)'>Enable Favplay</button>
         <div id='profiles'><em>No profiles?</em></div>
       </div>
-      <div id='tools2' class='inactive'>
+      <div id='tools3' class='inactive'>
         <button id='lurl'  onclick='showKbd(function () { loadURL() })'>Load URL</button>
         <button id='schan' onclick='newActive()'>Save Channel</button>
         <div id='channels'><em>No Channels</em></div>
-      </div>
-      <div id='tools3' class='inactive'>
-        <p id='active'>No active profile/channel</p>
-        <p id='status' class='hide'></p>
-        <button id='dbinfo' onclick='sendCMD(0x12)'>Show Playcount</button>
-        <button id='debug'  onclick='toggleDebug()'>Enable Debug</button>
-        <button id='reload' onclick='document.location.reload()'>Reload client</button>
-        <br/>
-        <button id='reset'  onclick='confReset()'>Reset player</button>
-        <button id='playcnt' onclick='showKbd(0x12)'>Fix playcount</button>
-        <button id='rescan'  onclick='showKbd(0x08)'>Rescan</button>
-        <button id='doublet' onclick='showKbd(0x0b)'>Doublets</button>
-        <div id='messages'></div>
       </div>
     </div>
     <!-- Search view -->
