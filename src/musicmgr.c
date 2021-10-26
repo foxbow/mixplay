@@ -1385,8 +1385,8 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 			}
 			runner = skipOver(guard, steps);
 			if (runner == NULL) {
-				addMessage(2, "All titles are marked!")
-					return NULL;
+				addMessage(2, "All titles are marked!");
+				return NULL;
 			}
 		}
 
@@ -1455,7 +1455,8 @@ static int32_t addNewTitle(void) {
 			   maxnum);
 
 	num = countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE | MP_PDARK);
-	addMessage(2, "%" PRIu64 " titles without playcount marker", num);
+	addMessage(2, "%" PRIu64 " hidden titles",
+			   countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE));
 
 	/* remember playcount bounds */
 	pcount = getPlaycount(0);
