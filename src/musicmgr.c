@@ -1328,7 +1328,7 @@ static mptitle_t *skipOver(mptitle_t * current, int32_t dir) {
 		}
 
 		if (marker == current) {
-			addMessage(2, "Ran out of titles!");
+			addMessage(3, "Ran out of titles!");
 			return NULL;
 		}
 	}
@@ -1379,14 +1379,14 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 			addMessage(2, "Increasing maxplaycount to %" PRIi32 " (pcount)",
 					   *pcount);
 			if (*pcount > maxcount) {
-				/* may happen when artists get rare */
-				addMessage(1, "No. More. Titles. Available?!");
+				/* We may need to decrease repeats */
+				addMessage(3, "No more titles available");
 				return NULL;
 			}
 			runner = skipOver(guard, steps);
 			if (runner == NULL) {
-				dumpState();
-				fail(F_FAIL, "Check skipPcount!");
+				addMessage(2, "All titles are marked!");
+				return NULL;
 			}
 		}
 
@@ -1424,7 +1424,6 @@ static int32_t addNewTitle(void) {
 	char *lastpat = NULL;
 	uint32_t pcount = 0;
 	uint32_t maxpcount = 0;
-	uint32_t cycles = 0;
 	uint32_t tnum = 0;
 	uint32_t maxnum = 0;
 
@@ -1447,18 +1446,16 @@ static int32_t addNewTitle(void) {
 	/* how many playable titles are there? */
 	num = countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE);
 	if (num == 0) {
-		dumpState();
 		fail(F_FAIL, "No titles to be played!");
-		addMessage(-1, "No titles to be played!");
 		return 0;
 	}
-	maxnum = MIN(num / 20, 15);
+	/* The 25 is a heuristic result of several testings */
+	maxnum = MIN(num / 25, 15);
 
 	addMessage(2, "%" PRIu64 " titles available, avoiding %u repeats", num,
 			   maxnum);
 
 	num = countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE | MP_PDARK);
-	addMessage(2, "%" PRIu64 " titles without playcount marker", num);
 
 	/* remember playcount bounds */
 	pcount = getPlaycount(0);
@@ -1489,14 +1486,13 @@ static int32_t addNewTitle(void) {
 			addMessage(3, "%s = %s", runner->artist, lastpat);
 			/* don't try this one again */
 			runner->flags |= MP_TDARK;
-			activity(1, "Nameskipping %" PRIu32, cycles);
+			activity(1, "Nameskipping");
 			/* get another with a matching playcount
 			 * these are expensive, so we try to keep the steps
 			 * somewhat reasonable.. */
 			runner =
 				skipPcount(runner, (num / 2) - (random() % num),
 						   &pcount, maxpcount);
-#if 1
 			if (runner == NULL) {
 				/* back to square one for this round */
 				runner = guard;
@@ -1511,31 +1507,6 @@ static int32_t addNewTitle(void) {
 					fail(-1, "Cannot play this profile!");
 				}
 			}
-#else
-			/* We tried about every playable title! */
-			if (cycles++ > num) {
-				if (pcount < maxpcount) {
-					num = countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE);
-					pcount++;	/* temporarily allow replays */
-					unsetFlags(runner, MP_PDARK);
-					addMessage(1, "Increasing maxplaycount to %u/%u (loop)",
-							   pcount, cycles);
-				}
-				else {
-					if (maxnum > 1) {
-						maxnum--;
-						pcount = getPlaycount(0);
-						unsetFlags(runner, MP_TDARK);
-						addMessage(1, "Reducing repeat to %u ", maxnum);
-					}
-					else {
-						/* then change it to something sensible! */
-						fail(-1, "Cannot play this profile!");
-					}
-				}
-				cycles = 0;
-			}
-#endif
 		}
 
 		if (guard != runner) {
