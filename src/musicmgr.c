@@ -1379,7 +1379,8 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 			addMessage(2, "Increasing maxplaycount to %" PRIi32 " (pcount)",
 					   *pcount);
 			if (*pcount > maxcount) {
-				addMessage(-1, "No. More. Titles. Available?!");
+				/* may happen when artists get rare */
+				addMessage(1, "No. More. Titles. Available?!");
 				return guard;
 			}
 			runner = skipOver(guard, steps);
@@ -1857,6 +1858,7 @@ static uint32_t countflag(mptitle_t * guard, uint32_t flag) {
 		if (runner->flags & flag) {
 			ret++;
 		}
+		runner = runner->next;
 	} while (runner != guard);
 	return ret;
 }
