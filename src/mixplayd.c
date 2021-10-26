@@ -62,6 +62,7 @@ void fail(const int32_t error, const char *msg, ...) {
 				   strerror(abs(error)));
 		}
 	}
+	dumpState();
 
 	unlink(PIDPATH);
 	getConfig()->command = mpc_quit;
