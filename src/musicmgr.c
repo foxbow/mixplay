@@ -1498,6 +1498,8 @@ static int32_t addNewTitle(void) {
 						   &pcount, maxpcount);
 #if 1
 			if (runner == NULL) {
+				/* back to square one for this round */
+				runner = guard;
 				if (maxnum > 1) {
 					maxnum--;
 					pcount = getPlaycount(0);
