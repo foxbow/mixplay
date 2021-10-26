@@ -1381,7 +1381,7 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 			if (*pcount > maxcount) {
 				/* may happen when artists get rare */
 				addMessage(1, "No. More. Titles. Available?!");
-				return guard;
+				return NULL;
 			}
 			runner = skipOver(guard, steps);
 			if (runner == NULL) {
@@ -1452,7 +1452,7 @@ static int32_t addNewTitle(void) {
 		addMessage(-1, "No titles to be played!");
 		return 0;
 	}
-	maxnum = MIN(num / 15, 15);
+	maxnum = MIN(num / 20, 15);
 
 	addMessage(2, "%" PRIu64 " titles available, avoiding %u repeats", num,
 			   maxnum);
@@ -1469,6 +1469,10 @@ static int32_t addNewTitle(void) {
 	runner =
 		skipPcount(runner, (int32_t) ((num / 2) - (random() % num)), &pcount,
 				   maxpcount);
+	if (runner == NULL) {
+		addMessage(1, "Off to a bad start!");
+		runner = root;
+	}
 
 	if (lastpat == NULL) {
 		/* No titles in the playlist yet, we're done! */
@@ -1492,6 +1496,20 @@ static int32_t addNewTitle(void) {
 			runner =
 				skipPcount(runner, (num / 2) - (random() % num),
 						   &pcount, maxpcount);
+#if 1
+			if (runner == NULL) {
+				if (maxnum > 1) {
+					maxnum--;
+					pcount = getPlaycount(0);
+					unsetFlags(runner, MP_TDARK);
+					addMessage(1, "Reducing repeat to %u ", maxnum);
+				}
+				else {
+					/* then change it to something sensible! */
+					fail(-1, "Cannot play this profile!");
+				}
+			}
+#else
 			/* We tried about every playable title! */
 			if (cycles++ > num) {
 				if (pcount < maxpcount) {
@@ -1515,6 +1533,7 @@ static int32_t addNewTitle(void) {
 				}
 				cycles = 0;
 			}
+#endif
 		}
 
 		if (guard != runner) {
