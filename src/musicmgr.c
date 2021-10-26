@@ -1328,7 +1328,7 @@ static mptitle_t *skipOver(mptitle_t * current, int32_t dir) {
 		}
 
 		if (marker == current) {
-			addMessage(2, "Ran out of titles!");
+			addMessage(3, "Ran out of titles!");
 			return NULL;
 		}
 	}
@@ -1449,14 +1449,13 @@ static int32_t addNewTitle(void) {
 		fail(F_FAIL, "No titles to be played!");
 		return 0;
 	}
-	maxnum = MIN(num / 20, 15);
+	/* The 25 is a heuristic result of several testings */
+	maxnum = MIN(num / 25, 15);
 
 	addMessage(2, "%" PRIu64 " titles available, avoiding %u repeats", num,
 			   maxnum);
 
 	num = countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE | MP_PDARK);
-	addMessage(2, "%" PRIu64 " hidden titles",
-			   countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE));
 
 	/* remember playcount bounds */
 	pcount = getPlaycount(0);
