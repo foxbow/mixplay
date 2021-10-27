@@ -310,6 +310,7 @@ void *setProfile(void *arg) {
 			applyLists(1);
 			lastact = control->active;
 		}
+		setArtistSpread();
 		plCheck(0);
 
 		addMessage(MPV + 1, "Profile set to %s.", profile->name);
@@ -1316,6 +1317,7 @@ void *reader() {
 					toPlayer(p_command[fdset][1], "STOP\n");
 				}
 				handleRangeCmd(ctitle, control->command);
+				setArtistSpread();
 				plCheck(1);
 				pthread_mutex_unlock(&_asynclock);
 			}
@@ -1646,7 +1648,7 @@ void *reader() {
 			if (control->mpmode & PM_STREAM)
 				break;
 			if (asyncTest()) {
-				if (countTitles(MP_FAV, 0) < 21) {
+				if (countflag(MP_FAV) < 21) {
 					addMessage(-1,
 							   "Need at least 21 Favourites to enable Favplay.");
 					break;
@@ -1659,6 +1661,7 @@ void *reader() {
 				}
 				cleanTitles(0);
 				writeConfig(NULL);
+				setArtistSpread();
 				plCheck(0);
 				sendplay(p_command[fdset][1]);
 				pthread_mutex_unlock(&_asynclock);

@@ -186,6 +186,7 @@ typedef struct {
 	uint32_t notify[MAXCLIENT];	/* next state per client */
 	uint64_t msgcnt[MAXCLIENT];
 	int32_t watchdog;
+	uint32_t spread;
 } mpconfig_t;
 
 /* message request types */
