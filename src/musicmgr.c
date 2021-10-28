@@ -480,7 +480,7 @@ static int32_t isMatch(const char *term, const char *pat, const mpcmd_t range) {
 		return (strstr(loterm, pat) != NULL);
 	}
 
-	return (strieq(term, pat) == 0);
+	return strieq(term, pat);
 }
 
 /*
