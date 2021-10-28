@@ -374,6 +374,7 @@ static void *plDbClean(void *arg) {
 	mpconfig_t *control = getConfig();
 	pthread_mutex_t *lock = (pthread_mutex_t *) arg;
 	int32_t i;
+	int32_t changed = 0;
 
 	addMessage(0, "Database Cleanup");
 
@@ -385,8 +386,7 @@ static void *plDbClean(void *arg) {
 
 	if (i > 0) {
 		addMessage(0, "Removed %i titles", i);
-		dbWrite(1);
-		plCheck(1);
+		changed = 1;
 	}
 	else {
 		addMessage(0, "No titles removed");
@@ -397,10 +397,16 @@ static void *plDbClean(void *arg) {
 
 	if (i > 0) {
 		addMessage(0, "Added %i new titles", i);
-		dbWrite(1);
+		changed=1;
 	}
 	else {
 		addMessage(0, "No titles to be added");
+	}
+
+	if (changed) {
+		dbWrite(1);
+		setArtistSpread();
+		plCheck(1);
 	}
 
 	unlockClient(-1);
@@ -1330,6 +1336,11 @@ void *reader() {
 				handleRangeCmd(ctitle, control->command);
 				notifyChange(MPCOMM_TITLES);
 				pthread_mutex_unlock(&_asynclock);
+				/* when playing only favourites, adding titles can make
+				 * a difference */
+				if(getFavplay()) {
+					setArtistSpread();
+				}
 			}
 			break;
 

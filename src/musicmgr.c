@@ -465,23 +465,22 @@ static int32_t strieq(const char *t1, const char *t2) {
 
 /*
  * matches term with pattern in search.
- * range is only used to mark fuzzy searches!
  */
 static int32_t isMatch(const char *term, const char *pat, const mpcmd_t range) {
 	char loterm[MAXPATHLEN];
 
-	strltcpy(loterm, term, MAXPATHLEN);
-
 	if (MPC_ISFUZZY(range)) {
+		strltcpy(loterm, term, MAXPATHLEN);
 		return patMatch(loterm, pat);
 	}
 
+	/* mpc_substr is only sent from the UI */
 	if (MPC_ISSUBSTR(range)) {
+		strltcpy(loterm, term, MAXPATHLEN);
 		return (strstr(loterm, pat) != NULL);
 	}
 
-	strltcpy(loterm, term, MAXPATHLEN);
-	return (strcmp(loterm, pat) == 0);
+	return (strieq(term, pat) == 0);
 }
 
 /*
@@ -541,7 +540,8 @@ static uint32_t matchTitle(mptitle_t * title, const char *pat) {
 	}
 	else {
 		addMessage(0, "Pattern without range: %s", pat);
-		res = isMatch(title->display, pat, fuzzy);
+		if(isMatch(title->display, pat, 0))
+			res = mpc_display;
 	}
 
 	return res;
@@ -1418,8 +1418,7 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
  * The value is set in the global config.
  */
 void setArtistSpread() {
-	mptitle_t *guard=skipOver(getConfig()->root,1);
-	mptitle_t *runner=guard;
+	mptitle_t *runner=skipOver(getConfig()->root,1);
 	mptitle_t *checker=NULL;
 	uint32_t count=0;
 
