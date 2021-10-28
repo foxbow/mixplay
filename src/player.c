@@ -310,6 +310,7 @@ void *setProfile(void *arg) {
 			applyLists(1);
 			lastact = control->active;
 		}
+		setArtistSpread();
 		plCheck(0);
 
 		addMessage(MPV + 1, "Profile set to %s.", profile->name);
@@ -373,6 +374,7 @@ static void *plDbClean(void *arg) {
 	mpconfig_t *control = getConfig();
 	pthread_mutex_t *lock = (pthread_mutex_t *) arg;
 	int32_t i;
+	int32_t changed = 0;
 
 	addMessage(0, "Database Cleanup");
 
@@ -384,8 +386,7 @@ static void *plDbClean(void *arg) {
 
 	if (i > 0) {
 		addMessage(0, "Removed %i titles", i);
-		dbWrite(1);
-		plCheck(1);
+		changed = 1;
 	}
 	else {
 		addMessage(0, "No titles removed");
@@ -396,10 +397,16 @@ static void *plDbClean(void *arg) {
 
 	if (i > 0) {
 		addMessage(0, "Added %i new titles", i);
-		dbWrite(1);
+		changed=1;
 	}
 	else {
 		addMessage(0, "No titles to be added");
+	}
+
+	if (changed) {
+		dbWrite(1);
+		setArtistSpread();
+		plCheck(1);
 	}
 
 	unlockClient(-1);
@@ -1316,6 +1323,7 @@ void *reader() {
 					toPlayer(p_command[fdset][1], "STOP\n");
 				}
 				handleRangeCmd(ctitle, control->command);
+				setArtistSpread();
 				plCheck(1);
 				pthread_mutex_unlock(&_asynclock);
 			}
@@ -1328,6 +1336,11 @@ void *reader() {
 				handleRangeCmd(ctitle, control->command);
 				notifyChange(MPCOMM_TITLES);
 				pthread_mutex_unlock(&_asynclock);
+				/* when playing only favourites, adding titles can make
+				 * a difference */
+				if(getFavplay()) {
+					setArtistSpread();
+				}
 			}
 			break;
 
@@ -1646,7 +1659,7 @@ void *reader() {
 			if (control->mpmode & PM_STREAM)
 				break;
 			if (asyncTest()) {
-				if (countTitles(MP_FAV, 0) < 21) {
+				if (countflag(MP_FAV) < 21) {
 					addMessage(-1,
 							   "Need at least 21 Favourites to enable Favplay.");
 					break;
@@ -1659,6 +1672,7 @@ void *reader() {
 				}
 				cleanTitles(0);
 				writeConfig(NULL);
+				setArtistSpread();
 				plCheck(0);
 				sendplay(p_command[fdset][1]);
 				pthread_mutex_unlock(&_asynclock);

@@ -465,23 +465,22 @@ static int32_t strieq(const char *t1, const char *t2) {
 
 /*
  * matches term with pattern in search.
- * range is only used to mark fuzzy searches!
  */
 static int32_t isMatch(const char *term, const char *pat, const mpcmd_t range) {
 	char loterm[MAXPATHLEN];
 
-	strltcpy(loterm, term, MAXPATHLEN);
-
 	if (MPC_ISFUZZY(range)) {
+		strltcpy(loterm, term, MAXPATHLEN);
 		return patMatch(loterm, pat);
 	}
 
+	/* mpc_substr is only sent from the UI */
 	if (MPC_ISSUBSTR(range)) {
+		strltcpy(loterm, term, MAXPATHLEN);
 		return (strstr(loterm, pat) != NULL);
 	}
 
-	strltcpy(loterm, term, MAXPATHLEN);
-	return (strcmp(loterm, pat) == 0);
+	return strieq(term, pat);
 }
 
 /*
@@ -541,7 +540,8 @@ static uint32_t matchTitle(mptitle_t * title, const char *pat) {
 	}
 	else {
 		addMessage(0, "Pattern without range: %s", pat);
-		res = isMatch(title->display, pat, fuzzy);
+		if(isMatch(title->display, pat, 0))
+			res = mpc_display;
 	}
 
 	return res;
@@ -802,7 +802,8 @@ static int32_t applyFAVlist(marklist_t * favourites) {
 }
 
 /* reset the given flags on all titles */
-static void unsetFlags(mptitle_t * guard, uint32_t flags) {
+static void unsetFlags(uint32_t flags) {
+	mptitle_t * guard = getConfig()->root;
 	mptitle_t *runner = guard;
 
 	do {
@@ -813,11 +814,10 @@ static void unsetFlags(mptitle_t * guard, uint32_t flags) {
 
 void applyLists(int32_t clean) {
 	mpconfig_t *control = getConfig();
-	mptitle_t *title = control->root;
 
 	lockPlaylist();
 	if (clean) {
-		unsetFlags(title, MPC_DFRANGE | MP_FAV | MP_DNP);
+		unsetFlags(MPC_DFRANGE | MP_FAV | MP_DNP);
 	}
 	applyFAVlist(control->favlist);
 	applyDNPlist(control->dnplist, 0);
@@ -1375,7 +1375,7 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 			count = 0;
 			(*pcount)++;
 			/* remove MP_PDARK as the playcount changed */
-			unsetFlags(guard, MP_PDARK);
+			unsetFlags(MP_PDARK);
 			addMessage(2, "Increasing maxplaycount to %" PRIi32 " (pcount)",
 					   *pcount);
 			if (*pcount > maxcount) {
@@ -1406,6 +1406,39 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 	}
 
 	return runner;
+}
+
+/**
+ * checks how many different artists are available to get a maximum for
+ * how many titles can be played until an artist must be played again.
+ * The actual value may vary during play, but it may never get larger
+ * than this one, so avoid trying past this one.
+ * The absolute maximum is 20, as we can only have 21 titles in the playlist
+ * and checking further does not work.
+ * The value is set in the global config.
+ */
+void setArtistSpread() {
+	mptitle_t *runner=skipOver(getConfig()->root,1);
+	mptitle_t *checker=NULL;
+	uint32_t count=0;
+
+	unsetFlags(MP_TDARK);
+	while (runner != NULL) {
+		checker=skipOver(runner->next,1);
+		while (checker && (checker != runner)) {
+			if(checkSim(runner->artist, checker->artist)) {
+				checker->flags |= MP_TDARK;
+			}
+			checker=skipOver(checker->next, 1);
+		}
+		runner->flags |= MP_TDARK;
+		runner=skipOver(runner->next, 1);
+		activity(1, "Checking spread - %" PRIu32, count);
+		if (count++ == 20) break;
+	}
+	unsetFlags(MP_TDARK);
+
+	getConfig()->spread=count;
 }
 
 /**
@@ -1449,11 +1482,16 @@ static int32_t addNewTitle(void) {
 		fail(F_FAIL, "No titles to be played!");
 		return 0;
 	}
-	/* The 25 is a heuristic result of several testings */
-	maxnum = MIN(num / 25, 15);
+
+	maxnum = getConfig()->spread;
 
 	addMessage(2, "%" PRIu64 " titles available, avoiding %u repeats", num,
 			   maxnum);
+
+	/* Do not unset the TDARK flag while still filling up the playlist */
+	if(countflag(MP_INPL) > MIN(num, 10)) {
+		unsetFlags(MP_TDARK);
+	}
 
 	num = countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE | MP_PDARK);
 
@@ -1499,7 +1537,7 @@ static int32_t addNewTitle(void) {
 				if (maxnum > 1) {
 					maxnum--;
 					pcount = getPlaycount(0);
-					unsetFlags(runner, MP_TDARK);
+					unsetFlags(MP_TDARK);
 					addMessage(1, "Reducing repeat to %u ", maxnum);
 				}
 				else {
@@ -1527,9 +1565,6 @@ static int32_t addNewTitle(void) {
 			   (runner->flags & MP_FAV) ? runner->favpcount : runner->playcount,
 			   pcount, flagToChar(runner->flags), runner->key, runner->display);
 	/*  *INDENT-ON*  */
-	/* next time we come in, at least one title is missing and we can check
-	 * again from the start */
-	unsetFlags(runner, MP_TDARK);
 	appendToPL(runner, getCurrent(), 1);
 	return 1;
 }
@@ -1842,19 +1877,6 @@ void dumpInfo(int32_t smooth) {
 	}
 }
 
-static uint32_t countflag(mptitle_t * guard, uint32_t flag) {
-	uint32_t ret = 0;
-	mptitle_t *runner = guard;
-
-	do {
-		if (runner->flags & flag) {
-			ret++;
-		}
-		runner = runner->next;
-	} while (runner != guard);
-	return ret;
-}
-
 /**
  * big debug dump, used on ctrl-c or whenever something is fishy
  */
@@ -1867,10 +1889,10 @@ void dumpState() {
 			   (conf->argument) ? conf->argument : "-none-");
 	addMessage(0, "database: %p - mode: 0x%02x", (void *) guard, conf->mpmode);
 	if ((guard != NULL) && (conf->mpmode & PM_DATABASE)) {
-		addMessage(0, "%5u titles are MP_INPL", countflag(guard, MP_INPL));
-		addMessage(0, "%5u titles are MP_PDARK", countflag(guard, MP_PDARK));
-		addMessage(0, "%5u titles are MP_TDARK", countflag(guard, MP_TDARK));
-		addMessage(0, "%5u titles are MP_HIDE", countflag(guard, MP_HIDE));
+		addMessage(0, "%5" PRIu64 " titles are MP_INPL", countflag(MP_INPL));
+		addMessage(0, "%5" PRIu64 " titles are MP_PDARK", countflag(MP_PDARK));
+		addMessage(0, "%5" PRIu64 " titles are MP_TDARK", countflag(MP_TDARK));
+		addMessage(0, "%5" PRIu64 " titles are MP_HIDE", countflag(MP_HIDE));
 		dumpInfo(0);
 	}
 	else {

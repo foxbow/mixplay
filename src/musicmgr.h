@@ -15,6 +15,7 @@
 #define SIMGUARD 70
 
 /* flags - keep clear of range bits! */
+#define MP_NONE  0x0000
 #define MP_FAV   0x0001			/* Favourite */
 #define MP_DNP   0x0002			/* do not play */
 #define MP_DBL   0x0004			/* doublet */
@@ -114,9 +115,11 @@ int32_t writeList(const mpcmd_t cmd);
 int32_t isMusic(const char *name);
 void dumpTitles(mptitle_t * root, const int32_t pl);
 void dumpInfo(int32_t smooth);
+void setArtistSpread();
 int32_t fillstick(mptitle_t * root, const char *target);
 int32_t getPlaylists(const char *cd, struct dirent ***pllist);
 uint64_t countTitles(const uint32_t inc, const uint32_t exc);
+#define countflag(x) countTitles((x), MP_NONE)
 uint32_t getPlaycount(int32_t high);
 
 void dumpState(void);
