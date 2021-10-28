@@ -1434,11 +1434,16 @@ void setArtistSpread() {
 		runner->flags |= MP_TDARK;
 		runner=skipOver(runner->next, 1);
 		activity(1, "Checking spread - %" PRIu32, count);
-		if (count++ == 20) break;
+		if (count++ == 20) {
+			count++;
+			break;
+		}
 	}
 	unsetFlags(MP_TDARK);
 
-	getConfig()->spread=count;
+	/* lower spread by one, otherwise the artists will always repeat in the
+	   very same order */
+	getConfig()->spread=count-1;
 }
 
 /**
