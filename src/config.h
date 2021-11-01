@@ -222,6 +222,8 @@ void addMessage(int32_t v, const char *msg, ...)
 #define addError(x) addMessage( 0, "%i - %s", x, strerror(x) );
 
 char *getCurrentActivity(void);
+void setCurrentActivity(const char* act);
+
 void activity(int32_t v, const char *msg, ...)
 	__attribute__ ((__format__(__printf__, 2, 3)));
 

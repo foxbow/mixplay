@@ -93,7 +93,7 @@ static void _debugHidUpdateHook() {
 
 	/* has the title changed? */
 	if ((title != NULL) && (strcmp(title, _lasttitle) != 0)) {
-		strtcpy(_lasttitle, title, MAXPATHLEN);
+		strtcpy(_lasttitle, title, MAXPATHLEN-1);
 		hidPrintline("%s", title);
 	}
 

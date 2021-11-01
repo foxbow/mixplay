@@ -585,19 +585,20 @@ static void *killPlayers(pid_t pid[2], int32_t p_command[2][2],
 	}
 
 	/* ask nicely first.. */
+	setCurrentActivity("Stopping players");
 	for (i = 0; i < players; i++) {
-		activity(0, "Stopping player %" PRId64, i);
+		addMessage(2, "Stopping player %" PRId64, i);
 		toPlayer(p_command[i][1], "QUIT\n");
 		close(p_command[i][1]);
 		close(p_status[i][0]);
 		close(p_error[i][0]);
 		sleep(1);
 		if (waitpid(pid[i], NULL, WNOHANG | WCONTINUED) != pid[i]) {
-			activity(1, "Terminating player %" PRId64, i);
+			addMessage(1, "Terminating player %" PRId64, i);
 			kill(pid[i], SIGTERM);
 			sleep(1);
 			if (waitpid(pid[i], NULL, WNOHANG | WCONTINUED) != pid[i]) {
-				activity(1, "Killing player %" PRId64, i);
+				addMessage(0, "Killing player %" PRId64, i);
 				kill(pid[i], SIGKILL);
 				sleep(1);
 				if (waitpid(pid[i], NULL, WNOHANG | WCONTINUED) != pid[i]) {
@@ -606,7 +607,7 @@ static void *killPlayers(pid_t pid[2], int32_t p_command[2][2],
 			}
 		}
 	}
-	activity(0, "Players stopped!");
+	setCurrentActivity("Players stopped!");
 	closeAudio();
 	if (!asyncTest()) {
 		addMessage(MPV + 1, "Shutting down on active async!");
@@ -623,7 +624,7 @@ static void *killPlayers(pid_t pid[2], int32_t p_command[2][2],
 	}
 	pthread_mutex_unlock(&_pcmdlock);
 
-	activity(1, "All unlocked");
+	setCurrentActivity("All unlocked");
 	return NULL;
 }
 

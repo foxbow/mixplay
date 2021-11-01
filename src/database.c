@@ -255,7 +255,7 @@ mptitle_t *dbGetMusic() {
 		return NULL;
 	}
 
-	activity(1, "Loading database");
+	setCurrentActivity("Loading database");
 	while ((len = read(db, &dbentry, DBESIZE)) == DBESIZE) {
 		/* explicitlöy terminate path */
 		dbentry.path[MAXPATHLEN - 1] = 0;
@@ -304,11 +304,8 @@ int32_t dbCheckExist(void) {
 		return -1;
 	}
 	runner = root;
-	addMessage(1, "Cleaning database...");
-
+	addMessage(0, "Cleaning database");
 	do {
-		activity(1, "Cleaning");
-
 		if (!mp3Exists(runner)) {
 			if (root == runner) {
 				root = runner->prev;
@@ -368,6 +365,7 @@ int32_t dbAddTitles(char *basedir) {
 		addMessage(0, "No database loaded!");
 	}
 	else {
+		addMessage(0, "Adding new titles");
 		dbrunner = dbroot;
 
 		do {
@@ -417,7 +415,6 @@ int32_t dbAddTitles(char *basedir) {
 	}
 
 	while (NULL != fsroot) {
-		activity(1, "Adding");
 		dbrunner = findTitle(dbroot, fsroot->path);
 
 		if (NULL == dbrunner) {
@@ -522,6 +519,7 @@ int32_t dbNameCheck(void) {
 		return -1;
 	}
 
+	addMessage(0, "Namechecking");
 	/* start with a clean list, old doublets may have been deleted by now */
 	getConfig()->dbllist = wipeList(getConfig()->dbllist);
 	getListPath(rmpath, mpc_doublets);
@@ -531,7 +529,6 @@ int32_t dbNameCheck(void) {
 
 	currentEntry = root;
 	while (currentEntry->next != root) {
-		activity(1, "Namechecking");
 		if (!(currentEntry->flags & MP_MARK)) {
 			runner = currentEntry->next;
 			do {

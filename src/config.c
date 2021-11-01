@@ -740,7 +740,21 @@ int32_t playerIsBusy(void) {
 }
 
 #define MP_ACTLEN 75
-static char _curact[MP_ACTLEN] = "startup";
+static char _curact[MP_ACTLEN+1] = "startup";
+
+char *getCurrentActivity(void) {
+	return _curact;
+}
+
+void setCurrentActivity( const char* activity ) {
+	if (strcmp(activity, _curact)) {
+		strtcpy(_curact, activity, MP_ACTLEN);
+		notifyChange(MPCOMM_TITLES);
+		if(getDebug() > 1) {
+			printf("* %s\n", _curact);
+		}
+	}
+}
 
 /**
  * show activity roller on console
@@ -751,7 +765,7 @@ void activity(int32_t v, const char *msg, ...) {
 	int32_t pos = 0;
 	int32_t i;
 	va_list args;
-	char newact[MP_ACTLEN] = "";
+	char newact[MP_ACTLEN+1] = "";
 	static uint32_t _ftrpos = 0;
 
 	va_start(args, msg);
@@ -759,28 +773,21 @@ void activity(int32_t v, const char *msg, ...) {
 	va_end(args);
 
 	/* fill activity up with blanks and ensure \0 termination */
-	for (i = strlen(newact); i < (MP_ACTLEN - 1); i++) {
+	for (i = strlen(newact); i < (MP_ACTLEN); i++) {
 		newact[i] = ' ';
 	}
-	_curact[MP_ACTLEN - 1] = 0;
+	newact[MP_ACTLEN] = 0;
 	/* _ftrpos is uint32_t so an overflow does not cause issues later */
 	++_ftrpos;
 
 	/* Update the current action for the client */
-	if (strcmp(newact, _curact)) {
-		strcpy(_curact, newact);
-		notifyChange(MPCOMM_TITLES);
-	}
+	setCurrentActivity(newact);
 
 	if ((v < getDebug()) && (_ftrpos % 100 == 0)) {
 		printf("%c %s\r", roller[pos], newact);
 		fflush(stdout);
 		pos = (pos + 1) % 4;
 	}
-}
-
-char *getCurrentActivity(void) {
-	return _curact;
 }
 
 static void addHook(void (*func) (void *), void *arg, _mpfunc ** list) {
@@ -989,8 +996,8 @@ mptitle_t *wipeTitles(mptitle_t * root) {
 	if (NULL != root) {
 		root->prev->next = NULL;
 
+		setCurrentActivity("Cleaning");
 		while (runner != NULL) {
-			activity(1, "Cleaning");
 			root = runner->next;
 			free(runner);
 			runner = root;

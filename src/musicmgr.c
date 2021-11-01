@@ -581,7 +581,6 @@ int32_t search(const char *pat, const mpcmd_t range) {
 	lopat = toLower(strdup(pat));
 
 	do {
-		activity(1, "searching for %s", lopat);
 		found = 0;
 
 		/* ugly but at least somewhat understandable how titles get filtered */
@@ -701,9 +700,9 @@ int32_t applyDNPlist(marklist_t * list, int32_t dbl) {
 	}
 
 	if (dbl)
-		activity(1, "Applying DBL list");
+		setCurrentActivity("Applying DBL list");
 	else
-		activity(1, "Applying DNP list");
+		setCurrentActivity("Applying DNP list");
 
 	do {
 		if (!(pos->flags & MP_DBL)) {
@@ -768,7 +767,7 @@ static int32_t applyFAVlist(marklist_t * favourites) {
 		return 0;
 	}
 
-	activity(1, "Applying FAV list");
+	setCurrentActivity("Applying FAV list");
 
 	do {
 		if (!(runner->flags & MP_DBL)) {
@@ -849,13 +848,13 @@ marklist_t *loadList(const mpcmd_t cmd) {
 
 	switch (cmd) {
 	case mpc_dnp:
-		activity(1, "Loading DNP list");
+		setCurrentActivity("Loading DNP list");
 		break;
 	case mpc_fav:
-		activity(1, "Loading FAV list");
+		setCurrentActivity("Loading FAV list");
 		break;
 	default:
-		activity(1, "Loading doublets");
+		setCurrentActivity("Loading doublets");
 		break;
 	}
 
@@ -1185,15 +1184,15 @@ mptitle_t *loadPlaylist(const char *path) {
 	}
 
 	buff = (char *) falloc(MAXPATHLEN, 1);
+	setCurrentActivity("Loading playlist");
 	while (!feof(fp)) {
-		activity(1, "Loading");
 		if ((fgets(buff, MAXPATHLEN, fp) != NULL) &&
 			(strlen(buff) > 1) && (buff[0] != '#')) {
 			/* turn relative paths into absolute ones */
 			if (buff[0] != '/') {
-				strtcpy(titlePath, mdir, MAXPATHLEN);
-				strtcat(titlePath, buff, MAXPATHLEN);
-				strtcpy(buff, titlePath, MAXPATHLEN);
+				strtcpy(titlePath, mdir, MAXPATHLEN-1);
+				strtcat(titlePath, buff, MAXPATHLEN-1);
+				strtcpy(buff, titlePath, MAXPATHLEN-1);
 			}
 			/* remove control chars like CR/LF */
 			strip(titlePath, buff, MAXPATHLEN - 1);
@@ -1360,7 +1359,7 @@ static char flagToChar(int32_t flag) {
 static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 							 uint32_t * pcount, uint64_t maxcount) {
 	mptitle_t *runner = guard;
-	uint32_t count = 0;
+	setCurrentActivity("Playcountskipping");
 
 	while (steps != 0) {
 		/* fetch the next */
@@ -1372,7 +1371,6 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 		}
 		/* Nothing fits!? Then increase playcount and try again */
 		if (runner == NULL) {
-			count = 0;
 			(*pcount)++;
 			/* remove MP_PDARK as the playcount changed */
 			unsetFlags(MP_PDARK);
@@ -1401,8 +1399,6 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 		else {
 			runner->flags |= MP_PDARK;
 		}
-		activity(1, "Playcountskipping (%" PRIi32 "/%" PRIu32 ") ", steps,
-				 ++count);
 	}
 
 	return runner;
@@ -1423,6 +1419,7 @@ void setArtistSpread() {
 	uint32_t count=0;
 
 	unsetFlags(MP_TDARK);
+	setCurrentActivity("Checking artist spread");
 	while (runner != NULL) {
 		checker=skipOver(runner->next,1);
 		while (checker && (checker != runner)) {
@@ -1433,7 +1430,6 @@ void setArtistSpread() {
 		}
 		runner->flags |= MP_TDARK;
 		runner=skipOver(runner->next, 1);
-		activity(1, "Checking spread - %" PRIu32, count);
 		if (count++ == 20) {
 			count++;
 			break;
@@ -1521,6 +1517,7 @@ static int32_t addNewTitle(void) {
 	}
 
 	/* step through the playlist and check for repeats */
+	setCurrentActivity("Adding title");
 	do {
 		lastpat = pl->title->artist;
 		guard = runner;
@@ -1529,7 +1526,6 @@ static int32_t addNewTitle(void) {
 			addMessage(3, "%s = %s", runner->artist, lastpat);
 			/* don't try this one again */
 			runner->flags |= MP_TDARK;
-			activity(1, "Nameskipping");
 			/* get another with a matching playcount
 			 * these are expensive, so we try to keep the steps
 			 * somewhat reasonable.. */
