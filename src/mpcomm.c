@@ -115,6 +115,11 @@ static jsonObject *jsonAddTitle(jsonObject * jo, const char *key,
 		jsonAddStr(val, "title", getCurrentActivity());
 		jsonAddInt(val, "flags", 0);
 		jsonAddStr(val, "genre", "");
+		jsonAddInt(val, "favpcount", 0);
+		jsonAddInt(val, "playcount", 0);
+		jsonAddInt(val, "skipcount", 0);
+		/* try again on next update */
+		notifyChange(MPCOMM_TITLES);
 	}
 	else {
 		val = jsonAddInt(NULL, "key", title->key);
@@ -199,9 +204,10 @@ char *serializeStatus(int32_t clientid, int32_t type) {
 			unlockPlaylist();
 		}
 		else {
-			// todo: not nice but better than blocking on plCheck()
 			jsonAddTitles(jo, "prev", NULL, -1);
 			jsonAddTitles(jo, "next", NULL, 1);
+			/* try again on next update */
+			notifyChange(MPCOMM_TITLES);
 		}
 	}
 	if (type & MPCOMM_RESULT) {
