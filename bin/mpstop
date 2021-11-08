@@ -27,3 +27,14 @@ if [ -f /tmp/mixplayd.pid ]; then
 else
   echo "mixplayd is not running!"
 fi
+
+if [ "$1" = "-r" ]; then
+  RP=$(realpath $0)
+  MP=$(dirname ${RP})/mixplayd
+  if [ -f ${MP} ]; then
+    echo "Starting mixplayd"
+    ${MP}
+  else
+    echo "${MP} is not available!"
+  fi
+fi

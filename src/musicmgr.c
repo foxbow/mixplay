@@ -1419,6 +1419,7 @@ void setArtistSpread() {
 	uint32_t count=0;
 
 	unsetFlags(MP_TDARK);
+	unsetFlags(MP_PDARK);
 	setCurrentActivity("Checking artist spread");
 	while (runner != NULL) {
 		checker=skipOver(runner->next,1);
@@ -1440,6 +1441,7 @@ void setArtistSpread() {
 	/* lower spread by one, otherwise the artists will always repeat in the
 	   very same order */
 	getConfig()->spread=count-1;
+	addMessage(2, "At least %" PRIu32 " artists available.", count);
 }
 
 /**
