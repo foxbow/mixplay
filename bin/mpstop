@@ -1,32 +1,37 @@
 #! /bin/bash
-if [ -f /tmp/mixplayd.pid ]; then
-  PID=$(cat /tmp/mixplayd.pid)
-  LIST=$(ps -fea)
-  LIST=$(echo -e "${LIST}" | grep mixplayd)
-  RES=$(echo -e "${LIST}" | grep ${PID})
-  if [ "${RES}" != "" ]; then
-      echo "Stopping mixplayd.."
-      kill ${PID}
-      if [ $? != 0 ]; then
-          echo "Error while stopping mixplayd.."
-          echo -n "${LIST}"
-          exit
-      fi
-      for i in {1..5}; do
-        sleep 1
-        if [ ! -f /tmp/mixplayd.pid ]; then
-          exit
+
+function mpstopper() {
+  if [ -f /tmp/mixplayd.pid ]; then
+    PID=$(cat /tmp/mixplayd.pid)
+    LIST=$(ps -fea)
+    LIST=$(echo -e "${LIST}" | grep mixplayd)
+    RES=$(echo -e "${LIST}" | grep ${PID})
+    if [ "${RES}" != "" ]; then
+        echo "Stopping mixplayd.."
+        kill ${PID}
+        if [ $? != 0 ]; then
+            echo "Error while stopping mixplayd.."
+            echo -n "${LIST}"
+            exit
         fi
-      done
-      echo "Killing mixplayd!"
-      kill -9 ${PID}
+        for i in {1..5}; do
+          sleep 1
+          if [ ! -f /tmp/mixplayd.pid ]; then
+            return
+          fi
+        done
+        echo "Killing mixplayd!"
+        kill -9 ${PID}
+    else
+      echo "mixplayd(${PID}) does not exist!"
+    fi
+    rm -f /tmp/mixplayd.pid
   else
-    echo "mixplayd(${PID}) does not exist!"
+    echo "mixplayd is not running!"
   fi
-  rm -f /tmp/mixplayd.pid
-else
-  echo "mixplayd is not running!"
-fi
+}
+
+mpstopper
 
 if [ "$1" = "-r" ]; then
   RP=$(realpath $0)

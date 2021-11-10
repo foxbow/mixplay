@@ -1418,8 +1418,8 @@ void setArtistSpread() {
 	mptitle_t *checker=NULL;
 	uint32_t count=0;
 
-	unsetFlags(MP_TDARK);
-	unsetFlags(MP_PDARK);
+	/* make sure all titles are caught */
+	unsetFlags(MP_TDARK|MP_PDARK);
 	setCurrentActivity("Checking artist spread");
 	while (runner != NULL) {
 		checker=skipOver(runner->next,1);

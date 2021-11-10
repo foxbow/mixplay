@@ -550,6 +550,7 @@ static void *killPlayers(pid_t pid[2], int32_t p_command[2][2],
 	mpconfig_t *control = getConfig();
 	uint32_t players = (control->fade > 0) ? 2 : 1;
 
+	addMessage(0, "Stopping player");
 	if (restart) {
 		addMessage(MPV + 1, "kill and restart reader");
 		control->watchdog = WATCHDOG_TIMEOUT;
