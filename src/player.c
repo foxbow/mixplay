@@ -234,7 +234,7 @@ void *setProfile(void *arg) {
 	}
 
 	blockSigint();
-	activity(0, "Changing profile");
+	activity(0, "Setting profile");
 	addMessage(MPV + 2, "New Thread: setProfile(%d)", control->active);
 
 	if (control->active == 0) {
@@ -335,7 +335,7 @@ void *setProfile(void *arg) {
 	}
 	notifyChange(MPCOMM_CONFIG);
 
-	sleep(1);
+	usleep(500);
 	startPlayer();
 
 	/* make sure that progress messages are removed */
@@ -561,11 +561,11 @@ static void *killPlayers(pid_t pid[2], int32_t p_command[2][2],
 		/* if this is already a retry, fall back to something better */
 		if (control->status == mpc_start) {
 			if (oactive == control->active) {
-				addMessage(-1, "Switching to default profile");
+				addMessage(0, "Switching to default profile");
 				control->active = 1;
 			}
 			else {
-				addMessage(-1, "Switching back to %s",
+				addMessage(0, "Switching back to %s",
 						   getProfileName(oactive));
 				control->active = oactive;
 			}
@@ -608,6 +608,8 @@ static void *killPlayers(pid_t pid[2], int32_t p_command[2][2],
 			}
 		}
 	}
+	/* nothing is playing */
+	control->status=mpc_idle;
 	setCurrentActivity("Players stopped!");
 	closeAudio();
 	if (!asyncTest()) {
@@ -621,7 +623,10 @@ static void *killPlayers(pid_t pid[2], int32_t p_command[2][2],
 			free(control->argument);
 			control->argument = NULL;
 		}
+		addMessage(0, "Draining queue");
 		pthread_cond_signal(&_pcmdcond);
+		/* make sure to be slower than anyone else */
+		usleep(500);
 	}
 	pthread_mutex_unlock(&_pcmdlock);
 
@@ -1170,7 +1175,7 @@ void *reader() {
 			key = readline(line, MAXPATHLEN, p_error[fdset][0]);
 			if (key > 1) {
 				if (strstr(line, "rror: ")) {
-					addMessage(-1, "%s", strstr(line, "rror: ") + 6);
+					addMessage(0, "%s", line);
 					return killPlayers(pid, p_command, p_status, p_error, 1);
 				}
 				else if (strstr(line, "Warning: ") == line) {

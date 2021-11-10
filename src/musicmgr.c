@@ -1553,6 +1553,7 @@ static int32_t addNewTitle(void) {
 		if (guard != runner) {
 			/* title did not fit, start again from the beginning
 			 * with the new one that fits here */
+			addMessage(1, "Testing %s", runner->display);
 			while (pl->next != NULL) {
 				pl = pl->next;
 			}
