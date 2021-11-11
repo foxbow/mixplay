@@ -751,7 +751,7 @@ void setCurrentActivity( const char* activity ) {
 		strtcpy(_curact, activity, MP_ACTLEN);
 		notifyChange(MPCOMM_TITLES);
 		if(getDebug() > 1) {
-			printf("* %s\n", _curact);
+			printf("\r* %s\n", _curact);
 		}
 	}
 }
