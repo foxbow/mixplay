@@ -256,7 +256,8 @@ int32_t main(int32_t argc, char **argv) {
 			pthread_join(control->rtid, NULL);
 			addMessage(1, "Reader stopped");
 			if (control->watchdog >= WATCHDOG_TIMEOUT) {
-				addMessage(1, "Restarting after timeout");
+				addMessage(1, "Restarting after timeout cooldown");
+				sleep(1);
 				initAll();
 			}
 		} while (control->watchdog >= WATCHDOG_TIMEOUT);

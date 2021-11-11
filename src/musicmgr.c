@@ -1361,6 +1361,12 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 	mptitle_t *runner = guard;
 	setCurrentActivity("Playcountskipping");
 
+	/* zero steps is a bad idea but may happen, since we play with randum
+	 * numbers */
+	if (steps == 0) {
+		steps = 1;
+	}
+
 	while (steps != 0) {
 		/* fetch the next */
 		if (steps > 0) {
@@ -1418,8 +1424,8 @@ void setArtistSpread() {
 	mptitle_t *checker=NULL;
 	uint32_t count=0;
 
-	unsetFlags(MP_TDARK);
-	unsetFlags(MP_PDARK);
+	/* make sure all titles are caught */
+	unsetFlags(MP_TDARK|MP_PDARK);
 	setCurrentActivity("Checking artist spread");
 	while (runner != NULL) {
 		checker=skipOver(runner->next,1);
@@ -1479,29 +1485,34 @@ static int32_t addNewTitle(void) {
 	}
 	runner = root;
 
-	/* how many playable titles are there? */
-	num = countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE);
-	if (num == 0) {
-		fail(F_FAIL, "No titles to be played!");
-		return 0;
-	}
-
-	maxnum = getConfig()->spread;
-
-	addMessage(2, "%" PRIu64 " titles available, avoiding %u repeats", num,
-			   maxnum);
+	/* remember playcount bounds */
+	pcount = getPlaycount(0);
+	maxpcount = getPlaycount(1);
+	addMessage(2, "Playcount [%" PRIu32 ":%" PRIu32 "]", pcount, maxpcount);
 
 	/* Do not unset the TDARK flag while still filling up the playlist */
 	if(countflag(MP_INPL) > MIN(num, 10)) {
 		unsetFlags(MP_TDARK);
 	}
 
-	num = countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE | MP_PDARK);
+	/* are there playable titles at all? */
+	if (countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE) == 0) {
+		fail(F_FAIL, "No titles to be played!");
+		return 0;
+	}
 
-	/* remember playcount bounds */
-	pcount = getPlaycount(0);
-	maxpcount = getPlaycount(1);
-	addMessage(2, "Playcount [%" PRIu32 ":%" PRIu32 "]", pcount, maxpcount);
+	num = countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE | MP_PDARK);
+	while (num < 3) {
+		pcount++;
+		/* if this happens, something is really askew */
+		assert (pcount <= maxpcount);
+		addMessage(2, "Less than 3 titles, bumping playcount to %" PRIu32, pcount);
+		unsetFlags(MP_PDARK);
+		num = countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE);
+	}
+	maxnum = getConfig()->spread;
+	addMessage(2, "%" PRIu64 " titles available, avoiding %u repeats", num,
+			   maxnum);
 
 	/* start with some 'random' title */
 	runner =
@@ -1540,8 +1551,9 @@ static int32_t addNewTitle(void) {
 				if (maxnum > 1) {
 					maxnum--;
 					pcount = getPlaycount(0);
-					unsetFlags(MP_TDARK);
-					addMessage(1, "Reducing repeat to %u ", maxnum);
+					unsetFlags(MP_TDARK|MP_PDARK);
+					num = countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE | MP_PDARK);
+					addMessage(1, "Reducing repeat to %" PRIu32 " with %" PRIu64 " titles", maxnum, num);
 				}
 				else {
 					/* then change it to something sensible! */
