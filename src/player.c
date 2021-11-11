@@ -36,6 +36,10 @@ static pthread_mutex_t _asynclock = PTHREAD_MUTEX_INITIALIZER;
 static void cleanTitles(int32_t flags) {
 	mpconfig_t *control = getConfig();
 	mptitle_t *runner = control->root;
+	uint32_t pc=getPlaycount(1);
+	if(pc > 0) {
+		pc--;
+	}
 
 	control->current =
 		wipePlaylist(control->current, control->mpmode & PM_STREAM);
@@ -45,7 +49,7 @@ static void cleanTitles(int32_t flags) {
 		return;
 	}
 	do {
-		resetFavpcount(runner);
+		runner->favpcount = getFavplay()?0:pc;
 		runner = runner->next;
 		if (flags) {
 			/* just keep MP_DBL */

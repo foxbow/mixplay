@@ -206,15 +206,6 @@ static mpplaylist_t *remFromPL(mpplaylist_t * pltitle) {
 	return ret;
 }
 
-void resetFavpcount(mptitle_t * title) {
-	if (getFavplay()) {
-		title->favpcount = 0;
-	}
-	else {
-		title->favpcount = title->playcount;
-	}
-}
-
 /**
  * checks if the playcount needs to be increased and if the skipcount
  * needs to be decreased. In both cases the updated information is written
@@ -781,8 +772,6 @@ static int32_t applyFAVlist(marklist_t * favourites) {
 						/* Save MP_INPL */
 						runner->flags =
 							(runner->flags & MP_INPL) | MP_FAV | range;
-						/* This is correct! Both counters get increased once every round */
-						resetFavpcount(runner);
 						cnt++;
 					}
 					ptr = NULL;

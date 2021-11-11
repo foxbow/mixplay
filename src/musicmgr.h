@@ -98,7 +98,6 @@ int32_t search(const char *pat, const mpcmd_t range);
 
 void moveTitleByIndex(uint32_t from, uint32_t before);
 
-void resetFavpcount(mptitle_t * title);
 int32_t playCount(mptitle_t * title, int32_t skip);
 void applyLists(int32_t clean);
 int32_t searchPlay(const char *pat, uint32_t num, const int32_t global);
