@@ -646,8 +646,8 @@ static void wipePTLists(mpconfig_t * control) {
 void freeConfig() {
 	assert(_cconfig != NULL);
 	freeConfigContents();
-	wipePTLists(_cconfig);
 	_cconfig->found->titles = wipePlaylist(_cconfig->found->titles, 0);
+	wipePTLists(_cconfig);
 	if (_cconfig->found->artists != NULL) {
 		free(_cconfig->found->artists);
 	}
