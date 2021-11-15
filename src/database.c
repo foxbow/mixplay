@@ -647,15 +647,6 @@ void dbWrite(int32_t force) {
 	}
 
 	addMessage(1, "Saving database.");
-	/* this should never happen, if it does, then there is a logic fail
-	 * somewhere */
-	if (force && getFavplay()) {
-		addMessage(-1, "forced dbWrite on Favplay!");
-		/* TODO is this abort() worthy in any case? */
-		if (getDebug())
-			abort();
-		return;
-	}
 	getConfig()->dbDirty = 0;
 
 	if (root == NULL) {
