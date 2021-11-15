@@ -1426,16 +1426,15 @@ void setArtistSpread() {
 		}
 		runner->flags |= MP_TDARK;
 		runner=skipOver(runner->next, 1);
-		if (count++ == 20) {
-			count++;
+		if (count++ == 30) {
 			break;
 		}
 	}
 	unsetFlags(MP_TDARK);
 
-	/* lower spread by one, otherwise the artists will always repeat in the
-	   very same order */
-	getConfig()->spread=count-1;
+	/* two thirds to take number of titles per artist somewhat into account */
+	count=(count*2)/3;
+	getConfig()->spread=(count>1)?count:2;
 	addMessage(2, "At least %" PRIu32 " artists available.", count);
 }
 
