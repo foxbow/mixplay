@@ -1746,9 +1746,9 @@ function toggleDebug () {
   debug = !debug
   if (debug) {
     addText('ClientID: ' + clientid)
-    setElement('debug', 'Disable Debug')
+    setElement('debug', 'Standard')
   } else {
-    setElement('debug', 'Enable Debug')
+    setElement('debug', 'Extra')
   }
   enableElement('debugdiv', debug)
   doUpdate |= 1

@@ -76,15 +76,15 @@
       <button id='ctools3' class='inactive' onclick='switchTab(this)'>&#x2630; Channels</button>
       <div id='tools0' class='active'>
         <p id='active'>No active profile/channel</p>
-        <button id='dbinfo' onclick='sendCMD(0x12)'>Show Playcount</button>
-        <button id='reload' onclick='document.location.reload()'>Reload client</button>
-        <button id='debug'  onclick='toggleDebug()'>Enable Debug</button>
+        <button id='dbinfo' onclick='sendCMD(0x12)'>Database info</button>
+        <button id='reload' onclick='document.location.reload()'>Reset client</button>
+        <button id='debug'  onclick='toggleDebug()'>Extra</button>
         <div id='debugdiv' class='hide'>
           <p id='status'></p>
           <button id='reset'   onclick='showConfirm("Confirm restart", 0x1f)'>Reset player</button>
           <button id='playcnt' onclick='showKbd(0x12)'>Fix playcount</button>
-          <button id='rescan'  onclick='showKbd(0x08)'>Rescan</button>
-          <button id='doublet' onclick='showKbd(0x0b)'>Doublets</button>
+          <button id='rescan'  onclick='showKbd(0x08)'>Rescan titles</button>
+          <button id='doublet' onclick='showKbd(0x0b)'>Find doublets</button>
         </div>
         <br/>
         <div id='messages'></div>
