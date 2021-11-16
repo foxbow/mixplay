@@ -281,7 +281,8 @@ int32_t playCount(mptitle_t * title, int32_t skip) {
  * this returns NULL or a valid playlist anchor in case the current title was
  * removed
  */
-mpplaylist_t *remFromPLByKey(mpplaylist_t * root, const uint32_t key) {
+mpplaylist_t *remFromPLByKey(const uint32_t key) {
+	mpplaylist_t * root = getCurrent(); 
 	mpplaylist_t *pl = root;
 
 	lockPlaylist();
@@ -303,10 +304,6 @@ mpplaylist_t *remFromPLByKey(mpplaylist_t * root, const uint32_t key) {
 	}
 
 	if (pl != NULL) {
-		/* This may be too hard */
-		if (pl->title->flags & MP_INPL) {
-			playCount(pl->title, 1);
-		}
 		if (pl->prev != NULL) {
 			pl->prev->next = pl->next;
 		}

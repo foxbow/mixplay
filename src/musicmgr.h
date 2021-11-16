@@ -85,7 +85,7 @@ struct marklist_s {
  */
 mpplaylist_t *addToPL(mptitle_t * title, mpplaylist_t * target,
 					  const int32_t mark);
-mpplaylist_t *remFromPLByKey(mpplaylist_t * root, const uint32_t key);
+mpplaylist_t *remFromPLByKey(const uint32_t key);
 mpplaylist_t *addPLDummy(mpplaylist_t * pl, const char *name);
 void plCheck(int32_t del);
 int32_t writePlaylist(mpplaylist_t * pl, const char *name);

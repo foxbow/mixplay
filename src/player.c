@@ -410,7 +410,7 @@ static void *plDbClean(void *arg) {
 	if (changed) {
 		dbWrite(1);
 		setArtistSpread();
-		plCheck(1);
+		plCheck(0);
 	}
 
 	unlockClient(-1);
@@ -1657,7 +1657,7 @@ void *reader() {
 				break;
 			if (control->argument != NULL) {
 				control->current =
-					remFromPLByKey(control->current, atoi(control->argument));
+					remFromPLByKey(atoi(control->argument));
 				plCheck(0);
 			}
 			break;

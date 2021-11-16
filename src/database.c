@@ -130,6 +130,8 @@ static mptitle_t *removeTitle(mptitle_t * entry) {
 		entry->prev->next = entry->next;
 	}
 
+	remFromPLByKey(entry->key);
+
 	free(entry);
 	return next;
 }
