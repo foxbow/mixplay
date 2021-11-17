@@ -49,7 +49,7 @@ static void cleanTitles(int32_t flags) {
 		return;
 	}
 	do {
-		runner->favpcount = getFavplay()?0:pc;
+		runner->favpcount = getFavplay()?0:MIN(runner->playcount, pc);
 		runner = runner->next;
 		if (flags) {
 			/* just keep MP_DBL */
