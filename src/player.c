@@ -781,7 +781,9 @@ void *reader() {
 		addMessage(MPV + 1, "Hardware volume level is %i%%", control->volume);
 	}
 
-	/* main loop */
+	/* main loop
+	   TODO: nothing in this loop shall block so setting the watchdog will
+	         cause a restart in any case! */
 	do {
 		FD_ZERO(&fds);
 		for (i = 0; i <= fading; i++) {
@@ -808,8 +810,10 @@ void *reader() {
 					   mpcString(control->status));
 			return killPlayers(pid, p_command, p_status, p_error, 1);
 		}
+		/* no watchdog on start as this may be a slow DNS, wait until mpg123
+		   reports an error instead */
 		if ((i == 0) && (control->mpmode & PM_STREAM) &&
-			(control->status != mpc_idle)) {
+			(control->status & ~(mpc_idle|mpc_start))) {
 			control->watchdog++;
 		}
 		else {

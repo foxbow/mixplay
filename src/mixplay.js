@@ -143,7 +143,6 @@ function sendArg (cmd) {
   const term = document.getElementById('kbdtext').value
 
   if (term.length > 1) {
-    document.getElementById('kbdtext').value = ''
     sendCMDArg(cmd, term)
   } else {
     showConfirm('Need at least two letters!')
@@ -1749,6 +1748,7 @@ function toggleDebug () {
     setElement('debug', 'Standard')
   } else {
     setElement('debug', 'Extra')
+    document.getElementById('kbdtext').value = ''
   }
   enableElement('debugdiv', debug)
   doUpdate |= 1
