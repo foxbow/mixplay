@@ -86,6 +86,28 @@ mptitle_t *getTitleForRange(const mpcmd_t range, const char *name) {
 	return NULL;
 }
 
+/* compares two strings backwards.
+   returns 0 on inequality
+           1 on equality
+   used to compare paths since the difference is more likely to be at the end
+   so the difference will we noted faster and with more than 5k titles things
+   like these start to matter */
+static int32_t strreq(const char* str1, const char *str2) {
+	size_t len = strlen(str1);
+
+	if( strlen(str2) != len ) {
+		return 0;
+	}
+
+	do {
+		if(str1[len] != str2[len]) {
+			return 0;
+		}
+	} while (--len != 0);
+
+	return 1;
+}
+
 /**
  * 	searches for a given path in the mixplay entry list
  */
@@ -99,7 +121,7 @@ static mptitle_t *findTitle(mptitle_t * base, const char *path) {
 	runner = base;
 
 	do {
-		if (strstr(runner->path, path)) {
+		if (strreq(runner->path, path)) {
 			return runner;
 		}
 
