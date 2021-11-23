@@ -282,18 +282,21 @@ int32_t playCount(mptitle_t * title, int32_t skip) {
  * removed
  */
 mpplaylist_t *remFromPLByKey(const uint32_t key) {
-	mpplaylist_t * root = getCurrent(); 
-	mpplaylist_t *pl = root;
+	mpplaylist_t * root;
+	mpplaylist_t *pl;
 
-	lockPlaylist();
-	if (pl == NULL) {
+	if (getCurrent() == NULL) {
 		addMessage(0, "Cannot remove titles from an empty playlist");
 		return NULL;
 	}
 
 	if (key == 0) {
-		return root;
+		return getCurrent();
 	}
+
+	lockPlaylist();
+	root = getCurrent();
+	pl = root;
 
 	while (pl->prev != NULL) {
 		pl = pl->prev;
