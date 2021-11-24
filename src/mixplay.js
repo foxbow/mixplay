@@ -1426,23 +1426,27 @@ function playerUpdate (data) {
     enableElement('schan', 0)
   }
 
-  /* mpc_play */
-  if (data.status === 0) {
-    clearBody('pause')
-    if (smallUI !== 2) {
-      power(1)
-    }
-    document.getElementById('play').innerHTML = '||'
-  } else if (!(data.mpmode & 8)) {
-    setBody('pause')
-    if (idlesleep > 0) {
-      if (idletime < idlesleep) {
-        idletime += toval
-      } else {
-        power(0)
+  /* player status */
+  switch (data.status) {
+    case 0x22 : /* mpc_idle */
+      setBody('pause')
+      if (idlesleep > 0) {
+        if (idletime < idlesleep) {
+          idletime += toval
+        } else {
+          power(0)
+        }
       }
-    }
-    document.getElementById('play').innerHTML = '&#x25B6;'
+      document.getElementById('play').innerHTML = '&#x25B6;'
+      break
+    case 0: /* mpc_play */
+      document.getElementById('play').innerHTML = '||'
+      /* fallthrough */
+    default: /* player is playing or busy */
+      clearBody('pause')
+      if (smallUI !== 2) {
+        power(1)
+      }
   }
 
   curvol = data.volume
