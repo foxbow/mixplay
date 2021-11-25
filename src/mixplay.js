@@ -212,15 +212,11 @@ function showKbd (ok) {
 }
 
 function setBody (cname) {
-  if (document.body.className === '') {
-    document.body.className = cname
-  }
+  document.body.className = cname
 }
 
-function clearBody (cname) {
-  if (document.body.className === cname) {
-    document.body.className = ''
-  }
+function clearBody () {
+  document.body.className = ''
 }
 
 function replaceChild (e, c) {
@@ -1375,12 +1371,6 @@ function playerUpdate (data) {
     enableElement('clprof', !isstream)
   }
 
-  if (data.mpmode & 8) {
-    setBody('busy')
-  } else {
-    clearBody('busy')
-  }
-
   if ((data.clientid > 0) && (clientid !== data.clientid)) {
     if (debug) {
       addText('Client ID from ' + clientid + ' to ' + data.clientid)
@@ -1428,7 +1418,8 @@ function playerUpdate (data) {
 
   /* player status */
   switch (data.status) {
-    case 0x22 : /* mpc_idle */
+    case 0x22: /* mpc_idle */
+    case 0x20: /* mpc_pause */
       setBody('pause')
       if (idlesleep > 0) {
         if (idletime < idlesleep) {
@@ -1440,13 +1431,13 @@ function playerUpdate (data) {
       document.getElementById('play').innerHTML = '&#x25B6;'
       break
     case 0: /* mpc_play */
+      clearBody()
       document.getElementById('play').innerHTML = '||'
-      /* fallthrough */
-    default: /* player is playing or busy */
-      clearBody('pause')
-      if (smallUI !== 2) {
-        power(1)
-      }
+      power(1)
+      break
+    default: /* player is busy */
+      setBody('busy')
+      power(1)
   }
 
   curvol = data.volume
@@ -1877,20 +1868,27 @@ function addTouch (name, num) {
 function power (on) {
   const el = document.getElementById('black')
   if (on === 1) {
-    if (smallUI === -1) {
-      smallUI = 2
-      setCookies()
-      el.className = ''
-      return
-    }
-    if (smallUI === 2) {
-      switchUI()
-    }
     idletime = 0
-    el.className = 'hide'
+    if (smallUI !== 2) {
+      el.className = 'hide'
+    }
   } else {
     el.className = ''
   }
+}
+
+function tap () {
+  const el = document.getElementById('black')
+  if (smallUI === -1) {
+    smallUI = 2
+    setCookies()
+    el.className = ''
+    return
+  }
+  if (smallUI === 2) {
+    switchUI()
+  }
+  power(1)
 }
 
 function clocktime () {
@@ -1968,7 +1966,7 @@ function initializeUI () {
   document.getElementById('progress').addEventListener('click', ctrlFF, false)
   document.body.addEventListener('keypress', handleKey)
   document.body.addEventListener('keyup', blockSpace)
-  document.body.addEventListener('click', function () { power(1) })
+  document.body.addEventListener('click', function () { tap() })
   /* set initial tab and sizes */
   adaptUI(0)
   /* initialize scrolltext */
