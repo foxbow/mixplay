@@ -1250,6 +1250,8 @@ void *reader() {
 				else {
 					/* play stream */
 					if (control->mpmode & PM_STREAM) {
+						/* wake up UI in case it's in sleep mode */
+						control->status=mpc_start;
 						sendplay(p_command[fdset][1]);
 					}
 					/* unpause on normal play */
