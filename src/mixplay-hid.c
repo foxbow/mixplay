@@ -13,25 +13,34 @@
 
 char last[MAXPATHLEN + 1] = "";
 
-static int32_t drawAll(clientInfo * ci) {
+static int32_t drawAll() {
 	jsonObject *jo = NULL;
 	char *text = NULL;
 	mptitle_t title;
 	char current[MAXPATHLEN + 5];
-	int32_t rv;
-	int32_t state;
+	int32_t state=0;
 
-	jo = getStatus(ci, MPCOMM_STAT);
+	do {
+		jo = getStatus(MPCOMM_TITLES);
+	} while (jo == NULL);
+
 	text = jsonGetError(jo);
 	if (text != NULL) {
 		fail(F_FAIL, "JSON Error! %s", text);
 	}
-
-	if (jsonPeek(jo, "type") == json_error) {
-		rv = jsonGetInt(jo, "error");
-		fail(F_FAIL, "Server returned %i!", rv);
+	if (jsonPeek(jo, "error") != json_error) {
+		state = jsonGetInt(jo, "error");
+		switch(state){
+		case -1: /* error during send/receive */
+			fail(F_FAIL, "Server did not reply!");
+			break;
+		case 204: /* empty HTTP reply - ignore */
+			break;
+		default: /* should not happen, so report it */
+			hidPrintline("Server returned code %i", state);
+		}
 	}
-	else {
+	if (jsonPeek(jo, "type") != json_error) {
 		state = jsonGetInt(jo, "status");
 		if (jsonGetInt(jo, "type") & MPCOMM_TITLES) {
 			jsonGetTitle(jo, "current", &title);
@@ -51,8 +60,6 @@ static int32_t drawAll(clientInfo * ci) {
 int32_t main(int32_t argc, char **argv) {
 	char c = 0;
 	int32_t running = 1;
-	int32_t fd = 0;
-	clientInfo *ci;
 	mpcmd_t cmd = mpc_idle;
 
 	if (readConfig() == NULL) {
@@ -63,14 +70,8 @@ int32_t main(int32_t argc, char **argv) {
 		setMPHost(argv[1]);
 	}
 
-	fd = getCurrentTitle(last, MAXPATHLEN);
-	if (fd < 0) {
+	if( getCurrentTitle(last, MAXPATHLEN) < 0) {
 		fail(errno, "Could not get current title!");
-	}
-
-	ci = getConnection(1);
-	if (ci->fd < 0) {
-		fail(errno, "Could not connect to server (%s)!", getMPHost());
 	}
 
 	hidPrintline("Mixplay HID demo\n");
@@ -85,11 +86,9 @@ int32_t main(int32_t argc, char **argv) {
 		}
 		else if (cmd != mpc_idle) {
 			hidPrintline("Sent: %s", mpcString(cmd));
-			sendCMD(ci, cmd);
+			sendCMD(cmd);
 		}
-		drawAll(ci);
+		drawAll();
 	}
-	free(ci);
 	puts("");
-	close(fd);
 }

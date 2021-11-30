@@ -62,7 +62,7 @@ const char *getMPHost(void) {
 
 /* send a get request to the server and return the reply as a string
    which MUST be free'd after use! */
-static char *sendRequest(clientInfo * usefd, const char *path) {
+static char *sendRequest(const char *path) {
 	char *req;
 	char *reply = NULL;
 	char *rdata = NULL;
@@ -73,21 +73,13 @@ static char *sendRequest(clientInfo * usefd, const char *path) {
 	int32_t rv = 0;
 	fd_set fds;
 	struct timeval to;
-	clientInfo *ci;
-
-	if (usefd == NULL) {
-		ci = getConnection(0);
-		if (ci->fd < 0) {
-			printf("C: could not open connection (%i)\n", ci->fd);
-			free(ci);
-			return NULL;
-		}
-	}
-	else {
-		ci = usefd;
+	int fd = getConnection();
+	if (fd < 0) {
+		fail(errno, "could not open connection\n");
+		return NULL;
 	}
 
-	rlen = 13 + strlen(path) + 6 + 1;
+	rlen = strlen("POST /mpctrl/") + strlen(path) + strlen(" http\015\012") + 1;
 	req = (char *) falloc(1, rlen);
 	if (strstr(path, "cmd") == path) {
 		strcpy(req, "POST /mpctrl/");
@@ -100,14 +92,9 @@ static char *sendRequest(clientInfo * usefd, const char *path) {
 
 	clen = 0;
 	do {
-		rv = send(ci->fd, req + clen, rlen - clen, 0);
+		rv = send(fd, req + clen, rlen - clen, 0);
 		if (rv < 1) {
-			printf("Could not send request! (%s)\n", strerror(errno));
-			free(req);
-			if (usefd == NULL) {
-				close(ci->fd);
-				free(ci);
-			}
+			fail(errno, "Could not send request!");
 			return NULL;
 		}
 		clen += rv;
@@ -115,15 +102,19 @@ static char *sendRequest(clientInfo * usefd, const char *path) {
 	free(req);
 
 	FD_ZERO(&fds);
-	FD_SET(ci->fd, &fds);
+	FD_SET(fd, &fds);
 	to.tv_sec = 1;
 	to.tv_usec = 0;
 	if (select(FD_SETSIZE, &fds, NULL, NULL, &to) > 0) {
-		if (FD_ISSET(ci->fd, &fds)) {
+		if (FD_ISSET(fd, &fds)) {
 			rlen = 0;
+			ilen = 0;
 			do {
 				reply = (char *) frealloc(reply, rlen + 512);
-				ilen = recv(ci->fd, reply + rlen, 512, MSG_DONTWAIT);
+				ilen = recv(fd, reply + rlen, 512, MSG_WAITALL);
+				if( (ssize_t)ilen == -1 ) {
+					fail(errno, "Read error!");
+				}
 				rlen = rlen + ilen;
 			} while (ilen == 512);
 			/* force 0 termination of string */
@@ -139,10 +130,7 @@ static char *sendRequest(clientInfo * usefd, const char *path) {
 		return NULL;
 	}
 
-	if (usefd == NULL) {
-		close(ci->fd);
-		free(ci);
-	}
+	close(fd);
 
 	if (strstr(reply, "HTTP/1.1 200") == reply) {
 		pos = strstr(reply, "Content-Length:");
@@ -152,7 +140,8 @@ static char *sendRequest(clientInfo * usefd, const char *path) {
 
 			/* content length larger than received data */
 			if (clen > rlen) {
-				printf("Content length mismatch!\n");
+				printf("Content length mismatch (expected %zu, received %zu)!\n", clen, rlen);
+				printf("%s\n", reply);
 			}
 			else {
 				pos = strstr(pos, "\015\012\015\012");
@@ -167,7 +156,7 @@ static char *sendRequest(clientInfo * usefd, const char *path) {
 	else if (strstr(reply, "HTTP/1.") == reply) {
 		/* just copy status number */
 		rdata = (char *) falloc(1, 4);
-		strtcpy(rdata, reply + 9, 3);
+		strtcpy(rdata, reply + 9, 4);
 		free(reply);
 	}
 	else {
@@ -185,12 +174,9 @@ static char *sendRequest(clientInfo * usefd, const char *path) {
 	 on error and the socket on success.
 	 also registers an update handler when keep is non null.
 */
-clientInfo *getConnection(int32_t keep) {
+int getConnection( void ) {
 	struct sockaddr_in server;
 	int32_t fd;
-	int32_t cid = 0;
-	clientInfo *ci;
-	jsonObject *jo = NULL;
 
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd > 0) {
@@ -204,31 +190,7 @@ clientInfo *getConnection(int32_t keep) {
 		}
 	}
 
-	ci = (clientInfo *) calloc(1, sizeof (clientInfo));
-	ci->fd = fd;
-	if (keep) {
-		ci->clientid = -1;
-	}
-	else {
-		ci->clientid = 0;
-	}
-
-	if ((fd > 0) && (keep)) {
-		jo = getStatus(ci, 0);
-		if (jo == NULL) {
-			close(fd);
-			ci->fd = -3;
-		}
-		else {
-			cid = jsonGetInt(jo, "clientid");
-			if (cid > 0) {
-				ci->clientid = cid;
-			}
-			jo = jsonDiscard(jo);
-		}
-	}
-
-	return ci;
+	return fd;
 }
 
 /* send a command to mixplayd.
@@ -237,7 +199,7 @@ clientInfo *getConnection(int32_t keep) {
 	  0 - server busy
 	 -1 - failure on send
 */
-int32_t sendCMD(clientInfo * usefd, mpcmd_t cmd) {
+int32_t sendCMD(mpcmd_t cmd) {
 	char req[1024];
 	char *reply;
 	jsonObject *jo = NULL;
@@ -247,12 +209,12 @@ int32_t sendCMD(clientInfo * usefd, mpcmd_t cmd) {
 	}
 
 	jo = jsonAddInt(NULL, "cmd", cmd);
-	jsonAddInt(jo, "clientid", usefd->clientid);
+	jsonAddInt(jo, "clientid", 0);
 	reply = jsonToString(jo);
 	jo = jsonDiscard(jo);
 	snprintf(req, 1023, "cmd?%s x\015\012", reply);
 	free(reply);
-	reply = sendRequest(usefd, req);
+	reply = sendRequest(req);
 	if (reply == NULL) {
 		return -1;
 	}
@@ -269,7 +231,7 @@ int32_t sendCMD(clientInfo * usefd, mpcmd_t cmd) {
 int32_t getCurrentTitle(char *title, uint32_t tlen) {
 	char *line;
 
-	line = sendRequest(NULL, "title/info");
+	line = sendRequest("title/info");
 	if (line == NULL) {
 		return -1;
 	}
@@ -285,33 +247,27 @@ int32_t getCurrentTitle(char *title, uint32_t tlen) {
  * or a single json_integer object with the HTTP status code or
  * -1 on a fatal error
  */
-jsonObject *getStatus(clientInfo * usefd, int32_t flags) {
+jsonObject *getStatus(int32_t flags) {
 	char *reply;
 	char req[1024];
 	jsonObject *jo = NULL;
 
 	jo = jsonAddInt(NULL, "cmd", flags % 15);
-	if (usefd == NULL) {
-		jsonAddInt(jo, "clientid", 0);
-	}
-	else {
-		jsonAddInt(jo, "clientid", usefd->clientid);
-	}
+	jsonAddInt(jo, "clientid", 0);
 	reply = jsonToString(jo);
 	jo = jsonDiscard(jo);
 	sprintf(req, "status?%s", reply);
 	free(reply);
-	reply = sendRequest(usefd, req);
+	reply = sendRequest(req);
 
 	if (reply != NULL) {
 		if (strlen(reply) < 4) {
-			jo = jsonAddInt(NULL, "error", atoi(reply));
+			if (atoi(reply) > 0) {
+				jo = jsonAddInt(NULL, "error", atoi(reply));
+			}
 		}
 		else {
 			jo = jsonRead(reply);
-			if (usefd && (usefd->clientid == -1)) {
-				usefd->clientid = jsonGetInt(jo, "clientid");
-			}
 		}
 		free(reply);
 	}

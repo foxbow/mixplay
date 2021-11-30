@@ -554,9 +554,8 @@ static void *killPlayers(pid_t pid[2], int32_t p_command[2][2],
 	mpconfig_t *control = getConfig();
 	uint32_t players = (control->fade > 0) ? 2 : 1;
 
-	addMessage(0, "Stopping player");
 	if (restart) {
-		addMessage(MPV + 1, "kill and restart reader");
+		setCurrentActivity("Restarting players");
 		control->watchdog = WATCHDOG_TIMEOUT;
 		if (control->current == NULL) {
 			addMessage(-1, "Restarting on empty player!");
@@ -564,21 +563,15 @@ static void *killPlayers(pid_t pid[2], int32_t p_command[2][2],
 
 		/* if this is already a retry, fall back to something better */
 		if (control->status == mpc_start) {
-			if (oactive == control->active) {
+			/* Most likely an URL could not be loaded */
+			if (oactive != control->active) {
+				addMessage(MPV + 1, "Reverting to %s", getProfileName(oactive));
+				control->active = oactive;
+			}
+			else {
 				addMessage(0, "Switching to default profile");
 				control->active = 1;
 			}
-			else {
-				addMessage(0, "Switching back to %s",
-						   getProfileName(oactive));
-				control->active = oactive;
-			}
-		}
-
-		/* Most likely an URL could not be loaded */
-		if (control->active == 0) {
-			addMessage(MPV + 1, "Reverting to %s", getProfileName(oactive));
-			control->active = oactive;
 		}
 
 		/* starting on an error? Not good.. */
@@ -588,9 +581,11 @@ static void *killPlayers(pid_t pid[2], int32_t p_command[2][2],
 			control->watchdog = 0;
 		}
 	}
+	else {
+		setCurrentActivity("Stopping players");
+	}
 
 	/* ask nicely first.. */
-	setCurrentActivity("Stopping players");
 	for (i = 0; i < players; i++) {
 		addMessage(2, "Stopping player %" PRId64, i);
 		toPlayer(p_command[i][1], "QUIT\n");
@@ -614,7 +609,7 @@ static void *killPlayers(pid_t pid[2], int32_t p_command[2][2],
 	}
 	/* nothing is playing */
 	control->status=mpc_idle;
-	setCurrentActivity("Players stopped!");
+	addMessage(MPV+1, "Players stopped!");
 	closeAudio();
 	if (!asyncTest()) {
 		addMessage(MPV + 1, "Shutting down on active async!");
@@ -642,7 +637,7 @@ static void stopPlay(int32_t channel) {
 	mpconfig_t *control = getConfig();
 
 	if (control->status == mpc_stop) {
-		addMessage(MPV + 1, "Patience we are altready stopping..");
+		addMessage(MPV + 1, "Patience, we are already stopping..");
 		return;
 	}
 

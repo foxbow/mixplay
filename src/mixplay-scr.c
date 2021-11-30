@@ -93,7 +93,7 @@ int32_t main() {
 	/* todo parameters: timeout, host, port */
 	while (to < 0) {
 		sleep(5);
-		jo = getStatus(NULL, MPCOMM_CONFIG);
+		jo = getStatus(MPCOMM_CONFIG);
 		if (jsonPeek(jo, "type") == json_error) {
 			to++;
 		}
@@ -109,7 +109,7 @@ int32_t main() {
 	timer = to;
 
 	while (state != (mpc_idle + 1)) {
-		jo = getStatus(NULL, MPCOMM_STAT);
+		jo = getStatus(MPCOMM_STAT);
 		if (jsonPeek(jo, "type") == json_error) {
 			state = mpc_idle;
 		}
