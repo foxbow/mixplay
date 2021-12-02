@@ -8,12 +8,15 @@
 #include <unistd.h>
 #include <assert.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <netdb.h>
 
 #include "mpclient.h"
 #include "utils.h"
 
+#define MAXHOSTLEN 64
 static int32_t _mpport = MP_PORT;
-static char _mphost[16] = "127.0.0.1";
+static char _mphost[MAXHOSTLEN+1] = "localhost";
 
 /*
  * Print errormessage and exit
@@ -45,12 +48,12 @@ int32_t setMPPort(int32_t port) {
 	return 0;
 }
 
-/* this is misleading! host is an IP address.. */
+/* now works with numerical and symbilic addresses! */
 int32_t setMPHost(const char *host) {
-	if (strlen(host) > 16) {
+	if (strlen(host) > MAXHOSTLEN) {
 		return -1;
 	}
-	strtcpy(_mphost, host, 15);
+	strtcpy(_mphost, host, MAXHOSTLEN);
 	return 0;
 }
 
@@ -168,27 +171,38 @@ static char *sendRequest(const char *path) {
 }
 
 /* open a connection to the server.
-   returns a valid ci with ci->fd being
+   returns
 	 -1 : No socket available
-	 -2 : unable to connect to server
-	 on error and the socket on success.
-	 also registers an update handler when keep is non null.
+	 -2 : unable to resolve server
+   on error and the connected socket on success.
 */
 int getConnection( void ) {
-	struct sockaddr_in server;
-	int32_t fd;
+	struct addrinfo hint;
+	struct addrinfo *result, *ai;
+	char port[20];
+	int32_t fd=-3;
 
-	fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (fd > 0) {
-		memset(&server, 0, sizeof (server));
-		server.sin_family = AF_INET;
-		server.sin_addr.s_addr = inet_addr(_mphost);
-		server.sin_port = htons(_mpport);
-		if (connect(fd, (struct sockaddr *) &server, sizeof (server)) == -1) {
-			close(fd);
-			fd = -2;
-		}
+	memset(&hint, 0, sizeof(hint));
+	hint.ai_family = AF_UNSPEC;
+	hint.ai_socktype = SOCK_STREAM;
+	hint.ai_flags = 0;
+	hint.ai_protocol = 0;
+
+	snprintf(port, 19, "%d", _mpport);
+	if( getaddrinfo(_mphost, port, &hint, &result) != 0) {
+		return -2;
 	}
+
+	for (ai = result; ai != NULL; ai = ai->ai_next) {
+		fd = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
+		if (fd == -1)
+			continue;
+		if (connect(fd, ai->ai_addr, ai->ai_addrlen) != -1)
+			break;
+		close(fd);
+		fd = -1;
+	}
+	freeaddrinfo(result);
 
 	return fd;
 }

@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <netdb.h>
 
 #include "mpserver.h"
 #include "mpcomm.h"
@@ -820,33 +821,49 @@ static void *mpserver(void *arg) {
  */
 int32_t startServer() {
 	mpconfig_t *control = getConfig();
-	struct sockaddr_in server;
 	int32_t mainsocket = -1;
 	int32_t val = 1;
+	char port[20];
+	struct addrinfo hints;
+	struct addrinfo *result, *rp;
 
-	memset(&server, 0, sizeof (server));
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET6; // this should include IPv4
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
+	hints.ai_protocol = 0;
+	hints.ai_canonname = NULL;
+	hints.ai_addr = NULL;
+	hints.ai_next = NULL;
 
-	mainsocket = socket(AF_INET, SOCK_STREAM, 0);
-	if (mainsocket == -1) {
-		addMessage(0, "Could not create socket");
-		addError(errno);
+	snprintf(port, 19, "%d", control->port);
+	if(getaddrinfo(NULL, port, &hints, &result) != 0) {
+		addMessage(0, "Could not get addrinfo!");
 		return -1;
-	}
-	if (setsockopt
-		(mainsocket, SOL_SOCKET, SO_REUSEADDR, &val, sizeof (int32_t)) < 0) {
-		addMessage(0, "Could not set SO_REUSEADDR on socket!");
-		addError(errno);
-	}
-	addMessage(MPV + 1, "Socket created");
+	};
 
-	server.sin_family = AF_INET;
-	server.sin_addr.s_addr = INADDR_ANY;
-	server.sin_port = htons(control->port);
+	for (rp = result; rp != NULL; rp = rp->ai_next) {
+		mainsocket = socket(rp->ai_family, rp->ai_socktype,
+				rp->ai_protocol);
+		if (mainsocket == -1)
+			continue;
+		if (setsockopt(mainsocket, SOL_SOCKET, SO_REUSEADDR,
+				&val, sizeof (int32_t)) < 0) {
+			addMessage(0, "Could not set SO_REUSEADDR on socket!");
+			addError(errno);
+		}
+		else if (bind(mainsocket, rp->ai_addr, rp->ai_addrlen) == 0)
+			break;
 
-	if (bind(mainsocket, (struct sockaddr *) &server, sizeof (server)) < 0) {
+		close(mainsocket);
+		mainsocket = 0;
+	}
+
+	freeaddrinfo(result);
+
+	if (mainsocket <= 0) {
 		addMessage(0, "bind to port %i failed!", control->port);
 		addError(errno);
-		close(mainsocket);
 		return -1;
 	}
 	addMessage(MPV + 1, "bind() done");
