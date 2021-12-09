@@ -5,6 +5,14 @@ OBJDIR=build
 
 CCFLAGS+=-DVERSION=\"$(VERSION)\"
 
+# rudimentary sanity check
+ifeq ($(shell pkg-config --exists alsa && echo 1),)
+$(error ALSA support is not installed. Consider running 'make prepare' )
+endif
+ifeq ($(shell pkg-config --exists libmpg123 && echo 1),)
+$(error libmpg123 is not installed. Consider running 'make prepare' )
+endif
+
 ifdef MPDEBUG
 # force compilation with -g
 CCFLAGS+=-std=gnu11 -Wall -Wextra -pedantic -Werror -I . -g
@@ -26,10 +34,15 @@ CLOBJS=$(addprefix $(OBJDIR)/,utils.o msgbuf.o config.o json.o mpclient.o \
 
 HCOBJS=$(CLOBJS) $(addprefix $(OBJDIR)/,mphid.o)
 
-SCLIBS=-lX11 -lXext -lpthread
+LIBS=-lpthread -lm
+REFS=alsa libmpg123
 
-LIBS=-lmpg123 -lpthread -lm
-REFS=alsa
+CLIENTS=bin/mixplay-hid
+ifeq ($(shell pkg-config --exists x11 && echo 0),0)
+CLIENTS+=bin/mixplay-scr
+else
+$(info No X11 support, screensaver client will not be built)
+endif
 
 # Install globally when called as root
 ifeq ("$(shell id -un)","root")
@@ -45,7 +58,7 @@ all: server clients
 
 server: $(OBJDIR)/dep.d bin/mixplayd bin/mprcinit
 
-clients: $(OBJDIR)/dep.d bin/mixplay-hid bin/mixplay-scr
+clients: $(OBJDIR)/dep.d $(CLIENTS)
 
 clean:
 	rm -f $(OBJDIR)/[!R]*
@@ -69,8 +82,6 @@ distclean: clean
 
 new: clean all
 
-clients: bin/mixplay-hid bin/mixplay-scr
-
 bin/minify: $(SRCDIR)/minify.c
 	$(CC) $^ -o $@
 
@@ -84,7 +95,7 @@ bin/mixplay-hid: $(OBJDIR)/mixplay-hid.o $(HCOBJS)
 	$(CC) $^ -o $@ $(LIBS)
 
 bin/mixplay-scr: $(OBJDIR)/mixplay-scr.o $(CLOBJS)
-	$(CC) $^ -o $@ $(SCLIBS)
+	$(CC) $^ -o $@ -lpthread -lX11 -lXext
 
 bin/mprcinit: $(OBJDIR)/mprcinit.o $(OBJS)
 	$(CC) $^ -o $@ $(LIBS)
@@ -126,7 +137,7 @@ $(OBJDIR)/manifest_json.h: static/manifest.json
 	xxd -i static/manifest.json > $(OBJDIR)/manifest_json.h
 
 prepare:
-	apt-get install mpg123 libmpg123-dev libasound-dev
+	sudo apt-get install mpg123 libmpg123-dev libasound-dev
 
 $(OBJDIR)/dep.d: src/*
 	rm -f $(OBJDIR)/dep.d
