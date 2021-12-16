@@ -16,7 +16,7 @@
 
 #define MP_MSGLEN 512
 #define MAXCLIENT 100
-#define WATCHDOG_TIMEOUT 9
+
 /* standard crossfade value */
 #define FADESECS 4
 
@@ -158,8 +158,8 @@ typedef struct {
 	uint32_t playtime;			/* seconds time into song */
 	uint32_t remtime;			/* seconds remaining */
 	int32_t percent;			/* how many percent of the song have been played */
-	mpcmd_t command;			/* command to the player */
-	char *argument;				/* arguments to command */
+	mpcmd_t command;			/* current command on the player */
+//	char *argument;				/* arguments to command */
 	mpcmd_t status;				/* status of the player/system */
 	pthread_t rtid;				/* thread ID of the reader */
 	pthread_t stid;				/* thread ID of the server */
@@ -185,7 +185,6 @@ typedef struct {
 	uint32_t client[MAXCLIENT];	/* glabal clientID marker */
 	uint32_t notify[MAXCLIENT];	/* next state per client */
 	uint64_t msgcnt[MAXCLIENT];
-	int32_t watchdog;
 	uint32_t spread;
 } mpconfig_t;
 

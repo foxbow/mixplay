@@ -18,6 +18,7 @@
 
 #include "config.h"
 #include "utils.h"
+#include "controller.h"
 #include "player.h"
 #include "mpinit.h"
 #include "mphid.h"
@@ -247,20 +248,26 @@ int32_t main(int32_t argc, char **argv) {
 			addUpdateHook(&_debugHidUpdateHook);
 			pthread_create(&hidtid, NULL, debugHID, NULL);
 		}
+
 		/**
-		 * wait for the reader thread to terminate. If it terminated due to the
-		 * watchdog, restart it and wait again, otherwise commence shutdown.
+		 * wait for the reader thread to terminate. If it terminated due to a
+		 * player reset, restart it and wait again, otherwise commence
+		 * shutdown.
 		 */
 		do {
-			addMessage(1, "Waiting for reader to stop");
-			pthread_join(control->rtid, NULL);
-			addMessage(1, "Reader stopped");
-			if (control->watchdog >= WATCHDOG_TIMEOUT) {
-				addMessage(1, "Restarting after timeout cooldown");
-				sleep(1);
-				initAll();
+			addMessage(1, "Player is up");
+			if(pthread_join(control->rtid, NULL) == 0) {
+				addMessage(1, "Reader stopped");
+				if (control->status == mpc_reset) {
+					control->status=mpc_start;
+					initAll();
+				}
 			}
-		} while (control->watchdog >= WATCHDOG_TIMEOUT);
+			else {
+				addMessage(1, "pthread_join on %d failed!", (unsigned)control->rtid);
+				sleep(1);
+			}
+		} while (control->status != mpc_quit);
 		addMessage(1, "Waiting for server to stop");
 		pthread_join(control->stid, NULL);
 		if (hidtid > 0) {

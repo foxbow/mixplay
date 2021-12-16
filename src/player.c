@@ -4,36 +4,44 @@
  *  Created on: 26.04.2017
  *	  Author: bweber
  */
-#include <assert.h>
-#include <string.h>
-#include <pthread.h>
+
 #include <errno.h>
-#include <signal.h>
-#include <sys/stat.h>
-#include <stdio.h>
 #include <unistd.h>
 #include <math.h>
 #include <sys/wait.h>
 
 #include "mpalsa.h"
-#include "utils.h"
 #include "database.h"
-#include "player.h"
-#include "config.h"
-#include "mpinit.h"
-#include "mpcomm.h"
+#include "controller.h"
 
 #define MPV 10
+#define WATCHDOG_TIMEOUT 9
 
-static pthread_mutex_t _pcmdlock = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t _pcmdcond = PTHREAD_COND_INITIALIZER;
-static pthread_mutex_t _asynclock = PTHREAD_MUTEX_INITIALIZER;
+static int32_t fdset = 0;	/* the currently active player */
+static int32_t p_command[2][2];	/* command pipes to mpg123 */
+static int32_t p_status[2][2];		/* status pipes to mpg123 */
+static int32_t p_error[2][2];		/* error pipes to mpg123 */
+static pid_t p_pid[2];		/* player pids */
+static int32_t p_order=1;	/* playing order */
+static int32_t p_skipped=0;	/* playing order */
+static uint32_t watchdog=0;
+
+void setSkipped() {
+	p_skipped=1;
+}
+
+/*
+ * todo: does this need to be made thread safe?
+ */
+void setOrder( int32_t order ) {
+	p_order = order;
+}
 
 /* clean up when switching mode
  * if flags is true, all title flags will be cleared, only
  * MP_DBL will be kept.
  */
-static void cleanTitles(int32_t flags) {
+void cleanTitles(int32_t flags) {
 	mpconfig_t *control = getConfig();
 	mptitle_t *runner = control->root;
 	uint32_t pc=getPlaycount(1);
@@ -60,42 +68,6 @@ static void cleanTitles(int32_t flags) {
 			runner->flags &= ~MP_TDARK;
 		}
 	} while (runner != control->root);
-}
-
-/**
- * returns TRUE when no asynchronous operation is running but does not
- * block on async operations.
- */
-static int32_t asyncTest() {
-	int32_t ret = 0;
-
-	if (pthread_mutex_trylock(&_asynclock) != EBUSY) {
-		addMessage(MPV + 1, "Locking for %s/%s",
-				   mpcString(getConfig()->command),
-				   mpcString(getConfig()->status));
-		ret = 1;
-	}
-	else {
-		addMessage(0, "Player is already locked!");
-	}
-	return ret;
-}
-
-static int32_t checkPasswd(void) {
-	char *pass = getConfig()->argument;
-
-	if (asyncTest()) {
-		if (pass && !strcmp(getConfig()->password, pass)) {
-			return 1;
-		}
-		addMessage(MPV + 1, "Unlocking player after wrong password");
-		/* unlock mutex locked in asyncTest() */
-		pthread_mutex_unlock(&_asynclock);
-		/* TODO this may be potentially dangerous! */
-		unlockClient(-1);
-		addMessage(-1, "Wrong password!");
-	}
-	return 0;
 }
 
 /**
@@ -128,64 +100,21 @@ void setStream(char const *const stream, char const *const name) {
 	addMessage(MPV + 1, "Play Stream %s (%s)", name, stream);
 }
 
-/**
- * sends a command to the player
- * also makes sure that commands are not overwritten
- */
-void setCommand(mpcmd_t cmd, char *arg) {
-	mpconfig_t *config = getConfig();
-
-	if ((cmd == mpc_idle) ||
-		(config->status == mpc_quit) || (config->status == mpc_reset)) {
-		return;
-	}
-
-	if (cmd == mpc_reset) {
-		config->watchdog = WATCHDOG_TIMEOUT;
-		config->command = cmd;
-		return;
-	}
-
-	if (pthread_mutex_trylock(&_pcmdlock) == EBUSY) {
-		/* Wait until someone unlocks */
-		addMessage(MPV + 1, "%s waiting to be set", mpcString(cmd));
-		pthread_mutex_lock(&_pcmdlock);
-	}
-
-	/* wait for the last command to be handled */
-	while (config->command != mpc_idle) {
-		addMessage(MPV + 1, "%s blocked on %s/%s", mpcString(cmd),
-				   mpcString(config->command), mpcString(config->status));
-		pthread_cond_wait(&_pcmdcond, &_pcmdlock);
-		addMessage(MPV + 1, "unblocked on %s/%s", mpcString(config->command),
-				   mpcString(config->status));
-	}
-
-	/* player is being reset or about to quit - do not handle any commands */
-	if ((config->status != mpc_reset) && (config->status != mpc_quit)) {
-		addMessage(MPV + 1, "Setting %s..", mpcString(cmd));
-		/* someone did not clean up! */
-		assert(config->argument == NULL);
-		config->command = cmd;
-		config->argument = arg;
-	}
-	else {
-		addMessage(-1, "%s dropped for %s!", mpcString(cmd),
-				   mpcString(config->status));
-	}
-	pthread_mutex_unlock(&_pcmdlock);
-}
-
 static int32_t oactive = 1;
 
-static int32_t toPlayer(int32_t fd, const char *msg) {
-	return dowrite(fd, msg, strlen(msg));
+/*
+ * send something to a player
+ * player: 0 - currently active player
+ *         1 - inactive player
+ */
+int32_t toPlayer(int32_t player, const char *msg) {
+	return dowrite(p_command[player?(fdset?0:1):fdset][1], msg, strlen(msg));
 }
 
 /**
  * make mpeg123 play the given title
  */
-static void sendplay(int32_t fdset) {
+void sendplay( void ) {
 	char line[MAXPATHLEN + 13] = "load ";
 	mpconfig_t *control = getConfig();
 
@@ -205,7 +134,7 @@ static void sendplay(int32_t fdset) {
 		strtcat(line, fullpath(control->current->title->path), MAXPATHLEN + 6);
 	}
 	strtcat(line, "\n", MAXPATHLEN + 6);
-	if (toPlayer(fdset, line) == -1) {
+	if (toPlayer(0, line) == -1) {
 		fail(errno, "Could not write\n%s", line);
 	}
 	notifyChange(MPCOMM_TITLES);
@@ -318,10 +247,6 @@ void *setProfile(void *arg) {
 		plCheck(0);
 
 		addMessage(MPV + 1, "Profile set to %s.", profile->name);
-		if (control->argument != NULL) {
-			/* do not free, the string has become the new profile entry! */
-			control->argument = NULL;
-		}
 	}
 	else {
 		addMessage(-1, "No valid profile selected!");
@@ -348,189 +273,6 @@ void *setProfile(void *arg) {
 	return arg;
 }
 
-/**
- * asnchronous functions to run in the background and allow updates being sent to the
- * client
- */
-static void *plCheckDoublets(void *arg) {
-	pthread_mutex_t *lock = (pthread_mutex_t *) arg;
-	int32_t i;
-
-	addMessage(0, "Checking for doublets..");
-	/* update database with current playcount etc */
-	dbWrite(0);
-
-	i = dbNameCheck();
-	if (i > 0) {
-		addMessage(0, "Marked %i doublets", i);
-		applyLists(0);
-		plCheck(1);
-	}
-	else {
-		addMessage(0, "No doublets found");
-	}
-	unlockClient(-1);
-	pthread_mutex_unlock(lock);
-	return NULL;
-}
-
-static void *plDbClean(void *arg) {
-	mpconfig_t *control = getConfig();
-	pthread_mutex_t *lock = (pthread_mutex_t *) arg;
-	int32_t i;
-	int32_t changed = 0;
-
-	addMessage(0, "Database Cleanup");
-
-	/* update database with current playcount etc */
-	dbWrite(0);
-
-	addMessage(0, "Checking for deleted titles..");
-	i = dbCheckExist();
-
-	if (i > 0) {
-		addMessage(0, "Removed %i titles", i);
-		changed = 1;
-	}
-	else {
-		addMessage(0, "No titles removed");
-	}
-
-	addMessage(0, "Checking for new titles..");
-	i = dbAddTitles(control->musicdir);
-
-	if (i > 0) {
-		addMessage(0, "Added %i new titles", i);
-		changed=1;
-	}
-	else {
-		addMessage(0, "No titles to be added");
-	}
-
-	if (changed) {
-		dbWrite(1);
-		setArtistSpread();
-		plCheck(0);
-	}
-
-	unlockClient(-1);
-	pthread_mutex_unlock(lock);
-	return NULL;
-}
-
-static void *plDbFix(void *arg) {
-	pthread_mutex_t *lock = (pthread_mutex_t *) arg;
-
-	addMessage(0, "Database smooth");
-	dumpInfo(1);
-	unlockClient(-1);
-	pthread_mutex_unlock(lock);
-	return NULL;
-}
-
-static void *plDbInfo(void *arg) {
-	pthread_mutex_t *lock = (pthread_mutex_t *) arg;
-
-	addMessage(0, "Database Info");
-	dumpInfo(0);
-	unlockClient(-1);
-	pthread_mutex_unlock(lock);
-	return NULL;
-}
-
-/* simple wrapper to run setProfile as an own thread */
-static void *plSetProfile(void *arg) {
-	pthread_mutex_t *lock = (pthread_mutex_t *) arg;
-
-	setProfile(NULL);
-	pthread_mutex_unlock(lock);
-	return NULL;
-}
-
-/**
- * run the given command asynchronously to allow updates during execution
- * if channel is != -1 then playing the song will be paused during execution
- */
-static void asyncRun(void *cmd(void *)) {
-	pthread_t pid;
-
-	if (pthread_create(&pid, NULL, cmd, &_asynclock) < 0) {
-		addMessage(0, "Could not create async thread!");
-	}
-}
-
-/**
- * adds searchresults to the playlist
- * range - title-display/artist/album
- * arg - either a title key or a string
- * insert - play next or append to the end of the playlist
- */
-static int32_t playResults(mpcmd_t range, const char *arg,
-						   const int32_t insert) {
-	mpconfig_t *config = getConfig();
-	mpplaylist_t *pos = config->current;
-	mpplaylist_t *res = config->found->titles;
-	mptitle_t *title = NULL;
-	int32_t key = atoi(arg);
-
-	/* insert results at current pos or at the end? */
-	if ((pos != NULL) && (insert == 0)) {
-		while (pos->next != NULL) {
-			pos = pos->next;
-		}
-	}
-
-	if ((range == mpc_title) || (range == mpc_display)) {
-		/* Play the current resultlist */
-		if (key == 0) {
-			/* should not happen but better safe than sorry! */
-			if (config->found->tnum == 0) {
-				addMessage(0, "No results to be added!");
-				return 0;
-			}
-			if (config->found->titles == NULL) {
-				addMessage(0, "%i titles found but none in list!",
-						   config->found->tnum);
-				return 0;
-			}
-
-			while (res != NULL) {
-				pos = addToPL(res->title, pos, 0);
-				if (config->current == NULL) {
-					config->current = pos;
-				}
-				res = res->next;
-			}
-
-			notifyChange(MPCOMM_TITLES);
-			return config->found->tnum;
-		}
-
-		/* play only one */
-		title = getTitleByIndex(key);
-		if (title == NULL) {
-			addMessage(0, "No title with key %i!", key);
-			return 0;
-		}
-		/*
-		 * Do not touch marking, we searched the title so it's playing out of
-		 * order. It has been played before? Don't care, we want it now and it
-		 * won't come back! It's not been played before? Then play it now and
-		 * whenever it's time comes.
-		 */
-		pos = addToPL(title, pos, 0);
-		if (config->current == NULL) {
-			config->current = pos;
-		}
-
-		notifyChange(MPCOMM_TITLES);
-		return 1;
-	}
-
-	addMessage(0, "Range not supported!");
-	return 0;
-}
-
 static char *getProfileName(int32_t profile) {
 	mpconfig_t *config = getConfig();
 
@@ -547,16 +289,13 @@ static char *getProfileName(int32_t profile) {
 	}
 }
 
-static void *killPlayers(pid_t pid[2], int32_t p_command[2][2],
-						 int32_t p_status[2][2], int32_t p_error[2][2],
-						 int32_t restart) {
+void *killPlayers(int32_t restart) {
 	uint64_t i;
 	mpconfig_t *control = getConfig();
 	uint32_t players = (control->fade > 0) ? 2 : 1;
 
 	if (restart) {
 		setCurrentActivity("Restarting players");
-		control->watchdog = WATCHDOG_TIMEOUT;
 		if (control->current == NULL) {
 			addMessage(-1, "Restarting on empty player!");
 		}
@@ -578,62 +317,50 @@ static void *killPlayers(pid_t pid[2], int32_t p_command[2][2],
 		if ((control->status == mpc_start) && (control->mpmode & PM_DATABASE)) {
 			addMessage(-1, "Music database failure!");
 			control->status = mpc_quit;
-			control->watchdog = 0;
+		}
+		else {
+			control->status=mpc_reset;
 		}
 	}
 	else {
+		control->status=mpc_quit;
 		setCurrentActivity("Stopping players");
 	}
 
 	/* ask nicely first.. */
 	for (i = 0; i < players; i++) {
 		addMessage(2, "Stopping player %" PRId64, i);
-		toPlayer(p_command[i][1], "QUIT\n");
+		toPlayer(i, "QUIT\n");
 		close(p_command[i][1]);
 		close(p_status[i][0]);
 		close(p_error[i][0]);
 		sleep(1);
-		if (waitpid(pid[i], NULL, WNOHANG | WCONTINUED) != pid[i]) {
+		if (waitpid(p_pid[i], NULL, WNOHANG | WCONTINUED) != p_pid[i]) {
 			addMessage(1, "Terminating player %" PRId64, i);
-			kill(pid[i], SIGTERM);
+			kill(p_pid[i], SIGTERM);
 			sleep(1);
-			if (waitpid(pid[i], NULL, WNOHANG | WCONTINUED) != pid[i]) {
+			if (waitpid(p_pid[i], NULL, WNOHANG | WCONTINUED) != p_pid[i]) {
 				addMessage(0, "Killing player %" PRId64, i);
-				kill(pid[i], SIGKILL);
+				kill(p_pid[i], SIGKILL);
 				sleep(1);
-				if (waitpid(pid[i], NULL, WNOHANG | WCONTINUED) != pid[i]) {
-					addMessage(-1, "Could not get rid of %i!", pid[i]);
+				if (waitpid(p_pid[i], NULL, WNOHANG | WCONTINUED) != p_pid[i]) {
+					addMessage(-1, "Could not get rid of %i!", p_pid[i]);
 				}
 			}
 		}
 	}
-	/* nothing is playing */
-	control->status=mpc_idle;
+
 	addMessage(MPV+1, "Players stopped!");
 	closeAudio();
 	if (!asyncTest()) {
 		addMessage(MPV + 1, "Shutting down on active async!");
 	}
-	pthread_mutex_unlock(&_asynclock);
-	/* drain command queue */
-	while (pthread_mutex_trylock(&_pcmdlock) == EBUSY) {
-		control->command = mpc_idle;
-		if (control->argument) {
-			free(control->argument);
-			control->argument = NULL;
-		}
-		addMessage(0, "Draining queue");
-		pthread_cond_signal(&_pcmdcond);
-		/* make sure to be slower than anyone else */
-		usleep(500);
-	}
-	pthread_mutex_unlock(&_pcmdlock);
-
+	unlockController();
 	setCurrentActivity("All unlocked");
 	return NULL;
 }
 
-static void stopPlay(int32_t channel) {
+void stopPlay(void) {
 	mpconfig_t *control = getConfig();
 
 	if (control->status == mpc_stop) {
@@ -643,21 +370,21 @@ static void stopPlay(int32_t channel) {
 
 	if (control->status != mpc_idle) {
 		control->status = mpc_stop;
-		toPlayer(channel, "STOP\n");
+		toPlayer(0, "STOP\n");
 	}
 }
 
 /* stops the current title. That means send a stop to a stream and a pause
  * to a database title. */
-static void pausePlay(int32_t channel) {
+void pausePlay(void) {
 	mpconfig_t *control = getConfig();
 
 	if (control->status == mpc_play) {
 		if (control->mpmode & PM_STREAM) {
-			stopPlay(channel);
+			stopPlay();
 		}
 		else {
-			toPlayer(channel, "PAUSE\n");
+			toPlayer(0, "PAUSE\n");
 		}
 	}
 }
@@ -672,29 +399,16 @@ static void pausePlay(int32_t channel) {
  */
 void *reader() {
 	mpconfig_t *control = getConfig();
-	mptitle_t *ctitle = NULL;	/* the title commands should use */
 	fd_set fds;
 	struct timeval to;
-	struct timespec ts;
 	int64_t i, key;
 	int32_t invol = 80;
 	int32_t outvol = 80;
-	int32_t fdset = 0;
-	int32_t profile;
 	char line[MAXPATHLEN];
 	char *a, *t;
-	int32_t order = 1;
 	float intime = 0.0;
 	float oldtime = 0.0;
 	int32_t fading = 1;
-	int32_t p_status[2][2];		/* status pipes to mpg123 */
-	int32_t p_command[2][2];	/* command pipes to mpg123 */
-	int32_t p_error[2][2];		/* error pipes to mpg123 */
-	pid_t pid[2];
-	mpcmd_t cmd = mpc_idle;
-	uint32_t update = 0;
-	uint32_t insert = 0;
-	uint32_t skipped = 0;
 
 	blockSigint();
 
@@ -704,9 +418,6 @@ void *reader() {
 		addMessage(MPV + 1, "No crossfading");
 		fading = 0;
 	}
-
-	ts.tv_nsec = 250000;
-	ts.tv_sec = 0;
 
 	/* start the needed mpg123 instances */
 	/* start the player processes */
@@ -720,17 +431,17 @@ void *reader() {
 			(pipe(p_command[i]) != 0) || (pipe(p_error[i]) != 0)) {
 			fail(errno, "Could not create pipes!");
 		}
-		pid[i] = fork();
+		p_pid[i] = fork();
 		/* todo: consider spawn() instead
 		 * https://unix.stackexchange.com/questions/252901/get-output-of-posix-spawn
 		 */
 
-		if (0 > pid[i]) {
+		if (0 > p_pid[i]) {
 			fail(errno, "could not fork");
 		}
 
 		/* child process */
-		if (0 == pid[i]) {
+		if (0 == p_pid[i]) {
 			if (dup2(p_command[i][0], STDIN_FILENO) != STDIN_FILENO) {
 				fail(errno, "Could not dup stdin for player %" PRId64, i + 1);
 			}
@@ -760,7 +471,7 @@ void *reader() {
 		close(p_error[i][1]);
 	}
 
-	control->watchdog = 0;
+	watchdog = 0;
 
 	/* check if we can control the system's volume */
 	control->volume = getVolume();
@@ -788,7 +499,6 @@ void *reader() {
 		to.tv_sec = 1;
 		to.tv_usec = 0;			/* 1/10 second */
 		i = select(FD_SETSIZE, &fds, NULL, NULL, &to);
-		update = 0;
 
 		/**
 		 * status is not idle but we did not get any updates from either player
@@ -799,20 +509,20 @@ void *reader() {
 		 * changes - most likely due to a DSL reconnect - or if the stream host
 		 * fails.
 		 */
-		if (control->watchdog >= WATCHDOG_TIMEOUT) {
+		if (watchdog >= WATCHDOG_TIMEOUT) {
 			addMessage(MPV + 1, "Player restart! cmd:%s - status:%s",
 					   mpcString(control->command),
 					   mpcString(control->status));
-			return killPlayers(pid, p_command, p_status, p_error, 1);
+			return killPlayers(1);
 		}
 		/* no watchdog on start as this may be a slow DNS, wait until mpg123
 		   reports an error instead */
 		if ((i == 0) && (control->mpmode & PM_STREAM) &&
 			(control->status & ~(mpc_idle|mpc_start))) {
-			control->watchdog++;
+			watchdog++;
 		}
 		else {
-			control->watchdog = 0;
+			watchdog = 0;
 		}
 
 		if (fading) {
@@ -843,15 +553,14 @@ void *reader() {
 										   fullpath(control->current->title->path));
 								/*  *INDENT-ON*  */
 							}
-							return killPlayers(pid, p_command, p_status,
-											   p_error, 1);
+							return killPlayers(1);
 							break;
 						case 'F':
 							if (outvol > 0) {
 								outvol--;
 								snprintf(line, MAXPATHLEN, "volume %i\n",
 										 outvol);
-								toPlayer(p_command[fdset ? 0 : 1][1], line);
+								toPlayer(1, line);
 							}
 							break;
 						}
@@ -902,7 +611,7 @@ void *reader() {
 							if (control->current->prev != NULL) {
 								strip(control->current->prev->title->title,
 									  line + 13, NAMELEN - 1);
-								update = 1;
+								notifyChange(MPCOMM_TITLES);
 							}
 						}
 
@@ -937,7 +646,7 @@ void *reader() {
 								/* carry over stream title as album entry */
 								strcpy(control->current->title->album,
 									   control->current->prev->title->title);
-								update = 1;
+								notifyChange(MPCOMM_TITLES);
 							}
 						}
 					}
@@ -976,12 +685,11 @@ void *reader() {
 					if (invol < 100) {
 						invol++;
 						snprintf(line, MAXPATHLEN, "volume %i\n", invol);
-						toPlayer(p_command[fdset][1], line);
+						toPlayer(0, line);
 					}
 
 					if (intime != oldtime) {
 						oldtime = intime;
-						update = 1;
 					}
 					else {
 						break;
@@ -1015,8 +723,8 @@ void *reader() {
 
 						if ((fading) && (rem <= control->fade)) {
 							/* should the playcount be increased? */
-							playCount(control->current->title, skipped);
-							skipped = 0;
+							playCount(control->current->title, p_skipped);
+							p_skipped = 0;
 
 							if (control->current->next == control->current) {
 								control->status = mpc_idle;	/* Single song: STOP */
@@ -1028,8 +736,8 @@ void *reader() {
 								fdset = fdset ? 0 : 1;
 								invol = 0;
 								outvol = 100;
-								toPlayer(p_command[fdset][1], "volume 0\n");
-								sendplay(p_command[fdset][1]);
+								toPlayer(0, "volume 0\n");
+								sendplay();
 							}
 						}
 					}
@@ -1059,7 +767,7 @@ void *reader() {
 								addMessage(MPV + 1,
 										   "Trying to restart stream");
 								control->status = mpc_start;
-								sendplay(p_command[fdset][1]);
+								sendplay( );
 							}
 							else {
 								control->status = mpc_idle;
@@ -1069,37 +777,37 @@ void *reader() {
 						else if ((control->current != NULL) &&
 								 !(control->mpmode & PM_SWITCH)) {
 							addMessage(MPV + 2, "Title change");
-							if (order == 1) {
-								if (playCount(control->current->title, skipped)
+							if (p_order == 1) {
+								if (playCount(control->current->title, p_skipped)
 									== 1) {
-									order = 0;
+									p_order = 0;
 								}
-								skipped = 0;
+								p_skipped = 0;
 							}
 
-							if (order < 0) {
+							if (p_order < 0) {
 								while ((control->current->prev != NULL)
-									   && order < 0) {
+									   && p_order < 0) {
 									control->current = control->current->prev;
-									order++;
+									p_order++;
 								}
 								/* ignore skip before first title in playlist */
 							}
 
-							if (order > 0) {
+							if (p_order > 0) {
 								while ((control->current->next != NULL)
-									   && order > 0) {
+									   && p_order > 0) {
 									control->current = control->current->next;
-									order--;
+									p_order--;
 								}
 								/* stop on end of playlist */
-								if (order > 0) {
+								if (p_order > 0) {
 									control->status = mpc_idle;	/* stop */
 								}
 							}
 
 							if (control->status != mpc_idle) {
-								sendplay(p_command[fdset][1]);
+								sendplay( );
 							}
 
 							if (control->mpmode == PM_DATABASE) {
@@ -1107,7 +815,7 @@ void *reader() {
 							}
 						}
 						/* always re-enable proper playorder after stop */
-						order = 1;
+						p_order = 1;
 						break;
 
 					case 1:	/* PAUSE */
@@ -1126,6 +834,7 @@ void *reader() {
 							}
 						}
 						control->status = mpc_play;
+						notifyChange(MPCOMM_CONFIG);
 						break;
 
 					default:
@@ -1133,8 +842,6 @@ void *reader() {
 								   cmd, line);
 						break;
 					}
-
-					update = 1;
 					break;
 
 				case 'V':		/* volume reply */
@@ -1160,7 +867,7 @@ void *reader() {
 							/*  *INDENT-ON*  */
 						}
 					}
-					return killPlayers(pid, p_command, p_status, p_error, 1);
+					return killPlayers(1);
 					break;
 
 				default:
@@ -1179,7 +886,7 @@ void *reader() {
 			if (key > 1) {
 				if (strstr(line, "rror: ")) {
 					addMessage(0, "%s", line);
-					return killPlayers(pid, p_command, p_status, p_error, 1);
+					return killPlayers(1);
 				}
 				else if (strstr(line, "Warning: ") == line) {
 					/* ignore content-type warnings */
@@ -1192,556 +899,14 @@ void *reader() {
 				}
 			}
 		}
-
-		cmd = MPC_CMD(control->command);
-
-		/* get the target title for fav and dnp commands */
-		if (control->current != NULL) {
-			ctitle = control->current->title;
-			if ((cmd == mpc_fav) || (cmd == mpc_dnp)) {
-				if (control->argument != NULL) {
-					/* todo: check if control->argument is a number */
-					if (MPC_EQDISPLAY(control->command)) {
-						ctitle = getTitleByIndex(atoi(control->argument));
-					}
-					else {
-						ctitle =
-							getTitleForRange(control->command,
-											 control->argument);
-					}
-					/* someone is testing parameters, mh? */
-					if (ctitle == NULL) {
-						addMessage(0, "Nothing matches %s!",
-								   control->argument);
-					}
-					sfree(&(control->argument));
-				}
-			}
-		}
-
-		switch (cmd) {
-		case mpc_start:
-			addMessage(MPV + 1, "mpc_start (%s)", mpcString(control->status));
-			if (control->status == mpc_start) {
-				addMessage(MPV + 1, "Already starting!");
-			}
-			else {
-				plCheck(0);
-				control->status = mpc_start;
-				sendplay(p_command[fdset][1]);
-				notifyChange(MPCOMM_CONFIG);
-			}
-			break;
-
-		case mpc_play:
-			addMessage(MPV + 1, "mpc_play (%s)", mpcString(control->status));
-			/* has the player been properly initialized yet? */
-			if (control->status != mpc_start) {
-				/* simple stop */
-				if (control->status == mpc_play) {
-					pausePlay(p_command[fdset][1]);
-				}
-				/* play */
-				else {
-					/* play stream */
-					if (control->mpmode & PM_STREAM) {
-						/* wake up UI in case it's in sleep mode */
-						control->status=mpc_start;
-						sendplay(p_command[fdset][1]);
-					}
-					/* unpause on normal play */
-					else {
-						toPlayer(p_command[fdset][1], "PAUSE\n");
-					}
-				}
-			}
-			/* initialize player after startup */
-			/* todo: what happens if the user sends a play during startup? */
-			else {
-				plCheck(0);
-				if (control->current != NULL) {
-					addMessage(MPV + 1, "Autoplay..");
-					sendplay(p_command[fdset][1]);
-				}
-			}
-			break;
-
-		case mpc_prev:
-			/* This /may/ make sense on streamlists but so far a stream has no
-			 * previous or next title */
-			if (control->mpmode & PM_STREAM)
-				break;
-			if (control->playtime > 3) {
-				toPlayer(p_command[fdset][1], "JUMP 0\n");
-				control->percent = 0;
-				control->playtime = 0;
-			}
-			else if (asyncTest()) {
-				order = -1;
-				if (control->argument != NULL) {
-					order = -atoi(control->argument);
-				}
-				toPlayer(p_command[fdset][1], "STOP\n");
-				pthread_mutex_unlock(&_asynclock);
-			}
-			break;
-
-		case mpc_next:
-			/* This /may/ make sense on streamlists but so far a stream has no
-			 * previous or next title */
-			if (control->mpmode & PM_STREAM)
-				break;
-			if ((control->current != NULL) && asyncTest()) {
-				order = 1;
-				if (control->argument != NULL) {
-					order = atoi(control->argument);
-				}
-				else {
-					skipped = 1;
-				}
-				toPlayer(p_command[fdset][1], "STOP\n");
-				pthread_mutex_unlock(&_asynclock);
-			}
-			break;
-
-		case mpc_doublets:
-			if (control->mpmode & PM_STREAM)
-				break;
-			if (checkPasswd()) {
-				asyncRun(plCheckDoublets);
-			}
-			break;
-
-		case mpc_dbclean:
-			if (control->mpmode & PM_STREAM)
-				break;
-			if (checkPasswd()) {
-				asyncRun(plDbClean);
-			}
-			break;
-
-		case mpc_stop:
-			addMessage(MPV + 1, "mpc_stop (%s)", mpcString(control->status));
-			stopPlay(p_command[fdset][1]);
-			break;
-
-		case mpc_dnp:
-			if (control->mpmode & PM_STREAM)
-				break;
-			if ((ctitle != NULL) && asyncTest()) {
-				if (ctitle == control->current->title) {
-					/* current title is affected, play the next one */
-					order = 0;
-					toPlayer(p_command[fdset][1], "STOP\n");
-				}
-				handleRangeCmd(ctitle, control->command);
-				setArtistSpread();
-				plCheck(1);
-				pthread_mutex_unlock(&_asynclock);
-			}
-			break;
-
-		case mpc_fav:
-			if (control->mpmode & PM_STREAM)
-				break;
-			if ((ctitle != NULL) && asyncTest()) {
-				handleRangeCmd(ctitle, control->command);
-				notifyChange(MPCOMM_TITLES);
-				pthread_mutex_unlock(&_asynclock);
-				/* when playing only favourites, adding titles can make
-				 * a difference */
-				if(getFavplay()) {
-					setArtistSpread();
-				}
-			}
-			break;
-
-		case mpc_repl:
-			if (control->mpmode & PM_STREAM)
-				break;
-			toPlayer(p_command[fdset][1], "JUMP 0\n");
-			control->percent = 0;
-			control->playtime = 0;
-			break;
-
-		case mpc_quit:
-			/* The player does not know about the main App so anything setting
-			 * mcp_quit MUST make sure that the main app terminates as well ! */
-			if (checkPasswd()) {
-				control->status = mpc_quit;
-				pthread_mutex_unlock(&_asynclock);
-			}
-			break;
-
-		case mpc_profile:
-			if (asyncTest()) {
-				if (control->argument == NULL) {
-					addMessage(-1, "No profile given!");
-				}
-				else {
-					profile = atoi(control->argument);
-					if ((profile != 0) && (profile != control->active)) {
-						if (!(control->mpmode & (PM_STREAM | PM_DATABASE))) {
-							wipeTitles(control->root);
-						}
-						/* switching channels started */
-						control->mpmode |= PM_SWITCH;
-						/* write database if needed */
-						dbWrite(0);
-						if (control->active < 0) {
-							control->stream[(-control->active) - 1]->volume =
-								control->volume;
-						}
-						else if (control->active > 0) {
-							control->profile[control->active - 1]->volume =
-								control->volume;
-						}
-						control->active = profile;
-						asyncRun(plSetProfile);
-					}
-					else {
-						addMessage(0, "Invalid profile %i", profile);
-						pthread_mutex_unlock(&_asynclock);
-					}
-				}
-			}
-			break;
-
-		case mpc_newprof:
-			if ((control->current != NULL) && asyncTest()) {
-				if (control->argument == NULL) {
-					addMessage(-1, "No profile given!");
-				}
-				/* save the current stream */
-				else if (control->active == 0) {
-					control->streams++;
-					control->stream =
-						(profile_t **) frealloc(control->stream,
-												control->streams *
-												sizeof (profile_t *));
-					control->stream[control->streams - 1] =
-						createProfile(control->argument, control->streamURL, 0,
-									  control->volume);
-					control->active = -(control->streams);
-				}
-				/* just add argument as new profile */
-				else {
-					control->profiles++;
-					control->profile =
-						(profile_t **) frealloc(control->profile,
-												control->profiles *
-												sizeof (profile_t *));
-					control->profile[control->profiles - 1] =
-						createProfile(control->argument, NULL, 0,
-									  control->volume);
-				}
-				writeConfig(NULL);
-				control->argument = NULL;
-				pthread_mutex_unlock(&_asynclock);
-				notifyChange(MPCOMM_CONFIG);
-			}
-			break;
-
-		case mpc_clone:
-			if ((control->current != NULL) && asyncTest()) {
-				if (control->argument == NULL) {
-					addMessage(-1, "No profile given!");
-				}
-				/* only clone profiles */
-				else if (control->active > 0) {
-					control->profiles++;
-					control->profile =
-						(profile_t **) frealloc(control->profile,
-												control->profiles *
-												sizeof (profile_t *));
-					control->profile[control->profiles - 1] =
-						createProfile(control->argument, NULL, 0,
-									  control->volume);
-					control->active = control->profiles;
-					writeList(mpc_fav);
-					writeList(mpc_dnp);
-
-					writeConfig(NULL);
-					control->argument = NULL;
-					notifyChange(MPCOMM_CONFIG);
-				}
-				pthread_mutex_unlock(&_asynclock);
-			}
-			break;
-
-		case mpc_remprof:
-			if (control->argument == NULL) {
-				addMessage(-1, "No profile given!");
-			}
-			else {
-				if (asyncTest()) {
-					profile = atoi(control->argument);
-					if (profile > 0) {
-						if (profile == 1) {
-							addMessage(-1, "mixplay cannot be removed.");
-						}
-						else if (profile == control->active) {
-							addMessage(-1, "Cannot remove active profile!");
-						}
-						else if (profile > control->profiles) {
-							addMessage(-1, "Profile #%i does not exist!",
-									   profile);
-						}
-						else {
-							free(control->profile[profile - 1]);
-							for (i = profile; i < control->profiles; i++) {
-								control->profile[i - 1] = control->profile[i];
-								if (i == control->active) {
-									control->active = control->active - 1;
-								}
-							}
-							control->profiles--;
-							writeConfig(NULL);
-						}
-					}
-					else if (profile < 0) {
-						profile = (-profile);
-						if (profile > control->streams) {
-							addMessage(-1, "Stream #%i does not exist!",
-									   profile);
-						}
-						else if (-profile == control->active) {
-							addMessage(-1, "Cannot remove active profile!");
-						}
-						else {
-							freeProfile(control->stream[profile - 1]);
-							for (i = profile; i < control->streams; i++) {
-								control->stream[i - 1] = control->stream[i];
-								if (i == control->active) {
-									control->active = control->active - 1;
-								}
-							}
-							control->streams--;
-							control->stream =
-								(profile_t **) frealloc(control->stream,
-														control->streams *
-														sizeof (profile_t *));
-
-							writeConfig(NULL);
-						}
-					}
-					else {
-						addMessage(-1, "Cannot remove empty profile!");
-					}
-					pthread_mutex_unlock(&_asynclock);
-				}
-			}
-			break;
-
-		case mpc_path:
-			if ((control->current != NULL) && asyncTest()) {
-				if (control->argument == NULL) {
-					addMessage(-1, "No path given!");
-				}
-				else {
-					if (setArgument(control->argument)) {
-						control->active = 0;
-						stopPlay(p_command[fdset][1]);
-						sendplay(p_command[fdset][1]);
-					}
-				}
-				pthread_mutex_unlock(&_asynclock);
-			}
-			break;
-
-		case mpc_ivol:
-			adjustVolume(+VOLSTEP);
-			update = 1;
-			break;
-
-		case mpc_dvol:
-			adjustVolume(-VOLSTEP);
-			update = 1;
-			break;
-
-		case mpc_bskip:
-			if (control->mpmode & PM_STREAM)
-				break;
-			toPlayer(p_command[fdset][1], "JUMP -64\n");
-			break;
-
-		case mpc_fskip:
-			if (control->mpmode & PM_STREAM)
-				break;
-			toPlayer(p_command[fdset][1], "JUMP +64\n");
-			break;
-
-		case mpc_dbinfo:
-			if (control->mpmode & PM_STREAM)
-				break;
-			if ((control->argument) && checkPasswd()) {
-				asyncRun(plDbFix);
-			}
-			else if (asyncTest()) {
-				asyncRun(plDbInfo);
-			}
-			break;
-
-			/* this is kinda ugly as the logic needs to be all over the place
-			 * the state is initially set to busy in the server code, then the server
-			 * waits for the search() called here to set the state to send thus
-			 * unlocking the server to send the reply and finally sets it to idle
-			 * again, unlocking the player */
-		case mpc_search:
-			if (control->mpmode & PM_STREAM)
-				break;
-			if (asyncTest()) {
-				/* if we mix two searches we're in trouble! */
-				assert(control->found->state != mpsearch_idle);
-				if (control->argument == NULL) {
-					if (MPC_ISARTIST(control->command)) {
-						control->argument = strdup(ctitle->artist);
-					}
-					else {
-						control->argument = strdup(ctitle->album);
-					}
-				}
-				if (search(control->argument, MPC_MODE(control->command)) ==
-					-1) {
-					addMessage(0, "Too many titles found!");
-				}
-				/* todo: a signal/unblock would be nicer here */
-				addMessage(MPV + 1, "Waiting to send results..");
-				while (control->found->state != mpsearch_idle) {
-					nanosleep(&ts, NULL);
-				}
-				addMessage(MPV + 1, "Results sent!");
-				pthread_mutex_unlock(&_asynclock);
-			}
-			break;
-
-		case mpc_insert:
-			if (control->mpmode & PM_STREAM)
-				break;
-			insert = 1;
-			/* fallthrough */
-
-		case mpc_append:
-			if (control->mpmode & PM_STREAM)
-				break;
-			if (control->argument != NULL) {
-				playResults(MPC_RANGE(control->command), control->argument,
-							insert);
-			}
-			insert = 0;
-			break;
-
-		case mpc_setvol:
-			if (control->argument != NULL) {
-				setVolume(atoi(control->argument));
-			}
-			update = 1;
-			break;
-
-		case mpc_smode:
-			if (control->mpmode & PM_STREAM)
-				break;
-			control->searchDNP = ~(control->searchDNP);
-			break;
-
-		case mpc_deldnp:
-		case mpc_delfav:
-			if (control->mpmode & PM_STREAM)
-				break;
-			if (control->argument != NULL) {
-				delFromList(cmd, control->argument);
-			}
-			break;
-
-		case mpc_remove:
-			if (control->mpmode & PM_STREAM)
-				break;
-			if (control->argument != NULL) {
-				control->current =
-					remFromPLByKey(atoi(control->argument));
-				plCheck(0);
-			}
-			break;
-
-		case mpc_mute:
-			toggleMute();
-			break;
-
-		case mpc_favplay:
-			if (control->mpmode & PM_STREAM)
-				break;
-			if (asyncTest()) {
-				if (countflag(MP_FAV) < 21) {
-					addMessage(-1,
-							   "Need at least 21 Favourites to enable Favplay.");
-					break;
-				}
-				if (toggleFavplay()) {
-					addMessage(MPV + 1, "Enabling Favplay");
-				}
-				else {
-					addMessage(MPV + 1, "Disabling Favplay");
-				}
-				cleanTitles(0);
-				writeConfig(NULL);
-				setArtistSpread();
-				plCheck(0);
-				sendplay(p_command[fdset][1]);
-				pthread_mutex_unlock(&_asynclock);
-			}
-			break;
-
-		case mpc_move:
-			if (control->mpmode & PM_STREAM)
-				break;
-			if (control->argument != NULL) {
-				t = strchr(control->argument, '/');
-				if (t != NULL) {
-					*t = 0;
-					t++;
-					moveTitleByIndex(atoi(control->argument), atoi(t));
-				}
-				else {
-					moveTitleByIndex(atoi(control->argument), 0);
-				}
-				notifyChange(MPCOMM_TITLES);
-			}
-			break;
-
-		case mpc_idle:
-			/* read current Hardware volume in case it changed externally
-			 * don't read before control->argument is NULL as someone may be
-			 * trying to set the volume right now */
-			if ((control->argument == NULL) && (control->volume != -1)) {
-				control->volume = getVolume();
-			}
-			break;
-
-		case mpc_reset:
-			addMessage(-1, "Force restart!");
-			control->status = mpc_reset;
-			return killPlayers(pid, p_command, p_status, p_error, 1);
-
-		default:
-			addMessage(0, "Received illegal command %i", cmd);
-			break;
-		}
-
-		sfree(&(control->argument));
-		control->command = mpc_idle;
-		pthread_cond_signal(&_pcmdcond);
-
-		/* notify UI that something has changed */
-		if (update) {
-			updateUI();
-		}
+		updateUI();
 	}
 	while (control->status != mpc_quit);
 
 	dbWrite(0);
 
 	/* stop player(s) gracefully */
-	return killPlayers(pid, p_command, p_status, p_error, 0);
+	return killPlayers(0);
 }
 
 #undef MPV

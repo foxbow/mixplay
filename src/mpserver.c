@@ -21,7 +21,7 @@
 
 #include "mpserver.h"
 #include "mpcomm.h"
-#include "player.h"
+#include "controller.h"
 #include "config.h"
 #include "utils.h"
 #include "database.h"
@@ -433,13 +433,16 @@ static void *clientHandler(void *args) {
 						/* search is synchronous */
 						if (MPC_CMD(cmd) == mpc_search) {
 							setCurClient(reqInfo.clientid);
-							/* this client cannot already search! */
-							assert(getConfig()->found->state == mpsearch_idle);
-							getConfig()->found->state = mpsearch_busy;
-							setCommand(cmd, reqInfo.arg ?
-									   strdup(reqInfo.arg) : NULL);
-							running |= CL_SRC;
-							state = req_update;
+							if (getConfig()->found->state == mpsearch_idle) {
+								setCommand(cmd, reqInfo.arg ?
+								    strdup(reqInfo.arg) : NULL);
+								running |= CL_SRC;
+								state = req_update;
+							}
+							else {
+								addMessage(-1, "Already searching!");
+								unlockClient(reqInfo.clientid);
+							}
 						}
 					}
 					else {		/* unresolvable POST request */

@@ -310,6 +310,7 @@ mpconfig_t *readConfig(void) {
 		_cconfig->msg = msgBuffInit();
 		_cconfig->found =
 			(searchresults_t *) falloc(1, sizeof (searchresults_t));
+		_cconfig->found->state=mpsearch_idle;
 	}
 	else {
 		/* This may even be assert() worthy */

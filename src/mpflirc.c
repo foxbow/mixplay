@@ -6,7 +6,7 @@
 #include <errno.h>
 
 #include "config.h"
-#include "player.h"
+#include "controller.h"
 /*
  * handles key events from the reserved HID device
  */
