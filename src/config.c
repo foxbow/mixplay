@@ -304,7 +304,6 @@ mpconfig_t *readConfig(void) {
 		fail(F_FAIL, "Cannot get HOME!");
 	}
 	pthread_mutex_lock(&conflock);
-
 	if (_cconfig == NULL) {
 		_cconfig = (mpconfig_t *) falloc(1, sizeof (mpconfig_t));
 		_cconfig->msg = msgBuffInit();
@@ -313,18 +312,15 @@ mpconfig_t *readConfig(void) {
 		_cconfig->found->state=mpsearch_idle;
 	}
 	else {
-		/* This may even be assert() worthy */
+		/* Happens on the first run! */
 		addMessage(-1, "Config being read twice!");
-		pthread_cond_signal(&confinit);
-		pthread_mutex_unlock(&conflock);
-		return _cconfig;
 	}
 
 	/* Set some default values */
 	_cconfig->root = NULL;
 	_cconfig->current = NULL;
 	_cconfig->volume = 80;
-	_cconfig->active = 0;
+	_cconfig->active = 1;
 	_cconfig->playtime = 0;
 	_cconfig->remtime = 0;
 	_cconfig->percent = 0;
@@ -355,7 +351,11 @@ mpconfig_t *readConfig(void) {
 	snprintf(conffile, MAXPATHLEN, "%s/.mixplay/mixplay.conf", home);
 	fp = fopen(conffile, "r");
 
-	if (NULL != fp) {
+	if (fp == NULL) {
+		pthread_mutex_unlock(&conflock);
+		return createConfig();
+	}
+	else {
 		do {
 			if ((line = fetchline(fp)) == NULL) {
 				continue;
@@ -448,9 +448,10 @@ mpconfig_t *readConfig(void) {
 		while (!feof(fp));
 
 		fclose(fp);
-	}
-	else {
-		addMessage(-1, "Could not open %s! Using default settings.", conffile);
+
+		if(_cconfig->profiles == 0) {
+			fail(F_FAIL, "FUCK!!");
+		}
 	}
 
 	pthread_cond_signal(&confinit);
@@ -570,8 +571,10 @@ mpconfig_t *createConfig() {
 		fflush(stdout);
 		memset(path, 0, MAXPATHLEN);
 		if (fgets(path, MAXPATHLEN, stdin) == NULL) {
+			printf("Got nothing..\n");
 			continue;
 		};
+		printf("Got %s\n", path);
 		path[strlen(path) - 1] = 0;	/* cut off CR */
 		abspath(path, getenv("HOME"), MAXPATHLEN);
 
@@ -582,7 +585,10 @@ mpconfig_t *createConfig() {
 			printf("%s is not a directory!\n", path);
 		}
 	}
+	printf("Writing config..\n");
 	writeConfig(path);
+	/* make sure we really wrote a valid config */
+	printf("Reading config..\n");
 	return readConfig();
 }
 

@@ -330,7 +330,10 @@ void *killPlayers(int32_t restart) {
 	/* ask nicely first.. */
 	for (i = 0; i < players; i++) {
 		addMessage(2, "Stopping player %" PRId64, i);
-		toPlayer(i, "QUIT\n");
+		if (toPlayer(i, "QUIT\n") == -1) {
+			/* apparently we're already dead.. oops! */
+			return NULL;
+		}
 		close(p_command[i][1]);
 		close(p_status[i][0]);
 		close(p_error[i][0]);

@@ -1696,6 +1696,9 @@ mptitle_t *recurse(char *curdir, mptitle_t * files) {
 	struct dirent **entry;
 	int32_t num, i;
 
+	/* this means the config is broken */
+	assert (curdir != NULL);
+
 	if ('/' == curdir[strlen(curdir) - 1]) {
 		curdir[strlen(curdir) - 1] = 0;
 	}

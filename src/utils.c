@@ -374,7 +374,6 @@ int32_t dowrite(const int32_t fd, const char *buf, const size_t buflen) {
 	while (sent < buflen) {
 		ret = write(fd, pos + sent, buflen - sent);
 		if (ret == -1) {
-			fail(errno, "Could not write %s (%zd)", buf, sent);
 			return -1;
 		}
 		sent = sent + ret;

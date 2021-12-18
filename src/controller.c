@@ -522,7 +522,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 	case mpc_newprof:
 		if ((config->current != NULL) && asyncTest()) {
 			if (arg == NULL) {
-				addMessage(-1, "No profile given!");
+				addMessage(-1, "No name given!");
 			}
 			/* save the current stream */
 			else if (config->active == 0) {
