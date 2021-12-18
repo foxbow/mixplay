@@ -139,7 +139,6 @@ function initKbdDiv () {
  * if clear is set, the entered value is unset after evaluating it
  */
 function sendArg (cmd) {
-  if (isstream) return
   const term = document.getElementById('kbdtext').value
 
   if (term.length > 1) {
@@ -1699,6 +1698,11 @@ function loadURL () {
   } else {
     showConfirm('Invalid Address!')
   }
+}
+
+function newActive () {
+  document.getElementById('kbdtext').value = document.getElementById('prev').innerHTML
+  showKbd(0x16)
 }
 
 /*
