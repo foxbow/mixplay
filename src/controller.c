@@ -710,7 +710,6 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 				arg = strdup(ctitle->album);
 			}
 		}
-		addMessage(0, "Starting earch for %s", arg);
 		if (search(arg, MPC_MODE(rcmd)) == -1) {
 			addMessage(0, "Too many titles found!");
 		}
