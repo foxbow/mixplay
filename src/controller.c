@@ -23,7 +23,6 @@
 #define MPV 10
 
 static pthread_mutex_t _pcmdlock = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t _pcmdcond = PTHREAD_COND_INITIALIZER;
 static pthread_mutex_t _asynclock = PTHREAD_MUTEX_INITIALIZER;
 
 /**
@@ -102,16 +101,8 @@ static int32_t playResults(mpcmd_t range, const char *arg,
  * reset controller on restart
  */
 void unlockController( void ) {
-	mpconfig_t *control=getConfig();
-	pthread_mutex_unlock(&_asynclock);
-	/* drain command queue */
-	while (pthread_mutex_trylock(&_pcmdlock) == EBUSY) {
-		control->command = mpc_idle;
-		addMessage(0, "Draining queue");
-		pthread_cond_signal(&_pcmdcond);
-		/* make sure to be slower than anyone else */
-		usleep(500);
-	}
+	/* make sure that the unlock has defined behaviour */
+	pthread_mutex_trylock(&_pcmdlock);
 	pthread_mutex_unlock(&_pcmdlock);
 }
 
@@ -123,8 +114,7 @@ int32_t asyncTest() {
 	int32_t ret = 0;
 
 	if (pthread_mutex_trylock(&_asynclock) != EBUSY) {
-		addMessage(MPV + 1, "Locking for %s/%s",
-				   mpcString(getConfig()->command),
+		addMessage(MPV + 1, "Locking for %s",
 				   mpcString(getConfig()->status));
 		ret = 1;
 	}
@@ -279,7 +269,17 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 	}
 
 	if (rcmd == mpc_reset) {
+		config->status = mpc_reset;
 		killPlayers(1);
+		return;
+	}
+
+	/* QUIT has precedence over all */
+	if (rcmd == mpc_quit) {
+		if (arg && !strcmp(getConfig()->password, arg)) {
+			config->status = mpc_quit;
+			killPlayers(0);
+		}
 		return;
 	}
 
@@ -289,20 +289,10 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		pthread_mutex_lock(&_pcmdlock);
 	}
 
-	/* wait for the last command to be handled */
-	while (config->command != mpc_idle) {
-		addMessage(MPV + 1, "%s blocked on %s/%s", mpcString(rcmd),
-				   mpcString(config->command), mpcString(config->status));
-		pthread_cond_wait(&_pcmdcond, &_pcmdlock);
-		addMessage(MPV + 1, "unblocked on %s/%s", mpcString(config->command),
-				   mpcString(config->status));
-	}
-
-	config->command = rcmd;
-	/* player is being reset or about to quit - do not handle any commands */
-	if ((config->status == mpc_reset) && (config->status == mpc_quit)) {
-		addMessage(0, "%s dropped for %s!", mpcString(rcmd),
-				   mpcString(config->status));
+	/* a quit or reset came in while the mutex was blocked, so forget about
+	 * everything until we had a clean restart */
+	if ((config->status == mpc_quit) || (config->status == mpc_reset)) {
+		pthread_mutex_unlock(&_pcmdlock);
 		return;
 	}
 
@@ -474,15 +464,6 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		toPlayer(0, "JUMP 0\n");
 		config->percent = 0;
 		config->playtime = 0;
-		break;
-
-	case mpc_quit:
-		/* The player does not know about the main App so anything setting
-		 * mcp_quit MUST make sure that the main app terminates as well ! */
-		if (checkPasswd(arg)) {
-			config->status = mpc_quit;
-			pthread_mutex_unlock(&_asynclock);
-		}
 		break;
 
 	case mpc_profile:
@@ -810,27 +791,16 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		break;
 
 	case mpc_idle:
-		/* read current Hardware volume in case it changed externally
-		 * don't read before arg is NULL as someone may be
-		 * trying to set the volume right now */
-		if ((arg == NULL) && (config->volume != -1)) {
-			config->volume = getVolume();
-		}
+	case mpc_quit:
+	case mpc_reset:
+		/* handled above */
 		break;
 
-	case mpc_reset:
-		addMessage(-1, "Force restart!");
-		config->status = mpc_reset;
-		 killPlayers(1);
-		return;
 
 	default:
 		addMessage(0, "Received illegal command %i", rcmd);
 		break;
 	}
-
-	config->command = mpc_idle;
-	pthread_cond_signal(&_pcmdcond);
 
 	pthread_mutex_unlock(&_pcmdlock);
 }

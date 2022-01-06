@@ -513,8 +513,7 @@ void *reader() {
 		 * fails.
 		 */
 		if (watchdog >= WATCHDOG_TIMEOUT) {
-			addMessage(MPV + 1, "Player restart! cmd:%s - status:%s",
-					   mpcString(control->command),
+			addMessage(MPV + 1, "Player restart! status: %s",
 					   mpcString(control->status));
 			return killPlayers(1);
 		}

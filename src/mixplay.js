@@ -1460,7 +1460,7 @@ function playerUpdate (data) {
     }
   }
 
-  setElement('status', 'cmd:' + data.mpcmd + ' - status:' + data.mpstatus)
+  setElement('status', data.mpstatus)
 }
 
 /*

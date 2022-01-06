@@ -158,8 +158,6 @@ typedef struct {
 	uint32_t playtime;			/* seconds time into song */
 	uint32_t remtime;			/* seconds remaining */
 	int32_t percent;			/* how many percent of the song have been played */
-	mpcmd_t command;			/* current command on the player */
-//	char *argument;				/* arguments to command */
 	mpcmd_t status;				/* status of the player/system */
 	pthread_t rtid;				/* thread ID of the reader */
 	pthread_t stid;				/* thread ID of the server */

@@ -237,7 +237,6 @@ char *serializeStatus(int32_t clientid, int32_t type) {
 	jsonAddInt(jo, "volume", data->volume);
 	jsonAddInt(jo, "status", data->status);
 	jsonAddStr(jo, "mpstatus", mpcString(data->status));
-	jsonAddStr(jo, "mpcmd", mpcString(data->command));
 	jsonAddInt(jo, "mpmode", data->mpmode);
 	jsonAddBool(jo, "mpfavplay", getFavplay());
 	jsonAddBool(jo, "searchDNP", data->searchDNP);

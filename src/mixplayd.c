@@ -25,6 +25,7 @@
 #include "mpflirc.h"
 #include "mpserver.h"
 #include "database.h"
+#include "mpalsa.h" /* for getVolume */
 
 /**
  * TODO: create a dedicated signal handler thread.
@@ -66,12 +67,7 @@ void fail(const int32_t error, const char *msg, ...) {
 	dumpState();
 
 	unlink(PIDPATH);
-	getConfig()->command = mpc_quit;
-	getConfig()->status = mpc_quit;
-
-	pthread_join(getConfig()->stid, NULL);
-	pthread_join(getConfig()->rtid, NULL);
-
+	/* Do not clean up, that may invalidate the core here! */
 	abort();
 }
 
@@ -80,6 +76,16 @@ void fail(const int32_t error, const char *msg, ...) {
  */
 static char _lasttitle[MAXPATHLEN + 1];
 static mpcmd_t _last = mpc_idle;
+
+static void _volumeUpdateHook() {
+	mpconfig_t *config=getConfig();
+	/* read current Hardware volume in case it changed externally
+	 * don't read before arg is NULL as someone may be
+	 * trying to set the volume right now */
+	if (config->volume != -1) {
+		config->volume = getVolume();
+	}
+}
 
 /*
  * print title and play changes
@@ -112,7 +118,7 @@ static void *debugHID() {
 	mpcmd_t cmd;
 
 	/* wait for the initialization to be done */
-	while ((config->status != mpc_play) && (config->status != mpc_quit)) {
+	while (config->status != mpc_play) {
 		sleep(1);
 	}
 
@@ -248,6 +254,7 @@ int32_t main(int32_t argc, char **argv) {
 			addUpdateHook(&_debugHidUpdateHook);
 			pthread_create(&hidtid, NULL, debugHID, NULL);
 		}
+		addUpdateHook(&_volumeUpdateHook);
 
 		/**
 		 * wait for the reader thread to terminate. If it terminated due to a

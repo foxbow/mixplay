@@ -325,7 +325,6 @@ mpconfig_t *readConfig(void) {
 	_cconfig->remtime = 0;
 	_cconfig->percent = 0;
 	_cconfig->status = mpc_idle;
-	_cconfig->command = mpc_idle;
 	_cconfig->dbname = (char *) falloc(MAXPATHLEN + 1, 1);
 	_cconfig->password = strdup("mixplay");
 	_cconfig->skipdnp = 3;
@@ -741,8 +740,7 @@ int32_t playerIsBusy(void) {
 	int32_t res = 0;
 	mpconfig_t *control = getConfig();
 
-	res = (control->status == mpc_start) ||
-		(control->command == mpc_start) || (control->mpmode & PM_SWITCH);
+	res = (control->status == mpc_start) || (control->mpmode & PM_SWITCH);
 	return res;
 }
 

@@ -1890,8 +1890,7 @@ void dumpState() {
 	mpconfig_t *conf = getConfig();
 	mptitle_t *guard = conf->root;
 
-	addMessage(0, "Status: %s - Command: %s", mpcString(conf->status),
-			   mpcString(conf->command));
+	addMessage(0, "Status: %s", mpcString(conf->status));
 	addMessage(0, "database: %p - mode: 0x%02x", (void *) guard, conf->mpmode);
 	if ((guard != NULL) && (conf->mpmode & PM_DATABASE)) {
 		addMessage(0, "%5" PRIu64 " titles are MP_INPL", countflag(MP_INPL));
