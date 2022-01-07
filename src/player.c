@@ -24,7 +24,6 @@ static int32_t p_error[2][2];		/* error pipes to mpg123 */
 static pid_t p_pid[2];		/* player pids */
 static int32_t p_order=1;	/* playing order */
 static int32_t p_skipped=0;	/* playing order */
-static uint32_t watchdog=0;
 
 void setSkipped() {
 	p_skipped=1;
@@ -273,6 +272,7 @@ void *setProfile(void *arg) {
 	return arg;
 }
 
+/* returns the name of the current profile or channel */
 static char *getProfileName(int32_t profile) {
 	mpconfig_t *config = getConfig();
 
@@ -289,6 +289,8 @@ static char *getProfileName(int32_t profile) {
 	}
 }
 
+/* kills (and restarts) the player loop and decoders
+ */
 void *killPlayers(int32_t restart) {
 	uint64_t i;
 	mpconfig_t *control = getConfig();
@@ -393,12 +395,10 @@ void pausePlay(void) {
 }
 
 /**
- * the main control thread function that acts as an interface between the
- * player processes and the UI. It checks the control->command value for
- * commands from the UI and the status messages from the players.
- *
- * The original plan was to keep this UI independent so it could be used
- * in mixplay, gmixplay and probably other GUI variants (ie: web)
+ * the main player loop.
+ * This starts and listens to the mpg123 processes and acts accordingly on
+ * information and status changes. It also controls volume fading when
+ * available and checks for general health of the decoders.
  */
 void *reader() {
 	mpconfig_t *control = getConfig();
@@ -412,6 +412,7 @@ void *reader() {
 	float intime = 0.0;
 	float oldtime = 0.0;
 	int32_t fading = 1;
+	uint32_t watchdog=0;
 
 	blockSigint();
 
@@ -503,25 +504,24 @@ void *reader() {
 		to.tv_usec = 0;			/* 1/10 second */
 		i = select(FD_SETSIZE, &fds, NULL, NULL, &to);
 
-		/**
-		 * status is not idle but we did not get any updates from either player
+		/* status is not idle but we did not get any updates from either player
 		 * after ten times we decide all hope is lost and we take the hard way
-		 * out.
+		 * out. No watchdog on start as this may be a slow DNS, wait until
+		 * mpg123 reports an error instead
 		 *
 		 * this may happen when a stream is played and the network connection
-		 * changes - most likely due to a DSL reconnect - or if the stream host
-		 * fails.
-		 */
-		if (watchdog >= WATCHDOG_TIMEOUT) {
-			addMessage(MPV + 1, "Player restart! status: %s",
-					   mpcString(control->status));
-			return killPlayers(1);
-		}
-		/* no watchdog on start as this may be a slow DNS, wait until mpg123
-		   reports an error instead */
-		if ((i == 0) && (control->mpmode & PM_STREAM) &&
-			(control->status & ~(mpc_idle|mpc_start))) {
-			watchdog++;
+		 * changes (most likely due to a DSL reconnect) or if the stream host
+		 * fails. However those should trigger decode errors and lead an
+		 * automatic restart, so this is really supposed to be the last
+		 * failsafe. */
+		if ((i == 0) &&
+			(control->mpmode & PM_STREAM) &&
+			(control->status != mpc_idle) &&
+			(control->status != mpc_start)) {
+			if (++watchdog >= WATCHDOG_TIMEOUT) {
+				addMessage(-1, "Watchdog triggered!");
+				return killPlayers(1);
+			}
 		}
 		else {
 			watchdog = 0;
@@ -903,7 +903,7 @@ void *reader() {
 		}
 		updateUI();
 	}
-	while (control->status != mpc_quit);
+	while ((control->status != mpc_quit) && (control->status != mpc_reset));
 
 	dbWrite(0);
 
