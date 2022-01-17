@@ -364,9 +364,6 @@ void *killPlayers(int32_t restart) {
 
 	addMessage(MPV+1, "Players stopped!");
 	closeAudio();
-	if (!asyncTest()) {
-		addMessage(MPV + 1, "Shutting down on active async!");
-	}
 	unlockController();
 	setCurrentActivity("All unlocked");
 	pthread_mutex_unlock(&_killlock);
