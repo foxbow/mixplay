@@ -37,6 +37,7 @@ int32_t setArgument(const char *arg) {
 	control->mpmode = PM_NONE;
 
 	if (isURL(arg)) {
+		setCurrentActivity("Loading URL");
 		addMessage(1, "URL: %s", arg);
 		line[0] = 0;
 

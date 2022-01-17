@@ -30,6 +30,7 @@ var clientid = -1
 var shortcuts = []
 var curvol = 0
 var inUpdate = 0
+var lastsearch = ''
 
 function debugLog (txt) {
   if (debug) {
@@ -189,7 +190,7 @@ function confHide () {
 /*
  * display on-screen keyboard and set callback on 'okay'
  */
-function showKbd (ok) {
+function showKbd (ok, search = 0) {
   /* the target textfield */
   if (!kbddiv) {
     showConfirm('Keyboard was not initialized!')
@@ -198,6 +199,11 @@ function showKbd (ok) {
   /* the keyboard textfield */
   const t = document.getElementById('kbdtext')
   if (kbddiv.className === 'hide') {
+    if (search === 1) {
+      t.value = lastsearch
+    } else {
+      t.value = ''
+    }
     kbddiv.className = ''
     if (ok > 0) {
       kbdokay = function () { sendArg(ok) }
@@ -622,6 +628,7 @@ function sendCMDArg (cmd, arg) {
       break
     /* all these commands have a progress */
     case 0x13: /* mpc_search */
+      lastsearch = arg
       if (cmdtosend === '') {
         switchView(3)
         e = document.getElementById('search0')
