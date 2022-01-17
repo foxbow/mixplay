@@ -106,9 +106,9 @@ void unlockController( void ) {
 	pthread_mutex_unlock(&_pcmdlock);
 	while (pthread_mutex_trylock(&_asynclock) == EBUSY) {
 		addMessage(0, "Asyncunlock..");
-		pthread_mutex_unlock(&_pcmdlock);
+		pthread_mutex_unlock(&_asynclock);
 	}
-	pthread_mutex_unlock(&_pcmdlock);
+	pthread_mutex_unlock(&_asynclock);
 }
 
 /**
