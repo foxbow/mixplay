@@ -104,6 +104,8 @@ void unlockController( void ) {
 	/* make sure that the unlock has defined behaviour */
 	pthread_mutex_trylock(&_pcmdlock);
 	pthread_mutex_unlock(&_pcmdlock);
+	pthread_mutex_trylock(&_asynclock);
+	pthread_mutex_unlock(&_asynclock);
 }
 
 /**
