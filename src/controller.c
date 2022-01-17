@@ -431,14 +431,15 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		if (config->mpmode & PM_STREAM)
 			break;
 		if ((ctitle != NULL) && asyncTest()) {
-			if (ctitle == config->current->title) {
-				/* current title is affected, play the next one */
-				setOrder(0);
-				toPlayer(0, "STOP\n");
-			}
+			mptitle_t *cplayed = config->current->title;
 			handleRangeCmd(ctitle, rcmd);
 			setArtistSpread();
 			plCheck(1);
+			if (ctitle == cplayed) {
+				/* current title was affected, play the new current one */
+				setOrder(0);
+				toPlayer(0, "STOP\n");
+			}
 			pthread_mutex_unlock(&_asynclock);
 		}
 		break;
@@ -467,46 +468,44 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		break;
 
 	case mpc_profile:
-		if (asyncTest()) {
-			if (arg == NULL) {
-				addMessage(-1, "No profile given!");
+		if (arg == NULL) {
+			addMessage(-1, "No profile given!");
+		}
+		else if (asyncTest()) {
+			profile = atoi(arg);
+			if ((profile != 0) && (profile != config->active)) {
+				if (!(config->mpmode & (PM_STREAM | PM_DATABASE))) {
+					wipeTitles(config->root);
+				}
+				/* switching channels started */
+				config->mpmode |= PM_SWITCH;
+				/* write database if needed */
+				dbWrite(0);
+				if (config->active < 0) {
+					config->stream[(-config->active) - 1]->volume =
+						config->volume;
+				}
+				else if (config->active > 0) {
+					config->profile[config->active - 1]->volume =
+						config->volume;
+				}
+				config->active = profile;
+				asyncRun(plSetProfile);
 			}
 			else {
-				profile = atoi(arg);
-				if ((profile != 0) && (profile != config->active)) {
-					if (!(config->mpmode & (PM_STREAM | PM_DATABASE))) {
-						wipeTitles(config->root);
-					}
-					/* switching channels started */
-					config->mpmode |= PM_SWITCH;
-					/* write database if needed */
-					dbWrite(0);
-					if (config->active < 0) {
-						config->stream[(-config->active) - 1]->volume =
-							config->volume;
-					}
-					else if (config->active > 0) {
-						config->profile[config->active - 1]->volume =
-							config->volume;
-					}
-					config->active = profile;
-					asyncRun(plSetProfile);
-				}
-				else {
-					addMessage(0, "Invalid profile %i", profile);
-					pthread_mutex_unlock(&_asynclock);
-				}
+				addMessage(0, "Invalid profile %i", profile);
+				pthread_mutex_unlock(&_asynclock);
 			}
 		}
 		break;
 
 	case mpc_newprof:
-		if ((config->current != NULL) && asyncTest()) {
-			if (arg == NULL) {
-				addMessage(-1, "No name given!");
-			}
+		if (arg == NULL) {
+			addMessage(-1, "No name given!");
+		}
+		else if ((config->current != NULL) && asyncTest()) {
 			/* save the current stream */
-			else if (config->active == 0) {
+			if (config->active == 0) {
 				config->streams++;
 				config->stream =
 					(profile_t **) frealloc(config->stream,
@@ -535,12 +534,12 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		break;
 
 	case mpc_clone:
-		if ((config->current != NULL) && asyncTest()) {
-			if (arg == NULL) {
-				addMessage(-1, "No profile given!");
-			}
+		if (arg == NULL) {
+			addMessage(-1, "No profile given!");
+		}
+		else if ((config->current != NULL) && asyncTest()) {
 			/* only clone profiles */
-			else if (config->active > 0) {
+			if (config->active > 0) {
 				config->profiles++;
 				config->profile =
 					(profile_t **) frealloc(config->profile,
@@ -625,16 +624,14 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		break;
 
 	case mpc_path:
-		if ((config->current != NULL) && asyncTest()) {
-			if (arg == NULL) {
-				addMessage(-1, "No path given!");
-			}
-			else {
-				if (setArgument(arg)) {
-					config->active = 0;
-					stopPlay();
-					sendplay();
-				}
+		if (arg == NULL) {
+			addMessage(-1, "No path given!");
+		}
+		else if ((config->current != NULL) && asyncTest()) {
+			if (setArgument(arg)) {
+				config->active = 0;
+				stopPlay();
+				sendplay();
 			}
 			pthread_mutex_unlock(&_asynclock);
 		}

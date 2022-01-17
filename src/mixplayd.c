@@ -286,6 +286,7 @@ int32_t main(int32_t argc, char **argv) {
 		addMessage(0, "Player terminated gracefully");
 	}
 
+	writeConfig(NULL);
 	if (access(PIDPATH, F_OK) == 0) {
 		unlink(PIDPATH);
 	}

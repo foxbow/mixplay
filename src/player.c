@@ -17,6 +17,8 @@
 #define MPV 10
 #define WATCHDOG_TIMEOUT 9
 
+static pthread_mutex_t _killlock = PTHREAD_MUTEX_INITIALIZER;
+
 static int32_t fdset = 0;	/* the currently active player */
 static int32_t p_command[2][2];	/* command pipes to mpg123 */
 static int32_t p_status[2][2];		/* status pipes to mpg123 */
@@ -296,6 +298,11 @@ void *killPlayers(int32_t restart) {
 	mpconfig_t *control = getConfig();
 	uint32_t players = (control->fade > 0) ? 2 : 1;
 
+	if (pthread_mutex_trylock(&_killlock) == EBUSY) {
+		addMessage(0, "Player is already in %s!", mpcString(control->status));
+		return NULL;
+	}
+
 	if (restart) {
 		setCurrentActivity("Restarting players");
 		if (control->current == NULL) {
@@ -362,6 +369,7 @@ void *killPlayers(int32_t restart) {
 	}
 	unlockController();
 	setCurrentActivity("All unlocked");
+	pthread_mutex_unlock(&_killlock);
 	return NULL;
 }
 
@@ -907,8 +915,13 @@ void *reader() {
 
 	dbWrite(0);
 
-	/* stop player(s) gracefully */
-	return killPlayers(0);
+	if (pthread_mutex_trylock(&_killlock) == EBUSY) {
+		setCurrentActivity("Waiting for players to stop..");
+		pthread_mutex_lock(&_killlock);
+	}
+	pthread_mutex_unlock(&_killlock);
+
+	return NULL;
 }
 
 #undef MPV
