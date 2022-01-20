@@ -279,7 +279,7 @@ mptitle_t *dbGetMusic() {
 		return NULL;
 	}
 
-	setCurrentActivity("Loading database");
+	activity(1, "Loading database");
 	while ((len = read(db, &dbentry, DBESIZE)) == DBESIZE) {
 		/* explicitlöy terminate path */
 		dbentry.path[MAXPATHLEN - 1] = 0;

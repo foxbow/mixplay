@@ -672,13 +672,12 @@ void freeConfig() {
 }
 
 /**
- * adds a message to the message buffer if verbosity is >= v
+ * adds a message
  *
- * If the application is not in UI mode, the message will just be printed to
- * make sure messages are displayed on the correct media.
- *
- * If debug > v the message is printed on the console (to avoid verbosity
- * 0 messages to always appear in the debug stream.
+ * v controls the verbosity
+ * -1 - message is an alert, treat as 0 furtheron
+ *  0 - add to message buffer, write to syslog if daemonized
+ *  n - if debuglevel is > n print on screen
  */
 void addMessage(int32_t v, const char *msg, ...) {
 	va_list args;
@@ -695,30 +694,23 @@ void addMessage(int32_t v, const char *msg, ...) {
 		line[strlen(line)] = 0;
 	}
 
-	if (_cconfig == NULL) {
-		fprintf(stderr, "* %s\n", line);
+	if (v < 1) {
+		/* normal status messages */
+		if (v == -1) {
+			memmove(line + 6, line, MP_MSGLEN - 6);
+			memcpy(line, "ALERT:", 6);
+			line[MP_MSGLEN] = 0;
+		}
+		if (_cconfig->inUI) {
+			msgBuffAdd(_cconfig->msg, line);
+		}
+		if (_cconfig->isDaemon) {
+			syslog(LOG_NOTICE, "%s", line);
+		}
 	}
-	else {
-		if (v < 1) {
-			/* normal status messages */
-			if (v == -1) {
-				memmove(line + 6, line, MP_MSGLEN - 6);
-				memcpy(line, "ALERT:", 6);
-				line[MP_MSGLEN] = 0;
-			}
-			if (_cconfig->inUI) {
-				msgBuffAdd(_cconfig->msg, line);
-			}
-			else if (!getDebug()) {
-				fprintf(stderr, "\r%s\n", line);
-			}
-			if (_cconfig->isDaemon) {
-				syslog(LOG_NOTICE, "%s", line);
-			}
-		}
-		if (v < getDebug()) {
-			fprintf(stderr, "\r%s\n", line);
-		}
+
+	if (v < getDebug()) {
+		fprintf(stderr, "\r%s\n", line);
 	}
 
 	free(line);
@@ -730,8 +722,14 @@ void incDebug(void) {
 	_cconfig->debug++;
 }
 
+/**
+ * returns the current debuglevel. If the configuration has not yet been
+ * initialized, a debug level of 1 (HID-mode) is assumed.
+ */
 int32_t getDebug(void) {
-	assert(_cconfig != NULL);
+	if (_cconfig == NULL) {
+		return 1;
+	}
 	return _cconfig->debug;
 }
 
@@ -751,47 +749,24 @@ char *getCurrentActivity(void) {
 	return _curact;
 }
 
-void setCurrentActivity( const char* activity ) {
-	if (strcmp(activity, _curact)) {
-		strtcpy(_curact, activity, MP_ACTLEN);
+/*
+ * set the current activity
+ * the given string is shown as title for the client while the playlist
+ * is either locked or not yet set.
+ * Print message in debug interface when debuglevel is < n, so -1 means
+ * the activity is not shown in debuginterface
+ */
+void activity(int32_t v, char *act) {
+	if (strlen(act) > MP_ACTLEN+1) {
+		act[MP_ACTLEN]=0;
+	}
+
+	if (strcmp(act, _curact)) {
+		strtcpy(_curact, act, MP_ACTLEN);
 		notifyChange(MPCOMM_TITLES);
-		if(getDebug() > 1) {
+		if(getDebug() >= v) {
 			printf("\r* %s\n", _curact);
 		}
-	}
-}
-
-/**
- * show activity roller on console
- * this will only show if debug mode is enabled
- */
-void activity(int32_t v, const char *msg, ...) {
-	char roller[5] = "|/-\\";
-	int32_t pos = 0;
-	int32_t i;
-	va_list args;
-	char newact[MP_ACTLEN+1] = "";
-	static uint32_t _ftrpos = 0;
-
-	va_start(args, msg);
-	vsnprintf(newact, MP_ACTLEN, msg, args);
-	va_end(args);
-
-	/* fill activity up with blanks and ensure \0 termination */
-	for (i = strlen(newact); i < (MP_ACTLEN); i++) {
-		newact[i] = ' ';
-	}
-	newact[MP_ACTLEN] = 0;
-	/* _ftrpos is uint32_t so an overflow does not cause issues later */
-	++_ftrpos;
-
-	/* Update the current action for the client */
-	setCurrentActivity(newact);
-
-	if ((v < getDebug()) && (_ftrpos % 100 == 0)) {
-		printf("%c %s\r", roller[pos], newact);
-		fflush(stdout);
-		pos = (pos + 1) % 4;
 	}
 }
 
@@ -1001,7 +976,7 @@ mptitle_t *wipeTitles(mptitle_t * root) {
 	if (NULL != root) {
 		root->prev->next = NULL;
 
-		setCurrentActivity("Cleaning");
+		activity(2, "Cleaning");
 		while (runner != NULL) {
 			root = runner->next;
 			free(runner);

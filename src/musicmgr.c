@@ -691,9 +691,9 @@ int32_t applyDNPlist(marklist_t * list, int32_t dbl) {
 	}
 
 	if (dbl)
-		setCurrentActivity("Applying DBL list");
+		activity(0, "Applying DBL list");
 	else
-		setCurrentActivity("Applying DNP list");
+		activity(0, "Applying DNP list");
 
 	do {
 		if (!(pos->flags & MP_DBL)) {
@@ -758,7 +758,7 @@ static int32_t applyFAVlist(marklist_t * favourites) {
 		return 0;
 	}
 
-	setCurrentActivity("Applying FAV list");
+	activity(0, "Applying FAV list");
 
 	do {
 		if (!(runner->flags & MP_DBL)) {
@@ -837,13 +837,13 @@ marklist_t *loadList(const mpcmd_t cmd) {
 
 	switch (cmd) {
 	case mpc_dnp:
-		setCurrentActivity("Loading DNP list");
+		activity(1, "Loading DNP list");
 		break;
 	case mpc_fav:
-		setCurrentActivity("Loading FAV list");
+		activity(1, "Loading FAV list");
 		break;
 	default:
-		setCurrentActivity("Loading doublets");
+		activity(1, "Loading doublets");
 		break;
 	}
 
@@ -1173,7 +1173,7 @@ mptitle_t *loadPlaylist(const char *path) {
 	}
 
 	buff = (char *) falloc(MAXPATHLEN, 1);
-	setCurrentActivity("Loading playlist");
+	activity(0, "Loading playlist");
 	while (!feof(fp)) {
 		if ((fgets(buff, MAXPATHLEN, fp) != NULL) &&
 			(strlen(buff) > 1) && (buff[0] != '#')) {
@@ -1348,7 +1348,7 @@ static char flagToChar(int32_t flag) {
 static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 							 uint32_t * pcount, uint64_t maxcount) {
 	mptitle_t *runner = guard;
-	setCurrentActivity("Playcountskipping");
+	activity(1, "Playcountskipping");
 
 	/* zero steps is a bad idea but may happen, since we play with randum
 	 * numbers */
@@ -1415,7 +1415,7 @@ void setArtistSpread() {
 
 	/* make sure all titles are caught */
 	unsetFlags(MP_TDARK|MP_PDARK);
-	setCurrentActivity("Checking artist spread");
+	activity(1, "Checking artist spread");
 	while (runner != NULL) {
 		checker=skipOver(runner->next,1);
 		while (checker && (checker != runner)) {
@@ -1518,7 +1518,7 @@ static int32_t addNewTitle(void) {
 	}
 
 	/* step through the playlist and check for repeats */
-	setCurrentActivity("Adding title");
+	activity(1, "Adding title");
 	do {
 		lastpat = pl->title->artist;
 		guard = runner;

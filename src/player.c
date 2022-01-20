@@ -304,7 +304,7 @@ void *killPlayers(int32_t restart) {
 	}
 
 	if (restart) {
-		setCurrentActivity("Restarting players");
+		activity(0, "Restarting players");
 		if (control->current == NULL) {
 			addMessage(-1, "Restarting on empty player!");
 		}
@@ -333,7 +333,7 @@ void *killPlayers(int32_t restart) {
 	}
 	else {
 		control->status=mpc_quit;
-		setCurrentActivity("Stopping players");
+		activity(0, "Stopping players");
 	}
 
 	/* ask nicely first.. */
@@ -365,7 +365,7 @@ void *killPlayers(int32_t restart) {
 	addMessage(MPV+1, "Players stopped!");
 	closeAudio();
 	unlockController();
-	setCurrentActivity("All unlocked");
+	activity(0, "All unlocked");
 	pthread_mutex_unlock(&_killlock);
 	return NULL;
 }
@@ -913,7 +913,7 @@ void *reader() {
 	dbWrite(0);
 
 	if (pthread_mutex_trylock(&_killlock) == EBUSY) {
-		setCurrentActivity("Waiting for players to stop..");
+		activity(0, "Waiting for players to stop..");
 		pthread_mutex_lock(&_killlock);
 	}
 	pthread_mutex_unlock(&_killlock);
