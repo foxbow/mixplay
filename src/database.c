@@ -39,7 +39,7 @@ mptitle_t *getTitleByIndex(uint32_t index) {
 	mptitle_t *root = getConfig()->root;
 	mptitle_t *run = root;
 
-	if (root == NULL) {
+	if ((root == NULL) || (index == 0)) {
 		return NULL;
 	}
 

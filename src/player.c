@@ -245,14 +245,14 @@ void *setProfile(void *arg) {
 			lastact = control->active;
 		}
 		setArtistSpread();
-		plCheck(0);
+		plCheck(1);
 
 		addMessage(MPV + 1, "Profile set to %s.", profile->name);
 	}
 	else {
 		addMessage(-1, "No valid profile selected!");
 		addMessage(MPV + 1, "Restart play");
-		plCheck(0);
+		plCheck(1);
 		startPlayer();
 		return arg;
 	}
@@ -738,13 +738,13 @@ void *reader() {
 							}
 							else {
 								control->current = control->current->next;
-								plCheck(0);
 								/* swap players */
 								fdset = fdset ? 0 : 1;
 								invol = 0;
 								outvol = 100;
 								toPlayer(0, "volume 0\n");
 								sendplay();
+								plCheck(1);
 							}
 						}
 					}
@@ -818,7 +818,7 @@ void *reader() {
 							}
 
 							if (control->mpmode == PM_DATABASE) {
-								plCheck(0);
+								plCheck(1);
 							}
 						}
 						/* always re-enable proper playorder after stop */

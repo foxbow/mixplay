@@ -144,6 +144,36 @@ static int32_t checkPasswd(char *pass) {
 	return 0;
 }
 
+/*
+ * returns the current title or NULL if the playlist has not been initialized
+ * yet
+ */
+static mptitle_t *getCurrentTitle() {
+	if (getConfig()->current != NULL) {
+		return getConfig()->current->title;
+	}
+	return NULL;
+}
+
+/**
+ * to be called after removing titles, marking them DNP or as DBL.
+ **/
+static void checkAfterRemove( mptitle_t *ctitle ) {
+	/* clean up the playlist without adding new titles */
+	plCheck(0);
+	/* has the current title changed? Then send a replay to play the new
+	   current title. This may lead to a replay if the title changed during
+	   plcheck() but the effort to avoid this is larger than the expected
+	   impact */
+	if (ctitle != getConfig()->current->title) {
+		setOrder(0);
+		toPlayer(0, "STOP\n");
+	}
+	setArtistSpread();
+	/* fill up the playlist */
+	plCheck(1);
+}
+
 /**
  * asnchronous functions to run in the background and allow updates being sent to the
  * client
@@ -151,6 +181,7 @@ static int32_t checkPasswd(char *pass) {
 static void *plCheckDoublets(void *arg) {
 	pthread_mutex_t *lock = (pthread_mutex_t *) arg;
 	int32_t i;
+	mptitle_t *ctitle = getCurrentTitle();
 
 	addMessage(0, "Checking for doublets..");
 	/* update database with current playcount etc */
@@ -160,7 +191,7 @@ static void *plCheckDoublets(void *arg) {
 	if (i > 0) {
 		addMessage(0, "Marked %i doublets", i);
 		applyLists(0);
-		plCheck(1);
+		checkAfterRemove(ctitle);
 	}
 	else {
 		addMessage(0, "No doublets found");
@@ -172,6 +203,7 @@ static void *plCheckDoublets(void *arg) {
 
 static void *plDbClean(void *arg) {
 	mpconfig_t *control = getConfig();
+	mptitle_t *ctitle = getCurrentTitle();
 	pthread_mutex_t *lock = (pthread_mutex_t *) arg;
 	int32_t i;
 	int32_t changed = 0;
@@ -197,7 +229,7 @@ static void *plDbClean(void *arg) {
 
 	if (i > 0) {
 		addMessage(0, "Added %i new titles", i);
-		changed=1;
+		changed |= 2;
 	}
 	else {
 		addMessage(0, "No titles to be added");
@@ -206,7 +238,9 @@ static void *plDbClean(void *arg) {
 	if (changed) {
 		dbWrite(1);
 		setArtistSpread();
-		plCheck(0);
+		if (changed & 1) {
+			checkAfterRemove(ctitle);
+		}
 	}
 
 	unlockClient(-1);
@@ -260,7 +294,7 @@ static void asyncRun(void *cmd(void *)) {
  * also makes sure that commands are not overwritten
  */
 void setCommand(mpcmd_t rcmd, char *arg) {
-	mptitle_t *ctitle = NULL;	/* the title commands should use */
+	mptitle_t *ctitle = getCurrentTitle();	/* the title commands should use */
 	mpconfig_t *config = getConfig();
 	char *tpos;
 	uint32_t insert = 0;
@@ -305,21 +339,19 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 	cmd = MPC_CMD(rcmd);
 
 	/* get the target title for fav and dnp commands */
-	if (config->current != NULL) {
-		ctitle = config->current->title;
-		if ((cmd == mpc_fav) || (cmd == mpc_dnp)) {
-			if (arg != NULL) {
-				/* todo: check if config->argument is a number */
-				if (MPC_EQDISPLAY(rcmd)) {
-					ctitle = getTitleByIndex(atoi(arg));
-				}
-				else {
-					ctitle = getTitleForRange(rcmd, arg);
-				}
-				/* someone is testing parameters, mh? */
-				if (ctitle == NULL) {
-					addMessage(0, "Nothing matches %s!", arg);
-				}
+	if ((cmd == mpc_fav) || (cmd == mpc_dnp)) {
+		if (arg != NULL) {
+			if (MPC_EQDISPLAY(rcmd)) {
+				ctitle = getTitleByIndex(atoi(arg));
+			}
+			else {
+				ctitle = getTitleForRange(rcmd, arg);
+			}
+			/* someone is testing parameters, mh? */
+			if (ctitle == NULL) {
+				addMessage(0, "Nothing matches %s!", arg);
+				pthread_mutex_unlock(&_pcmdlock);
+				return;
 			}
 		}
 	}
@@ -331,8 +363,8 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			addMessage(MPV + 1, "Already starting!");
 		}
 		else {
-			plCheck(0);
 			config->status = mpc_start;
+			plCheck(1);
 			sendplay();
 			notifyChange(MPCOMM_CONFIG);
 		}
@@ -363,7 +395,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		/* initialize player after startup */
 		/* todo: what happens if the user sends a play during startup? */
 		else {
-			plCheck(0);
+			plCheck(1);
 			if (config->current != NULL) {
 				addMessage(MPV + 1, "Autoplay..");
 				sendplay();
@@ -435,16 +467,9 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 	case mpc_dnp:
 		if (config->mpmode & PM_STREAM)
 			break;
-		if ((ctitle != NULL) && asyncTest()) {
-			mptitle_t *cplayed = config->current->title;
+		if (asyncTest()) {
 			handleRangeCmd(ctitle, rcmd);
-			setArtistSpread();
-			plCheck(1);
-			if (ctitle == cplayed) {
-				/* current title was affected, play the new current one */
-				setOrder(0);
-				toPlayer(0, "STOP\n");
-			}
+			checkAfterRemove(ctitle);
 			pthread_mutex_unlock(&_asynclock);
 		}
 		break;
@@ -452,7 +477,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 	case mpc_fav:
 		if (config->mpmode & PM_STREAM)
 			break;
-		if ((ctitle != NULL) && asyncTest()) {
+		if (asyncTest()) {
 			handleRangeCmd(ctitle, rcmd);
 			notifyChange(MPCOMM_TITLES);
 			pthread_mutex_unlock(&_asynclock);
@@ -741,9 +766,8 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		if (config->mpmode & PM_STREAM)
 			break;
 		if (arg != NULL) {
-			config->current =
-				remFromPLByKey(atoi(arg));
-			plCheck(0);
+			config->current = remFromPLByKey(atoi(arg));
+			checkAfterRemove(ctitle);
 		}
 		break;
 
@@ -769,7 +793,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			cleanTitles(0);
 			writeConfig(NULL);
 			setArtistSpread();
-			plCheck(0);
+			plCheck(1);
 			sendplay();
 			pthread_mutex_unlock(&_asynclock);
 		}

@@ -1574,10 +1574,12 @@ static int32_t addNewTitle(void) {
 
 /**
  * checks the current playlist.
- * If there are more than 10 previous titles, those get pruned.
- * While there are less that 10 next titles, titles will be added.
+ * If there are more than 10 previous titles, those get pruned. Titles marked
+ * as DNP or Doublet will be removed as well.
+ *
+ * If fill is set, the playlist will be filled up to ten new titles.
  */
-void plCheck(int32_t del) {
+void plCheck(int32_t fill) {
 	int32_t cnt = 0;
 	mpplaylist_t *pl;
 	mpplaylist_t *buf;
@@ -1612,10 +1614,8 @@ void plCheck(int32_t del) {
 		cnt = 0;
 
 		/* rewind to the start of the list */
-		if (del != 0) {
-			while (pl->prev != NULL) {
-				pl = pl->prev;
-			}
+		while (pl->prev != NULL) {
+			pl = pl->prev;
 		}
 
 		/* go through end of the playlist and clean up underway */
@@ -1623,23 +1623,18 @@ void plCheck(int32_t del) {
 			/* clean up on the way to remove DNP marked or deleted files?
 			 * there /should/ not be any doublets here, but it does not hurt
 			 * to check those too */
-			if (del != 0) {
-				if ((pl->title->flags & (MP_DNP | MP_DBL))
-					|| (!mp3Exists(pl->title))) {
-					/* make sure that the playlist root stays valid */
-					if (pl == getCurrent()) {
-						if (pl->prev != NULL) {
-							getConfig()->current = pl->prev;
-						}
-						else {
-							getConfig()->current = pl->next;
-						}
+			if ((pl->title->flags & (MP_DNP | MP_DBL))
+				|| (!mp3Exists(pl->title))) {
+				/* make sure that the playlist root stays valid */
+				if (pl == getCurrent()) {
+					if (pl->prev != NULL) {
+						getConfig()->current = pl->prev;
 					}
-					pl = remFromPL(pl);
+					else {
+						getConfig()->current = pl->next;
+					}
 				}
-				else {
-					pl = pl->next;
-				}
+				pl = remFromPL(pl);
 			}
 			else {
 				pl = pl->next;
@@ -1676,9 +1671,11 @@ void plCheck(int32_t del) {
 	}
 
 	/* fill up the playlist with new titles */
-	while (cnt < 10) {
-		addNewTitle();
-		cnt++;
+	if (fill) {
+		while (cnt < 10) {
+			addNewTitle();
+			cnt++;
+		}
 	}
 
 	unlockPlaylist();
