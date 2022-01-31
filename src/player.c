@@ -912,9 +912,9 @@ void *reader() {
 
 	dbWrite(0);
 
-	if (pthread_mutex_trylock(&_killlock) == EBUSY) {
+	while (pthread_mutex_trylock(&_killlock) == EBUSY) {
 		activity(0, "Waiting for players to stop..");
-		pthread_mutex_lock(&_killlock);
+		usleep(250000);
 	}
 	pthread_mutex_unlock(&_killlock);
 

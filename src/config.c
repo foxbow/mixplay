@@ -765,7 +765,7 @@ void activity(int32_t v, char *act) {
 		strtcpy(_curact, act, MP_ACTLEN);
 		notifyChange(MPCOMM_TITLES);
 		if(getDebug() >= v) {
-			printf("\r* %s\n", _curact);
+			printf("\r* %s\r", _curact);
 		}
 	}
 }

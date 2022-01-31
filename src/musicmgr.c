@@ -1294,19 +1294,14 @@ uint32_t getPlaycount(int32_t high) {
 	return high ? max : min;
 }
 
-/**
- * skips the global list until a title is found that has not been hidden
- * is not in the current playlist and is not marked as DNP/DBL
- * returns NULL if no title is available
- */
-static mptitle_t *skipOver(mptitle_t * current, int32_t dir) {
+static mptitle_t *skipOverFlags(mptitle_t * current, int32_t dir, uint32_t flags) {
 	mptitle_t *marker = current;
 
 	if (marker == NULL) {
 		return NULL;
 	}
 
-	while ((marker->flags & (MP_HIDE | MP_PDARK)) ||
+	while ((marker->flags & flags) ||
 		   (getFavplay() && !(marker->flags & MP_FAV))) {
 		if (dir > 0) {
 			marker = marker->next;
@@ -1322,6 +1317,15 @@ static mptitle_t *skipOver(mptitle_t * current, int32_t dir) {
 	}
 
 	return marker;
+}
+
+/**
+ * skips the global list until a title is found that has not been hidden
+ * is not in the current playlist and is not marked as DNP/DBL
+ * returns NULL if no title is available
+ */
+static mptitle_t *skipOver(mptitle_t * current, int32_t dir) {
+	return skipOverFlags( current, dir, MP_HIDE | MP_PDARK);
 }
 
 static char flagToChar(int32_t flag) {
@@ -1348,7 +1352,7 @@ static char flagToChar(int32_t flag) {
 static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 							 uint32_t * pcount, uint64_t maxcount) {
 	mptitle_t *runner = guard;
-	activity(1, "Playcountskipping");
+	activity(2, "Playcountskipping");
 
 	/* zero steps is a bad idea but may happen, since we play with randum
 	 * numbers */
@@ -1413,24 +1417,32 @@ void setArtistSpread() {
 	mptitle_t *checker=NULL;
 	uint32_t count=0;
 
-	/* make sure all titles are caught */
-	unsetFlags(MP_TDARK|MP_PDARK);
+	/* Use MP_MARK to check off tested titles */
+	unsetFlags(MP_MARK);
 	activity(1, "Checking artist spread");
 	while (runner != NULL) {
-		checker=skipOver(runner->next,1);
+		/* find the next unmarked, playable title to compare to */
+		checker=skipOverFlags(runner->next, 1, MP_DNP|MP_DBL|MP_MARK);
+		/* a comparison can be done */
 		while (checker && (checker != runner)) {
 			if(checkSim(runner->artist, checker->artist)) {
-				checker->flags |= MP_TDARK;
+				/* the artist is similar enough, mark as gone */
+				checker->flags |= MP_MARK;
 			}
-			checker=skipOver(checker->next, 1);
+			/* check for the next title */
+			checker=skipOverFlags(checker->next, 1, MP_DNP|MP_DBL|MP_MARK);
 		}
-		runner->flags |= MP_TDARK;
-		runner=skipOver(runner->next, 1);
+		/* Check has been done */
 		if (count++ == 30) {
 			break;
 		}
+		/* runner has been checked too */
+		runner->flags |= MP_MARK;
+		/* find the next title to check */
+		runner=skipOverFlags(runner->next, 1, MP_DNP|MP_DBL|MP_MARK);
 	}
-	unsetFlags(MP_TDARK);
+	/* clean up */
+	unsetFlags(MP_MARK);
 
 	/* two thirds to take number of titles per artist somewhat into account */
 	count=(count*2)/3;
@@ -1518,7 +1530,7 @@ static int32_t addNewTitle(void) {
 	}
 
 	/* step through the playlist and check for repeats */
-	activity(1, "Adding title");
+	activity(2, "Adding title");
 	do {
 		lastpat = pl->title->artist;
 		guard = runner;
@@ -1972,6 +1984,7 @@ int32_t handleRangeCmd(mptitle_t * title, mpcmd_t cmd) {
 			list = config->dnplist;
 		}
 
+		/* check if the entry is already in the list */
 		buff = list;
 		while (buff != NULL) {
 			if (strcmp(line, buff->dir) == 0) {
@@ -1981,10 +1994,12 @@ int32_t handleRangeCmd(mptitle_t * title, mpcmd_t cmd) {
 			buff = buff->next;
 		}
 
+		/* create new entry item */
 		buff = (marklist_t *) falloc(1, sizeof (marklist_t));
 		strcpy(buff->dir, line);
 		buff->next = NULL;
 
+		/* if there is no existing list yet, the new item becomes the list */
 		if (list == NULL) {
 			if (MPC_CMD(cmd) == mpc_fav) {
 				config->favlist = buff;
@@ -1993,6 +2008,7 @@ int32_t handleRangeCmd(mptitle_t * title, mpcmd_t cmd) {
 				config->dnplist = buff;
 			}
 		}
+		/* otherwise append the ittem to the list */
 		else {
 			while (list->next != NULL) {
 				list = list->next;
@@ -2000,7 +2016,10 @@ int32_t handleRangeCmd(mptitle_t * title, mpcmd_t cmd) {
 			list->next = buff;
 		}
 
+		/* add line to the file */
 		addToList(buff->dir, cmd);
+
+		/* apply actual line to the playlist */
 		if (MPC_CMD(cmd) == mpc_fav) {
 			cnt = applyFAVlist(buff);
 		}

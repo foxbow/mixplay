@@ -149,14 +149,14 @@ int32_t main(int32_t argc, char **argv) {
 	if (access(PIDPATH, F_OK) == 0) {
 		pidlog = fopen(PIDPATH, "r");
 		if (pidlog == NULL) {
-			addMessage(0, "Cannot open %s!", PIDPATH);
-			addError(errno);
+			fprintf( stderr, "Cannot open %s!\n", PIDPATH);
+			fprintf( stderr, "(%i) %s\n", errno, strerror(errno));
 			return -1;
 		}
 		res = fscanf(pidlog, "%i", &rv);
 		fclose(pidlog);
 		if (res != 1) {
-			addMessage(0, "Could not read PID from %s!", PIDPATH);
+			fprintf( stderr,  "Could not read PID from %s!\n", PIDPATH);
 			return -1;
 		}
 		/* does the pid exist? */
@@ -164,18 +164,17 @@ int32_t main(int32_t argc, char **argv) {
 			/* a process is using the PID. It's highly likely that this is in fact
 			 * the mixplayd that created the pidfile but there is a chance that
 			 * some other process recycled the PID after a reboot or something */
-			addMessage(0, "Mixplayd (PID: %i) is already running!", rv);
+			fprintf( stderr,  "Mixplayd (PID: %i) is already running!\n", rv);
 			return -1;
 		}
-		addMessage(0,
-				   "Found stale pidfile, you may want to check for a core!");
+		fprintf( stderr, "Found stale pidfile, you may want to check for a core!\n");
 		unlink(PIDPATH);
 	}
 
 	control = readConfig();
 	if (control == NULL) {
-		printf("Cannot find configuration!\n");
-		printf("Run 'mprcinit' first\n");
+		fprintf( stderr, "Cannot find configuration!\n");
+		fprintf( stderr, "Run 'mprcinit' first\n");
 		return 1;
 	}
 
