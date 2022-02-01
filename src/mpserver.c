@@ -127,7 +127,7 @@ static char *strdec(char *target, const char *src) {
 
 static int32_t fillReqInfo(mpReqInfo * info, char *line) {
 	jsonObject *jo = NULL;
-	char *jsonLine = calloc(strlen(line), 1);
+	char *jsonLine = falloc(strlen(line), 1);
 	int32_t rc = 0;
 
 	strdec(jsonLine, line);
@@ -859,12 +859,12 @@ int32_t startServer() {
 			break;
 
 		close(mainsocket);
-		mainsocket = 0;
+		mainsocket = -1;
 	}
 
 	freeaddrinfo(result);
 
-	if (mainsocket <= 0) {
+	if (mainsocket < 0) {
 		addMessage(0, "bind to port %i failed!", control->port);
 		addError(errno);
 		return -1;

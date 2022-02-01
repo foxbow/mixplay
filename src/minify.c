@@ -41,7 +41,7 @@
  * whitespaces.
  */
 static int32_t scanChar(int32_t next) {
-	while (isblank(next)) {
+	while ((next >= 0) && isblank(next)) {
 		next = getchar();
 	}
 	return next;

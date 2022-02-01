@@ -101,14 +101,16 @@ static int32_t playResults(mpcmd_t range, const char *arg,
  * reset controller on restart
  */
 void unlockController( void ) {
-	/* make sure that the unlock has defined behaviour */
-	pthread_mutex_trylock(&_pcmdlock);
-	pthread_mutex_unlock(&_pcmdlock);
-	while (pthread_mutex_trylock(&_asynclock) == EBUSY) {
-		addMessage(0, "Asyncunlock..");
+	/* unlock and destroy the mutexes.
+	   This is actually against all rules as only the creating thread should
+	   unlock it's own mutex. However since we are terminating, locks become
+	   meaningless. */
+	if(pthread_mutex_destroy(&_pcmdlock) != 0) {
+		pthread_mutex_unlock(&_pcmdlock);
+	}
+	if (pthread_mutex_destroy(&_asynclock) != 0) {
 		pthread_mutex_unlock(&_asynclock);
 	}
-	pthread_mutex_unlock(&_asynclock);
 }
 
 /**
