@@ -146,13 +146,8 @@ int32_t main(int32_t argc, char **argv) {
 	pthread_t hidtid = 0;
 
 	/* first of all check if there isn't already another instance running */
-	if (access(PIDPATH, F_OK) == 0) {
-		pidlog = fopen(PIDPATH, "r");
-		if (pidlog == NULL) {
-			fprintf( stderr, "Cannot open %s!\n", PIDPATH);
-			fprintf( stderr, "(%i) %s\n", errno, strerror(errno));
-			return -1;
-		}
+	pidlog = fopen(PIDPATH, "r");
+	if (pidlog != NULL) {
 		res = fscanf(pidlog, "%i", &rv);
 		fclose(pidlog);
 		if (res != 1) {
