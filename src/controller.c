@@ -101,25 +101,41 @@ static int32_t playResults(mpcmd_t range, const char *arg,
  * reset controller on restart
  */
 void unlockController( void ) {
-	/* unlock and destroy the mutexes.
-	   This is actually against all rules as only the creating thread should
-	   unlock it's own mutex. However since we are terminating, locks become
-	   meaningless. */
-	if(pthread_mutex_destroy(&_pcmdlock) != 0) {
-		pthread_mutex_unlock(&_pcmdlock);
+	int32_t cnt = 0;
+	char msg[32];
+	/* this must only be called when stopping or restarting the player! */
+	assert ((getConfig()->status == mpc_quit) ||
+			(getConfig()->status == mpc_reset));
+
+	/* setCommand cleans up itself, no need to retry */
+	if (pthread_mutex_trylock(&_pcmdlock) == EBUSY) {
+		addMessage(0, "Unlocking commands");
 	}
-	if (pthread_mutex_destroy(&_asynclock) != 0) {
-		pthread_mutex_unlock(&_asynclock);
+	pthread_mutex_unlock(&_pcmdlock);
+
+	/* This is bad but unfortunately this may exactly be the reason for the
+	   restart =/ It may make sense to remember the tid of the current async
+	   operation and terminate that explicitly. */
+	while ((pthread_mutex_trylock(&_asynclock) == EBUSY) && (cnt++ < 5)) {
+		snprintf(msg, 32, "async blocked! retrying %i", cnt);
+		activity(0, msg);
+		sleep(1);
 	}
+	pthread_mutex_unlock(&_asynclock);
 }
 
 /**
  * returns TRUE when no asynchronous operation is running but does not
  * block on async operations.
  */
-int32_t asyncTest() {
+static int32_t asyncTest() {
 	int32_t ret = 0;
-
+	int32_t status = getConfig()->status;
+	/* don't even try when we are about to stop the player */
+	if (( status == mpc_quit) || (status == mpc_reset)) {
+		addMessage(0, "Player is %s", (status==mpc_quit)?"shutting down":"resetting");
+		return 0;
+	}
 	if (pthread_mutex_trylock(&_asynclock) != EBUSY) {
 		addMessage(MPV + 1, "Locking for %s",
 				   mpcString(getConfig()->status));

@@ -1301,7 +1301,8 @@ static mptitle_t *skipOverFlags(mptitle_t * current, int32_t dir, uint32_t flags
 		return NULL;
 	}
 
-	while ((marker->flags & flags) ||
+	while ((marker->flags & (MP_DBL|MP_DNP)) ||
+		   (marker->flags & flags) ||
 		   (getFavplay() && !(marker->flags & MP_FAV))) {
 		if (dir > 0) {
 			marker = marker->next;
@@ -1325,7 +1326,7 @@ static mptitle_t *skipOverFlags(mptitle_t * current, int32_t dir, uint32_t flags
  * returns NULL if no title is available
  */
 static mptitle_t *skipOver(mptitle_t * current, int32_t dir) {
-	return skipOverFlags( current, dir, MP_HIDE | MP_PDARK);
+	return skipOverFlags( current, dir, MP_INPL | MP_TDARK | MP_PDARK);
 }
 
 static char flagToChar(int32_t flag) {
@@ -1416,13 +1417,17 @@ void setArtistSpread() {
 	mptitle_t *runner=skipOver(getConfig()->root,1);
 	mptitle_t *checker=NULL;
 	uint32_t count=0;
+	/* which titles should be skipped
+	   MP_PDARK is kind of questionable but may speed up adding titles and
+	   avoid premature increase of playcount */
+	const uint32_t mask = MP_PDARK|MP_MARK;
 
 	/* Use MP_MARK to check off tested titles */
 	unsetFlags(MP_MARK);
 	activity(1, "Checking artist spread");
 	while (runner != NULL) {
 		/* find the next unmarked, playable title to compare to */
-		checker=skipOverFlags(runner->next, 1, MP_DNP|MP_DBL|MP_MARK);
+		checker=skipOverFlags(runner->next, 1, mask);
 		/* a comparison can be done */
 		while (checker && (checker != runner)) {
 			if(checkSim(runner->artist, checker->artist)) {
@@ -1430,16 +1435,17 @@ void setArtistSpread() {
 				checker->flags |= MP_MARK;
 			}
 			/* check for the next title */
-			checker=skipOverFlags(checker->next, 1, MP_DNP|MP_DBL|MP_MARK);
+			checker=skipOverFlags(checker->next, 1, mask);
 		}
-		/* Check has been done */
+		/* Check has been done
+		   30 is correct here since we use a rule of 2/3 later */
 		if (count++ == 30) {
 			break;
 		}
 		/* runner has been checked too */
 		runner->flags |= MP_MARK;
 		/* find the next title to check */
-		runner=skipOverFlags(runner->next, 1, MP_DNP|MP_DBL|MP_MARK);
+		runner=skipOverFlags(runner->next, 1, mask);
 	}
 	/* clean up */
 	unsetFlags(MP_MARK);

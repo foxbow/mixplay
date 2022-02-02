@@ -28,7 +28,7 @@
  * Next iteration (if ever) will tokenize the code and probably even shorten
  * function and variable names, which is where the fat lies.
  *
- * (c) 2021 - Björn 'foxbow' Weber
+ * (c) 2021-2022 - Björn 'foxbow' Weber
  * Use at will, no warranties
  */
 #include <stdio.h>
@@ -415,7 +415,7 @@ int32_t main(int32_t argc, char **argv) {
 			}
 			break;
 		}
-		if (this) {
+		if (this > 0) {
 			putchar(this);
 		}
 		this = next;
