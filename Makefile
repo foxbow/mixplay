@@ -5,14 +5,6 @@ OBJDIR=build
 
 CCFLAGS+=-DVERSION=\"$(VERSION)\"
 
-# rudimentary sanity check
-ifeq ($(shell pkg-config --exists alsa && echo 1),)
-$(error ALSA support is not installed. Consider running 'make prepare' )
-endif
-ifeq ($(shell pkg-config --exists libmpg123 && echo 1),)
-$(error libmpg123 is not installed. Consider running 'make prepare' )
-endif
-
 ifdef MPDEBUG
 # force compilation with -g
 CCFLAGS+=-std=gnu11 -Wall -Wextra -pedantic -Werror -I . -g
@@ -54,7 +46,16 @@ endif
 LIBS+=$(shell pkg-config --libs $(REFS))
 CCFLAGS+=$(shell pkg-config --cflags $(REFS))
 
-all: server clients
+all: sanity server clients
+
+# rudimentary sanity check
+.PHONY sanity:
+ifeq ($(shell pkg-config --exists alsa && echo 1),)
+	$(error ALSA support is not installed. Consider running 'make prepare' )
+endif
+ifeq ($(shell pkg-config --exists libmpg123 && echo 1),)
+	$(error libmpg123 is not installed. Consider running 'make prepare' )
+endif
 
 server: $(OBJDIR)/dep.d bin/mixplayd bin/mprcinit
 
