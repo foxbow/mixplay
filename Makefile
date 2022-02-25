@@ -1,5 +1,5 @@
 CC=gcc
-VERSION=$(shell git describe --tags --abbrev=1 --dirty=-dev --always)
+VERSION=$(shell git describe --tags --abbrev=1 --dirty=-dev --always | sed -e 's/-[0-9,a-z]*$$//' -e 's/-/\./' )
 SRCDIR=src
 OBJDIR=build
 

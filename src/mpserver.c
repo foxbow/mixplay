@@ -168,13 +168,41 @@ static size_t serviceUnavailable(char *commdata) {
 
 #define ROUNDUP(a,b) (((a/b)+1)*b)
 
+/* filters out anything that is not ASCII 7Bit and replaces any sequence with a
+   single underscore. Used to create non UTF-8 filenames when downloading
+   a title */
+static char* plaintext(const char *text) {
+	static char res[MAXPATHLEN+1];
+	uint8_t special=0;
+	size_t i, j=0;
+	if(strlen(text) > MAXPATHLEN) {
+		addMessage(0, "String %s too long!", text);
+		return "none.mp3";
+	}
+	for(i=0; i<strlen(text); i++) {
+		if(text[i]>0) {
+			res[j++]=text[i];
+			special=0;
+		}
+		else if (special == 0) {
+			res[j++]='_';
+			special=1;
+		}
+		else {
+			special=0;
+		}
+	}
+	res[j]=0;
+	return res;
+}
+
 /**
  * This will handle a connection
  *
  * since the context is HTTP the concept of a 'connection' does not really
  * apply here. To keep the protocol as simple as possible, each client has
  * has its own id and the clientHandler() will act according to this ID, not
- * the socket as this may be shared in unsuspected ways. For example this
+ * the socket as this may be shared in unexpected ways. For example this
  * allows two sessions in one browser.
  *
  * Since explicit disconnects are not really a thing in HTTP, we're using a
@@ -183,7 +211,7 @@ static size_t serviceUnavailable(char *commdata) {
  * When the last handler stops, the last clientid will not be removed until a
  * new client connects. This is not a real issue, as just the id of the last
  * client will be locked but MAXCLIENT-1 others are still available. And after
- * 2*clientnum triggerClient() calls the old client will be marked as dead
+ * 5*clientnum triggerClient() calls the old client will be marked as dead
  * again. It is not worth trying to clean up that id!
  */
 static void *clientHandler(void *args) {
@@ -351,7 +379,7 @@ static void *clientHandler(void *args) {
 							break;
 						}
 						initMsgCnt(reqInfo.clientid);
-						setNotify(reqInfo.clientid, MPCOMM_TITLES);
+						addNotify(reqInfo.clientid, MPCOMM_TITLES);
 					}
 
 					/* a valid client came in */
@@ -409,7 +437,6 @@ static void *clientHandler(void *args) {
 							send(sock,
 								 "HTTP/1.0 404 Not Found\015\012\015\012", 25,
 								 0);
-							state = req_none;
 							running = CL_STP;
 						}
 					}
@@ -419,7 +446,6 @@ static void *clientHandler(void *args) {
 					else {
 						send(sock, "HTTP/1.0 404 Not Found\015\012\015\012",
 							 25, 0);
-						state = req_none;
 						running = CL_STP;
 					}
 					break;
@@ -430,18 +456,29 @@ static void *clientHandler(void *args) {
 						addMessage(MPV + 1, "Got command 0x%04x - %s %s", cmd,
 								   mpcString(cmd),
 								   reqInfo.arg ? reqInfo.arg : "");
-						/* search is synchronous */
+						/* search is synchronous
+						 * This is ugly! This code *should* go into the next
+						 * step, but we need the searchresults then already.
+						 * Changing (cleaning) this would mean a complete
+						 * redesign of the server - which may not be the worst
+						 * plan anyways...
+						 */
 						if (MPC_CMD(cmd) == mpc_search) {
-							setCurClient(reqInfo.clientid);
-							if (getConfig()->found->state == mpsearch_idle) {
+							state = req_update;
+							if (setCurClient(reqInfo.clientid) == -1) {
+								addMessage(-1, "Server is blocked!");
+								len = serviceUnavailable(commdata);
+							}
+							else if (getConfig()->found->state == mpsearch_idle) {
 								setCommand(cmd, reqInfo.arg ?
 								    strdup(reqInfo.arg) : NULL);
 								running |= CL_SRC;
-								state = req_update;
 							}
+							/* this case should not be possible at all! */
 							else {
 								addMessage(-1, "Already searching!");
 								unlockClient(reqInfo.clientid);
+								len = serviceUnavailable(commdata);
 							}
 						}
 					}
@@ -449,7 +486,6 @@ static void *clientHandler(void *args) {
 						send(sock,
 							 "HTTP/1.0 406 Not Acceptable\015\012\015\012", 31,
 							 0);
-						state = req_none;
 						running = CL_STP;
 					}
 					break;
@@ -528,7 +564,6 @@ static void *clientHandler(void *args) {
 						addMessage(MPV + 1, "Illegal get %s", pos);
 						send(sock, "HTTP/1.0 404 Not Found\015\012\015\012",
 							 26, 0);
-						state = req_none;
 						running = CL_STP;
 					}
 					break;
@@ -537,18 +572,15 @@ static void *clientHandler(void *args) {
 					send(sock,
 						 "HTTP/1.0 405 Method Not Allowed\015\012\015\012", 35,
 						 0);
-					state = req_none;
 					running = CL_STP;
 					break;
 				case -2:		/* generic file not found */
 					send(sock, "HTTP/1.0 404 Not Found\015\012\015\012", 25,
 						 0);
-					state = req_none;
 					running = CL_STP;
 					break;
 				default:
 					addMessage(0, "Unknown method %i!", method);
-					state = req_none;
 					running = CL_STP;
 					break;
 				}				/* switch(method) */
@@ -556,7 +588,7 @@ static void *clientHandler(void *args) {
 		}						/* if fd_isset */
 
 		/* send a reply if needed */
-		if (running) {
+		if (running != CL_STP) {
 			memset(commdata, 0, commsize);
 			switch (state) {
 			case req_none:
@@ -565,18 +597,14 @@ static void *clientHandler(void *args) {
 
 			case req_update:	/* get update */
 				/* add flags that have been set outside */
-				if (getNotify(reqInfo.clientid) != MPCOMM_STAT) {
-					addMessage(MPV + 2,
-							   "Notification %i for client %i applied",
-							   getNotify(reqInfo.clientid), reqInfo.clientid);
-					fullstat |= getNotify(reqInfo.clientid);
-					clearNotify(reqInfo.clientid);
-				}
+				fullstat |= getNotify(reqInfo.clientid);
+				clearNotify(reqInfo.clientid);
+
 				/* only look at the search state if this is the searcher */
 				if ((running & CL_SRC)
 					&& (config->found->state != mpsearch_idle)) {
 					fullstat |= MPCOMM_RESULT;
-					/* wait until the search is done */
+					/* poll until the search is done */
 					while (config->found->state == mpsearch_busy) {
 						nanosleep(&ts, NULL);
 					}
@@ -667,10 +695,14 @@ static void *clientHandler(void *args) {
 				break;
 
 			case req_mp3:		/* send mp3 */
+				/* remove anything non-ascii7bit from the filename so asian
+				   smartphones don't consider the filename to be hanzi */
 				sprintf(commdata,
 						"HTTP/1.1 200 OK\015\012Content-Type: audio/mpeg;\015\012"
-						"Content-Disposition: attachment; filename=\"%s.mp3\"\015\012\015\012",
-						title->display);
+						"Content-Disposition: attachment; "
+						"filename=\"%s.mp3\"; "
+						"filename*=utf-8''%s.mp3\015\012\015\012",
+						plaintext(title->display), title->display);
 				send(sock, commdata, strlen(commdata), 0);
 				line[0] = 0;
 				filePost(sock, fullpath(title->path));

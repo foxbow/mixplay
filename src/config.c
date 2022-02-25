@@ -841,7 +841,9 @@ void notifyChange(int32_t state) {
 
 	pthread_mutex_lock(&_cblock);
 	for (i = 0; i < MAXCLIENT; i++) {
-		getConfig()->notify[i] |= state;
+		if(getConfig()->client[i]) {
+			addNotify(i, state);
+		}
 	}
 	pthread_mutex_unlock(&_cblock);
 }
@@ -1016,9 +1018,7 @@ int32_t getFreeClient(void) {
 			return i + 1;
 		}
 	}
-	/* hopefully this will never happen otherwise someone may DOS the player
-	 * and spam the clients with pop-ups.. */
-	addMessage(-1, "Out of clients!");
+	addMessage(0, "Out of clients!");
 	return -1;
 }
 
@@ -1039,9 +1039,16 @@ void triggerClient(int32_t client) {
 		else {
 			if (getConfig()->client[run] > 0) {
 				getConfig()->client[run]++;
-				if (getConfig()->client[run] > (2 * numclients)) {
+				if (getConfig()->client[run] > (4 * numclients)) {
 					getConfig()->client[run] = 0;
 					numclients--;
+					/* there MUST be at least one active client as one just
+					   invoked this function! If we see this, we probably
+					   need to mutex lock the client functions... */
+					if (numclients < 1) {
+						addMessage(0, "Client count out of sync!");
+						numclients=1;
+					}
 					addMessage(MPV + 2,
 							   "client %i disconnected, %i clients connected",
 							   run + 1, numclients);
@@ -1072,7 +1079,7 @@ int32_t getNotify(int32_t client) {
 	return 0;
 }
 
-void setNotify(int32_t client, int32_t state) {
+void addNotify(int32_t client, int32_t state) {
 	client--;
 	if ((client >= 0) && (client < MAXCLIENT)) {
 		getConfig()->notify[client] |= state;

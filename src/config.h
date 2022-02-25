@@ -244,7 +244,7 @@ int32_t trylockClient(int32_t);
 void triggerClient(int32_t);
 
 int32_t getNotify(int32_t);
-void setNotify(int32_t, int32_t);
+void addNotify(int32_t, int32_t);
 void clearNotify(int32_t);
 
 uint64_t getMsgCnt(int32_t);
