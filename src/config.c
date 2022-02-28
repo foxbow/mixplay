@@ -841,9 +841,7 @@ void notifyChange(int32_t state) {
 
 	pthread_mutex_lock(&_cblock);
 	for (i = 0; i < MAXCLIENT; i++) {
-		if(getConfig()->client[i]) {
-			addNotify(i, state);
-		}
+		addNotify(i, state);
 	}
 	pthread_mutex_unlock(&_cblock);
 }

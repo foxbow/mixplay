@@ -1353,7 +1353,7 @@ static char flagToChar(int32_t flag) {
 static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 							 uint32_t * pcount, uint64_t maxcount) {
 	mptitle_t *runner = guard;
-	activity(2, "Playcountskipping");
+	activity(2, "Adding title(s)");
 
 	/* zero steps is a bad idea but may happen, since we play with randum
 	 * numbers */
