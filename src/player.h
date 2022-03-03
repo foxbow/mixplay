@@ -15,7 +15,7 @@
 void *reader();
 void *setProfile(void *);
 void setStream(const char *const stream, const char *const name);
-void sendplay( void );
+void sendplay(void);
 void stopPlay(void);
 void pausePlay(void);
 void *killPlayers(int32_t restart);

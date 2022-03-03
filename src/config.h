@@ -240,7 +240,6 @@ int32_t playerIsBusy(void);
 void blockSigint();
 
 int32_t getFreeClient(void);
-int32_t trylockClient(int32_t);
 void triggerClient(int32_t);
 
 int32_t getNotify(int32_t);

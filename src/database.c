@@ -92,15 +92,15 @@ mptitle_t *getTitleForRange(const mpcmd_t range, const char *name) {
    used to compare paths since the difference is more likely to be at the end
    so the difference will we noted faster and with more than 5k titles things
    like these start to matter */
-static int32_t strreq(const char* str1, const char *str2) {
+static int32_t strreq(const char *str1, const char *str2) {
 	size_t len = strlen(str1);
 
-	if( strlen(str2) != len ) {
+	if (strlen(str2) != len) {
 		return 0;
 	}
 
 	do {
-		if(str1[len] != str2[len]) {
+		if (str1[len] != str2[len]) {
 			return 0;
 		}
 	} while (--len != 0);

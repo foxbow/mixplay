@@ -39,7 +39,7 @@ The following utilities will not be copied on 'make install'
 simple Javascript minifier that may also work on CSS, only needed during build
 
 ### pre-commit
-depends on the 'indent' utility and checks the code formatting on commit. Should only be needed for changes in the code. Check the fiule itself for more information.
+depends on the 'indent' utility and checks the code formatting on commit. Should only be needed for changes in the code. Check the file itself for more information.
 
 ### valgrind.sh
 depends on 'valgrind' to run a memory check on mixplay running in simple debug mode.

@@ -171,28 +171,29 @@ static size_t serviceUnavailable(char *commdata) {
 /* filters out anything that is not ASCII 7Bit and replaces any sequence with a
    single underscore. Used to create non UTF-8 filenames when downloading
    a title */
-static char* plaintext(const char *text) {
-	static char res[MAXPATHLEN+1];
-	uint8_t special=0;
-	size_t i, j=0;
-	if(strlen(text) > MAXPATHLEN) {
+static char *plaintext(const char *text) {
+	static char res[MAXPATHLEN + 1];
+	uint8_t special = 0;
+	size_t i, j = 0;
+
+	if (strlen(text) > MAXPATHLEN) {
 		addMessage(0, "String %s too long!", text);
 		return "none.mp3";
 	}
-	for(i=0; i<strlen(text); i++) {
-		if(text[i]>0) {
-			res[j++]=text[i];
-			special=0;
+	for (i = 0; i < strlen(text); i++) {
+		if (text[i] > 0) {
+			res[j++] = text[i];
+			special = 0;
 		}
 		else if (special == 0) {
-			res[j++]='_';
-			special=1;
+			res[j++] = '_';
+			special = 1;
 		}
 		else {
-			special=0;
+			special = 0;
 		}
 	}
-	res[j]=0;
+	res[j] = 0;
 	return res;
 }
 
@@ -469,9 +470,11 @@ static void *clientHandler(void *args) {
 								addMessage(-1, "Server is blocked!");
 								len = serviceUnavailable(commdata);
 							}
-							else if (getConfig()->found->state == mpsearch_idle) {
-								setCommand(cmd, reqInfo.arg ?
-								    strdup(reqInfo.arg) : NULL);
+							else if (getConfig()->found->state ==
+									 mpsearch_idle) {
+								setCommand(cmd,
+										   reqInfo.arg ? strdup(reqInfo.
+																arg) : NULL);
 								running |= CL_SRC;
 							}
 							/* this case should not be possible at all! */
@@ -696,7 +699,7 @@ static void *clientHandler(void *args) {
 
 			case req_mp3:		/* send mp3 */
 				/* remove anything non-ascii7bit from the filename so asian
-				   smartphones don't consider the filename to be hanzi */
+				 * smartphones don't consider the filename to be hanzi */
 				sprintf(commdata,
 						"HTTP/1.1 200 OK\015\012Content-Type: audio/mpeg;\015\012"
 						"Content-Disposition: attachment; "
@@ -862,8 +865,8 @@ int32_t startServer() {
 	struct addrinfo hints;
 	struct addrinfo *result, *rp;
 
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_INET6; // this should include IPv4
+	memset(&hints, 0, sizeof (hints));
+	hints.ai_family = AF_INET6;	// this should include IPv4
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 	hints.ai_protocol = 0;
@@ -872,18 +875,17 @@ int32_t startServer() {
 	hints.ai_next = NULL;
 
 	snprintf(port, 19, "%d", control->port);
-	if(getaddrinfo(NULL, port, &hints, &result) != 0) {
+	if (getaddrinfo(NULL, port, &hints, &result) != 0) {
 		addMessage(0, "Could not get addrinfo!");
 		return -1;
 	};
 
 	for (rp = result; rp != NULL; rp = rp->ai_next) {
-		mainsocket = socket(rp->ai_family, rp->ai_socktype,
-				rp->ai_protocol);
+		mainsocket = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
 		if (mainsocket == -1)
 			continue;
 		if (setsockopt(mainsocket, SOL_SOCKET, SO_REUSEADDR,
-				&val, sizeof (int32_t)) < 0) {
+					   &val, sizeof (int32_t)) < 0) {
 			addMessage(0, "Could not set SO_REUSEADDR on socket!");
 			addError(errno);
 		}

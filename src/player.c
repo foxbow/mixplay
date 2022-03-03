@@ -19,22 +19,22 @@
 
 static pthread_mutex_t _killlock = PTHREAD_MUTEX_INITIALIZER;
 
-static int32_t fdset = 0;	/* the currently active player */
+static int32_t fdset = 0;		/* the currently active player */
 static int32_t p_command[2][2];	/* command pipes to mpg123 */
-static int32_t p_status[2][2];		/* status pipes to mpg123 */
-static int32_t p_error[2][2];		/* error pipes to mpg123 */
-static pid_t p_pid[2];		/* player pids */
-static int32_t p_order=1;	/* playing order */
-static int32_t p_skipped=0;	/* playing order */
+static int32_t p_status[2][2];	/* status pipes to mpg123 */
+static int32_t p_error[2][2];	/* error pipes to mpg123 */
+static pid_t p_pid[2];			/* player pids */
+static int32_t p_order = 1;		/* playing order */
+static int32_t p_skipped = 0;	/* playing order */
 
 void setSkipped() {
-	p_skipped=1;
+	p_skipped = 1;
 }
 
 /*
  * todo: does this need to be made thread safe?
  */
-void setOrder( int32_t order ) {
+void setOrder(int32_t order) {
 	p_order = order;
 }
 
@@ -45,8 +45,9 @@ void setOrder( int32_t order ) {
 void cleanTitles(int32_t flags) {
 	mpconfig_t *control = getConfig();
 	mptitle_t *runner = control->root;
-	uint32_t pc=getPlaycount(1);
-	if(pc > 0) {
+	uint32_t pc = getPlaycount(1);
+
+	if (pc > 0) {
 		pc--;
 	}
 
@@ -58,7 +59,7 @@ void cleanTitles(int32_t flags) {
 		return;
 	}
 	do {
-		runner->favpcount = getFavplay()?0:MIN(runner->playcount, pc);
+		runner->favpcount = getFavplay()? 0 : MIN(runner->playcount, pc);
 		runner = runner->next;
 		if (flags) {
 			/* just keep MP_DBL */
@@ -109,13 +110,14 @@ static int32_t oactive = 1;
  *         1 - inactive player
  */
 int32_t toPlayer(int32_t player, const char *msg) {
-	return dowrite(p_command[player?(fdset?0:1):fdset][1], msg, strlen(msg));
+	return dowrite(p_command[player ? (fdset ? 0 : 1) : fdset][1], msg,
+				   strlen(msg));
 }
 
 /**
  * make mpeg123 play the given title
  */
-void sendplay( void ) {
+void sendplay(void) {
 	char line[MAXPATHLEN + 13] = "load ";
 	mpconfig_t *control = getConfig();
 
@@ -313,7 +315,8 @@ void *killPlayers(int32_t restart) {
 		if (control->status == mpc_start) {
 			/* Most likely an URL could not be loaded */
 			if (oactive != control->active) {
-				addMessage(MPV + 1, "Reverting to %s", getProfileName(oactive));
+				addMessage(MPV + 1, "Reverting to %s",
+						   getProfileName(oactive));
 				control->active = oactive;
 			}
 			else {
@@ -328,11 +331,11 @@ void *killPlayers(int32_t restart) {
 			control->status = mpc_quit;
 		}
 		else {
-			control->status=mpc_reset;
+			control->status = mpc_reset;
 		}
 	}
 	else {
-		control->status=mpc_quit;
+		control->status = mpc_quit;
 		activity(0, "Stopping players");
 	}
 
@@ -362,7 +365,7 @@ void *killPlayers(int32_t restart) {
 		}
 	}
 
-	addMessage(MPV+1, "Players stopped!");
+	addMessage(MPV + 1, "Players stopped!");
 	closeAudio();
 	unlockController();
 	activity(0, "All unlocked");
@@ -417,7 +420,7 @@ void *reader() {
 	float intime = 0.0;
 	float oldtime = 0.0;
 	int32_t fading = 1;
-	uint32_t watchdog=0;
+	uint32_t watchdog = 0;
 
 	blockSigint();
 
@@ -497,8 +500,8 @@ void *reader() {
 	}
 
 	/* main loop
-	   TODO: nothing in this loop shall block so setting the watchdog will
-	         cause a restart in any case! */
+	 * TODO: nothing in this loop shall block so setting the watchdog will
+	 * cause a restart in any case! */
 	do {
 		FD_ZERO(&fds);
 		for (i = 0; i <= fading; i++) {
@@ -521,8 +524,7 @@ void *reader() {
 		 * failsafe. */
 		if ((i == 0) &&
 			(control->mpmode & PM_STREAM) &&
-			(control->status != mpc_idle) &&
-			(control->status != mpc_start)) {
+			(control->status != mpc_idle) && (control->status != mpc_start)) {
 			if (++watchdog >= WATCHDOG_TIMEOUT) {
 				addMessage(-1, "Watchdog triggered!");
 				return killPlayers(1);
@@ -774,7 +776,7 @@ void *reader() {
 								addMessage(MPV + 1,
 										   "Trying to restart stream");
 								control->status = mpc_start;
-								sendplay( );
+								sendplay();
 							}
 							else {
 								control->status = mpc_idle;
@@ -785,7 +787,8 @@ void *reader() {
 								 !(control->mpmode & PM_SWITCH)) {
 							addMessage(MPV + 2, "Title change");
 							if (p_order == 1) {
-								if (playCount(control->current->title, p_skipped)
+								if (playCount
+									(control->current->title, p_skipped)
 									== 1) {
 									p_order = 0;
 								}
@@ -814,7 +817,7 @@ void *reader() {
 							}
 
 							if (control->status != mpc_idle) {
-								sendplay( );
+								sendplay();
 							}
 
 							if (control->mpmode == PM_DATABASE) {

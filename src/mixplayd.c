@@ -25,7 +25,7 @@
 #include "mpflirc.h"
 #include "mpserver.h"
 #include "database.h"
-#include "mpalsa.h" /* for getVolume */
+#include "mpalsa.h"				/* for getVolume */
 
 /**
  * TODO: create a dedicated signal handler thread.
@@ -78,7 +78,8 @@ static char _lasttitle[MAXPATHLEN + 1];
 static mpcmd_t _last = mpc_idle;
 
 static void _volumeUpdateHook() {
-	mpconfig_t *config=getConfig();
+	mpconfig_t *config = getConfig();
+
 	/* read current Hardware volume in case it changed externally
 	 * don't read before arg is NULL as someone may be
 	 * trying to set the volume right now */
@@ -100,7 +101,7 @@ static void _debugHidUpdateHook() {
 
 	/* has the title changed? */
 	if ((title != NULL) && (strcmp(title, _lasttitle) != 0)) {
-		strtcpy(_lasttitle, title, MAXPATHLEN-1);
+		strtcpy(_lasttitle, title, MAXPATHLEN - 1);
 		hidPrintline("%s", title);
 	}
 
@@ -151,7 +152,7 @@ int32_t main(int32_t argc, char **argv) {
 		res = fscanf(pidlog, "%i", &rv);
 		fclose(pidlog);
 		if (res != 1) {
-			fprintf( stderr,  "Could not read PID from %s!\n", PIDPATH);
+			fprintf(stderr, "Could not read PID from %s!\n", PIDPATH);
 			return -1;
 		}
 		/* does the pid exist? */
@@ -159,17 +160,18 @@ int32_t main(int32_t argc, char **argv) {
 			/* a process is using the PID. It's highly likely that this is in fact
 			 * the mixplayd that created the pidfile but there is a chance that
 			 * some other process recycled the PID after a reboot or something */
-			fprintf( stderr,  "Mixplayd (PID: %i) is already running!\n", rv);
+			fprintf(stderr, "Mixplayd (PID: %i) is already running!\n", rv);
 			return -1;
 		}
-		fprintf( stderr, "Found stale pidfile, you may want to check for a core!\n");
+		fprintf(stderr,
+				"Found stale pidfile, you may want to check for a core!\n");
 		unlink(PIDPATH);
 	}
 
 	control = readConfig();
 	if (control == NULL) {
-		fprintf( stderr, "Cannot find configuration!\n");
-		fprintf( stderr, "Run 'mprcinit' first\n");
+		fprintf(stderr, "Cannot find configuration!\n");
+		fprintf(stderr, "Run 'mprcinit' first\n");
 		return 1;
 	}
 
@@ -257,15 +259,16 @@ int32_t main(int32_t argc, char **argv) {
 		 */
 		do {
 			addMessage(1, "Player is up");
-			if(pthread_join(control->rtid, NULL) == 0) {
+			if (pthread_join(control->rtid, NULL) == 0) {
 				addMessage(1, "Reader stopped");
 				if (control->status == mpc_reset) {
-					control->status=mpc_start;
+					control->status = mpc_start;
 					initAll();
 				}
 			}
 			else {
-				addMessage(1, "pthread_join on %d failed!", (unsigned)control->rtid);
+				addMessage(1, "pthread_join on %d failed!",
+						   (unsigned) control->rtid);
 				sleep(1);
 			}
 		} while (control->status != mpc_quit);

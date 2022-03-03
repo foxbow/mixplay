@@ -18,7 +18,7 @@ static int32_t drawAll() {
 	char *text = NULL;
 	mptitle_t title;
 	char current[MAXPATHLEN + 5];
-	int32_t state=0;
+	int32_t state = 0;
 
 	do {
 		jo = getStatus(MPCOMM_TITLES);
@@ -30,13 +30,13 @@ static int32_t drawAll() {
 	}
 	if (jsonPeek(jo, "error") != json_error) {
 		state = jsonGetInt(jo, "error");
-		switch(state){
-		case -1: /* error during send/receive */
+		switch (state) {
+		case -1:				/* error during send/receive */
 			fail(F_FAIL, "Server did not reply!");
 			break;
-		case 204: /* empty HTTP reply - ignore */
+		case 204:				/* empty HTTP reply - ignore */
 			break;
-		default: /* should not happen, so report it */
+		default:				/* should not happen, so report it */
 			hidPrintline("Server returned code %i", state);
 		}
 	}
@@ -70,7 +70,7 @@ int32_t main(int32_t argc, char **argv) {
 		setMPHost(argv[1]);
 	}
 
-	if( getCurrentTitle(last, MAXPATHLEN) < 0) {
+	if (getCurrentTitle(last, MAXPATHLEN) < 0) {
 		fail(errno, "Could not get current title!");
 	}
 

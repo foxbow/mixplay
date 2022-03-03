@@ -40,7 +40,7 @@ static mpconfig_t *_cconfig = NULL;
  */
 typedef struct _mpfunc_t _mpfunc;
 struct _mpfunc_t {
-	void (*func) (void *);
+	void (*func)(void *);
 	void *arg;
 	_mpfunc *next;
 };
@@ -309,7 +309,7 @@ mpconfig_t *readConfig(void) {
 		_cconfig->msg = msgBuffInit();
 		_cconfig->found =
 			(searchresults_t *) falloc(1, sizeof (searchresults_t));
-		_cconfig->found->state=mpsearch_idle;
+		_cconfig->found->state = mpsearch_idle;
 	}
 	else {
 		/* Happens on the first run! */
@@ -448,8 +448,8 @@ mpconfig_t *readConfig(void) {
 
 		fclose(fp);
 
-		if(_cconfig->profiles == 0) {
-			fail(F_FAIL, "FUCK!!");
+		if (_cconfig->profiles == 0) {
+			fail(F_FAIL, "No profiles defined!");
 		}
 	}
 
@@ -743,7 +743,7 @@ int32_t playerIsBusy(void) {
 }
 
 #define MP_ACTLEN 75
-static char _curact[MP_ACTLEN+1] = "startup";
+static char _curact[MP_ACTLEN + 1] = "startup";
 
 char *getCurrentActivity(void) {
 	return _curact;
@@ -757,20 +757,20 @@ char *getCurrentActivity(void) {
  * the activity is not shown in debuginterface
  */
 void activity(int32_t v, char *act) {
-	if (strlen(act) > MP_ACTLEN+1) {
-		act[MP_ACTLEN]=0;
+	if (strlen(act) > MP_ACTLEN + 1) {
+		act[MP_ACTLEN] = 0;
 	}
 
 	if (strcmp(act, _curact)) {
 		strtcpy(_curact, act, MP_ACTLEN);
 		notifyChange(MPCOMM_TITLES);
-		if(getDebug() >= v) {
+		if (getDebug() >= v) {
 			printf("\r* %s\r", _curact);
 		}
 	}
 }
 
-static void addHook(void (*func) (void *), void *arg, _mpfunc ** list) {
+static void addHook(void (*func)(void *), void *arg, _mpfunc ** list) {
 	_mpfunc *pos = *list;
 
 	pthread_mutex_lock(&_cblock);
@@ -792,7 +792,7 @@ static void addHook(void (*func) (void *), void *arg, _mpfunc ** list) {
 }
 
 #if 0
-static void removeHook(void (*func) (void *), void *arg, _mpfunc ** list) {
+static void removeHook(void (*func)(void *), void *arg, _mpfunc ** list) {
 	_mpfunc *pos = *list;
 	_mpfunc *pre = NULL;
 
@@ -829,7 +829,7 @@ static void removeHook(void (*func) (void *), void *arg, _mpfunc ** list) {
 /**
  * register an update function, called on minor updates like playtime
  */
-void addUpdateHook(void (*func) ()) {
+void addUpdateHook(void (*func)()) {
 	addHook(func, NULL, &_ufunc);
 }
 
@@ -1003,17 +1003,27 @@ void blockSigint() {
 }
 
 static uint32_t numclients = 0;
+static uint32_t maxclientid = 0;
 
+/* return an unused clientid
+   this gives out clientids in ascending order, even if a previous clientid
+	 is already free again. This is done to avoid mobile clients reconnecting
+	 with their old clientid causing mix-ups if that id was already recycled.
+	 It still may happen but there nedd to be ~100 connects while the client
+	 was offline. Good enough for now */
 int32_t getFreeClient(void) {
 	int32_t i;
 
 	for (i = 0; i < MAXCLIENT; i++) {
-		if (getConfig()->client[i] == 0) {
-			getConfig()->client[i] = 1;
+		int32_t clientid = (maxclientid + i) % MAXCLIENT;
+
+		if (getConfig()->client[clientid] == 0) {
+			getConfig()->client[clientid] = 1;
 			numclients++;
 			addMessage(MPV + 2, "client %i connected, %i clients connected",
-					   i + 1, numclients);
-			return i + 1;
+					   clientid + 1, numclients);
+			maxclientid = clientid;
+			return clientid + 1;
 		}
 	}
 	addMessage(0, "Out of clients!");
@@ -1032,6 +1042,11 @@ void triggerClient(int32_t client) {
 
 	for (run = 0; run < MAXCLIENT; run++) {
 		if (run == client) {
+			if (getConfig()->client[run] == 0) {
+				/* This should no longer happen, see getFreeClient() */
+				addMessage(0, "Client %" PRId32 " got resurrected!", run + 1);
+				numclients++;
+			}
 			getConfig()->client[run] = 1;
 		}
 		else {
@@ -1041,11 +1056,11 @@ void triggerClient(int32_t client) {
 					getConfig()->client[run] = 0;
 					numclients--;
 					/* there MUST be at least one active client as one just
-					   invoked this function! If we see this, we probably
-					   need to mutex lock the client functions... */
+					 * invoked this function! If we see this, we probably
+					 * need to mutex lock the client functions... */
 					if (numclients < 1) {
 						addMessage(0, "Client count out of sync!");
-						numclients=1;
+						numclients = 1;
 					}
 					addMessage(MPV + 2,
 							   "client %i disconnected, %i clients connected",
@@ -1054,19 +1069,6 @@ void triggerClient(int32_t client) {
 			}
 		}
 	}
-}
-
-int32_t trylockClient(int32_t client) {
-	client--;
-	if ((client >= 0) && (client < MAXCLIENT)) {
-		if (getConfig()->client[client] == 0) {
-			getConfig()->client[client] = 1;
-			return 1;
-		}
-		return 0;
-	}
-	addMessage(MPV + 1, "Client id %i out of range!", client + 1);
-	return -1;
 }
 
 int32_t getNotify(int32_t client) {

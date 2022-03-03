@@ -100,12 +100,13 @@ static int32_t playResults(mpcmd_t range, const char *arg,
 /*
  * reset controller on restart
  */
-void unlockController( void ) {
+void unlockController(void) {
 	int32_t cnt = 0;
 	char msg[32];
+
 	/* this must only be called when stopping or restarting the player! */
-	assert ((getConfig()->status == mpc_quit) ||
-			(getConfig()->status == mpc_reset));
+	assert((getConfig()->status == mpc_quit) ||
+		   (getConfig()->status == mpc_reset));
 
 	/* setCommand cleans up itself, no need to retry */
 	if (pthread_mutex_trylock(&_pcmdlock) == EBUSY) {
@@ -114,8 +115,8 @@ void unlockController( void ) {
 	pthread_mutex_unlock(&_pcmdlock);
 
 	/* This is bad but unfortunately this may exactly be the reason for the
-	   restart =/ It may make sense to remember the tid of the current async
-	   operation and terminate that explicitly. */
+	 * restart =/ It may make sense to remember the tid of the current async
+	 * operation and terminate that explicitly. */
 	while ((pthread_mutex_trylock(&_asynclock) == EBUSY) && (cnt++ < 5)) {
 		snprintf(msg, 32, "async blocked! retrying %i", cnt);
 		activity(0, msg);
@@ -131,14 +132,15 @@ void unlockController( void ) {
 static int32_t asyncTest() {
 	int32_t ret = 0;
 	int32_t status = getConfig()->status;
+
 	/* don't even try when we are about to stop the player */
-	if (( status == mpc_quit) || (status == mpc_reset)) {
-		addMessage(0, "Player is %s", (status==mpc_quit)?"shutting down":"resetting");
+	if ((status == mpc_quit) || (status == mpc_reset)) {
+		addMessage(0, "Player is %s",
+				   (status == mpc_quit) ? "shutting down" : "resetting");
 		return 0;
 	}
 	if (pthread_mutex_trylock(&_asynclock) != EBUSY) {
-		addMessage(MPV + 1, "Locking for %s",
-				   mpcString(getConfig()->status));
+		addMessage(MPV + 1, "Locking for %s", mpcString(getConfig()->status));
 		ret = 1;
 	}
 	else {
@@ -176,13 +178,13 @@ static mptitle_t *getCurrentTitle() {
 /**
  * to be called after removing titles, marking them DNP or as DBL.
  **/
-static void checkAfterRemove( mptitle_t *ctitle ) {
+static void checkAfterRemove(mptitle_t * ctitle) {
 	/* clean up the playlist without adding new titles */
 	plCheck(0);
 	/* has the current title changed? Then send a replay to play the new
-	   current title. This may lead to a replay if the title changed during
-	   plcheck() but the effort to avoid this is larger than the expected
-	   impact */
+	 * current title. This may lead to a replay if the title changed during
+	 * plcheck() but the effort to avoid this is larger than the expected
+	 * impact */
 	if (ctitle != getConfig()->current->title) {
 		setOrder(0);
 		toPlayer(0, "STOP\n");
@@ -401,7 +403,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 				/* play stream */
 				if (config->mpmode & PM_STREAM) {
 					/* wake up UI in case it's in sleep mode */
-					config->status=mpc_start;
+					config->status = mpc_start;
 					sendplay();
 				}
 				/* unpause on normal play */
@@ -432,7 +434,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			config->playtime = 0;
 		}
 		else if (asyncTest()) {
-			i=-1;
+			i = -1;
 			if (arg != NULL) {
 				i = -atoi(arg);
 			}
@@ -501,7 +503,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			pthread_mutex_unlock(&_asynclock);
 			/* when playing only favourites, adding titles can make
 			 * a difference */
-			if(getFavplay()) {
+			if (getFavplay()) {
 				setArtistSpread();
 			}
 		}
@@ -560,8 +562,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 											config->streams *
 											sizeof (profile_t *));
 				config->stream[config->streams - 1] =
-					createProfile(arg, config->streamURL, 0,
-								  config->volume);
+					createProfile(arg, config->streamURL, 0, config->volume);
 				config->active = -(config->streams);
 			}
 			/* just add argument as new profile */
@@ -572,8 +573,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 											config->profiles *
 											sizeof (profile_t *));
 				config->profile[config->profiles - 1] =
-					createProfile(arg, NULL, 0,
-								  config->volume);
+					createProfile(arg, NULL, 0, config->volume);
 			}
 			writeConfig(NULL);
 			pthread_mutex_unlock(&_asynclock);
@@ -594,8 +594,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 											config->profiles *
 											sizeof (profile_t *));
 				config->profile[config->profiles - 1] =
-					createProfile(arg, NULL, 0,
-								  config->volume);
+					createProfile(arg, NULL, 0, config->volume);
 				config->active = config->profiles;
 				writeList(mpc_fav);
 				writeList(mpc_dnp);
@@ -622,8 +621,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 						addMessage(-1, "Cannot remove active profile!");
 					}
 					else if (profile > config->profiles) {
-						addMessage(-1, "Profile #%i does not exist!",
-								   profile);
+						addMessage(-1, "Profile #%i does not exist!", profile);
 					}
 					else {
 						free(config->profile[profile - 1]);
@@ -640,8 +638,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 				else if (profile < 0) {
 					profile = (-profile);
 					if (profile > config->streams) {
-						addMessage(-1, "Stream #%i does not exist!",
-								   profile);
+						addMessage(-1, "Stream #%i does not exist!", profile);
 					}
 					else if (-profile == config->active) {
 						addMessage(-1, "Cannot remove active profile!");
@@ -753,8 +750,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		if (config->mpmode & PM_STREAM)
 			break;
 		if (arg != NULL) {
-			playResults(MPC_RANGE(rcmd), arg,
-						insert);
+			playResults(MPC_RANGE(rcmd), arg, insert);
 		}
 		insert = 0;
 		break;

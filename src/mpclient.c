@@ -16,7 +16,7 @@
 
 #define MAXHOSTLEN 64
 static int32_t _mpport = MP_PORT;
-static char _mphost[MAXHOSTLEN+1] = "localhost";
+static char _mphost[MAXHOSTLEN + 1] = "localhost";
 
 /*
  * Print errormessage and exit
@@ -77,12 +77,14 @@ static char *sendRequest(const char *path) {
 	fd_set fds;
 	struct timeval to;
 	int fd = getConnection();
+
 	if (fd < 0) {
 		fail(errno, "could not open connection\n");
 		return NULL;
 	}
 
-	rlen = strlen("POST /mpctrl/") + strlen(path) + strlen(" http\015\012") + 1;
+	rlen =
+		strlen("POST /mpctrl/") + strlen(path) + strlen(" http\015\012") + 1;
 	req = (char *) falloc(1, rlen);
 	if (strstr(path, "cmd") == path) {
 		strcpy(req, "POST /mpctrl/");
@@ -115,7 +117,7 @@ static char *sendRequest(const char *path) {
 			do {
 				reply = (char *) frealloc(reply, rlen + 512);
 				ilen = recv(fd, reply + rlen, 512, MSG_WAITALL);
-				if( (ssize_t)ilen == -1 ) {
+				if ((ssize_t) ilen == -1) {
 					fail(errno, "Read error!");
 				}
 				rlen = rlen + ilen;
@@ -143,7 +145,9 @@ static char *sendRequest(const char *path) {
 
 			/* content length larger than received data */
 			if (clen > rlen) {
-				printf("Content length mismatch (expected %zu, received %zu)!\n", clen, rlen);
+				printf
+					("Content length mismatch (expected %zu, received %zu)!\n",
+					 clen, rlen);
 				printf("%s\n", reply);
 			}
 			else {
@@ -176,20 +180,20 @@ static char *sendRequest(const char *path) {
 	 -2 : unable to resolve server
    on error and the connected socket on success.
 */
-int getConnection( void ) {
+int getConnection(void) {
 	struct addrinfo hint;
 	struct addrinfo *result, *ai;
 	char port[20];
-	int32_t fd=-3;
+	int32_t fd = -3;
 
-	memset(&hint, 0, sizeof(hint));
+	memset(&hint, 0, sizeof (hint));
 	hint.ai_family = AF_UNSPEC;
 	hint.ai_socktype = SOCK_STREAM;
 	hint.ai_flags = 0;
 	hint.ai_protocol = 0;
 
 	snprintf(port, 19, "%d", _mpport);
-	if( getaddrinfo(_mphost, port, &hint, &result) != 0) {
+	if (getaddrinfo(_mphost, port, &hint, &result) != 0) {
 		return -2;
 	}
 

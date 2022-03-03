@@ -282,7 +282,7 @@ int32_t playCount(mptitle_t * title, int32_t skip) {
  * removed
  */
 mpplaylist_t *remFromPLByKey(const uint32_t key) {
-	mpplaylist_t * root;
+	mpplaylist_t *root;
 	mpplaylist_t *pl;
 
 	if (getCurrent() == NULL) {
@@ -419,7 +419,7 @@ static int32_t tsort(const struct dirent **d1, const struct dirent **d2) {
 /**
  * loads all playlists in cd into pllist
  */
-int32_t getPlaylists(const char *cd, struct dirent *** pllist) {
+int32_t getPlaylists(const char *cd, struct dirent ***pllist) {
 	return scandir(cd, pllist, plsel, tsort);
 }
 
@@ -531,7 +531,7 @@ static uint32_t matchTitle(mptitle_t * title, const char *pat) {
 	}
 	else {
 		addMessage(0, "Pattern without range: %s", pat);
-		if(isMatch(title->display, pat, 0))
+		if (isMatch(title->display, pat, 0))
 			res = mpc_display;
 	}
 
@@ -791,7 +791,7 @@ static int32_t applyFAVlist(marklist_t * favourites) {
 
 /* reset the given flags on all titles */
 static void unsetFlags(uint32_t flags) {
-	mptitle_t * guard = getConfig()->root;
+	mptitle_t *guard = getConfig()->root;
 	mptitle_t *runner = guard;
 
 	do {
@@ -1179,9 +1179,9 @@ mptitle_t *loadPlaylist(const char *path) {
 			(strlen(buff) > 1) && (buff[0] != '#')) {
 			/* turn relative paths into absolute ones */
 			if (buff[0] != '/') {
-				strtcpy(titlePath, mdir, MAXPATHLEN-1);
-				strtcat(titlePath, buff, MAXPATHLEN-1);
-				strtcpy(buff, titlePath, MAXPATHLEN-1);
+				strtcpy(titlePath, mdir, MAXPATHLEN - 1);
+				strtcat(titlePath, buff, MAXPATHLEN - 1);
+				strtcpy(buff, titlePath, MAXPATHLEN - 1);
 			}
 			/* remove control chars like CR/LF */
 			strip(titlePath, buff, MAXPATHLEN - 1);
@@ -1294,14 +1294,15 @@ uint32_t getPlaycount(int32_t high) {
 	return high ? max : min;
 }
 
-static mptitle_t *skipOverFlags(mptitle_t * current, int32_t dir, uint32_t flags) {
+static mptitle_t *skipOverFlags(mptitle_t * current, int32_t dir,
+								uint32_t flags) {
 	mptitle_t *marker = current;
 
 	if (marker == NULL) {
 		return NULL;
 	}
 
-	while ((marker->flags & (MP_DBL|MP_DNP)) ||
+	while ((marker->flags & (MP_DBL | MP_DNP)) ||
 		   (marker->flags & flags) ||
 		   (getFavplay() && !(marker->flags & MP_FAV))) {
 		if (dir > 0) {
@@ -1326,7 +1327,7 @@ static mptitle_t *skipOverFlags(mptitle_t * current, int32_t dir, uint32_t flags
  * returns NULL if no title is available
  */
 static mptitle_t *skipOver(mptitle_t * current, int32_t dir) {
-	return skipOverFlags( current, dir, MP_INPL | MP_TDARK | MP_PDARK);
+	return skipOverFlags(current, dir, MP_INPL | MP_TDARK | MP_PDARK);
 }
 
 static char flagToChar(int32_t flag) {
@@ -1353,6 +1354,7 @@ static char flagToChar(int32_t flag) {
 static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 							 uint32_t * pcount, uint64_t maxcount) {
 	mptitle_t *runner = guard;
+
 	activity(2, "Adding title(s)");
 
 	/* zero steps is a bad idea but may happen, since we play with randum
@@ -1414,45 +1416,46 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
  * The value is set in the global config.
  */
 void setArtistSpread() {
-	mptitle_t *runner=skipOver(getConfig()->root,1);
-	mptitle_t *checker=NULL;
-	uint32_t count=0;
+	mptitle_t *runner = skipOver(getConfig()->root, 1);
+	mptitle_t *checker = NULL;
+	uint32_t count = 0;
+
 	/* which titles should be skipped
-	   MP_PDARK is kind of questionable but may speed up adding titles and
-	   avoid premature increase of playcount */
-	const uint32_t mask = MP_PDARK|MP_MARK;
+	 * MP_PDARK is kind of questionable but may speed up adding titles and
+	 * avoid premature increase of playcount */
+	const uint32_t mask = MP_PDARK | MP_MARK;
 
 	/* Use MP_MARK to check off tested titles */
 	unsetFlags(MP_MARK);
 	activity(1, "Checking artist spread");
 	while (runner != NULL) {
 		/* find the next unmarked, playable title to compare to */
-		checker=skipOverFlags(runner->next, 1, mask);
+		checker = skipOverFlags(runner->next, 1, mask);
 		/* a comparison can be done */
 		while (checker && (checker != runner)) {
-			if(checkSim(runner->artist, checker->artist)) {
+			if (checkSim(runner->artist, checker->artist)) {
 				/* the artist is similar enough, mark as gone */
 				checker->flags |= MP_MARK;
 			}
 			/* check for the next title */
-			checker=skipOverFlags(checker->next, 1, mask);
+			checker = skipOverFlags(checker->next, 1, mask);
 		}
 		/* Check has been done
-		   30 is correct here since we use a rule of 2/3 later */
+		 * 30 is correct here since we use a rule of 2/3 later */
 		if (count++ == 30) {
 			break;
 		}
 		/* runner has been checked too */
 		runner->flags |= MP_MARK;
 		/* find the next title to check */
-		runner=skipOverFlags(runner->next, 1, mask);
+		runner = skipOverFlags(runner->next, 1, mask);
 	}
 	/* clean up */
 	unsetFlags(MP_MARK);
 
 	/* two thirds to take number of titles per artist somewhat into account */
-	count=(count*2)/3;
-	getConfig()->spread=(count>1)?count:2;
+	count = (count * 2) / 3;
+	getConfig()->spread = (count > 1) ? count : 2;
 	addMessage(2, "At least %" PRIu32 " artists available.", count);
 }
 
@@ -1497,7 +1500,7 @@ static int32_t addNewTitle(void) {
 	addMessage(2, "Playcount [%" PRIu32 ":%" PRIu32 "]", pcount, maxpcount);
 
 	/* Do not unset the TDARK flag while still filling up the playlist */
-	if(countflag(MP_INPL) > MIN(num, 10)) {
+	if (countflag(MP_INPL) > MIN(num, 10)) {
 		unsetFlags(MP_TDARK);
 	}
 
@@ -1511,8 +1514,9 @@ static int32_t addNewTitle(void) {
 	while (num < 3) {
 		pcount++;
 		/* if this happens, something is really askew */
-		assert (pcount <= maxpcount);
-		addMessage(2, "Less than 3 titles, bumping playcount to %" PRIu32, pcount);
+		assert(pcount <= maxpcount);
+		addMessage(2, "Less than 3 titles, bumping playcount to %" PRIu32,
+				   pcount);
 		unsetFlags(MP_PDARK);
 		num = countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE);
 	}
@@ -1557,9 +1561,13 @@ static int32_t addNewTitle(void) {
 				if (maxnum > 1) {
 					maxnum--;
 					pcount = getPlaycount(0);
-					unsetFlags(MP_TDARK|MP_PDARK);
-					num = countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE | MP_PDARK);
-					addMessage(1, "Reducing repeat to %" PRIu32 " with %" PRIu64 " titles", maxnum, num);
+					unsetFlags(MP_TDARK | MP_PDARK);
+					num =
+						countTitles(getFavplay()? MP_FAV : MP_ALL,
+									MP_HIDE | MP_PDARK);
+					addMessage(1,
+							   "Reducing repeat to %" PRIu32 " with %" PRIu64
+							   " titles", maxnum, num);
 				}
 				else {
 					/* then change it to something sensible! */
@@ -1712,7 +1720,7 @@ mptitle_t *recurse(char *curdir, mptitle_t * files) {
 	int32_t num, i;
 
 	/* this means the config is broken */
-	assert (curdir != NULL);
+	assert(curdir != NULL);
 
 	if ('/' == curdir[strlen(curdir) - 1]) {
 		curdir[strlen(curdir) - 1] = 0;
