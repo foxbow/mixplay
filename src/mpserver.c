@@ -27,6 +27,8 @@
 #include "database.h"
 #include "json.h"
 
+/* build/ paths are relative to Makefile and needed to create proper
+   dependencies even if the are misleading in src/ */
 #include "build/mpplayer_html.h"
 #include "build/mpplayer_js.h"
 #include "build/mixplay_html.h"
@@ -36,6 +38,10 @@
 #include "build/mixplay_svg.h"
 #include "build/mixplay_png.h"
 #include "build/manifest_json.h"
+
+#ifndef VERSION
+#define VERSION "developer"
+#endif
 
 /* message offset */
 #define MPV 10
@@ -127,7 +133,7 @@ static char *strdec(char *target, const char *src) {
 
 static int32_t fillReqInfo(mpReqInfo * info, char *line) {
 	jsonObject *jo = NULL;
-	char *jsonLine = falloc(strlen(line), 1);
+	char *jsonLine = (char *) falloc(strlen(line), 1);
 	int32_t rc = 0;
 
 	strdec(jsonLine, line);
@@ -178,7 +184,7 @@ static char *plaintext(const char *text) {
 
 	if (strlen(text) > MAXPATHLEN) {
 		addMessage(0, "String %s too long!", text);
-		return "none.mp3";
+		return strdup("none.mp3");
 	}
 	for (i = 0; i < strlen(text); i++) {
 		if (text[i] > 0) {
@@ -473,8 +479,8 @@ static void *clientHandler(void *args) {
 							else if (getConfig()->found->state ==
 									 mpsearch_idle) {
 								setCommand(cmd,
-										   reqInfo.arg ? strdup(reqInfo.
-																arg) : NULL);
+										   reqInfo.
+										   arg ? strdup(reqInfo.arg) : NULL);
 								running |= CL_SRC;
 							}
 							/* this case should not be possible at all! */
@@ -599,10 +605,6 @@ static void *clientHandler(void *args) {
 				break;
 
 			case req_update:	/* get update */
-				/* add flags that have been set outside */
-				fullstat |= getNotify(reqInfo.clientid);
-				clearNotify(reqInfo.clientid);
-
 				/* only look at the search state if this is the searcher */
 				if ((running & CL_SRC)
 					&& (config->found->state != mpsearch_idle)) {
@@ -612,6 +614,10 @@ static void *clientHandler(void *args) {
 						nanosleep(&ts, NULL);
 					}
 				}
+				/* add flags that have been set outside */
+				fullstat |= getNotify(reqInfo.clientid);
+				clearNotify(reqInfo.clientid);
+
 				jsonLine = serializeStatus(reqInfo.clientid, fullstat);
 				if (jsonLine != NULL) {
 					sprintf(commdata,
@@ -729,7 +735,7 @@ static void *clientHandler(void *args) {
 				break;
 
 			}
-			state = 0;
+			state = req_none;
 
 			if (len > 0) {
 				sent = 0;
@@ -760,9 +766,8 @@ static void *clientHandler(void *args) {
 			addMessage(0, "stopping handler");
 			running = CL_STP;
 		}
-		reqInfo.cmd = 0;
+		/* keep reqinfo.clientid though! */
 		sfree(&(reqInfo.arg));
-		reqInfo.clientid = 0;
 	} while (running & CL_RUN);
 
 	addMessage(MPV + 3, "Client handler exited");

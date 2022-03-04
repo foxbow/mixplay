@@ -220,7 +220,7 @@ void addMessage(int32_t v, const char *msg, ...)
 
 char *getCurrentActivity(void);
 
-void activity(int32_t v, char *act);
+void activity(int32_t v, const char *act);
 
 void updateUI(void);
 

@@ -375,7 +375,7 @@ mpconfig_t *readConfig(void) {
 					_cconfig->musicdir = strdup(pos);
 				}
 				else {
-					_cconfig->musicdir = falloc(strlen(pos) + 2, 1);
+					_cconfig->musicdir = (char *) falloc(strlen(pos) + 2, 1);
 					strcpy(_cconfig->musicdir, pos);
 					_cconfig->musicdir[strlen(pos)] = '/';
 				}
@@ -756,11 +756,7 @@ char *getCurrentActivity(void) {
  * Print message in debug interface when debuglevel is < n, so -1 means
  * the activity is not shown in debuginterface
  */
-void activity(int32_t v, char *act) {
-	if (strlen(act) > MP_ACTLEN + 1) {
-		act[MP_ACTLEN] = 0;
-	}
-
+void activity(int32_t v, const char *act) {
 	if (strcmp(act, _curact)) {
 		strtcpy(_curact, act, MP_ACTLEN);
 		notifyChange(MPCOMM_TITLES);
@@ -829,7 +825,7 @@ static void removeHook(void (*func)(void *), void *arg, _mpfunc ** list) {
 /**
  * register an update function, called on minor updates like playtime
  */
-void addUpdateHook(void (*func)()) {
+void addUpdateHook(void (*func)(void *)) {
 	addHook(func, NULL, &_ufunc);
 }
 
@@ -1062,6 +1058,8 @@ void triggerClient(int32_t client) {
 						addMessage(0, "Client count out of sync!");
 						numclients = 1;
 					}
+					/* make sure that the server won't get blocked on a dead client */
+					unlockClient(run + 1);
 					addMessage(MPV + 2,
 							   "client %i disconnected, %i clients connected",
 							   run + 1, numclients);
