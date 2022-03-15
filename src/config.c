@@ -48,6 +48,9 @@ struct _mpfunc_t {
 /* callback hooks */
 static _mpfunc *_ufunc = NULL;
 
+/* notification states per client */
+static uint32_t _notify[MAXCLIENT];
+
 static const char *mpccommand[] = {
 	"play",
 	"stop",
@@ -320,6 +323,7 @@ mpconfig_t *readConfig(void) {
 	_cconfig->root = NULL;
 	_cconfig->current = NULL;
 	_cconfig->volume = 80;
+	_cconfig->pvolume = 80;
 	_cconfig->active = 1;
 	_cconfig->playtime = 0;
 	_cconfig->remtime = 0;
@@ -340,10 +344,6 @@ mpconfig_t *readConfig(void) {
 	_cconfig->streamURL = NULL;
 	_cconfig->rcdev = NULL;
 	_cconfig->mpmode = PM_NONE;
-	for (i = 0; i < MAXCLIENT; i++)
-		_cconfig->client[i] = 0;
-	for (i = 0; i < MAXCLIENT; i++)
-		_cconfig->notify[i] = MPCOMM_STAT;
 
 	snprintf(_cconfig->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", home);
 
@@ -393,10 +393,8 @@ mpconfig_t *readConfig(void) {
 			if (strstr(line, "profiles=") == line) {
 				_cconfig->profiles = scanpronames(pos, &_cconfig->profile, -1);
 			}
-			if (strstr(line, "volumes=") == line) {
-				if (!scanprovols(pos, _cconfig->profile, _cconfig->profiles)) {
-					addMessage(0, "Number of profile volumes does not match!");
-				}
+			if (strstr(line, "volume=") == line) {
+				_cconfig->pvolume = atoi(pos);
 			}
 			if (strstr(line, "streams=") == line) {
 				_cconfig->streams = scanpropaths(pos, &_cconfig->stream);
@@ -456,6 +454,10 @@ mpconfig_t *readConfig(void) {
 	pthread_cond_signal(&confinit);
 	pthread_mutex_unlock(&conflock);
 
+	for (i = 0; i < MAXCLIENT; i++) {
+		_notify[i] = MPCOMM_STAT;
+	}
+
 	return _cconfig;
 }
 
@@ -504,7 +506,7 @@ void writeConfig(const char *musicpath) {
 		if (_cconfig->profiles == 0) {
 			fprintf(fp, "\nactive=1");
 			fprintf(fp, "\nprofiles=0:mixplay;");
-			fprintf(fp, "\nvolumes=100;");
+			fprintf(fp, "\nvolume=80;");
 		}
 		else {
 			fprintf(fp, "\nactive=%i", _cconfig->active);
@@ -513,10 +515,13 @@ void writeConfig(const char *musicpath) {
 				fprintf(fp, "%i:%s;", _cconfig->profile[i]->favplay,
 						_cconfig->profile[i]->name);
 			}
-			fprintf(fp, "\nvolumes=");
-			for (i = 0; i < _cconfig->profiles; i++) {
-				fprintf(fp, "%i;", _cconfig->profile[i]->volume);
-			}
+		}
+		fprintf(fp, "\nvolume=");
+		if (_cconfig->active > 0) {
+			fprintf(fp, PRId32 ";", _cconfig->volume);
+		}
+		else {
+			fprintf(fp, PRId32 ";", _cconfig->pvolume);
 		}
 		fprintf(fp, "\nstreams=");
 		for (i = 0; i < _cconfig->streams; i++) {
@@ -998,81 +1003,10 @@ void blockSigint() {
 	}
 }
 
-static uint32_t numclients = 0;
-static uint32_t maxclientid = 0;
-
-/* return an unused clientid
-   this gives out clientids in ascending order, even if a previous clientid
-	 is already free again. This is done to avoid mobile clients reconnecting
-	 with their old clientid causing mix-ups if that id was already recycled.
-	 It still may happen but there nedd to be ~100 connects while the client
-	 was offline. Good enough for now */
-int32_t getFreeClient(void) {
-	int32_t i;
-
-	for (i = 0; i < MAXCLIENT; i++) {
-		int32_t clientid = (maxclientid + i) % MAXCLIENT;
-
-		if (getConfig()->client[clientid] == 0) {
-			getConfig()->client[clientid] = 1;
-			numclients++;
-			addMessage(MPV + 2, "client %i connected, %i clients connected",
-					   clientid + 1, numclients);
-			maxclientid = clientid;
-			return clientid + 1;
-		}
-	}
-	addMessage(0, "Out of clients!");
-	return -1;
-}
-
-/*
- * whenever a client sends a message, it will reset it's idle counter and
- * all other clients will be increased. If the idle counter hits a threshold
- * the connection is considered dead.
- */
-void triggerClient(int32_t client) {
-	int32_t run;
-
-	client--;
-
-	for (run = 0; run < MAXCLIENT; run++) {
-		if (run == client) {
-			if (getConfig()->client[run] == 0) {
-				/* This should no longer happen, see getFreeClient() */
-				addMessage(0, "Client %" PRId32 " got resurrected!", run + 1);
-				numclients++;
-			}
-			getConfig()->client[run] = 1;
-		}
-		else {
-			if (getConfig()->client[run] > 0) {
-				getConfig()->client[run]++;
-				if (getConfig()->client[run] > (4 * numclients)) {
-					getConfig()->client[run] = 0;
-					numclients--;
-					/* there MUST be at least one active client as one just
-					 * invoked this function! If we see this, we probably
-					 * need to mutex lock the client functions... */
-					if (numclients < 1) {
-						addMessage(0, "Client count out of sync!");
-						numclients = 1;
-					}
-					/* make sure that the server won't get blocked on a dead client */
-					unlockClient(run + 1);
-					addMessage(MPV + 2,
-							   "client %i disconnected, %i clients connected",
-							   run + 1, numclients);
-				}
-			}
-		}
-	}
-}
-
 int32_t getNotify(int32_t client) {
 	client--;
 	if ((client >= 0) && (client < MAXCLIENT)) {
-		return getConfig()->notify[client];
+		return _notify[client];
 	}
 	return 0;
 }
@@ -1080,21 +1014,23 @@ int32_t getNotify(int32_t client) {
 void addNotify(int32_t client, int32_t state) {
 	client--;
 	if ((client >= 0) && (client < MAXCLIENT)) {
-		getConfig()->notify[client] |= state;
+		_notify[client] |= state;
 	}
 }
 
 void clearNotify(int32_t client) {
 	client--;
 	if ((client >= 0) && (client < MAXCLIENT)) {
-		getConfig()->notify[client] = MPCOMM_STAT;
+		_notify[client] = MPCOMM_STAT;
 	}
 }
+
+static uint64_t _msgcnt[MAXCLIENT];
 
 uint64_t getMsgCnt(int32_t client) {
 	client--;
 	if ((client >= 0) && (client < MAXCLIENT)) {
-		return getConfig()->msgcnt[client];
+		return _msgcnt[client];
 	}
 	return 0;
 }
@@ -1102,21 +1038,21 @@ uint64_t getMsgCnt(int32_t client) {
 void setMsgCnt(int32_t client, uint64_t count) {
 	client--;
 	if ((client >= 0) && (client < MAXCLIENT)) {
-		getConfig()->msgcnt[client] = count;
+		_msgcnt[client] = count;
 	}
 }
 
 void incMsgCnt(int32_t client) {
 	client--;
 	if ((client >= 0) && (client < MAXCLIENT)) {
-		getConfig()->msgcnt[client]++;
+		_msgcnt[client]++;
 	}
 }
 
 void initMsgCnt(int32_t client) {
 	client--;
 	if ((client >= 0) && (client < MAXCLIENT)) {
-		getConfig()->msgcnt[client] = msgBufGetLastRead(getConfig()->msg);
+		_msgcnt[client] = msgBufGetLastRead(getConfig()->msg);
 	}
 }
 

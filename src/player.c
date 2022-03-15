@@ -192,6 +192,7 @@ void *setProfile(void *arg) {
 		}
 
 		setStream(profile->stream, profile->name);
+		setVolume(profile->volume);
 	}
 	/* profile selected */
 	else if (active > 0) {
@@ -248,7 +249,7 @@ void *setProfile(void *arg) {
 		}
 		setArtistSpread();
 		plCheck(1);
-
+		setVolume(control->pvolume);
 		addMessage(MPV + 1, "Profile set to %s.", profile->name);
 	}
 	else {
@@ -259,12 +260,6 @@ void *setProfile(void *arg) {
 		return arg;
 	}
 
-	if (profile->volume == -1) {
-		profile->volume = control->volume;
-	}
-	else {
-		setVolume(profile->volume);
-	}
 	notifyChange(MPCOMM_CONFIG);
 
 	usleep(500);
@@ -277,7 +272,7 @@ void *setProfile(void *arg) {
 }
 
 /* returns the name of the current profile or channel */
-static char *getProfileName(int32_t profile) {
+static const char *getProfileName(int32_t profile) {
 	mpconfig_t *config = getConfig();
 
 	if (profile == 0) {

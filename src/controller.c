@@ -536,8 +536,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 						config->volume;
 				}
 				else if (config->active > 0) {
-					config->profile[config->active - 1]->volume =
-						config->volume;
+					config->pvolume = config->volume;
 				}
 				config->active = profile;
 				asyncRun(plSetProfile);

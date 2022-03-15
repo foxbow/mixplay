@@ -63,6 +63,80 @@ typedef enum {
 /* lock for fname, flen, fdata and mtype */
 static pthread_mutex_t _sendlock = PTHREAD_MUTEX_INITIALIZER;
 
+static uint32_t _numclients = 0;
+static uint32_t _heartbeat[MAXCLIENT];	/* glabal clientID marker */
+
+/* return an unused clientid
+   this gives out clientids in ascending order, even if a previous clientid
+	 is already free again. This is done to avoid mobile clients reconnecting
+	 with their old clientid causing mix-ups if that id was already recycled.
+	 It still may happen but there nedd to be ~100 connects while the client
+	 was offline. Good enough for now */
+static int32_t getFreeClient(void) {
+	static uint32_t maxclientid = 0;
+	int32_t i;
+
+	for (i = 0; i < MAXCLIENT; i++) {
+		int32_t clientid = (maxclientid + i) % MAXCLIENT;
+
+		if (_heartbeat[clientid] == 0) {
+			_heartbeat[clientid] = 1;
+			_numclients++;
+			addMessage(MPV + 2, "client %i connected, %i clients connected",
+					   clientid + 1, _numclients);
+			maxclientid = clientid + 1;
+			return clientid + 1;
+		}
+	}
+	addMessage(0, "Out of clients!");
+	return -1;
+}
+
+/*
+ * whenever a client sends a message, it will reset it's idle counter and
+ * all other clients will be decreased. If the idle counter hits zero
+ * the connection is considered dead.
+ */
+static void triggerClient(int32_t client) {
+	int32_t run;
+
+	client--;
+
+	for (run = 0; run < MAXCLIENT; run++) {
+		if (run == client) {
+			if (_heartbeat[run] == 0) {
+				/* client remebered it's ID while server considered it dead */
+				addMessage(MPV + 0, "Client %" PRId32 " got resurrected!",
+						   run + 1);
+				_numclients++;
+			}
+			/* all other clients have done at least two updates + 10 to drown out
+			 * volume requests */
+			_heartbeat[run] = (2 * _numclients) + 10;
+		}
+		else {
+			if (_heartbeat[run] > 0) {
+				_heartbeat[run]--;
+				if (_heartbeat[run] == 0) {
+					_numclients--;
+					/* there MUST be at least one active client as one just
+					 * invoked this function! If we see this, we probably
+					 * need to mutex lock the client functions... */
+					if (_numclients < 1) {
+						addMessage(0, "Client count out of sync!");
+						_numclients = 1;
+					}
+					/* make sure that the server won't get blocked on a dead client */
+					unlockClient(run + 1);
+					addMessage(MPV + 2,
+							   "client %i disconnected, %i clients connected",
+							   run + 1, _numclients);
+				}
+			}
+		}
+	}
+}
+
 /**
  * send a static file
  */
@@ -96,17 +170,16 @@ static char *strdec(char *target, const char *src) {
 	int32_t state = 0;
 
 	for (i = 0, j = 0; i < strlen(src); i++) {
+		if ((src[i] == 0x0d) || (src[i] == 0x0a)) {
+			break;
+		}
 		switch (state) {
 		case 0:
 			if (src[i] == '%') {
 				state = 1;
 			}
-			else if ((src[i] == 0x0d) || (src[i] == 0x0a)) {
-				target[j] = 0;
-			}
 			else {
-				target[j] = src[i];
-				j++;
+				target[j++] = src[i];
 			}
 			break;
 		case 1:
@@ -115,18 +188,16 @@ static char *strdec(char *target, const char *src) {
 			break;
 		case 2:
 			buf = buf + hexval(src[i]);
-			target[j] = buf;
-			j++;
+			target[j++] = buf;
 			state = 0;
 			break;
 		}
 	}
 
 	/* cut off trailing blanks */
-	j = j - 1;
+	target[j--] = 0;
 	while (j > 0 && isblank(target[j])) {
-		target[j] = 0;
-		j--;
+		target[j--] = 0;
 	}
 	return target;
 }
@@ -479,8 +550,8 @@ static void *clientHandler(void *args) {
 							else if (getConfig()->found->state ==
 									 mpsearch_idle) {
 								setCommand(cmd,
-										   reqInfo.
-										   arg ? strdup(reqInfo.arg) : NULL);
+										   reqInfo.arg ? strdup(reqInfo.
+																arg) : NULL);
 								running |= CL_SRC;
 							}
 							/* this case should not be possible at all! */

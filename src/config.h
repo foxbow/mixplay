@@ -139,6 +139,7 @@ typedef struct {
 
 /**
  * holds the widgets and pipes for communication
+ * TODO this should be cut down some more
  */
 typedef struct {
 	char *musicdir;				/* path to the music */
@@ -146,6 +147,7 @@ typedef struct {
 	int32_t active;				/* active >0 = profile / 0=none / <0 = stream */
 	int32_t profiles;			/* number of profiles */
 	profile_t **profile;		/* profiles */
+	int32_t pvolume;			/* default volume for profiles */
 	int32_t streams;			/* number of streams */
 	profile_t **stream;			/*streams */
 	mptitle_t *root;			/* the root title */
@@ -180,9 +182,6 @@ typedef struct {
 	uint32_t list:1;			/* remote playlist */
 	char *rcdev;				/* device by-id of the remote control */
 	int32_t rccodes[MPRC_NUM];	/* command codes for the remote */
-	uint32_t client[MAXCLIENT];	/* glabal clientID marker */
-	uint32_t notify[MAXCLIENT];	/* next state per client */
-	uint64_t msgcnt[MAXCLIENT];
 	uint32_t spread;
 } mpconfig_t;
 
@@ -238,9 +237,6 @@ mptitle_t *wipeTitles(mptitle_t * root);
 marklist_t *wipeList(marklist_t * root);
 int32_t playerIsBusy(void);
 void blockSigint();
-
-int32_t getFreeClient(void);
-void triggerClient(int32_t);
 
 int32_t getNotify(int32_t);
 void addNotify(int32_t, int32_t);
