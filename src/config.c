@@ -518,10 +518,10 @@ void writeConfig(const char *musicpath) {
 		}
 		fprintf(fp, "\nvolume=");
 		if (_cconfig->active > 0) {
-			fprintf(fp, PRId32 ";", _cconfig->volume);
+			fprintf(fp, "%" PRId32 ";", _cconfig->volume);
 		}
 		else {
-			fprintf(fp, PRId32 ";", _cconfig->pvolume);
+			fprintf(fp, "%" PRId32 ";", _cconfig->pvolume);
 		}
 		fprintf(fp, "\nstreams=");
 		for (i = 0; i < _cconfig->streams; i++) {
