@@ -86,7 +86,7 @@ int32_t main(int32_t argc, char **argv) {
 		}
 		else if (cmd != mpc_idle) {
 			hidPrintline("Sent: %s", mpcString(cmd));
-			sendCMD(cmd);
+			sendCMD(cmd, NULL);
 		}
 		drawAll();
 	}

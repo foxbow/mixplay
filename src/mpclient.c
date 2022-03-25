@@ -217,7 +217,7 @@ int getConnection(void) {
 	  0 - server busy
 	 -1 - failure on send
 */
-int32_t sendCMD(mpcmd_t cmd) {
+int32_t sendCMD(mpcmd_t cmd, const char *arg) {
 	char req[1024];
 	char *reply;
 	jsonObject *jo = NULL;
@@ -227,6 +227,7 @@ int32_t sendCMD(mpcmd_t cmd) {
 	}
 
 	jo = jsonAddInt(NULL, "cmd", cmd);
+	jsonAddStr(jo, "arg", arg);
 	jsonAddInt(jo, "clientid", 0);
 	reply = jsonToString(jo);
 	jo = jsonDiscard(jo);

@@ -10,7 +10,7 @@ int32_t setMPHost(const char *host);
 const char *getMPHost(void);
 int getConnection(void);
 
-int32_t sendCMD(mpcmd_t cmd);
+int32_t sendCMD(mpcmd_t cmd, const char *arg);
 int32_t getCurrentTitle(char *title, uint32_t tlen);
 jsonObject *getStatus(int32_t flags);
 int32_t jsonGetTitle(jsonObject * jo, const char *key, mptitle_t * title);

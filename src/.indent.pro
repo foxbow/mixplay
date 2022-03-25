@@ -24,4 +24,3 @@
 --start-left-side-of-comments
 --tab-size 4
 --use-tabs
---honour-newlines

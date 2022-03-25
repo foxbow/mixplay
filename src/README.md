@@ -53,3 +53,48 @@ cmd = 0MSR RRRR 000C CCCC
 * 0x22 - idle / max command*
 
 args are set with the '?' operator.
+
+## mpclient API
+mpclient.h describes a simple API to do basic communication with the server.
+See mixplay-hid.c and mixplay-scr.c for practical examples.
+
+* int32_t setMPPort(int32_t port);
+  set the port number to connect to (default: 2347)
+  returns 0 on success and -1 if the portnumber is out of range
+
+* int32_t setMPHost(const char *host);
+  set the hostname/IP to connect to (default: 127.0.0.1)
+  returns 0 on success and -1 of the name is too long
+
+* const char *getMPHost(void);
+  returns the current hostname/IP to connect to
+
+* int getConnection(void);
+  opens a connection to the server
+  returns -2 if the hostname cannot be resolved, -1 if the connection fails
+  and the filedescriptor on success
+
+* int32_t sendCMD(mpcmd_t cmd, const char *arg);
+  sends 'cmd' and 'arg' top the server. arg may be NULL if no argument is
+  needed
+  returns 1 on success, 0 if the server is busy and -1 on failure
+
+* int32_t getCurrentTitle(char *title, uint32_t tlen);
+  fetches the current title in the format "<artist> - <title>" and stores the
+  first 'tlen' characters in 'title'
+  returns the actual length on success and -1 on failure
+
+* jsonObject *getStatus(int32_t flags);
+  gets the current player status according to the flags
+  flags can be or'ed:
+  * MPCOMM_STAT   get simple player status
+  * MPCOMM_TITLES add full title/playlist info
+  * MPCOMM_LISTS  add DNP and favlists
+  * MPCOMM_CONFIG add immutable configuration
+  returns NULL on error and a jsonObject tree with the requested information
+  on success
+
+* int32_t jsonGetTitle(jsonObject * jo, const char *key, mptitle_t * title);
+  extracts a title from the given jsonObject tree. If the key cannot be
+  resolved dummy title information will be set to 'Mixplay'
+  returns 0 on failure and 1 on success
