@@ -485,24 +485,18 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		break;
 
 	case mpc_dnp:
-		if (config->mpmode & PM_STREAM)
-			break;
-		if (asyncTest()) {
-			handleRangeCmd(ctitle, rcmd);
-			checkAfterRemove(ctitle);
-			pthread_mutex_unlock(&_asynclock);
-		}
-		break;
-
 	case mpc_fav:
 		if (config->mpmode & PM_STREAM)
 			break;
 		if (asyncTest()) {
-			handleRangeCmd(ctitle, rcmd);
+			/* The current title may already be explicitly marked as DNP or FAV so
+			 * check if it needs to be removed from the other list. The last choice
+			 * shall have highest priority */
+			delTitleFromList((mpcmd_t) (rcmd ^ (mpc_dnp | mpc_fav)), ctitle);
+			handleRangeCmd(rcmd, ctitle);
+			checkAfterRemove(ctitle);
 			notifyChange(MPCOMM_TITLES);
 			pthread_mutex_unlock(&_asynclock);
-			/* when playing only favourites, adding titles can make
-			 * a difference */
 			if (getFavplay()) {
 				setArtistSpread();
 			}
@@ -732,7 +726,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 				arg = strdup(ctitle->album);
 			}
 		}
-		if (search(arg, MPC_MODE(rcmd)) == -1) {
+		if (search(MPC_MODE(rcmd), arg) == -1) {
 			addMessage(0, "Too many titles found!");
 		}
 		sfree(&arg);
@@ -771,7 +765,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		if (config->mpmode & PM_STREAM)
 			break;
 		if (arg != NULL) {
-			delFromList(cmd, arg);
+			delFromList(cmd, arg, 1);
 		}
 		break;
 

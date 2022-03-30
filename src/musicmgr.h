@@ -94,22 +94,22 @@ mptitle_t *recurse(char *curdir, mptitle_t * files);
 mptitle_t *rewindTitles(mptitle_t * base);
 mptitle_t *loadPlaylist(const char *path);
 mptitle_t *insertTitle(mptitle_t * base, const char *path);
-int32_t search(const char *pat, const mpcmd_t range);
+int32_t search(const mpcmd_t range, const char *pat);
 
 void moveTitleByIndex(uint32_t from, uint32_t before);
 
 int32_t playCount(mptitle_t * title, int32_t skip);
 void applyLists(int32_t clean);
 int32_t searchPlay(const char *pat, uint32_t num, const int32_t global);
-int32_t handleRangeCmd(mptitle_t * title, mpcmd_t cmd);
+int32_t handleRangeCmd(mpcmd_t cmd, mptitle_t * title);
 int32_t handleDBL(mptitle_t * title);
 int32_t applyDNPlist(marklist_t * list, int32_t dbl);
-int32_t addRangePrefix(char *line, mpcmd_t cmd);
-int32_t getListPath(char path[MAXPATHLEN], mpcmd_t cmd);
+int32_t getListPath(mpcmd_t cmd, char path[MAXPATHLEN]);
 
 marklist_t *loadList(const mpcmd_t cmd);
-int32_t delFromList(const mpcmd_t cmp, const char *line);
+int32_t delFromList(const mpcmd_t cmp, const char *line, int32_t cleanup);
 int32_t writeList(const mpcmd_t cmd);
+int32_t delTitleFromList(mpcmd_t cmd, const mptitle_t * title);
 
 int32_t isMusic(const char *name);
 void dumpTitles(mptitle_t * root, const int32_t pl);

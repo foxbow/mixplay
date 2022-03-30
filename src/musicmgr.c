@@ -93,7 +93,7 @@ int32_t checkSim(const char *text, const char *pat) {
 	}
 }
 
-int32_t getListPath(char path[MAXPATHLEN], mpcmd_t cmd) {
+int32_t getListPath(mpcmd_t cmd, char path[MAXPATHLEN]) {
 	if (getConfig()->active < 1) {
 		return -1;
 	}
@@ -120,7 +120,7 @@ static int32_t addToList(const char *line, mpcmd_t cmd) {
 	FILE *fp;
 	char path[MAXPATHLEN + 1];
 
-	getListPath(path, cmd);
+	getListPath(cmd, path);
 
 	fp = fopen(path, "a");
 	if (NULL == fp) {
@@ -238,7 +238,7 @@ int32_t playCount(mptitle_t * title, int32_t skip) {
 				title->skipcount--;
 				addMessage(0, "Marked %s as DNP for skipping!",
 						   title->display);
-				if (!handleRangeCmd(title, (mpcmd_t) (mpc_display | mpc_dnp))) {
+				if (!handleRangeCmd((mpcmd_t) (mpc_display | mpc_dnp), title)) {
 					/* Can happen if the title has been marked as a favourite,
 					 * so we have the case that the title is an explicit
 					 * favourite AND was skipped three times... */
@@ -485,7 +485,7 @@ static int32_t isMatch(const char *term, const char *pat, const mpcmd_t range) {
  *       fuzzy matching for fav/dnp
  */
 static uint32_t matchTitle(mptitle_t * title, const char *pat) {
-	int32_t fuzzy = 0;
+	mpcmd_t fuzzy = mpc_unset;
 	int32_t res = 0;
 
 	if (('=' == pat[1]) || ('*' == pat[1])) {
@@ -531,7 +531,7 @@ static uint32_t matchTitle(mptitle_t * title, const char *pat) {
 	}
 	else {
 		addMessage(0, "Pattern without range: %s", pat);
-		if (isMatch(title->display, pat, 0))
+		if (isMatch(title->display, pat, mpc_unset))
 			res = mpc_display;
 	}
 
@@ -544,13 +544,13 @@ static uint32_t matchTitle(mptitle_t * title, const char *pat) {
  * pat - pattern to search for
  * range - search range
  */
-int32_t search(const char *pat, const mpcmd_t range) {
+int32_t search(const mpcmd_t range, const char *pat) {
 	mptitle_t *root = getConfig()->root;
 	mptitle_t *runner = root;
 	searchresults_t *res = getConfig()->found;
 	uint32_t i = 0;
 	uint32_t valid = 0;
-	mpcmd_t found = mpc_play;
+	uint32_t found = 0;
 	char *lopat;
 
 	/* enter while the last result has not been sent yet! */
@@ -825,7 +825,7 @@ marklist_t *loadList(const mpcmd_t cmd) {
 	char *buff;
 	int32_t cnt = 0;
 
-	if (getListPath(path, cmd) == -1) {
+	if (getListPath(cmd, path) == -1) {
 		return NULL;
 	}
 
@@ -891,7 +891,7 @@ int32_t writeList(const mpcmd_t cmd) {
 	char path[MAXPATHLEN];
 	FILE *fp = NULL;
 
-	if (getListPath(path, cmd)) {
+	if (getListPath(cmd, path)) {
 		/* No active profile */
 		return -1;
 	}
@@ -929,18 +929,23 @@ int32_t writeList(const mpcmd_t cmd) {
 /**
  * removes an entry from the favourite or DNP list
  */
-int32_t delFromList(const mpcmd_t cmd, const char *line) {
+int32_t delFromList(const mpcmd_t cmd, const char *line, int32_t cleanup) {
 	marklist_t *list;
 	marklist_t *buff = NULL;
-	mpcmd_t mode;
+	mpcmd_t mode = MPC_CMD(cmd);
 	int32_t cnt = 0;
 
-	if (MPC_CMD(cmd) == mpc_deldnp) {
+	if (mode == mpc_deldnp) {
 		mode = mpc_dnp;
+	}
+	if (mode == mpc_delfav) {
+		mode = mpc_fav;
+	}
+
+	if (mode == mpc_dnp) {
 		list = getConfig()->dnplist;
 	}
-	else if (MPC_CMD(cmd) == mpc_delfav) {
-		mode = mpc_fav;
+	else if (mode == mpc_fav) {
 		list = getConfig()->favlist;
 	}
 	else {
@@ -988,7 +993,9 @@ int32_t delFromList(const mpcmd_t cmd, const char *line) {
 
 	if (cnt > 0) {
 		writeList(mode);
-		applyLists(1);
+		if (cleanup) {
+			applyLists(1);
+		}
 	}
 
 	return cnt;
@@ -1590,7 +1597,7 @@ static int32_t addNewTitle(void) {
 	} while ((pl != NULL) && (tnum++ < maxnum));
 
 	/*  *INDENT-OFF*  */
-	addMessage(2, "[+] (%i/%i/%c) %5"PRIu32" %s",
+	addMessage(2, "[+] (%i/%i/%c) %5" PRIu32 " %s",
 			   (runner->flags & MP_FAV) ? runner->favpcount : runner->playcount,
 			   pcount, flagToChar(runner->flags), runner->key, runner->display);
 	/*  *INDENT-ON*  */
@@ -1927,7 +1934,7 @@ void dumpState() {
 	}
 }
 
-int32_t addRangePrefix(char *line, mpcmd_t cmd) {
+static int32_t addRangePrefix(mpcmd_t cmd, char *line) {
 	line[2] = 0;
 	line[1] = MPC_ISFUZZY(cmd) ? '*' : '=';
 	switch (MPC_RANGE(cmd)) {
@@ -1954,18 +1961,9 @@ int32_t addRangePrefix(char *line, mpcmd_t cmd) {
 	return 0;
 }
 
-/**
- * wrapper to handle FAV and DNP. Uses the given title and the range
- * definitions in cmd to create the proper config line and immediately
- * applies it to the current database and playlist
- */
-int32_t handleRangeCmd(mptitle_t * title, mpcmd_t cmd) {
-	char line[MAXPATHLEN + 2];
-	marklist_t *buff, *list;
-	int32_t cnt = -1;
-	mpconfig_t *config = getConfig();
-
-	if (addRangePrefix(line, cmd) == 0) {
+static int32_t rangeToLine(mpcmd_t cmd, const mptitle_t * title,
+						   char line[MAXPATHLEN + 2]) {
+	if (addRangePrefix(cmd, line) == 0) {
 		switch (MPC_RANGE(cmd)) {
 		case mpc_title:
 			strltcat(line, title->title, NAMELEN + 2);
@@ -1986,6 +1984,23 @@ int32_t handleRangeCmd(mptitle_t * title, mpcmd_t cmd) {
 			addMessage(0, "Illegal range 0x%04x", MPC_RANGE(cmd));
 			break;
 		}
+		return 0;
+	}
+	return 1;
+}
+
+/**
+ * wrapper to handle FAV and DNP. Uses the given title and the range
+ * definitions in cmd to create the proper config line and immediately
+ * applies it to the current database and playlist
+ */
+int32_t handleRangeCmd(mpcmd_t cmd, mptitle_t * title) {
+	char line[MAXPATHLEN + 2];
+	marklist_t *buff, *list;
+	int32_t cnt = -1;
+	mpconfig_t *config = getConfig();
+
+	if (rangeToLine(cmd, title, line) == 0) {
 		if (strlen(line) < 5) {
 			addMessage(0, "Not enough info in %s!", line);
 			return 0;
@@ -2044,6 +2059,19 @@ int32_t handleRangeCmd(mptitle_t * title, mpcmd_t cmd) {
 
 	return cnt;
 }
+
+int32_t delTitleFromList(mpcmd_t cmd, const mptitle_t * title) {
+	char *line = NULL;
+	int32_t rv = 0;
+
+	line = (char *) falloc(MAXPATHLEN + 2, 1);
+	if (rangeToLine(cmd, title, line) == 0) {
+		rv = delFromList(cmd, line, 0);
+	}
+	free(line);
+	return rv;
+}
+
 
 /**
  * Adds a title to the global doublet list

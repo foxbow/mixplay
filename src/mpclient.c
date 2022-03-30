@@ -85,7 +85,7 @@ static char *sendRequest(const char *path) {
 
 	rlen =
 		strlen("POST /mpctrl/") + strlen(path) + strlen(" http\015\012") + 1;
-	req = (char *) falloc(1, rlen);
+	req = (char *) falloc(rlen, 1);
 	if (strstr(path, "cmd") == path) {
 		strcpy(req, "POST /mpctrl/");
 	}
@@ -162,7 +162,7 @@ static char *sendRequest(const char *path) {
 	}
 	else if (strstr(reply, "HTTP/1.") == reply) {
 		/* just copy status number */
-		rdata = (char *) falloc(1, 4);
+		rdata = (char *) falloc(4, 1);
 		strtcpy(rdata, reply + 9, 4);
 		free(reply);
 	}

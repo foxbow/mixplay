@@ -480,8 +480,7 @@ void writeConfig(const char *musicpath) {
 	}
 
 	if (musicpath != NULL) {
-		_cconfig->musicdir =
-			(char *) falloc(strlen(musicpath) + 2, sizeof (char));
+		_cconfig->musicdir = (char *) falloc(strlen(musicpath) + 2, 1);
 		strip(_cconfig->musicdir, musicpath, strlen(musicpath) + 1);
 		if (_cconfig->musicdir[strlen(_cconfig->musicdir) - 1] != '/') {
 			strtcat(_cconfig->musicdir, "/", strlen(musicpath) + 2);

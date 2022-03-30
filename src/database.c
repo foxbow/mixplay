@@ -195,7 +195,7 @@ static void entry2db(mptitle_t * entry, dbentry_t * dbentry) {
 /**
  * opens the database file
  */
-static int32_t dbOpen() {
+static int32_t dbOpen(void) {
 	int32_t db = -1;
 	char *path = getConfig()->dbname;
 
@@ -546,7 +546,7 @@ int32_t dbNameCheck(void) {
 	addMessage(0, "Namechecking");
 	/* start with a clean list, old doublets may have been deleted by now */
 	getConfig()->dbllist = wipeList(getConfig()->dbllist);
-	getListPath(rmpath, mpc_doublets);
+	getListPath(mpc_doublets, rmpath);
 	unlink(rmpath);
 
 	fprintf(fp, "#!/bin/bash\n");
@@ -661,7 +661,6 @@ int32_t dbNameCheck(void) {
 void dbWrite(int32_t force) {
 	int32_t db;
 	uint32_t index = 1;
-	const char *dbname = getConfig()->dbname;
 	mptitle_t *root = getConfig()->root;
 	mptitle_t *runner = root;
 
@@ -678,8 +677,8 @@ void dbWrite(int32_t force) {
 		return;
 	}
 
-	fileBackup(dbname);
-	db = dbOpen(dbname);
+	fileBackup(getConfig()->dbname);
+	db = dbOpen();
 	if (db == -1) {
 		return;
 	}

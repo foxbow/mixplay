@@ -25,6 +25,7 @@
  * caveat: when changing this check *mpc_command[] in config.c too!
  */
 typedef enum {
+	mpc_unset = 0,
 	mpc_play = 0,
 	mpc_stop,
 	mpc_prev,

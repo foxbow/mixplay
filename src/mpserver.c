@@ -331,7 +331,7 @@ static void *clientHandler(void *args) {
 	uint32_t method = 0;
 	mpReqInfo reqInfo = { 0, NULL, 0 };
 
-	commdata = (char *) falloc(commsize, sizeof (char));
+	commdata = (char *) falloc(commsize, 1);
 	sock = *(int32_t *) args;
 	free(args);
 
@@ -550,8 +550,8 @@ static void *clientHandler(void *args) {
 							else if (getConfig()->found->state ==
 									 mpsearch_idle) {
 								setCommand(cmd,
-										   reqInfo.arg ? strdup(reqInfo.
-																arg) : NULL);
+										   reqInfo.
+										   arg ? strdup(reqInfo.arg) : NULL);
 								running |= CL_SRC;
 							}
 							/* this case should not be possible at all! */
