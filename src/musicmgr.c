@@ -929,7 +929,7 @@ int32_t writeList(const mpcmd_t cmd) {
 /**
  * removes an entry from the favourite or DNP list
  */
-int32_t delFromList(const mpcmd_t cmd, const char *line, int32_t cleanup) {
+int32_t delFromList(const mpcmd_t cmd, const char *line) {
 	marklist_t *list;
 	marklist_t *buff = NULL;
 	mpcmd_t mode = MPC_CMD(cmd);
@@ -993,9 +993,7 @@ int32_t delFromList(const mpcmd_t cmd, const char *line, int32_t cleanup) {
 
 	if (cnt > 0) {
 		writeList(mode);
-		if (cleanup) {
-			applyLists(1);
-		}
+		applyLists(1);
 	}
 
 	return cnt;
@@ -2060,13 +2058,17 @@ int32_t handleRangeCmd(mpcmd_t cmd, mptitle_t * title) {
 	return cnt;
 }
 
-int32_t delTitleFromList(mpcmd_t cmd, const mptitle_t * title) {
+int32_t delTitleFromOtherList(mpcmd_t cmd, const mptitle_t * title) {
 	char *line = NULL;
 	int32_t rv = 0;
 
+	if ((MPC_CMD(cmd) != mpc_fav) && (MPC_CMD(cmd) != mpc_dnp)) {
+		addMessage(0, "No other list for %s!", mpcString(cmd));
+	}
+
 	line = (char *) falloc(MAXPATHLEN + 2, 1);
 	if (rangeToLine(cmd, title, line) == 0) {
-		rv = delFromList(cmd, line, 0);
+		rv = delFromList(cmd == mpc_fav ? mpc_dnp : mpc_fav, line);
 	}
 	free(line);
 	return rv;

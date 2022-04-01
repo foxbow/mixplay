@@ -107,9 +107,9 @@ int32_t applyDNPlist(marklist_t * list, int32_t dbl);
 int32_t getListPath(mpcmd_t cmd, char path[MAXPATHLEN]);
 
 marklist_t *loadList(const mpcmd_t cmd);
-int32_t delFromList(const mpcmd_t cmp, const char *line, int32_t cleanup);
+int32_t delFromList(const mpcmd_t cmp, const char *line);
 int32_t writeList(const mpcmd_t cmd);
-int32_t delTitleFromList(mpcmd_t cmd, const mptitle_t * title);
+int32_t delTitleFromOtherList(mpcmd_t cmd, const mptitle_t * title);
 
 int32_t isMusic(const char *name);
 void dumpTitles(mptitle_t * root, const int32_t pl);

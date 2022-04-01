@@ -489,12 +489,18 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		if (config->mpmode & PM_STREAM)
 			break;
 		if (asyncTest()) {
-			/* The current title may already be explicitly marked as DNP or FAV so
+			/* remember the current title so checkAfterRemove() can find out if
+			 * it has changed */
+			mptitle_t *check = getCurrentTitle();
+
+			/* The selected title may already be explicitly marked as DNP or FAV so
 			 * check if it needs to be removed from the other list. The last choice
 			 * shall have highest priority */
-			delTitleFromList((mpcmd_t) (rcmd ^ (mpc_dnp | mpc_fav)), ctitle);
+			delTitleFromOtherList(rcmd, ctitle);
 			handleRangeCmd(rcmd, ctitle);
-			checkAfterRemove(ctitle);
+			if (cmd == mpc_dnp) {
+				checkAfterRemove(check);
+			}
 			notifyChange(MPCOMM_TITLES);
 			pthread_mutex_unlock(&_asynclock);
 			if (getFavplay()) {
@@ -765,7 +771,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		if (config->mpmode & PM_STREAM)
 			break;
 		if (arg != NULL) {
-			delFromList(cmd, arg, 1);
+			delFromList(cmd, arg);
 		}
 		break;
 
