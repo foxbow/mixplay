@@ -1,8 +1,15 @@
 #!/bin/bash
 
-# temporary set coverity path to the right installation
-PATH=../cov-analysis-linux64-2019.03/bin/:${PATH}
+COVPATH=../cov-analysis-linux64-2021.12.1/bin/
 
+# temporary set coverity path to the right installation
+
+if [ ! -d "${COVPATH}" ]; then
+  echo "No Coverity found at ${COVPATH}"
+  exit
+fi
+
+PATH="${COVPATH}:${PATH}"
 rm -f *-cov.tgz
 make distclean
 cov-build --dir cov-int make

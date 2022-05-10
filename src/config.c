@@ -89,15 +89,15 @@ static const char *mpccommand[] = {
 	"idle"
 };
 
-void lockPlaylist(void) {
+inline void lockPlaylist(void) {
 	pthread_mutex_lock(&pllock);
 }
 
-void unlockPlaylist(void) {
+inline void unlockPlaylist(void) {
 	pthread_mutex_unlock(&pllock);
 }
 
-int32_t trylockPlaylist(void) {
+inline int32_t trylockPlaylist(void) {
 	return (pthread_mutex_trylock(&pllock) != EBUSY);
 }
 

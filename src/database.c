@@ -281,8 +281,14 @@ mptitle_t *dbGetMusic() {
 
 	activity(1, "Loading database");
 	while ((len = read(db, &dbentry, DBESIZE)) == DBESIZE) {
-		/* explicitlöy terminate path */
+		/* explicitly terminate strings. Those should never ever be not terminated,
+		 * but it may make a change on reading a corrupted database */
 		dbentry.path[MAXPATHLEN - 1] = 0;
+		dbentry.artist[NAMELEN - 1] = 0;
+		dbentry.title[NAMELEN - 1] = 0;
+		dbentry.album[NAMELEN - 1] = 0;
+		dbentry.genre[NAMELEN - 1] = 0;
+
 		/* support old database title path format */
 		if ((dbentry.path[0] == '/') &&
 			(strstr(dbentry.path, getConfig()->musicdir) != dbentry.path)) {
@@ -302,6 +308,7 @@ mptitle_t *dbGetMusic() {
 			return dbGetMusic();
 		}
 		else {
+			/* Maybe make an UI scan possible or trigger it here explicitly */
 			addMessage(-1,
 					   "Database %s and backup are corrupt!\nRun 'mixplay -C' to rescan",
 					   getConfig()->dbname);

@@ -113,9 +113,6 @@ long controlVolume(long volume, int32_t absolute) {
 
 	snd_mixer_selem_get_playback_volume_range(_elem, &min, &max);
 	if (absolute != 0) {
-		if (retval < 0) {
-			return config->volume;
-		}
 		retval = volume;
 	}
 	else {
