@@ -340,7 +340,7 @@ mpplaylist_t *remFromPLByKey(const uint32_t key) {
  * This function returns a valid target
  * if mark is true, the title will be checked and marked for playing in
  * default mixplay, otherwise it is a searched title and will be
- * played out of order.
+ * played out of order or added to a playlist result.
  */
 mpplaylist_t *addToPL(mptitle_t * title, mpplaylist_t * target,
 					  const int32_t mark) {
@@ -1547,52 +1547,55 @@ static int32_t addNewTitle(void) {
 	/* step through the playlist and check for repeats */
 	activity(2, "Adding title");
 	do {
-		lastpat = pl->title->artist;
-		guard = runner;
-		/* does the title clash with the current one? */
-		while (checkSim(runner->artist, lastpat)) {
-			addMessage(3, "%s = %s", runner->artist, lastpat);
-			/* don't try this one again */
-			runner->flags |= MP_TDARK;
-			/* get another with a matching playcount
-			 * these are expensive, so we try to keep the steps
-			 * somewhat reasonable.. */
-			runner =
-				skipPcount(runner, (num / 2) - (random() % num),
-						   &pcount, maxpcount);
-			if (runner == NULL) {
-				/* back to square one for this round */
-				runner = guard;
-				if (maxnum > 1) {
-					maxnum--;
-					pcount = getPlaycount(0);
-					unsetFlags(MP_TDARK | MP_PDARK);
-					num =
-						countTitles(getFavplay()? MP_FAV : MP_ALL,
-									MP_HIDE | MP_PDARK);
-					addMessage(1,
-							   "Reducing repeat to %" PRIu32 " with %" PRIu64
-							   " titles", maxnum, num);
-				}
-				else {
-					/* then change it to something sensible! */
-					fail(-1, "Cannot play this profile!");
+		/* skip searched titles */
+		if (pl->title->flags & MP_INPL) {
+			lastpat = pl->title->artist;
+			guard = runner;
+			/* does the title clash with the current one? */
+			while (checkSim(runner->artist, lastpat)) {
+				addMessage(3, "%s = %s", runner->artist, lastpat);
+				/* don't try this one again */
+				runner->flags |= MP_TDARK;
+				/* get another with a matching playcount
+				 * these are expensive, so we try to keep the steps
+				 * somewhat reasonable.. */
+				runner =
+					skipPcount(runner, (num / 2) - (random() % num),
+							   &pcount, maxpcount);
+				if (runner == NULL) {
+					/* back to square one for this round */
+					runner = guard;
+					if (maxnum > 1) {
+						maxnum--;
+						pcount = getPlaycount(0);
+						unsetFlags(MP_TDARK | MP_PDARK);
+						num =
+							countTitles(getFavplay()? MP_FAV : MP_ALL,
+										MP_HIDE | MP_PDARK);
+						addMessage(1,
+								   "Reducing repeat to %" PRIu32 " with %"
+								   PRIu64 " titles", maxnum, num);
+					}
+					else {
+						/* then change it to something sensible! */
+						fail(-1, "Cannot play this profile!");
+					}
 				}
 			}
-		}
 
-		if (guard != runner) {
-			/* title did not fit, start again from the beginning
-			 * with the new one that fits here */
-			while (pl->next != NULL) {
-				pl = pl->next;
+			if (guard != runner) {
+				/* title did not fit, start again from the beginning
+				 * with the new one that fits here */
+				while (pl->next != NULL) {
+					pl = pl->next;
+				}
+				tnum = 0;
+				continue;
 			}
-			tnum = 0;
+			tnum++;
 		}
-		else {
-			pl = pl->prev;
-		}
-	} while ((pl != NULL) && (tnum++ < maxnum));
+		pl = pl->prev;
+	} while ((pl != NULL) && (tnum < maxnum));
 
 	/*  *INDENT-OFF*  */
 	addMessage(2, "[+] (%i/%i/%c) %5" PRIu32 " %s",
@@ -1651,10 +1654,12 @@ void plCheck(int32_t fill) {
 
 		/* go through end of the playlist and clean up underway */
 		while (pl->next != NULL) {
-			/* clean up on the way to remove DNP marked or deleted files?
-			 * there /should/ not be any doublets here, but it does not hurt
+			/* clean up on the way to remove DNP marked or deleted files that
+			 * have not been added through a search.
+			 * There /should/ not be any doublets here, but it does not hurt
 			 * to check those too */
-			if ((pl->title->flags & (MP_DNP | MP_DBL))
+			if (((pl->title->flags & MP_INPL)
+				 && (pl->title->flags & (MP_DNP | MP_DBL)))
 				|| (!mp3Exists(pl->title))) {
 				/* make sure that the playlist root stays valid */
 				if (pl == getCurrent()) {
