@@ -82,7 +82,7 @@ char *strip(char *buff, const char *text, const size_t maxlen) {
 	}
 
 	/* Cut off leading spaces and special chars */
-	while ((tpos < len) && ((uint8_t) text[tpos] < 32)) {
+	while ((tpos < len) && ((uint8_t) text[tpos] <= 32)) {
 		tpos++;
 	}
 
@@ -90,12 +90,27 @@ char *strip(char *buff, const char *text, const size_t maxlen) {
 	strtcpy(buff, text + tpos, len + 1);
 
 	/* Cut off trailing spaces and special chars */
-	while ((len > 0) && ((uint8_t) text[tpos] < 32)) {
+	while ((len > 0) && ((uint8_t) text[tpos + len] <= 32)) {
 		buff[len] = 0;
 		len--;
 	}
 
 	return buff;
+}
+
+/**
+ * simple in-place strip
+ **/
+char *instrip(char *string) {
+	if (string == NULL) {
+		return NULL;
+	}
+	char *buf = strdup(string);
+
+	printf("** sstrip: '%s' -> '%s'\n", buf,
+		   strip(string, buf, strlen(string)));
+	free(buf);
+	return string;
 }
 
 /* returns a line of text from the FILE
@@ -111,7 +126,7 @@ char *fetchline(FILE * fp) {
 	while ((c != EOF) && (c != (int32_t) '\n')) {
 		if (len >= size - 2) {
 			size = size + 256;
-			line = frealloc(line, size);
+			line = (char *) frealloc(line, size);
 		}
 		line[len++] = (char) c;
 		line[len] = 0;

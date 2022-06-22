@@ -22,7 +22,7 @@ var idletime = 0
 var idlesleep = 30000 /* milliseconds until the clock shows up (30s) */
 var currentPop = ''
 var debug = false
-const layout = ['1234567890', 'qwertzuiop', 'asdfghjkl\'', 'yxcvbnm-', 'XC BO']
+const layout = ['1234567890', 'qwertzuiopü', 'asdfghjklöä', 'yxcvbnm-\'', 'XC BO']
 var kbddiv
 var kbdokay = function () {}
 var confokay = function () {}

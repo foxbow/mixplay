@@ -521,7 +521,7 @@ void *reader() {
 			(control->mpmode & PM_STREAM) &&
 			(control->status != mpc_idle) && (control->status != mpc_start)) {
 			if (++watchdog >= WATCHDOG_TIMEOUT) {
-				addMessage(-1, "Watchdog triggered!");
+				addMessage(0, "Watchdog triggered!");
 				return killPlayers(1);
 			}
 		}

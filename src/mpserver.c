@@ -219,6 +219,8 @@ static int32_t fillReqInfo(mpReqInfo * info, char *line) {
 		sfree(&(info->arg));
 		if (jsonPeek(jo, "arg") == json_string) {
 			info->arg = jsonGetStr(jo, "arg");
+			/* strip especially trailing spaces from mobile clients */
+			instrip(info->arg);
 			if (strlen(info->arg) == 0) {
 				sfree(&(info->arg));
 			}
@@ -531,8 +533,8 @@ static void *clientHandler(void *args) {
 					if (strstr(pos, "/cmd") == pos) {
 						state = req_command;
 						cmd = (mpcmd_t) reqInfo.cmd;
-						addMessage(MPV + 1, "Got command 0x%04x - %s %s", cmd,
-								   mpcString(cmd),
+						addMessage(MPV + 1, "Got command 0x%04x - %s '%s'",
+								   cmd, mpcString(cmd),
 								   reqInfo.arg ? reqInfo.arg : "");
 						/* search is synchronous
 						 * This is ugly! This code *should* go into the next
@@ -550,8 +552,8 @@ static void *clientHandler(void *args) {
 							else if (getConfig()->found->state ==
 									 mpsearch_idle) {
 								setCommand(cmd,
-										   reqInfo.
-										   arg ? strdup(reqInfo.arg) : NULL);
+										   reqInfo.arg ? strdup(reqInfo.
+																arg) : NULL);
 								running |= CL_SRC;
 							}
 							/* this case should not be possible at all! */
