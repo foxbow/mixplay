@@ -284,7 +284,7 @@ int32_t strltcat(char *dest, const char *src, const size_t len) {
 bool isDir(const char *path) {
 	struct stat st;
 
-	return (stat(path, &st) && S_ISDIR(st.st_mode));
+	return (!stat(path, &st) && S_ISDIR(st.st_mode));
 }
 
 /**
