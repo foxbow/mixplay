@@ -111,7 +111,7 @@ int32_t delFromList(const mpcmd_t cmp, const char *line);
 int32_t writeList(const mpcmd_t cmd);
 int32_t delTitleFromOtherList(mpcmd_t cmd, const mptitle_t * title);
 
-int32_t isMusic(const char *name);
+bool isMusic(const char *name);
 void dumpTitles(mptitle_t * root, const int32_t pl);
 void dumpInfo(int32_t smooth);
 void setArtistSpread();

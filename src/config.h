@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "msgbuf.h"
 
 #define MP_MSGLEN 512
@@ -213,6 +214,7 @@ mpplaylist_t *getCurrent();
 
 void incDebug(void);
 int32_t getDebug(void);
+bool isDebug(void);
 void addMessage(int32_t v, const char *msg, ...)
 	__attribute__ ((__format__(__printf__, 2, 3)));
 

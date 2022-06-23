@@ -737,6 +737,17 @@ int32_t getDebug(void) {
 	return _cconfig->debug;
 }
 
+/**
+ * returns true id debug is enabled, that means debug > 1!
+ * debug == 1 only means that console is enabled
+ */
+bool isDebug(void) {
+	if (_cconfig == NULL) {
+		return true;
+	}
+	return (_cconfig->debug > 1);
+}
+
 /* returns true if the player is not normally playing */
 int32_t playerIsBusy(void) {
 	int32_t res = 0;

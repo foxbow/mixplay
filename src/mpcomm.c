@@ -47,7 +47,7 @@ int32_t setCurClient(int32_t client) {
 	return client;
 }
 
-int32_t isCurClient(int32_t client) {
+bool isCurClient(int32_t client) {
 	return (_curclient == client);
 }
 

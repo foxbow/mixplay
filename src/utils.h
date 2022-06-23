@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #define F_FAIL -1
 
@@ -33,10 +34,10 @@ int32_t strltcpy(char *dest, const char *src, const size_t len);
 int32_t strltcat(char *dest, const char *src, const size_t len);
 char *strip(char *dest, const char *src, const size_t len);
 char *instrip(char *txt);
-int32_t endsWith(const char *text, const char *suffix);
-int32_t startsWith(const char *text, const char *prefix);
-int32_t isURL(const char *uri);
-int32_t isDir(const char *path);
+bool endsWith(const char *text, const char *suffix);
+bool startsWith(const char *text, const char *prefix);
+bool isURL(const char *uri);
+bool isDir(const char *path);
 char *fetchline(FILE * fp);
 int32_t readline(char *line, size_t len, int32_t fd);
 char *abspath(char *path, const char *basedir, const size_t len);

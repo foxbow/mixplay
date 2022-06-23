@@ -107,8 +107,7 @@ char *instrip(char *string) {
 	}
 	char *buf = strdup(string);
 
-	printf("** sstrip: '%s' -> '%s'\n", buf,
-		   strip(string, buf, strlen(string)));
+	strip(string, buf, strlen(string));
 	free(buf);
 	return string;
 }
@@ -176,30 +175,30 @@ int32_t readline(char *line, size_t len, int32_t fd) {
  * checks if text ends with suffix
  * this function is case insensitive
  */
-int32_t endsWith(const char *text, const char *suffix) {
+bool endsWith(const char *text, const char *suffix) {
 	int32_t i, tlen, slen;
 
 	tlen = strlen(text);
 	slen = strlen(suffix);
 
 	if (tlen < slen) {
-		return 0;
+		return false;
 	}
 
 	for (i = slen; i > 0; i--) {
 		if (tolower(text[tlen - i]) != tolower(suffix[slen - i])) {
-			return 0;
+			return false;
 		}
 	}
 
-	return 1;
+	return true;
 }
 
 /**
  * checks if text starts with prefix
  * this function is case insensitive
  */
-int32_t startsWith(const char *text, const char *prefix) {
+bool startsWith(const char *text, const char *prefix) {
 	int32_t i, tlen, plen;
 
 	tlen = strlen(text);
@@ -211,17 +210,17 @@ int32_t startsWith(const char *text, const char *prefix) {
 
 	for (i = 0; i < plen; i++) {
 		if (tolower(text[i]) != tolower(prefix[i])) {
-			return 0;
+			return false;
 		}
 	}
 
-	return 1;
+	return true;
 }
 
 /**
  * Check if a file is a music file
  */
-int32_t isMusic(const char *name) {
+bool isMusic(const char *name) {
 	return endsWith(name, ".mp3");
 	/*
 	 * if( endsWith( name, ".mp3" ) || endsWith( name, ".ogg" ) ) return 1;
@@ -234,18 +233,18 @@ int32_t isMusic(const char *name) {
  * Check if the given string is an URL
  * We just allow http/s and no parameters
  */
-int32_t isURL(const char *uri) {
+bool isURL(const char *uri) {
 	if (!startsWith(uri, "http://") && !startsWith(uri, "https://")) {
-		return 0;
+		return false;
 	}
 	if (strchr(uri, '?') != NULL) {
-		return 0;
+		return false;
 	}
 	if (strchr(uri, '&') != NULL) {
-		return 0;
+		return false;
 	}
 
-	return 1;
+	return true;
 }
 
 /*
@@ -282,14 +281,10 @@ int32_t strltcat(char *dest, const char *src, const size_t len) {
 /**
  * checks if the given path is an accessible directory
  */
-int32_t isDir(const char *path) {
+bool isDir(const char *path) {
 	struct stat st;
 
-	if (!stat(path, &st) && S_ISDIR(st.st_mode)) {
-		return ENOENT;
-	}
-
-	return 0;
+	return (stat(path, &st) && S_ISDIR(st.st_mode));
 }
 
 /**

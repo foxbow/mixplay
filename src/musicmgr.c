@@ -1871,8 +1871,12 @@ void dumpInfo(int32_t smooth) {
 			} while (current != root);
 			maxplayed--;
 		}
+
+		if (!isDebug())
+			pcount = pcount - (dcount + dblcnt);
+
 		/* normal output and forward to next count */
-		else if (pcount > 0) {
+		if (pcount > 0) {
 			switch (pl) {
 			case 0:
 				sprintf(line, "    Never %5i", pcount);
@@ -1886,7 +1890,7 @@ void dumpInfo(int32_t smooth) {
 			default:
 				sprintf(line, "%3i times %5i", pl, pcount);
 			}
-
+#define DD (isDebug()?'/':'+')
 			if (favcnt || dcount)
 				if (favcnt == pcount)
 					addMessage(0, "%s - allfav", line);
@@ -1894,19 +1898,21 @@ void dumpInfo(int32_t smooth) {
 					addMessage(0, "%s - alldnp", line);
 				else if (favcnt == 0)
 					if (dblcnt == 0)
-						addMessage(0, "%s - %i dnp", line, dcount);
+						addMessage(0, "%s %c %i dnp", line, DD, dcount);
 					else
-						addMessage(0, "%s - %i/%i dnp", line, dcount, dblcnt);
+						addMessage(0, "%s %c %i dbl %c %i dnp", line, DD,
+								   dcount, DD, dblcnt);
 				else if (dcount == 0)
-					addMessage(0, "%s - %i fav", line, favcnt);
+					addMessage(0, "%s / %i fav", line, favcnt);
 				else if (dblcnt == 0)
-					addMessage(0, "%s - %i dnp / %i fav", line, dcount,
+					addMessage(0, "%s %c %i dnp / %i fav", line, DD, dcount,
 							   favcnt);
 				else
-					addMessage(0, "%s - %i/%i dnp / %i fav", line, dcount,
-							   dblcnt, favcnt);
+					addMessage(0, "%s %c %i dbl %c %i dnp / %i fav", line, DD,
+							   dcount, DD, dblcnt, favcnt);
 			else
 				addMessage(0, "%s", line);
+#undef DD
 		}
 		pl++;
 	}							/* while pl < maxplay */
