@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <netdb.h>
+#include <poll.h>
 
 #include "mpclient.h"
 #include "utils.h"
@@ -74,8 +75,7 @@ static char *sendRequest(const char *path) {
 	size_t ilen = 0;
 	size_t clen = 0;
 	int32_t rv = 0;
-	fd_set fds;
-	struct timeval to;
+	struct pollfd pfd;
 	int fd = getConnection();
 
 	if (fd < 0) {
@@ -106,36 +106,29 @@ static char *sendRequest(const char *path) {
 	} while (clen < rlen);
 	free(req);
 
-	FD_ZERO(&fds);
-	FD_SET(fd, &fds);
-	to.tv_sec = 1;
-	to.tv_usec = 0;
-	if (select(FD_SETSIZE, &fds, NULL, NULL, &to) > 0) {
-		if (FD_ISSET(fd, &fds)) {
-			rlen = 0;
-			ilen = 0;
-			do {
-				reply = (char *) frealloc(reply, rlen + 512);
-				ilen = recv(fd, reply + rlen, 512, MSG_WAITALL);
-				if ((ssize_t) ilen == -1) {
-					fail(errno, "Read error!");
-				}
-				rlen = rlen + ilen;
-			} while (ilen == 512);
-			/* force 0 termination of string */
-			reply[rlen] = 0;
-		}
-		else {
-			/* no data */
-			return NULL;
-		}
+	pfd.fd = fd;
+	pfd.events = POLLIN;
+
+	rlen = 0;
+	ilen = 0;
+
+	if ((poll(&pfd, 1, 1000) > 0) && (pfd.revents & POLLIN)) {
+		do {
+			reply = (char *) frealloc(reply, rlen + 512);
+			ilen = recv(fd, reply + rlen, 512, MSG_WAITALL);
+			if ((ssize_t) ilen == -1) {
+				fail(errno, "Read error!");
+			}
+			rlen = rlen + ilen;
+		} while (ilen == 512);
+		/* force 0 termination of string */
+		reply[rlen] = 0;
 	}
-	else {
-		/* timeout */
+	close(fd);
+
+	if (rlen == 0) {
 		return NULL;
 	}
-
-	close(fd);
 
 	if (strstr(reply, "HTTP/1.1 200") == reply) {
 		pos = strstr(reply, "Content-Length:");

@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <math.h>
 #include <sys/wait.h>
+#include <poll.h>
 
 #include "mpalsa.h"
 #include "database.h"
@@ -405,8 +406,7 @@ void pausePlay(void) {
  */
 void *reader() {
 	mpconfig_t *control = getConfig();
-	fd_set fds;
-	struct timeval to;
+	struct pollfd pfd[4];
 	int64_t i, key;
 	int32_t invol = 80;
 	int32_t outvol = 80;
@@ -494,18 +494,18 @@ void *reader() {
 		addMessage(MPV + 1, "Hardware volume level is %i%%", control->volume);
 	}
 
+	for (i = 0; i <= fading; i++) {
+		pfd[2 * i].fd = p_status[i][0];
+		pfd[2 * i].events = POLLIN;
+		pfd[2 * i + 1].fd = p_error[i][0];
+		pfd[2 * i + 1].events = POLLIN;
+	}
 	/* main loop
 	 * TODO: nothing in this loop shall block so setting the watchdog will
 	 * cause a restart in any case! */
 	do {
-		FD_ZERO(&fds);
-		for (i = 0; i <= fading; i++) {
-			FD_SET(p_status[i][0], &fds);
-			FD_SET(p_error[i][0], &fds);
-		}
-		to.tv_sec = 1;
-		to.tv_usec = 0;			/* 1/10 second */
-		i = select(FD_SETSIZE, &fds, NULL, NULL, &to);
+		/* todo: pollify! */
+		i = poll(pfd, 2 * (fading + 1), 500);
 
 		/* status is not idle but we did not get any updates from either player
 		 * after ten times we decide all hope is lost and we take the hard way
@@ -531,7 +531,7 @@ void *reader() {
 
 		if (fading) {
 			/* drain inactive player */
-			if (FD_ISSET(p_status[fdset ? 0 : 1][0], &fds)) {
+			if (pfd[fdset ? 0 : 2].revents & POLLIN) {
 				key = readline(line, MAXPATHLEN, p_status[fdset ? 0 : 1][0]);
 				if (key > 2) {
 					if ('@' == line[0]) {
@@ -574,8 +574,9 @@ void *reader() {
 					}
 				}
 			}
+
 			/* this shouldn't be happening but if it happens, it gives a hint */
-			if (FD_ISSET(p_error[fdset ? 0 : 1][0], &fds)) {
+			if (pfd[fdset ? 1 : 3].revents & POLLIN) {
 				key = readline(line, MAXPATHLEN, p_error[fdset ? 0 : 1][0]);
 				if (key > 1) {
 					addMessage(-1, "BE: %s", line);
@@ -584,7 +585,7 @@ void *reader() {
 		}
 
 		/* Interpret mpg123 output and ignore invalid lines */
-		if (FD_ISSET(p_status[fdset][0], &fds) &&
+		if ((pfd[fdset ? 2 : 0].revents & POLLIN) &&
 			(3 < readline(line, MAXPATHLEN, p_status[fdset][0]))) {
 			if ('@' == line[0]) {
 				/* Don't print volume, tag and progress messages */
@@ -886,7 +887,7 @@ void *reader() {
 			}
 		}						/* FD_ISSET( p_status ) */
 
-		if (FD_ISSET(p_error[fdset][0], &fds)) {
+		if (pfd[fdset ? 3 : 1].revents & POLLIN) {
 			key = readline(line, MAXPATHLEN, p_error[fdset][0]);
 			if (key > 1) {
 				if (strstr(line, "rror: ")) {

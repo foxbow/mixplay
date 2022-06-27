@@ -10,6 +10,7 @@
 #include <termios.h>
 #include <assert.h>
 #include <linux/input.h>
+#include <poll.h>
 
 #include "utils.h"
 
@@ -429,8 +430,7 @@ int32_t fileRevert(const char *path) {
 int32_t getch(long timeout) {
 	int32_t c = 0;
 	struct termios org_opts, new_opts;
-	fd_set fds;
-	struct timeval to;
+	struct pollfd pfd;
 
 	/* get current settings if this fails the terminal is not fully featured */
 	assert(tcgetattr(STDIN_FILENO, &org_opts) == 0);
@@ -440,14 +440,10 @@ int32_t getch(long timeout) {
 		~(ICANON | ECHO | ECHOE | ECHOK | ECHONL | ECHOPRT | ECHOKE | ICRNL);
 	tcsetattr(STDIN_FILENO, TCSANOW, &new_opts);
 
-	FD_ZERO(&fds);
-	FD_SET(fileno(stdin), &fds);
+	pfd.fd = STDIN_FILENO;
+	pfd.events = POLLIN;
 
-	to.tv_sec = (timeout / 1000);
-	to.tv_usec = (timeout - (to.tv_sec * 1000)) * 1000;
-	select(FD_SETSIZE, &fds, NULL, NULL, &to);
-
-	if (FD_ISSET(fileno(stdin), &fds)) {
+	if (poll(&pfd, 1, timeout) > 0) {
 		c = getchar();
 	}
 	else {
@@ -470,44 +466,44 @@ int32_t getch(long timeout) {
  */
 int32_t getEventCode(int32_t * code, int32_t fd, uint32_t timeout,
 					 int32_t repeat) {
-	fd_set fds;
-	struct timeval to;
-	struct input_event ie;
 	int32_t emergency = 0;
+	struct pollfd pfd;
+	struct input_event ie;
+	int pr;
 
 	*code = 0;
 
 	/* just return timeouts and proper events.
-	 * Claim timeout after 1000 non-kbd events in a row */
-	while (emergency < 1000) {
-		FD_ZERO(&fds);
-		FD_SET(fd, &fds);
-		to.tv_sec = (timeout / 1000);
-		to.tv_usec = (timeout - (to.tv_sec * 1000)) * 1000;
-
-		select(FD_SETSIZE, &fds, NULL, NULL, &to);
-		/* timeout or signal.. */
-		if (!FD_ISSET(fd, &fds)) {
+	 * Claim timeout a fter 1000 non-kbd events in a row */
+	while (emergency++ < 1000) {
+		pfd.fd = fd;
+		pfd.events = POLLIN;
+		pr = poll(&pfd, 1, timeout);
+		if (pr == 0)
+			return -1;
+		if ((pr == -1) && (errno != EINTR)) {
+			fail(errno, "poll() failed!");
 			return -1;
 		}
-		/* truncated event, this should never happen */
-		if (read(fd, &ie, sizeof (ie)) != sizeof (ie)) {
-			return -2;
-		}
-		/* proper event */
-		if (ie.type == EV_KEY) {
-			/* keypress */
-			if (ie.value == 1) {
-				*code = ie.code;
-				return 1;
+		if (pfd.revents & POLLIN) {
+			/* truncated event, this should never happen */
+			if (read(fd, &ie, sizeof (ie)) != sizeof (ie)) {
+				return -2;
 			}
-			/* repeat */
-			if (repeat && (ie.value == 2)) {
-				*code = -ie.code;
-				return 1;
+			/* proper event */
+			if (ie.type == EV_KEY) {
+				/* keypress */
+				if (ie.value == 1) {
+					*code = ie.code;
+					return 1;
+				}
+				/* repeat */
+				if (repeat && (ie.value == 2)) {
+					*code = -ie.code;
+					return 1;
+				}
 			}
 		}
-		emergency++;
 	}
 	return -1;
 }

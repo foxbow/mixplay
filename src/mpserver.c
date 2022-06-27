@@ -18,6 +18,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <netdb.h>
+#include <poll.h>
 
 #include "mpserver.h"
 #include "mpcomm.h"
@@ -298,11 +299,10 @@ static void *clientHandler(void *args) {
 	int32_t sock;
 	size_t len = 0;
 	size_t sent, msglen;
-	struct timeval to;
 	uint32_t running = CL_ONE;
 	char *commdata = NULL;
 	char *jsonLine = NULL;
-	fd_set fds;
+	struct pollfd pfd;
 	mpconfig_t *config;
 	httpstate state = req_none;
 	char *pos = NULL;
@@ -329,6 +329,7 @@ static void *clientHandler(void *args) {
 
 	ts.tv_nsec = 250000;
 	ts.tv_sec = 0;
+
 	char *manifest = NULL;
 	uint32_t method = 0;
 	mpReqInfo reqInfo = { 0, NULL, 0 };
@@ -336,6 +337,8 @@ static void *clientHandler(void *args) {
 	commdata = (char *) falloc(commsize, 1);
 	sock = *(int32_t *) args;
 	free(args);
+	pfd.fd = sock;
+	pfd.events = POLLIN;
 
 	config = getConfig();
 
@@ -343,21 +346,18 @@ static void *clientHandler(void *args) {
 	pthread_detach(pthread_self());
 	addMessage(MPV + 3, "Client handler started");
 	do {
-		FD_ZERO(&fds);
-		FD_SET(sock, &fds);
+		int deathcount = 0;
 
-		to.tv_sec = 2;
-		to.tv_usec = 0;
 		/* Either an error or a timeout */
-		if (select(FD_SETSIZE, &fds, NULL, NULL, &to) < 1) {
+		if (poll(&pfd, 1, 250) <= 0) {
 			switch (errno) {
 			case EINTR:
-				/* the select was interrupted by a signal,
+				/* the poll was interrupted by a signal,
 				 * not worth bailing out */
-				addMessage(MPV + 1, "select(%i): Interrupt", sock);
+				addMessage(MPV + 1, "poll(%i): Interrupt", sock);
 				break;
 			case EBADF:
-				addMessage(MPV + 1, "select(%i): Dead Socket", sock);
+				addMessage(MPV + 1, "poll(%i): Dead Socket", sock);
 				running = CL_STP;
 				break;
 			case EINVAL:
@@ -365,18 +365,21 @@ static void *clientHandler(void *args) {
 				running = CL_STP;
 				break;
 			case ENOMEM:
-				addMessage(MPV + 1, "select(%i): No memory", sock);
+				addMessage(MPV + 1, "poll(%i): No memory", sock);
 				running = CL_STP;
 				break;
 			default:
-				/* timeout, no one was calling for two seconds */
-				addMessage(MPV + 2, "Reaping unused clienthandler");
-				running = CL_STP;
+				if (deathcount++ > 7) {
+					/* timeout, no one was calling for two seconds */
+					addMessage(MPV + 2, "Reaping unused clienthandler");
+					running = CL_STP;
+				}
 			}
 		}
+		deathcount = 0;
 
 		/* fetch data if any */
-		if (FD_ISSET(sock, &fds)) {
+		if (pfd.revents & POLLIN) {
 			memset(commdata, 0, commsize);
 			recvd = 0;
 			while ((retval =
@@ -552,8 +555,8 @@ static void *clientHandler(void *args) {
 							else if (getConfig()->found->state ==
 									 mpsearch_idle) {
 								setCommand(cmd,
-										   reqInfo.arg ? strdup(reqInfo.
-																arg) : NULL);
+										   reqInfo.
+										   arg ? strdup(reqInfo.arg) : NULL);
 								running |= CL_SRC;
 							}
 							/* this case should not be possible at all! */
@@ -863,8 +866,7 @@ static void *clientHandler(void *args) {
  * must be called through startServer()
  */
 static void *mpserver(void *arg) {
-	fd_set fds;
-	struct timeval to;
+	struct pollfd pfd;
 	int32_t mainsocket = (int32_t) (long) arg;
 	int32_t client_sock, alen, *new_sock;
 	struct sockaddr_in client;
@@ -889,16 +891,17 @@ static void *mpserver(void *arg) {
 		close(devnull);
 	}
 
-	/* enable inUI even when not in daemon mode */
+	/* enable inUI even when not in daemon mode
+	 * even if there is no clienthandler yet, messages should be
+	 * queued so the first client will see them. */
 	control->inUI = 1;
 	alen = sizeof (struct sockaddr_in);
 	/* Start main loop */
+	pfd.fd = mainsocket;
+	pfd.events = POLLIN;
+
 	while (control->status != mpc_quit) {
-		FD_ZERO(&fds);
-		FD_SET(mainsocket, &fds);
-		to.tv_sec = 1;
-		to.tv_usec = 0;
-		if (select(FD_SETSIZE, &fds, NULL, NULL, &to) > 0) {
+		if (poll(&pfd, 1, 250) > 0) {
 			pthread_t pid;
 
 			client_sock =
@@ -944,7 +947,7 @@ int32_t startServer() {
 	struct addrinfo *result, *rp;
 
 	memset(&hints, 0, sizeof (hints));
-	hints.ai_family = AF_INET6;	// this should include IPv4
+	hints.ai_family = AF_INET6;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 	hints.ai_protocol = 0;
