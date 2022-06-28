@@ -113,7 +113,8 @@ static void _debugHidUpdateHook() {
 }
 
 /* the most simple HID implementation for -d */
-static void *debugHID() {
+static void *debugHID( __attribute__ ((unused))
+					  void *arg) {
 	int32_t c;
 	mpconfig_t *config = getConfig();
 	mpcmd_t cmd;
@@ -128,7 +129,7 @@ static void *debugHID() {
 		cmd = hidCMD(c);
 		if (cmd == mpc_quit) {
 			hidPrintline("[QUIT]");
-			setCommand(mpc_quit, strdup(getConfig()->password));
+			setCommand(mpc_quit, getConfig()->password);
 		}
 		else if (cmd != mpc_idle) {
 			setCommand(cmd, NULL);

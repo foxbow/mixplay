@@ -87,7 +87,7 @@ mpplaylist_t *addToPL(mptitle_t * title, mpplaylist_t * target,
 					  const int32_t mark);
 mpplaylist_t *remFromPLByKey(const uint32_t key);
 mpplaylist_t *addPLDummy(mpplaylist_t * pl, const char *name);
-void plCheck(int32_t del);
+void plCheck(bool del);
 int32_t writePlaylist(mpplaylist_t * pl, const char *name);
 
 mptitle_t *recurse(char *curdir, mptitle_t * files);
@@ -120,7 +120,7 @@ int32_t getPlaylists(const char *cd, struct dirent ***pllist);
 uint64_t countTitles(const uint32_t inc, const uint32_t exc);
 
 #define countflag(x) countTitles((x), MP_NONE)
-uint32_t getPlaycount(int32_t high);
+uint32_t getPlaycount(bool high);
 
 void dumpState(void);
 

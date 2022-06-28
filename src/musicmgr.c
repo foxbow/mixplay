@@ -545,9 +545,10 @@ static uint32_t matchTitle(mptitle_t * title, const char *pat) {
  * range - search range
  */
 int32_t search(const mpcmd_t range, const char *pat) {
-	mptitle_t *root = getConfig()->root;
+	mpconfig_t *control = getConfig();
+	mptitle_t *root = control->root;
 	mptitle_t *runner = root;
-	searchresults_t *res = getConfig()->found;
+	searchresults_t *res = control->found;
 	uint32_t i = 0;
 	uint32_t valid = 0;
 	uint32_t found = 0;
@@ -558,7 +559,7 @@ int32_t search(const mpcmd_t range, const char *pat) {
 	assert(pat != NULL);
 
 	/* free buffer playlist, the arrays will not get lost due to the realloc later */
-	res->titles = wipePlaylist(res->titles, 0);
+	wipeSearchList(control);
 	res->tnum = 0;
 	res->anum = 0;
 	res->lnum = 0;
@@ -1265,7 +1266,7 @@ uint64_t countTitles(const uint32_t inc, const uint32_t exc) {
 /**
  * returns the lowest playcount of the current list
  */
-uint32_t getPlaycount(int32_t high) {
+uint32_t getPlaycount(bool high) {
 	mptitle_t *base = getConfig()->root;
 	mptitle_t *runner = base;
 	uint32_t min = UINT_MAX;
@@ -1500,8 +1501,8 @@ static int32_t addNewTitle(void) {
 	runner = root;
 
 	/* remember playcount bounds */
-	pcount = getPlaycount(0);
-	maxpcount = getPlaycount(1);
+	pcount = getPlaycount(false);
+	maxpcount = getPlaycount(true);
 	addMessage(2, "Playcount [%" PRIu32 ":%" PRIu32 "]", pcount, maxpcount);
 
 	/* Do not unset the TDARK flag while still filling up the playlist */
@@ -1567,7 +1568,7 @@ static int32_t addNewTitle(void) {
 					runner = guard;
 					if (maxnum > 1) {
 						maxnum--;
-						pcount = getPlaycount(0);
+						pcount = getPlaycount(false);
 						unsetFlags(MP_TDARK | MP_PDARK);
 						num =
 							countTitles(getFavplay()? MP_FAV : MP_ALL,
@@ -1613,7 +1614,7 @@ static int32_t addNewTitle(void) {
  *
  * If fill is set, the playlist will be filled up to ten new titles.
  */
-void plCheck(int32_t fill) {
+void plCheck(bool fill) {
 	int32_t cnt = 0;
 	mpplaylist_t *pl;
 	mpplaylist_t *buf;

@@ -180,7 +180,7 @@ static mptitle_t *getCurrentTitle() {
  **/
 static void checkAfterRemove(mptitle_t * ctitle) {
 	/* clean up the playlist without adding new titles */
-	plCheck(0);
+	plCheck(false);
 	/* has the current title changed? Then send a replay to play the new
 	 * current title. This may lead to a replay if the title changed during
 	 * plcheck() but the effort to avoid this is larger than the expected
@@ -191,7 +191,7 @@ static void checkAfterRemove(mptitle_t * ctitle) {
 	}
 	setArtistSpread();
 	/* fill up the playlist */
-	plCheck(1);
+	plCheck(true);
 }
 
 /**
@@ -384,7 +384,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		}
 		else {
 			config->status = mpc_start;
-			plCheck(1);
+			plCheck(true);
 			sendplay();
 			notifyChange(MPCOMM_CONFIG);
 		}
@@ -415,7 +415,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		/* initialize player after startup */
 		/* todo: what happens if the user sends a play during startup? */
 		else {
-			plCheck(1);
+			plCheck(true);
 			if (config->current != NULL) {
 				addMessage(MPV + 1, "Autoplay..");
 				sendplay();
@@ -803,10 +803,10 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			else {
 				addMessage(MPV + 1, "Disabling Favplay");
 			}
-			cleanTitles(0);
+			cleanTitles(false);
 			writeConfig(NULL);
 			setArtistSpread();
-			plCheck(1);
+			plCheck(true);
 			sendplay();
 			pthread_mutex_unlock(&_asynclock);
 		}

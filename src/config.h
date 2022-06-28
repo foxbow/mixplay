@@ -235,7 +235,9 @@ const char *mpcString(mpcmd_t rawcmd);
 mpcmd_t mpcCommand(const char *val);
 char *fullpath(const char *file);
 
-mpplaylist_t *wipePlaylist(mpplaylist_t * pl, int32_t recursive);
+void wipePlaylist(mpconfig_t *);
+void wipeSearchList(mpconfig_t *);
+
 mptitle_t *wipeTitles(mptitle_t * root);
 marklist_t *wipeList(marklist_t * root);
 int32_t playerIsBusy(void);

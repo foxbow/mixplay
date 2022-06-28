@@ -335,8 +335,8 @@ static void *clientHandler(void *args) {
 	mpReqInfo reqInfo = { 0, NULL, 0 };
 
 	commdata = (char *) falloc(commsize, 1);
-	sock = *(int32_t *) args;
-	free(args);
+	sock = (int32_t) (long) args;
+
 	pfd.fd = sock;
 	pfd.events = POLLIN;
 
@@ -483,6 +483,13 @@ static void *clientHandler(void *args) {
 					else {
 						if (method == 1) {
 							method = 3;
+							if (running & CL_RUN) {
+								/* an update client is fetching a file, that's bad since
+								 * Chrome seems to get stuck on file transfers as long
+								 * as the socket remains connected. So terminate this
+								 * handler after sending the file. */
+								running &= ~CL_RUN;
+							}
 						}
 						else {
 							addMessage(MPV + 1, "Invalid POST request!");
@@ -555,8 +562,8 @@ static void *clientHandler(void *args) {
 							else if (getConfig()->found->state ==
 									 mpsearch_idle) {
 								setCommand(cmd,
-										   reqInfo.
-										   arg ? strdup(reqInfo.arg) : NULL);
+										   reqInfo.arg ? strdup(reqInfo.
+																arg) : NULL);
 								running |= CL_SRC;
 							}
 							/* this case should not be possible at all! */
@@ -852,7 +859,6 @@ static void *clientHandler(void *args) {
 		unlockClient(reqInfo.clientid);
 		config->found->state = mpsearch_idle;
 	}
-
 	close(sock);
 	sfree(&manifest);
 	sfree(&commdata);
@@ -868,8 +874,8 @@ static void *clientHandler(void *args) {
 static void *mpserver(void *arg) {
 	struct pollfd pfd;
 	int32_t mainsocket = (int32_t) (long) arg;
-	int32_t client_sock, alen, *new_sock;
-	struct sockaddr_in client;
+	int32_t client_sock;
+	socklen_t alen;
 	mpconfig_t *control = getConfig();
 	int32_t devnull = 0;
 
@@ -895,7 +901,7 @@ static void *mpserver(void *arg) {
 	 * even if there is no clienthandler yet, messages should be
 	 * queued so the first client will see them. */
 	control->inUI = 1;
-	alen = sizeof (struct sockaddr_in);
+
 	/* Start main loop */
 	pfd.fd = mainsocket;
 	pfd.events = POLLIN;
@@ -904,23 +910,18 @@ static void *mpserver(void *arg) {
 		if (poll(&pfd, 1, 250) > 0) {
 			pthread_t pid;
 
-			client_sock =
-				accept(mainsocket, (struct sockaddr *) &client,
-					   (socklen_t *) & alen);
+			alen = 0;
+			client_sock = accept(mainsocket, NULL, &alen);
 			if (client_sock < 0) {
 				addMessage(0, "accept() failed!");
 				continue;
 			}
 			addMessage(MPV + 3, "Connection accepted");
 
-			/* free()'d in clientHandler() */
-			new_sock = (int32_t *) falloc(1, sizeof (int32_t));
-			*new_sock = client_sock;
-
 			/* todo collect pids?
 			 * or better use a threadpool */
-			if (pthread_create(&pid, NULL, clientHandler, (void *) new_sock) <
-				0) {
+			if (pthread_create
+				(&pid, NULL, clientHandler, (void *) (long) client_sock) < 0) {
 				addMessage(0, "Could not create client handler thread!");
 			}
 		}

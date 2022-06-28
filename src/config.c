@@ -385,6 +385,7 @@ mpconfig_t *readConfig(void) {
 				}
 			}
 			if (strstr(line, "password=") == line) {
+				sfree((char **) &(_cconfig->password));
 				_cconfig->password = strdup(pos);
 			}
 			if (strstr(line, "channel=") == line) {
@@ -635,18 +636,51 @@ void freeConfigContents() {
 	msgBuffDiscard(_cconfig->msg);
 }
 
-/*
- * wrapper to clean up player. If no database was loaded, the titles in the
- * playlist should be free()'d  too. If a database is loaded the titles in
- * the playlist must not be free()'d
+/**
+ * deletes the current playlist
+ * this is not in musicmanager.c to keep cross-dependecies in
+ * config.c low
  */
-static void wipePTLists(mpconfig_t * control) {
+static mpplaylist_t *_wipePlaylist(mpplaylist_t * pl, bool recursive,
+								   bool locked) {
+	mpplaylist_t *next = NULL;
+
+	if (pl == NULL) {
+		return NULL;
+	}
+
+	if (!locked)
+		lockPlaylist();
+
+	while (pl->prev != NULL) {
+		pl = pl->prev;
+	}
+
+	while (pl != NULL) {
+		next = pl->next;
+		pl->title->flags &= ~MP_INPL;
+		if (recursive) {
+			free(pl->title);
+			pl->title = NULL;
+		}
+		pl->next = NULL;
+		free(pl);
+		pl = next;
+	}
+	if (!locked)
+		unlockPlaylist();
+	return NULL;
+}
+
+static void wipePTlist(mpconfig_t * control) {
 	if (control->root != NULL) {
+		lockPlaylist();
+		control->current = _wipePlaylist(control->current, false, true);
 		control->root = wipeTitles(control->root);
-		control->current = wipePlaylist(control->current, 0);
+		unlockPlaylist();
 	}
 	else {
-		control->current = wipePlaylist(control->current, 1);
+		control->current = _wipePlaylist(control->current, true, true);
 	}
 }
 
@@ -656,8 +690,8 @@ static void wipePTLists(mpconfig_t * control) {
 void freeConfig() {
 	assert(_cconfig != NULL);
 	freeConfigContents();
-	_cconfig->found->titles = wipePlaylist(_cconfig->found->titles, 0);
-	wipePTLists(_cconfig);
+	wipeSearchList(_cconfig);
+	wipePTlist(_cconfig);
 	if (_cconfig->found->artists != NULL) {
 		free(_cconfig->found->artists);
 	}
@@ -921,36 +955,14 @@ profile_t *createProfile(const char *name, const char *stream,
 	return profile;
 }
 
-/**
- * deletes the current playlist
- * this is not in musicmanager.c to keep cross-dependecies in
- * config.c low
- */
-mpplaylist_t *wipePlaylist(mpplaylist_t * pl, int32_t recursive) {
-	mpplaylist_t *next = NULL;
+void wipeSearchList(mpconfig_t * control) {
+	control->found->titles =
+		_wipePlaylist(control->found->titles, false, false);
+}
 
-	if (pl == NULL) {
-		return NULL;
-	}
-
-	int32_t unlock = trylockPlaylist();
-
-	while (pl->prev != NULL) {
-		pl = pl->prev;
-	}
-
-	while (pl != NULL) {
-		next = pl->next;
-		pl->title->flags &= ~MP_INPL;
-		if (recursive) {
-			free(pl->title);
-		}
-		free(pl);
-		pl = next;
-	}
-	if (unlock)
-		unlockPlaylist();
-	return NULL;
+void wipePlaylist(mpconfig_t * control) {
+	control->current =
+		_wipePlaylist(control->current, control->mpmode & PM_STREAM, true);
 }
 
 /**

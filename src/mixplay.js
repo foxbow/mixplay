@@ -1708,8 +1708,8 @@ function loadURL () {
 }
 
 function newActive () {
-  document.getElementById('kbdtext').value = document.getElementById('prev').innerHTML
-  showKbd(0x16)
+  lastsearch = document.getElementById('prev').innerHTML
+  showKbd(0x16, 1)
 }
 
 /*

@@ -7,7 +7,8 @@ CCFLAGS+=-DVERSION=\"$(VERSION)\"
 
 ifdef MPDEBUG
 # force compilation with -g
-CCFLAGS+=-std=gnu11 -Wall -Wextra -pedantic -Werror -I . -g
+CCFLAGS+=-std=gnu11 -Wall -Wextra -pedantic -Werror -I . -g -fsanitize=address
+LIBS=-lasan
 else
 # master branch is built with -O2, dev branches with -g
 ifeq ($(shell git rev-parse --abbrev-ref HEAD),master)
@@ -26,7 +27,7 @@ CLOBJS=$(addprefix $(OBJDIR)/,utils.o msgbuf.o config.o json.o mpclient.o \
 
 HCOBJS=$(CLOBJS) $(addprefix $(OBJDIR)/,mphid.o)
 
-LIBS=-lpthread -lm
+LIBS+=-lpthread -lm
 REFS=alsa libmpg123
 
 CLIENTS=bin/mixplay-hid

@@ -16,7 +16,7 @@
 #include "controller.h"
 
 #define MPV 10
-#define WATCHDOG_TIMEOUT 9
+#define WATCHDOG_TIMEOUT 15
 
 static pthread_mutex_t _killlock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -43,17 +43,17 @@ void setOrder(int32_t order) {
  * if flags is true, all title flags will be cleared, only
  * MP_DBL will be kept.
  */
-void cleanTitles(int32_t flags) {
+void cleanTitles(bool flags) {
 	mpconfig_t *control = getConfig();
 	mptitle_t *runner = control->root;
-	uint32_t pc = getPlaycount(1);
+	uint32_t pc = getPlaycount(true);
 
 	if (pc > 0) {
 		pc--;
 	}
 
-	control->current =
-		wipePlaylist(control->current, control->mpmode & PM_STREAM);
+	wipePlaylist(control);
+
 	/* this should even be assert() worthy */
 	if (runner == NULL) {
 		addMessage(-1, "Switching Favplay without active database!");
@@ -79,9 +79,9 @@ void cleanTitles(int32_t flags) {
 void setStream(char const *const stream, char const *const name) {
 	mpconfig_t *control = getConfig();
 
+	/* TODO: this is not really elegant */
+	wipePlaylist(control);
 	lockPlaylist();
-	control->current =
-		wipePlaylist(control->current, control->mpmode & PM_STREAM);
 	control->mpmode = PM_STREAM | PM_SWITCH;
 	control->current = addPLDummy(control->current, "<waiting for info>");
 	control->current = addPLDummy(control->current, name);
@@ -229,13 +229,12 @@ void *setProfile(void *arg) {
 		profile = control->profile[active];
 		/* last database play was on the same profile, so just wipe playlist */
 		if (lastact == control->active) {
-			control->current =
-				wipePlaylist(control->current, control->mpmode & PM_STREAM);
+			wipePlaylist(control);
 			control->mpmode = PM_DATABASE | PM_SWITCH;
 		}
 		/* last database play was a different profile, so clean up all */
 		else {
-			cleanTitles(1);
+			cleanTitles(true);
 			control->mpmode = PM_DATABASE | PM_SWITCH;
 			control->dnplist = wipeList(control->dnplist);
 			control->favlist = wipeList(control->favlist);
@@ -249,14 +248,14 @@ void *setProfile(void *arg) {
 			lastact = control->active;
 		}
 		setArtistSpread();
-		plCheck(1);
+		plCheck(true);
 		setVolume(control->pvolume);
 		addMessage(MPV + 1, "Profile set to %s.", profile->name);
 	}
 	else {
 		addMessage(-1, "No valid profile selected!");
 		addMessage(MPV + 1, "Restart play");
-		plCheck(1);
+		plCheck(true);
 		startPlayer();
 		return arg;
 	}
@@ -340,7 +339,7 @@ void *killPlayers(int32_t restart) {
 		addMessage(2, "Stopping player %" PRId64, i);
 		if (toPlayer(i, "QUIT\n") == -1) {
 			/* apparently we're already dead.. oops! */
-			return NULL;
+			continue;
 		}
 		close(p_command[i][1]);
 		close(p_status[i][0]);
@@ -504,7 +503,6 @@ void *reader() {
 	 * TODO: nothing in this loop shall block so setting the watchdog will
 	 * cause a restart in any case! */
 	do {
-		/* todo: pollify! */
 		i = poll(pfd, 2 * (fading + 1), 500);
 
 		/* status is not idle but we did not get any updates from either player
@@ -647,7 +645,7 @@ void *reader() {
 									strip(control->current->title->title, t,
 										  NAMELEN - 1);
 								}
-								plCheck(0);
+								plCheck(false);
 								/* carry over stream title as album entry */
 								strcpy(control->current->title->album,
 									   control->current->prev->title->title);
@@ -742,7 +740,7 @@ void *reader() {
 								outvol = 100;
 								toPlayer(0, "volume 0\n");
 								sendplay();
-								plCheck(1);
+								plCheck(true);
 							}
 						}
 					}
@@ -817,7 +815,7 @@ void *reader() {
 							}
 
 							if (control->mpmode == PM_DATABASE) {
-								plCheck(1);
+								plCheck(true);
 							}
 						}
 						/* always re-enable proper playorder after stop */
