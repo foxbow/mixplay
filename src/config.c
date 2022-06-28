@@ -632,6 +632,7 @@ void freeConfigContents() {
 	sfree((char **) &(_cconfig->stream));
 	sfree((char **) &(_cconfig->channel));
 	sfree((char **) &(_cconfig->password));
+	sfree((char **) &(_cconfig->streamURL));
 
 	msgBuffDiscard(_cconfig->msg);
 }
