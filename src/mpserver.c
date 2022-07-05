@@ -561,9 +561,7 @@ static void *clientHandler(void *args) {
 							}
 							else if (getConfig()->found->state ==
 									 mpsearch_idle) {
-								setCommand(cmd,
-										   reqInfo.
-										   arg ? strdup(reqInfo.arg) : NULL);
+								setCommand(cmd, reqInfo.arg);
 								running |= CL_SRC;
 							}
 							/* this case should not be possible at all! */

@@ -673,6 +673,9 @@ static mpplaylist_t *_wipePlaylist(mpplaylist_t * pl, bool recursive,
 	return NULL;
 }
 
+/*
+ * locks playlist
+ */
 static void wipePTlist(mpconfig_t * control) {
 	if (control->root != NULL) {
 		lockPlaylist();
@@ -681,8 +684,24 @@ static void wipePTlist(mpconfig_t * control) {
 		unlockPlaylist();
 	}
 	else {
-		control->current = _wipePlaylist(control->current, true, true);
+		control->current = _wipePlaylist(control->current, true, false);
 	}
+}
+
+/*
+ * does not lock, since searchlist is single-threaded
+ */
+void wipeSearchList(mpconfig_t * control) {
+	control->found->titles =
+		_wipePlaylist(control->found->titles, false, true);
+}
+
+/*
+ * locks playlist while wiping
+ */
+void wipePlaylist(mpconfig_t * control) {
+	control->current =
+		_wipePlaylist(control->current, control->mpmode & PM_STREAM, false);
 }
 
 /**
@@ -954,16 +973,6 @@ profile_t *createProfile(const char *name, const char *stream,
 	profile->favplay = favplay;
 	profile->volume = vol;
 	return profile;
-}
-
-void wipeSearchList(mpconfig_t * control) {
-	control->found->titles =
-		_wipePlaylist(control->found->titles, false, false);
-}
-
-void wipePlaylist(mpconfig_t * control) {
-	control->current =
-		_wipePlaylist(control->current, control->mpmode & PM_STREAM, true);
 }
 
 /**

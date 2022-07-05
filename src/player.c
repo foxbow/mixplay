@@ -79,9 +79,7 @@ void cleanTitles(bool flags) {
 void setStream(char const *const stream, char const *const name) {
 	mpconfig_t *control = getConfig();
 
-	/* TODO: this is not really elegant */
 	wipePlaylist(control);
-	lockPlaylist();
 	control->mpmode = PM_STREAM | PM_SWITCH;
 	control->current = addPLDummy(control->current, "<waiting for info>");
 	control->current = addPLDummy(control->current, name);
@@ -99,7 +97,6 @@ void setStream(char const *const stream, char const *const name) {
 	control->streamURL =
 		(char *) frealloc(control->streamURL, strlen(stream) + 1);
 	strcpy(control->streamURL, stream);
-	unlockPlaylist();
 	addMessage(MPV + 1, "Play Stream %s (%s)", name, stream);
 }
 
