@@ -334,22 +334,24 @@ void *killPlayers(int32_t restart) {
 	/* ask nicely first.. */
 	for (i = 0; i < players; i++) {
 		addMessage(2, "Stopping player %" PRId64, i);
-		if (toPlayer(i, "QUIT\n") == -1) {
-			/* apparently we're already dead.. oops! */
-			continue;
+		if (toPlayer(i, "QUIT\n") != -1) {
+			/* if the player is still listening, give it a chance to react */
+			sleep(1);
 		}
 		close(p_command[i][1]);
 		close(p_status[i][0]);
 		close(p_error[i][0]);
-		sleep(1);
+		/* still there? */
 		if (waitpid(p_pid[i], NULL, WNOHANG | WCONTINUED) != p_pid[i]) {
 			addMessage(1, "Terminating player %" PRId64, i);
 			kill(p_pid[i], SIGTERM);
 			sleep(1);
+			/* STILL there?? */
 			if (waitpid(p_pid[i], NULL, WNOHANG | WCONTINUED) != p_pid[i]) {
 				addMessage(0, "Killing player %" PRId64, i);
 				kill(p_pid[i], SIGKILL);
 				sleep(1);
+				/* This is bad... */
 				if (waitpid(p_pid[i], NULL, WNOHANG | WCONTINUED) != p_pid[i]) {
 					addMessage(-1, "Could not get rid of %i!", p_pid[i]);
 				}
