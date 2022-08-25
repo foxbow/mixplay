@@ -1572,13 +1572,16 @@ static int32_t addNewTitle(void) {
 						unsetFlags(MP_TDARK | MP_PDARK);
 						num =
 							countTitles(getFavplay()? MP_FAV : MP_ALL,
-										MP_HIDE | MP_PDARK);
-						addMessage(1,
+										MP_HIDE);
+						/* we do not want to see this and if we do, it may hint at
+						 * something strange going on - maybe even add some debug info */
+						addMessage(0,
 								   "Reducing repeat to %" PRIu32 " with %"
 								   PRIu64 " titles", maxnum, num);
 					}
 					else {
-						/* then change it to something sensible! */
+						/* This should rather change it to something sensible instead of
+						 * simply bailing out! */
 						fail(-1, "Cannot play this profile!");
 					}
 				}
