@@ -19,7 +19,9 @@ var swipest = []
 var overflow = 0
 var toval = 500
 var idletime = 0
-var idlesleep = 30000 /* milliseconds until the clock shows up (30s) */
+var idlesleep = 60000 /* milliseconds until the clock shows up (1m) */
+var playtimer = 0
+var timetoplay = 30000 /* time until reverting to default screen (30s) */
 var currentPop = ''
 var debug = false
 const layout = ['1234567890', 'qwertzuiopü', 'asdfghjklöä', 'yxcvbnm-\'', 'XC BO']
@@ -1334,9 +1336,9 @@ function dnpfavUpdate (data) {
 
 function secsToTime (secs) {
   var time = ''
-  const hrs = Math.round(secs / 3600)
+  const hrs = Math.floor(secs / 3600)
   secs = secs % 3600
-  const min = Math.round(secs / 60)
+  const min = Math.floor(secs / 60)
   secs = secs % 60
 
   if (hrs !== 0) {
@@ -1440,6 +1442,13 @@ function playerUpdate (data) {
       clearBody()
       document.getElementById('play').innerHTML = '||'
       power(1)
+      if (timetoplay > 0) {
+        playtimer += toval
+        if (playtimer > timetoplay) {
+          playtimer = 0;
+          adaptUI(-1)
+        }
+      }
       break
     default: /* player is busy */
       setBody('busy')
@@ -1880,6 +1889,7 @@ function power (on) {
   const el = document.getElementById('black')
   if (on === 1) {
     idletime = 0
+    playtime = 0
     if (smallUI !== 2) {
       el.className = 'hide'
     }
