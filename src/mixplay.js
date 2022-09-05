@@ -18,7 +18,7 @@ var active = 0
 var swipest = []
 var overflow = 0
 var toval = 500
-var idletime = 0
+var idletimer = 0
 var idlesleep = 60000 /* milliseconds until the clock shows up (1m) */
 var playtimer = 0
 var timetoplay = 30000 /* time until reverting to default screen (30s) */
@@ -600,7 +600,7 @@ function sendCMDArg (cmd, arg) {
     if ((cmd === 0x02) || (cmd === 0x03) || (cmd === 0x05)) {
       return
     }
-    if ((cmd === 0x0) && (idletime > 0)) {
+    if ((cmd === 0x0) && (idletimer > 0)) {
       setElement('title', '-- reconnect --')
     }
   }
@@ -1430,8 +1430,8 @@ function playerUpdate (data) {
     case 0x20: /* mpc_pause */
       setBody('pause')
       if (idlesleep > 0) {
-        if (idletime < idlesleep) {
-          idletime += toval
+        if (idletimer < idlesleep) {
+          idletimer += toval
         } else {
           power(0)
         }
@@ -1888,8 +1888,7 @@ function addTouch (name, num) {
 function power (on) {
   const el = document.getElementById('black')
   if (on === 1) {
-    idletime = 0
-    playtime = 0
+    idletimer = 0
     if (smallUI !== 2) {
       el.className = 'hide'
     }
@@ -1909,6 +1908,7 @@ function tap () {
   if (smallUI === 2) {
     switchUI()
   }
+  playtimer = 0
   power(1)
 }
 
