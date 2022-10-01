@@ -79,16 +79,22 @@ int32_t main() {
 	int32_t timer = 0;
 	mpcmd_t state = mpc_idle;
 	int32_t sstate;
-	int32_t dstate = getDisplayState();
-
-	sstate = dstate;
-	if (sstate < 0) {
-		fail(F_FAIL, "Cannot access DPMS!");
-	}
+	int32_t dstate;
 
 	if (daemon(1, 0) != 0) {
 		fail(errno, "Could not demonize!");
 	}
+
+	/* give X11 some time to start up */
+	sleep(10);
+
+	dstate = getDisplayState();
+	sstate = dstate;
+	if (sstate < 0) {
+		/* this will get lost since we're already demonized */
+		fail(F_FAIL, "Cannot access DPMS!");
+	}
+
 
 	/* todo parameters: timeout, host, port */
 	while (to < 0) {

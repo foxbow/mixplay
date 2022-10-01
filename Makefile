@@ -31,10 +31,10 @@ LIBS+=-lpthread -lm
 REFS=alsa libmpg123
 
 CLIENTS=bin/mixplay-hid
-ifeq ($(shell pkg-config --exists x11 && echo 0),0)
+ifeq ($(shell pkg-config --exists xcomposite && echo 0),0)
 CLIENTS+=bin/mixplay-scr
 else
-$(info No X11 support, screensaver client will not be built)
+$(info No X11 support (libxcomposite-dev), screensaver client will not be built)
 endif
 
 # Install globally when called as root
@@ -139,7 +139,7 @@ $(OBJDIR)/manifest_json.h: static/manifest.json
 	xxd -i static/manifest.json > $(OBJDIR)/manifest_json.h
 
 prepare:
-	sudo apt-get install mpg123 libmpg123-dev libasound-dev
+	sudo apt-get install mpg123 libmpg123-dev libasound-dev pkg-config
 
 $(OBJDIR)/dep.d: src/*
 	rm -f $(OBJDIR)/dep.d
