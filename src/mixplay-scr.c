@@ -16,7 +16,7 @@ static int32_t displayPower(int32_t on) {
 	int32_t dummy;
 	int32_t rv = -1;
 	Display *dpy;
-	char *disp = ":0";
+	const char *disp = ":0";
 
 	dpy = XOpenDisplay(disp);	/*  Open display and check for success */
 	if (dpy == NULL) {
@@ -48,7 +48,7 @@ static int32_t getDisplayState() {
 	BOOL dummy2;
 	int32_t rv = -1;
 	Display *dpy;
-	char *disp = ":0";
+	const char *disp = ":0";
 	CARD16 level;
 
 	dpy = XOpenDisplay(disp);
@@ -84,6 +84,9 @@ int32_t main() {
 	if (daemon(1, 0) != 0) {
 		fail(errno, "Could not demonize!");
 	}
+
+	/* make sure we can recognize failures in the syslog */
+	openlog("mp-scr", LOG_PID, LOG_DAEMON);
 
 	/* give X11 some time to start up */
 	sleep(10);
@@ -164,6 +167,8 @@ int32_t main() {
 		}
 		sleep(1);
 	}
+
+	syslog(LOG_INFO, "Exiting with state=%i (mpc_idle=%i)", state, mpc_idle);
 	/* always turn the screen on on exit */
 	displayPower(1);
 }

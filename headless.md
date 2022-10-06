@@ -18,7 +18,6 @@ startx /usr/bin/chromium-browser --disable-plugins --window-position=0,0 --windo
 ```
 #!/bin/bash
 mixplay/bin/mixplayd
-sleep 1
 mixplay/bin/mixplay-scr
 startx /usr/bin/chromium-browser --disable-plugins --window-position=0,0 --window-size=800,480 --app=http://localhost:2347/ -- -nocursor -s 0
 # uncomment if you want an autoreboot after a crash..

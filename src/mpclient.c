@@ -38,6 +38,7 @@ void fail(const int32_t error, const char *msg, ...) {
 	if (error > 0) {
 		fprintf(stdout, "ERROR: %i - %s\n", abs(error), strerror(abs(error)));
 	}
+	vsyslog(LOG_ERR, msg, args);
 	exit(error);
 }
 

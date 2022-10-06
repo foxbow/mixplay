@@ -4,6 +4,7 @@
 #include "json.h"
 /* so that MPCOMM_ macros are available */
 #include "mpcomm.h"
+#include <syslog.h>
 
 int32_t setMPPort(int32_t port);
 int32_t setMPHost(const char *host);
