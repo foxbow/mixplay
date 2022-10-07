@@ -130,7 +130,7 @@ int32_t main() {
 		/* get display state */
 		dstate = getDisplayState();
 		/* nothing is playing */
-		if (state == mpc_idle) {
+		if ((state == mpc_idle) || (state == mpc_pause)) {
 			/* is the screen physically on? */
 			if (dstate == 1) {
 				/* should it be off - then turn it off again in 10s */
