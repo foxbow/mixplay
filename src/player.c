@@ -409,7 +409,6 @@ void *reader() {
 	int32_t invol = 80;
 	int32_t outvol = 80;
 	char line[MAXPATHLEN];
-	char *a, *t;
 	float intime = 0.0;
 	float oldtime = 0.0;
 	int32_t fading = 1;
@@ -597,6 +596,9 @@ void *reader() {
 					int32_t cmd;
 					float rem;
 
+					/* title/time position in status line */
+					char *tpos;
+
 				case 'R':		/* startup */
 					addMessage(MPV + 1, "MPG123 foreground instance is up");
 					break;
@@ -606,44 +608,68 @@ void *reader() {
 					if (control->mpmode & PM_DATABASE) {
 						break;
 					}
-					/* ICY stream info */
-					if ((control->current != NULL)
-						&& (NULL != strstr(line, "ICY-"))) {
-						if (NULL != strstr(line, "ICY-NAME: ")) {
-							if (control->current->prev != NULL) {
-								strip(control->current->prev->title->title,
-									  line + 13, NAMELEN - 1);
-								notifyChange(MPCOMM_TITLES);
-							}
-						}
 
-						if (NULL != (a = strstr(line, "StreamTitle"))) {
-							addMessage(MPV + 3, "%s", a);
-							a = a + 13;
-							t = strchr(a, ';');
-							if (t != NULL) {
-								t--;
-								*t = 0;
-							}
+					/* sanity check, this is almost assert worthy */
+					if (control->current == NULL) {
+						addMessage(0, "Premature stream info!");
+						break;
+					}
+
+					/* Stream name */
+					if (NULL != strstr(line, "ICY-NAME: ")) {
+						/* if prev is NULL it would mean the stream started before
+						 * it was set - shouldn't ever happen */
+						if (control->current->prev != NULL) {
+							strip(control->current->prev->title->title,
+								  line + 13, NAMELEN - 1);
+							notifyChange(MPCOMM_TITLES);
+						}
+					}
+
+					/* metadata, usually title info */
+					if (NULL != strstr(line, "ICY-META")) {
+						/* StreamTitle='artist-title' -> apos[,tpos] */
+						char *apos = strstr(line, "StreamTitle='");
+
+						if (apos != NULL) {
+							addMessage(MPV + 3, "%s", apos);
+							apos = apos + strlen("StreamTitle='");
+							/* cut off trailing '; */
+							if (strlen(apos) - 2 > 0)
+								apos[strlen(apos) - 2] = 0;
+
 							/* only do this if the title actually changed */
-							if (strcmp(a, control->current->title->display)) {
+							if (strcmp(apos, control->current->title->display)) {
+
+								/* The album field contains the stream name. If it is not set
+								 * then this is the first title, otherwise create a new enntry
+								 * to store the current title */
 								if (strlen(control->current->title->album) > 0) {
 									control->current =
-										addPLDummy(control->current, a);
+										addPLDummy(control->current, apos);
 								}
-								strip(control->current->title->display, a,
+								strip(control->current->title->display, apos,
 									  MAXPATHLEN - 1);
-								strip(control->current->title->title, a,
-									  NAMELEN - 1);
-								/* if possible cut up title and artist */
-								if (NULL != (t = strstr(a, " - "))) {
-									*t = 0;
-									t = t + 3;
-									strip(control->current->title->artist, a,
-										  NAMELEN - 1);
-									strip(control->current->title->title, t,
+
+								/* if possible cut up title and artist
+								 * This fails if the artist has a ' - ' in the name but it's
+								 * more likely that the title has a ' - ' so take the first
+								 * dash not the last */
+								tpos = strstr(apos, " - ");
+								if (tpos != NULL) {
+									*tpos = 0;
+									strip(control->current->title->artist,
+										  apos, NAMELEN - 1);
+									strip(control->current->title->title,
+										  tpos + 3, NAMELEN - 1);
+								}
+								/* can't find a title, so everything goes into the title
+								 * line (this is centered on the display) */
+								else {
+									strip(control->current->title->title, apos,
 										  NAMELEN - 1);
 								}
+
 								plCheck(false);
 								/* carry over stream title as album entry */
 								strcpy(control->current->title->album,
@@ -670,20 +696,21 @@ void *reader() {
 					 * in  = seconds (float)
 					 * rem = seconds left (float)
 					 */
-					a = strrchr(line, ' ');
-					if (a == NULL) {
+					tpos = strrchr(line, ' ');
+					if (tpos == NULL) {
 						addMessage(0, "Error in Frame info: %s", line);
 						break;
 					}
-					rem = strtof(a, NULL);
-					*a = 0;
-					a = strrchr(line, ' ');
-					if (a == NULL) {
+					rem = strtof(tpos, NULL);
+					*tpos = 0;
+					tpos = strrchr(line, ' ');
+					if (tpos == NULL) {
 						addMessage(0, "Error in Frame info: %s", line);
 						break;
 					}
-					intime = strtof(a, NULL);
+					intime = strtof(tpos, NULL);
 
+					/* fade in if needed */
 					if (invol < 100) {
 						invol++;
 						snprintf(line, MAXPATHLEN, "volume %i\n", invol);
