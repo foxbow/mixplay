@@ -7,8 +7,12 @@ CCFLAGS+=-DVERSION=\"$(VERSION)\"
 
 ifdef MPDEBUG
 # force compilation with -g
-CCFLAGS+=-std=gnu11 -Wall -Wextra -pedantic -Werror -I . -g -fsanitize=address
+CCFLAGS+=-std=gnu11 -Wall -Wextra -pedantic -Werror -I . -g
+ifeq ($(MPDEBUG),2)
+# enable address sanitizer
+CCFLAGS+=-fsanitize=address
 LIBS=-lasan
+endif
 else
 # master branch is built with -O2, dev branches with -g
 ifeq ($(shell git rev-parse --abbrev-ref HEAD),master)
@@ -97,7 +101,7 @@ bin/mixplay-hid: $(OBJDIR)/mixplay-hid.o $(HCOBJS)
 	$(CC) $^ -o $@ $(LIBS)
 
 bin/mixplay-scr: $(OBJDIR)/mixplay-scr.o $(CLOBJS)
-	$(CC) $^ -o $@ -lpthread -lX11 -lXext
+	$(CC) $^ -o $@ -lpthread -lX11 -lXext $(LIBS)
 
 bin/mprcinit: $(OBJDIR)/mprcinit.o $(OBJS)
 	$(CC) $^ -o $@ $(LIBS)

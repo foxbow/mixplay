@@ -88,7 +88,7 @@ int32_t main() {
 	/* make sure we can recognize failures in the syslog */
 	openlog("mp-scr", LOG_PID, LOG_DAEMON);
 
-	/* give X11 some time to start up */
+	/* give X11 and mixplay some time to start up */
 	sleep(10);
 
 	dstate = getDisplayState();
@@ -100,13 +100,9 @@ int32_t main() {
 
 
 	/* todo parameters: timeout, host, port */
-	while (to < 0) {
-		sleep(5);
+	if (to < 0) {
 		jo = getStatus(MPCOMM_CONFIG);
-		if (jsonPeek(jo, "type") == json_error) {
-			to++;
-		}
-		else {
+		if (jsonPeek(jo, "type") != json_error) {
 			to = jsonGetInt(jo, "sleepto");
 		}
 		jsonDiscard(jo);
@@ -130,7 +126,7 @@ int32_t main() {
 		/* get display state */
 		dstate = getDisplayState();
 		/* nothing is playing */
-		if (state == mpc_idle) {
+		if (state != mpc_play) {
 			/* is the screen physically on? */
 			if (dstate == 1) {
 				/* should it be off - then turn it off again in 10s */
@@ -168,7 +164,7 @@ int32_t main() {
 		sleep(1);
 	}
 
-	syslog(LOG_INFO, "Exiting with state=%i (mpc_idle=%i)", state, mpc_idle);
+	syslog(LOG_INFO, "Exiting with state=mpc_%s)", mpcString(state));
 	/* always turn the screen on on exit */
 	displayPower(1);
 }
