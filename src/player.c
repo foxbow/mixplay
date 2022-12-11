@@ -634,9 +634,19 @@ void *reader() {
 						if (apos != NULL) {
 							addMessage(MPV + 3, "%s", apos);
 							apos = apos + strlen("StreamTitle='");
-							/* cut off trailing '; */
-							if (strlen(apos) - 2 > 0)
-								apos[strlen(apos) - 2] = 0;
+
+							/* find a proper terminating '; sequence */
+							char *aend = strchr(apos, '\'');
+							while (aend[1] != ';') {
+								aend=strchr(aend, '\'');
+								if(aend == NULL) {
+									/* unable to find '; at all */
+									addMessage(0, "Format error in %s", apos);
+									aend=apos+strlen(apos);
+									break;
+								}
+							}
+							*aend = 0;
 
 							/* only do this if the title actually changed */
 							if (strcmp(apos, control->current->title->display)) {
