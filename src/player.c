@@ -637,12 +637,13 @@ void *reader() {
 
 							/* find a proper terminating '; sequence */
 							char *aend = strchr(apos, '\'');
+
 							while (aend[1] != ';') {
-								aend=strchr(aend, '\'');
-								if(aend == NULL) {
+								aend = strchr(aend + 1, '\'');
+								if (aend == NULL) {
 									/* unable to find '; at all */
 									addMessage(0, "Format error in %s", apos);
-									aend=apos+strlen(apos);
+									aend = apos + strlen(apos);
 									break;
 								}
 							}
