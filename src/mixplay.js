@@ -1823,6 +1823,7 @@ function handleKey (event) {
  */
 function touchstartEL (event) {
   var touch = event.changedTouches[0]
+  playtimer = 0
   swipest.x = touch.pageX
   swipest.y = touch.pageY
   swipest.event = event
@@ -1899,6 +1900,7 @@ function power (on) {
 
 function tap () {
   const el = document.getElementById('black')
+  playtimer = 0
   if (smallUI === -1) {
     smallUI = 2
     setCookies()
@@ -1908,7 +1910,6 @@ function tap () {
   if (smallUI === 2) {
     switchUI()
   }
-  playtimer = 0
   power(1)
 }
 
