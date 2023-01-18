@@ -120,7 +120,7 @@ void unlockController(void) {
 	while ((pthread_mutex_trylock(&_asynclock) == EBUSY) && (cnt++ < 5)) {
 		snprintf(msg, 32, "async blocked! retrying %i", cnt);
 		activity(0, msg);
-		sleep(1);
+		sleep(1);				// poll every second (give up after 5s)
 	}
 	pthread_mutex_unlock(&_asynclock);
 }

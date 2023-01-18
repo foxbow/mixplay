@@ -18,7 +18,7 @@ static void *_mpFLIRC(void *arg) {
 	/* wait for the initialization to be done */
 	while ((getConfig()->status != mpc_play) &&
 		   (getConfig()->status != mpc_quit)) {
-		sleep(1);
+		sleep(1);				// poll every second
 	}
 
 	while (getConfig()->status != mpc_quit) {

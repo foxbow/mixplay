@@ -928,7 +928,7 @@ static void *mpserver(void *arg) {
 	}
 	addMessage(0, "Server stopped");
 	/* todo this may return before the threads are done cleaning up.. */
-	sleep(1);
+	sleep(1);					// join()ing the threads would be cleaner!
 	close(mainsocket);
 
 	return NULL;

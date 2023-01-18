@@ -6,6 +6,10 @@
 #include "player.h"
 #include "mpserver.h"
 
+#ifndef VERSION
+#define VERSION "none"
+#endif
+
 /*
  * print out the default CLI help text
  */
@@ -139,16 +143,11 @@ int32_t getArgs(int32_t argc, char **argv) {
 int32_t initAll() {
 	mpconfig_t *control;
 	pthread_t tid;
-	struct timespec ts;
 
 	control = getConfig();
-	ts.tv_sec = 0;
-	ts.tv_nsec = 250000;
 
 	/* start the actual player */
 	pthread_create(&control->rtid, NULL, reader, NULL);
-	/* make sure the mpg123 instances have a chance to start up */
-	nanosleep(&ts, NULL);
 
 	/* Runs as thread to have updates in the UI */
 	pthread_create(&tid, NULL, setProfile, NULL);

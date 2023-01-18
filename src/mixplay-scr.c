@@ -25,7 +25,7 @@ static int32_t displayPower(int32_t on) {
 
 	if (DPMSQueryExtension(dpy, &dummy, &dummy)) {
 		DPMSEnable(dpy);
-		usleep(100000);
+		usleep(100000);			// DPMSEnable us asynchronous so wait a bit
 		if (on) {
 			DPMSForceLevel(dpy, DPMSModeOn);
 			rv = 1;
@@ -88,8 +88,8 @@ int32_t main() {
 	/* make sure we can recognize failures in the syslog */
 	openlog("mp-scr", LOG_PID, LOG_DAEMON);
 
-	/* give X11 and mixplay some time to start up */
-	sleep(10);
+	/* Yes, we could also poll but sometimes just waiting is okay */
+	sleep(10);					// give X11 and mixplay some time to start up
 
 	dstate = getDisplayState();
 	sstate = dstate;
@@ -161,7 +161,7 @@ int32_t main() {
 			}
 			timer = to;
 		}
-		sleep(1);
+		sleep(1);				// poll every second
 	}
 
 	syslog(LOG_INFO, "Exiting with state=mpc_%s)", mpcString(state));

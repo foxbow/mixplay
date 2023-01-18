@@ -79,7 +79,7 @@ int32_t main() {
 	}
 
 	printf("\rOkay, trying to init %s\n", devices[c]->d_name);
-	sleep(1);
+
 	getConfig()->rcdev = strdup(devices[c]->d_name);
 	fd = initFLIRC();
 	if (fd == -1) {
@@ -110,8 +110,8 @@ int32_t main() {
 			else {
 				printf("%i\n", c);
 				getConfig()->rccodes[i] = c;
+				sleep(1);		// give the user a chance to lift the finger again
 			}
-			sleep(1);
 		}
 		printf("Okay? (y)\n");
 		while ((c = getch(1000)) == -1);

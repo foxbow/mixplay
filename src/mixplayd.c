@@ -121,7 +121,7 @@ static void *debugHID( __attribute__ ((unused))
 
 	/* wait for the initialization to be done */
 	while (config->status != mpc_play) {
-		sleep(1);
+		sleep(1);				// poll every second
 	}
 
 	while (config->status != mpc_quit) {
@@ -270,7 +270,9 @@ int32_t main(int32_t argc, char **argv) {
 			else {
 				addMessage(1, "pthread_join on %d failed!",
 						   (unsigned) control->rtid);
-				sleep(1);
+				/* if this happens then something is really broken and I'd rather
+				 * have a core to debug than a stateless application */
+				abort();
 			}
 		} while (control->status != mpc_quit);
 		addMessage(1, "Waiting for server to stop");

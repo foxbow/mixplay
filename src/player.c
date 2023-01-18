@@ -259,7 +259,7 @@ void *setProfile(void *arg) {
 
 	notifyChange(MPCOMM_CONFIG);
 
-	usleep(500);
+	usleep(500);				// why?
 	startPlayer();
 
 	/* make sure that progress messages are removed */
@@ -335,8 +335,7 @@ void *killPlayers(int32_t restart) {
 	for (i = 0; i < players; i++) {
 		addMessage(2, "Stopping player %" PRId64, i);
 		if (toPlayer(i, "QUIT\n") != -1) {
-			/* if the player is still listening, give it a chance to react */
-			sleep(1);
+			sleep(1);			// if the player is still listening, give it a chance to react
 		}
 		close(p_command[i][1]);
 		close(p_status[i][0]);
@@ -345,12 +344,12 @@ void *killPlayers(int32_t restart) {
 		if (waitpid(p_pid[i], NULL, WNOHANG | WCONTINUED) != p_pid[i]) {
 			addMessage(1, "Terminating player %" PRId64, i);
 			kill(p_pid[i], SIGTERM);
-			sleep(1);
+			sleep(1);			// Let the SIGTERM soak
 			/* STILL there?? */
 			if (waitpid(p_pid[i], NULL, WNOHANG | WCONTINUED) != p_pid[i]) {
 				addMessage(0, "Killing player %" PRId64, i);
 				kill(p_pid[i], SIGKILL);
-				sleep(1);
+				sleep(1);		// Let the SIGKILL soak
 				/* This is bad... */
 				if (waitpid(p_pid[i], NULL, WNOHANG | WCONTINUED) != p_pid[i]) {
 					addMessage(-1, "Could not get rid of %i!", p_pid[i]);
@@ -402,7 +401,8 @@ void pausePlay(void) {
  * information and status changes. It also controls volume fading when
  * available and checks for general health of the decoders.
  */
-void *reader() {
+void *reader( __attribute__ ((unused))
+			 void *arg) {
 	mpconfig_t *control = getConfig();
 	struct pollfd pfd[4];
 	int64_t i, key;
@@ -945,12 +945,6 @@ void *reader() {
 	while ((control->status != mpc_quit) && (control->status != mpc_reset));
 
 	dbWrite(0);
-
-	while (pthread_mutex_trylock(&_killlock) == EBUSY) {
-		activity(0, "Waiting for players to stop..");
-		usleep(250000);
-	}
-	pthread_mutex_unlock(&_killlock);
 
 	return NULL;
 }
