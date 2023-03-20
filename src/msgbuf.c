@@ -23,7 +23,7 @@ msgbuf_t *msgBuffInit() {
  * returns the current message number
  */
 uint64_t msgBuffAdd(msgbuf_t * msgbuf, char *line) {
-	clmessage *msg = falloc(1, sizeof (clmessage));
+	clmessage *msg = (clmessage *) falloc(1, sizeof (clmessage));
 
 	msg->msg = strdup(line);
 	msg->cid = getCurClient();
@@ -105,7 +105,7 @@ const clmessage *msgBuffPeek(msgbuf_t * msgbuf, uint64_t msgno) {
  * Caveat: Returns NULL if no messages are available
  */
 char *msgBuffAll(msgbuf_t * msgbuf) {
-	int32_t i, lineno;
+	int32_t lineno;
 	char *buff;
 	size_t len = 256;
 
@@ -113,7 +113,7 @@ char *msgBuffAll(msgbuf_t * msgbuf) {
 	buff[0] = 0;
 
 	pthread_mutex_lock(msgbuf->msgLock);
-	for (i = 0; i < msgbuf->lines; i++) {
+	for (int i = 0; i < msgbuf->lines; i++) {
 		lineno = (i + msgbuf->current) % MSGNUM;
 		while (strlen(buff) + strlen(msgbuf->msg[lineno]->msg) >= len) {
 			len = len + 256;

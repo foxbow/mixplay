@@ -127,23 +127,6 @@ const char *mpcString(mpcmd_t rawcmd) {
 	}
 }
 
-/*
- * transform a string literal into an mpcmd value
- */
-mpcmd_t mpcCommand(const char *name) {
-	int32_t i;
-
-	for (i = 0; i <= mpc_idle; i++) {
-		if (strstr(name, mpccommand[i]))
-			break;
-	}
-	if (i > mpc_idle) {
-		addMessage(MPV + 1, "Unknown command %s!", name);
-		return mpc_idle;
-	}
-	return (mpcmd_t) i;
-}
-
 /**
  * returns the current configuration
  */
@@ -167,12 +150,11 @@ inline mpplaylist_t *getCurrent() {
  * returns the number of found values
  */
 static int32_t scanparts(char *line, char ***target) {
-	uint32_t i;
 	char *pos;
 	uint32_t num = 0;
 
 	/* count number of entries */
-	for (i = 0; i < strlen(line); i++) {
+	for (unsigned i = 0; i < strlen(line); i++) {
 		if (line[i] == ';') {
 			num++;
 		}
@@ -181,7 +163,7 @@ static int32_t scanparts(char *line, char ***target) {
 	/* walk through the entries */
 	if (num > 0) {
 		*target = (char **) falloc(num, sizeof (char *));
-		for (i = 0; i < num; i++) {
+		for (unsigned i = 0; i < num; i++) {
 			pos = strchr(line, ';');
 			if (pos != NULL) {
 				*pos = 0;

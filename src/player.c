@@ -288,7 +288,6 @@ static const char *getProfileName(int32_t profile) {
 /* kills (and restarts) the player loop and decoders
  */
 void *killPlayers(int32_t restart) {
-	uint64_t i;
 	mpconfig_t *control = getConfig();
 	uint32_t players = (control->fade > 0) ? 2 : 1;
 
@@ -332,8 +331,8 @@ void *killPlayers(int32_t restart) {
 	}
 
 	/* ask nicely first.. */
-	for (i = 0; i < players; i++) {
-		addMessage(2, "Stopping player %" PRId64, i);
+	for (unsigned i = 0; i < players; i++) {
+		addMessage(2, "Stopping player %u", i);
 		if (toPlayer(i, "QUIT\n") != -1) {
 			sleep(1);			// if the player is still listening, give it a chance to react
 		}
@@ -342,12 +341,12 @@ void *killPlayers(int32_t restart) {
 		close(p_error[i][0]);
 		/* still there? */
 		if (waitpid(p_pid[i], NULL, WNOHANG | WCONTINUED) != p_pid[i]) {
-			addMessage(1, "Terminating player %" PRId64, i);
+			addMessage(1, "Terminating player %u", i);
 			kill(p_pid[i], SIGTERM);
 			sleep(1);			// Let the SIGTERM soak
 			/* STILL there?? */
 			if (waitpid(p_pid[i], NULL, WNOHANG | WCONTINUED) != p_pid[i]) {
-				addMessage(0, "Killing player %" PRId64, i);
+				addMessage(0, "Killing player %u", i);
 				kill(p_pid[i], SIGKILL);
 				sleep(1);		// Let the SIGKILL soak
 				/* This is bad... */
@@ -405,7 +404,7 @@ void *reader( __attribute__ ((unused))
 			 void *arg) {
 	mpconfig_t *control = getConfig();
 	struct pollfd pfd[4];
-	int64_t i, key;
+	int64_t key;
 	int32_t invol = 80;
 	int32_t outvol = 80;
 	char line[MAXPATHLEN];
@@ -427,8 +426,8 @@ void *reader( __attribute__ ((unused))
 	/* start the player processes */
 	/* these may wait in the background until */
 	/* something needs to be played at all */
-	for (i = 0; i <= fading; i++) {
-		addMessage(MPV + 2, "Starting player %" PRId64, i + 1);
+	for (int i = 0; i <= fading; i++) {
+		addMessage(MPV + 2, "Starting player %i", i + 1);
 
 		/* create communication pipes */
 		if ((pipe(p_status[i]) != 0) ||
@@ -447,15 +446,15 @@ void *reader( __attribute__ ((unused))
 		/* child process */
 		if (0 == p_pid[i]) {
 			if (dup2(p_command[i][0], STDIN_FILENO) != STDIN_FILENO) {
-				fail(errno, "Could not dup stdin for player %" PRId64, i + 1);
+				fail(errno, "Could not dup stdin for player %i", i + 1);
 			}
 
 			if (dup2(p_status[i][1], STDOUT_FILENO) != STDOUT_FILENO) {
-				fail(errno, "Could not dup stdout for player %" PRId64, i + 1);
+				fail(errno, "Could not dup stdout for player %i", i + 1);
 			}
 
 			if (dup2(p_error[i][1], STDERR_FILENO) != STDERR_FILENO) {
-				fail(errno, "Could not dup stderr for player %" PRId64, i + 1);
+				fail(errno, "Could not dup stderr for player %i", i + 1);
 			}
 
 			/* this process needs no pipe handles */
@@ -491,7 +490,7 @@ void *reader( __attribute__ ((unused))
 		addMessage(MPV + 1, "Hardware volume level is %i%%", control->volume);
 	}
 
-	for (i = 0; i <= fading; i++) {
+	for (int i = 0; i <= fading; i++) {
 		pfd[2 * i].fd = p_status[i][0];
 		pfd[2 * i].events = POLLIN;
 		pfd[2 * i + 1].fd = p_error[i][0];
@@ -501,21 +500,19 @@ void *reader( __attribute__ ((unused))
 	 * TODO: nothing in this loop shall block so setting the watchdog will
 	 * cause a restart in any case! */
 	do {
-		i = poll(pfd, 2 * (fading + 1), 500);
+		if ((poll(pfd, 2 * (fading + 1), 500) == 0) &&
+			(control->mpmode & PM_STREAM) && (control->status != mpc_idle)) {
 
-		/* status is not idle but we did not get any updates from either player
-		 * after ten times we decide all hope is lost and we take the hard way
-		 * out. No watchdog on start as this may be a slow DNS, wait until
-		 * mpg123 reports an error instead
-		 *
-		 * this may happen when a stream is played and the network connection
-		 * changes (most likely due to a DSL reconnect) or if the stream host
-		 * fails. However those should trigger decode errors and lead an
-		 * automatic restart, so this is really supposed to be the last
-		 * failsafe. */
-		if ((i == 0) &&
-			(control->mpmode & PM_STREAM) &&
-			(control->status != mpc_idle) && (control->status != mpc_start)) {
+			/* status is not idle but we did not get any updates from either player
+			 * after ten times we decide all hope is lost and we take the hard way
+			 * out.
+			 *
+			 * this may happen when a stream is played and the network connection
+			 * changes (most likely due to a DSL reconnect) or if the stream host
+			 * fails. However those should trigger decode errors and lead an
+			 * automatic restart, so this is really supposed to be the last
+			 * failsafe. */
+
 			if (++watchdog >= WATCHDOG_TIMEOUT) {
 				addMessage(0, "Watchdog triggered!");
 				return killPlayers(1);
@@ -649,8 +646,10 @@ void *reader( __attribute__ ((unused))
 							}
 							*aend = 0;
 
-							/* only do this if the title actually changed */
-							if (strcmp(apos, control->current->title->display)) {
+							/* only do this if the title actually changed
+							 * some streams mix up upper and lower cases in titles */
+							if (strcasecmp
+								(apos, control->current->title->display)) {
 
 								/* The album field contains the stream name. If it is not set
 								 * then this is the first title, otherwise create a new enntry

@@ -318,7 +318,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 	mpconfig_t *config = getConfig();
 	char *tpos;
 	uint32_t insert = 0;
-	int32_t i;
+	int32_t order;
 	int32_t profile;
 	mpcmd_t cmd;
 
@@ -434,11 +434,11 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			config->playtime = 0;
 		}
 		else if (asyncTest()) {
-			i = -1;
+			order = -1;
 			if (arg != NULL) {
-				i = -atoi(arg);
+				order = -atoi(arg);
 			}
-			setOrder(i);
+			setOrder(order);
 			toPlayer(0, "STOP\n");
 			pthread_mutex_unlock(&_asynclock);
 		}
@@ -450,14 +450,14 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		if (config->mpmode & PM_STREAM)
 			break;
 		if ((config->current != NULL) && asyncTest()) {
-			i = 1;
+			order = 1;
 			if (arg != NULL) {
-				i = atoi(arg);
+				order = atoi(arg);
 			}
 			else {
 				setSkipped();
 			}
-			setOrder(i);
+			setOrder(order);
 			toPlayer(0, "STOP\n");
 			pthread_mutex_unlock(&_asynclock);
 		}
@@ -624,7 +624,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 					}
 					else {
 						free(config->profile[profile - 1]);
-						for (i = profile; i < config->profiles; i++) {
+						for (int i = profile; i < config->profiles; i++) {
 							config->profile[i - 1] = config->profile[i];
 							if (i == config->active) {
 								config->active = config->active - 1;
@@ -644,7 +644,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 					}
 					else {
 						freeProfile(config->stream[profile - 1]);
-						for (i = profile; i < config->streams; i++) {
+						for (int i = profile; i < config->streams; i++) {
 							config->stream[i - 1] = config->stream[i];
 							if (i == config->active) {
 								config->active = config->active - 1;

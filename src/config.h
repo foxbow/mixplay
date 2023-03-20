@@ -232,7 +232,6 @@ void addProgressHook(void (*)(void *), void *id);
 void addUpdateHook(void (*)());
 
 const char *mpcString(mpcmd_t rawcmd);
-mpcmd_t mpcCommand(const char *val);
 char *fullpath(const char *file);
 
 void wipePlaylist(mpconfig_t *);
