@@ -147,7 +147,7 @@ prepare:
 
 $(OBJDIR)/dep.d: src/*
 	rm -f $(OBJDIR)/dep.d
-	$(CC) -I . $(SRCDIR)/*.c -MM -MG | sed 's|[a-zA-Z0-9_-]*\.o|$(OBJDIR)/&|' >> $(OBJDIR)/dep.d
+	$(CC) -E $(SRCDIR)/*.c -MM -MG | sed 's|[a-zA-Z0-9_-]*\.o|$(OBJDIR)/&|' >> $(OBJDIR)/dep.d
 
 # This will fail silently of first make run
 -include $(OBJDIR)/dep.d

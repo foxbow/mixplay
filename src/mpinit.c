@@ -69,7 +69,6 @@ int32_t getArgs(int32_t argc, char **argv) {
 	int32_t c, changed = 0;
 
 	/* parse command line options */
-	/* using uint8_t c to work around getopt quirk on ARM */
 	while ((c = getopt(argc, argv, "VfdF:hp:Wm")) != -1) {
 		switch (c) {
 
