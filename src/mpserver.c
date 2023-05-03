@@ -787,20 +787,28 @@ static void *clientHandler(void *args) {
 				break;
 
 			case req_mp3:		/* send mp3 */
+				stat(fullpath(title->path), &sbuf);
 				/* remove anything non-ascii7bit from the filename so asian
 				 * smartphones don't consider the filename to be hanzi */
 				sprintf(commdata,
 						"HTTP/1.1 200 OK\015\012Content-Type: audio/mpeg;\015\012"
+						"Content-Length: %ld;\015\012"
 						"Content-Disposition: attachment; "
 						"filename=\"%s.mp3\"; "
-						"filename*=utf-8''%s.mp3\015\012\015\012",
-						plaintext(title->display), title->display);
+						"filename*=utf-8''%s.mp3;"
+						"\015\012\015\012",
+						sbuf.st_size, plaintext(title->display),
+						title->display);
 				send(sock, commdata, strlen(commdata), 0);
 				line[0] = 0;
 				filePost(sock, fullpath(title->path));
 				title = NULL;
 				pthread_mutex_unlock(&_sendlock);
 				len = 0;
+				/* even though we sent a Content-Length Chrome still waits on the
+				 * connection. So either the length is wrong or ignored forcing
+				 * us to close the connection and force the download to end */
+				running &= ~CL_RUN;
 				break;
 
 			case req_current:	/* return "artist - title" line */
