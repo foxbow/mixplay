@@ -456,6 +456,7 @@ int32_t dbAddTitles(char *basedir) {
 			}
 
 			fsroot->playcount = mean;
+			fsroot->favpcount = mean;
 			fsroot->key = index++;
 			addMessage(1, "Adding %s", fsroot->display);
 			dbAddTitle(db, fsroot);
