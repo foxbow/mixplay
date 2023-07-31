@@ -1703,8 +1703,7 @@ function loadURL () {
     url = 'http://' + url
   }
   /* check link format, this may be too strict */
-  if (!url.endsWith('/') &&
-     (url.indexOf('?') === -1) &&
+  if ((url.indexOf('?') === -1) &&
      (url.indexOf('&') === -1) &&
      (url.indexOf(' ') === -1) &&
      (url.indexOf(',') === -1) &&
