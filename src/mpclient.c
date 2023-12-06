@@ -21,10 +21,9 @@ static char _mphost[MAXHOSTLEN + 1] = "localhost";
 
 /*
  * Print errormessage and exit
- * msg - Message to print
- * info - second part of the massage, for instance a variable
  * error - errno that was set
  *		 F_FAIL = print message w/o errno and exit
+ * msg, ... - Message in printf format
  */
 void fail(const int32_t error, const char *msg, ...) {
 	va_list args;
@@ -208,7 +207,6 @@ int getConnection(void) {
 /* send a command to mixplayd.
    returns:
 	  1 - success
-	  0 - server busy
 	 -1 - failure on send
 */
 int32_t sendCMD(mpcmd_t cmd, const char *arg) {
@@ -238,7 +236,7 @@ int32_t sendCMD(mpcmd_t cmd, const char *arg) {
 }
 
 /*
- * copies the currently pplayed title into the given string and returns
+ * copies the currently played title into the given string and returns
  * the stringlength or -1 on error.
  */
 int32_t getCurrentTitle(char *title, uint32_t tlen) {
@@ -255,7 +253,7 @@ int32_t getCurrentTitle(char *title, uint32_t tlen) {
 
 /*
  * fetches the curent player status and returns the reply as a json object
- * flgas is defined by MPCOMM_* in mpcomm.h
+ * flags: as defined by MPCOMM_* in mpcomm.h
  * reply is a jsonObject that either contains the expected data
  * or a single json_integer object with the HTTP status code or
  * -1 on a fatal error

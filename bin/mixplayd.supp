@@ -1,0 +1,17 @@
+{
+   asound_1
+   Memcheck:Cond
+   fun:pa_shm_cleanup
+   fun:pa_shm_create_rw
+   fun:pa_mempool_new
+   fun:pa_context_new_with_proplist
+   fun:conf_pulse_hook_load_if_running
+   obj:/usr/lib/x86_64-linux-gnu/libasound.so.2.0.0
+   obj:/usr/lib/x86_64-linux-gnu/libasound.so.2.0.0
+   fun:snd_config_searcha_hooks
+   fun:snd_config_searchva_hooks
+   obj:/usr/lib/x86_64-linux-gnu/libasound.so.2.0.0
+   fun:snd_config_search_definition
+   obj:/usr/lib/x86_64-linux-gnu/libasound.so.2.0.0
+}
+

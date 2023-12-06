@@ -138,13 +138,12 @@ static char *jsonEncode(const char *val) {
    according to RFC 3629 */
 static int32_t utfDecode(const char *in, char *out) {
 	uint64_t unicode = 0;
-	int32_t i;
 
 	if (strlen(in) < 4) {
 		return -1;
 	}
 
-	for (i = 0; i < 4; i++) {
+	for (int i = 0; i < 4; i++) {
 		unicode = unicode << 4;
 		unicode = unicode + hexval(in[i]);
 	}
@@ -241,6 +240,7 @@ static int32_t jsonDecodeInto(const char *val, char *ret, size_t len) {
 
 /**
  * decode a JSON string value into a standard C text representation
+ * returned char* must be free'd!
  */
 static char *jsonDecode(const char *val) {
 	size_t len = 0;
@@ -810,10 +810,10 @@ char *jsonGetError(jsonObject * jo) {
 	errObj = jsonFindKey(jo, "jsonError");
 	while (errObj != NULL) {
 		if (result == NULL) {
-			result = calloc(strlen((char *) errObj->val) + 3, 1);
+			result = (char *) calloc(strlen((char *) errObj->val) + 3, 1);
 		}
 		else {
-			result =
+			result = (char *)
 				realloc(result,
 						strlen(result) + strlen((char *) errObj->val) + 3);
 		}
@@ -864,7 +864,8 @@ int32_t jsonGetInt(jsonObject * jo, const char *key) {
 
 /**
  * copies and decodes the value of key into a new memory area
- * the memory will be allocated so make sure that returned pointer is free'd after use
+ * the memory will be allocated so make sure that returned pointer is free'd
+ * after use
  */
 char *jsonGetStr(jsonObject * jo, const char *key) {
 	jo = jsonFollowPath(jo, key);
@@ -895,7 +896,8 @@ static void *jsonGetByIndex(jsonObject * jo, int32_t i) {
 }
 
 /**
- * copy the array of strings into the vals pointer
+ * copy the array of strings into an array or char*
+ * make sure the results are free'd after usage!
  */
 char **jsonGetStrs(jsonObject * jo, const char *key, int32_t * num) {
 	int32_t i;
@@ -1149,7 +1151,7 @@ int32_t jsonAddArrElement(jsonObject * jo, void *val, jsonType type) {
 			jsonAddInt(jo, key, atoi((char *) val));
 			break;
 		case json_object:
-			jo->next = val;
+			jo->next = (jsonObject *) val;
 			if (jo->next->key) {
 				free(jo->next->key);
 			}
