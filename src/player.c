@@ -500,6 +500,9 @@ void *reader( __attribute__ ((unused))
 	 * TODO: nothing in this loop shall block so setting the watchdog will
 	 * cause a restart in any case! */
 	do {
+		// set if muted for news
+		bool automute = false;
+
 		if ((poll(pfd, 2 * (fading + 1), 500) == 0) &&
 			(control->mpmode & PM_STREAM) && (control->status != mpc_idle)) {
 
@@ -686,20 +689,36 @@ void *reader( __attribute__ ((unused))
 									   control->current->prev->title->title);
 
 								/* filter out 'things' */
-								if (strcasecmp(control->current->title->artist, control->current->title->album) == 0) {
+								if (strcasecmp
+									(control->current->title->artist,
+									 control->current->title->album) == 0) {
 									/* mute news */
-									if (strcasecmp(control->current->title->title, "Nachrichten") == 0) {
-										if(control->volume != -2) toggleMute();
+									if (strcasecmp
+										(control->current->title->title,
+										 "Nachrichten") == 0) {
+										if (control->volume >= 0) {
+											automute = true;
+											toggleMute();
+										}
 									}
 									/* unmute weather report */
-									if (strcasecmp(control->current->title->title, "Wetter") == 0) {
-										if(control->volume == -2) toggleMute();
+									if (strcasecmp
+										(control->current->title->title,
+										 "Wetter") == 0) {
+										if (automute
+											&& (control->volume == -2)) {
+											toggleMute();
+											automute = false;
+										}
 									}
 									/* keep current state on something else */
 								}
 								else {
 									/* unmute on normal titles */
-									if(control->volume == -2) toggleMute();
+									if (automute && (control->volume == -2)) {
+										automute = false;
+										toggleMute();
+									}
 								}
 								notifyChange(MPCOMM_TITLES);
 							}
