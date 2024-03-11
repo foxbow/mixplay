@@ -415,7 +415,7 @@ static void *clientHandler(void *args) {
 			/* all seems good now parse the request.. */
 			else {
 				method = 0;
-				toLower(commdata);
+				// toLower(commdata);
 				addMessage(MPV + 3, "%s", commdata);
 				end = strchr(commdata, ' ');
 				if (end == NULL) {
@@ -425,10 +425,10 @@ static void *clientHandler(void *args) {
 				else {
 					*end = 0;
 					pos = end + 1;
-					if (strcmp(commdata, "get") == 0) {
+					if (strcasecmp(commdata, "get") == 0) {
 						method = 1;
 					}
-					else if (strcmp(commdata, "post") == 0) {
+					else if (strcasecmp(commdata, "post") == 0) {
 						method = 2;
 					}
 					else {
