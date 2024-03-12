@@ -157,8 +157,11 @@ function sendArg (cmd) {
  *  - undefined        : no cancel button, no callback on okay
  *  - <num>            : sendCMD(<num>) on okay
  *  - function() {...} : callback to invoke on okay
+ * arg is an optional argument to be given if ok is a number
+ * 
+ * todo: is ok ever used as a function?
  */
-function showConfirm (msg, ok) {
+function showConfirm (msg, ok, arg) {
   const cdiv = document.getElementById('confirm')
   if (cdiv.className === 'hide') {
     document.getElementById('confmsg').innerHTML = msg
@@ -168,7 +171,7 @@ function showConfirm (msg, ok) {
       enableElement('confcanc', 0)
     } else {
       if (ok > 0) {
-        confokay = function () { sendCMD(ok) }
+        confokay = function () { sendCMDArg(ok, arg) }
       } else {
         confokay = ok
       }
@@ -623,7 +626,7 @@ function sendCMDArg (cmd, arg) {
       adaptUI(-1)
       break
     case 0x18: /* mpc_remprof */
-      showConfirm('Remove ' + arg + '?', 0x98)
+      showConfirm('Remove ' + arg + '?', 0x98, arg)
       return
     case 0x98: /* confirm remprof */
       cmd = 0x18
