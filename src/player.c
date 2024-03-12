@@ -93,14 +93,10 @@ void setStream(char const *const stream, char const *const name) {
 		control->list = 0;
 	}
 
-	/* no strdup() as this will be recycled on each setStream() call */
-	control->streamURL =
-		(char *) frealloc(control->streamURL, strlen(stream) + 1);
-	strcpy(control->streamURL, stream);
 	addMessage(MPV + 1, "Play Stream %s (%s)", name, stream);
 }
 
-static int32_t oactive = 1;
+static uint32_t oactive = 1;
 
 /*
  * send something to a player
@@ -158,8 +154,8 @@ static void startPlayer() {
 void *setProfile(void *arg) {
 	profile_t *profile;
 	int32_t num;
-	int64_t active;
-	static int32_t lastact = 0;	/* last active profile (not channel!) */
+	uint32_t active;
+	static uint32_t lastact = 0;	/* last active profile (not channel!) */
 	mpconfig_t *control = getConfig();
 	char *home = getenv("HOME");
 
@@ -169,7 +165,8 @@ void *setProfile(void *arg) {
 
 	blockSigint();
 	activity(0, "Setting profile");
-	addMessage(MPV + 2, "New Thread: setProfile(%d)", control->active);
+	addMessage(MPV + 2, "New Thread: setProfile(%" PRId32 ")",
+			   control->active);
 
 	if (control->active == 0) {
 		control->active = oactive;
@@ -178,30 +175,24 @@ void *setProfile(void *arg) {
 	active = control->active;
 	control->searchDNP = 0;
 
-	/* stream selected */
-	if (active < 0) {
-		active = -(active + 1);
-		profile = control->stream[active];
-
-		if (active >= control->streams) {
-			addMessage(0, "Stream #%" PRId64 " does no exist!", active);
+	profile = getProfile(active);
+	if (profile == NULL) {
+		addMessage(0, "No profile with ID %" PRIu32 "!", active);
+		if (control->active == oactive)
 			control->active = 1;
-			return setProfile(NULL);
-		}
+		else
+			control->active = oactive;
+		return setProfile(NULL);
+	}
 
-		setStream(profile->stream, profile->name);
+	/* stream selected */
+	if (isStream(profile)) {
 		setVolume(profile->volume);
+		setStream(profile->url, profile->name);
 	}
 	/* profile selected */
-	else if (active > 0) {
-		active = active - 1;
+	else {
 		addMessage(MPV + 1, "Playmode=%u", control->mpmode);
-
-		if (active > control->profiles) {
-			addMessage(0, "Profile #%" PRId64 " does no exist!", active);
-			control->active = 1;
-			return setProfile(NULL);
-		}
 
 		/* only load database if it has not yet been used */
 		if (control->root == NULL) {
@@ -222,8 +213,6 @@ void *setProfile(void *arg) {
 			}
 		}
 
-		/* change mode */
-		profile = control->profile[active];
 		/* last database play was on the same profile, so just wipe playlist */
 		if (lastact == control->active) {
 			wipePlaylist(control);
@@ -246,15 +235,7 @@ void *setProfile(void *arg) {
 		}
 		setArtistSpread();
 		plCheck(true);
-		setVolume(control->pvolume);
 		addMessage(MPV + 1, "Profile set to %s.", profile->name);
-	}
-	else {
-		addMessage(-1, "No valid profile selected!");
-		addMessage(MPV + 1, "Restart play");
-		plCheck(true);
-		startPlayer();
-		return arg;
 	}
 
 	notifyChange(MPCOMM_CONFIG);
@@ -275,14 +256,7 @@ static const char *getProfileName(int32_t profile) {
 	if (profile == 0) {
 		return "NONE";
 	}
-	if (profile < 0) {
-		profile = -(profile + 1);
-		return config->stream[profile]->name;
-	}
-	else {
-		profile = profile - 1;
-		return config->profile[profile]->name;
-	}
+	return config->profile[profile]->name;
 }
 
 /* kills (and restarts) the player loop and decoders
@@ -900,7 +874,8 @@ void *reader( __attribute__ ((unused))
 
 					case 2:	/* PLAY */
 						if (control->mpmode & PM_SWITCH) {
-							addMessage(MPV + 1, "Playing profile #%i: %s",
+							addMessage(MPV + 1,
+									   "Playing profile #%" PRIu32 ": %s",
 									   control->active,
 									   getProfileName(control->active));
 							control->mpmode &= ~PM_SWITCH;

@@ -182,32 +182,39 @@ static int32_t scanparts(char *line, char ***target) {
 
 /*
  * scans a number on names into newly created profile entries
- * this must happen before urls or volumes get parsed!
+ * this must happen before volumes but after streams get parsed !
+ * 
+ * maxp: -1 - read profiles
+ *       >0 - read stream names
+ * @deprecated
  */
 static int32_t scanpronames(char *input, profile_t *** target, int32_t max) {
 	char **line;
 	int32_t i, num;
 
 	num = scanparts(input, &line);
+	// read names for existing channels
 	if (max > 0) {
 		for (i = 0; i < MIN(max, num); i++) {
 			(*target)[i]->name = line[i];
 		}
 		free(line);
+		// return true if numbers match
 		max = (max == num);
 	}
+	// read new profiles
 	else if (num > 0) {
 		*target = (profile_t **) falloc(num, sizeof (profile_t *));
 
 		for (i = 0; i < num; i++) {
 			if (line[i][1] == ':') {
-				(*target)[i] = createProfile(line[i] + 2, NULL, 0, -1);
+				(*target)[i] = createProfile(line[i] + 2, NULL, 0, -1, true);
 				if (line[i][0] == '1') {
 					(*target)[i]->favplay = 1;
 				}
 			}
 			else {
-				(*target)[i] = createProfile(line[i], NULL, 0, -1);
+				(*target)[i] = createProfile(line[i], NULL, 0, -1, true);
 			}
 			free(line[i]);
 		}
@@ -217,6 +224,7 @@ static int32_t scanpronames(char *input, profile_t *** target, int32_t max) {
 	return max;
 }
 
+// @deprecated
 static int32_t scanpropaths(char *input, profile_t *** target) {
 	char **line;
 	int32_t i, num;
@@ -227,7 +235,7 @@ static int32_t scanpropaths(char *input, profile_t *** target) {
 		*target = (profile_t **) falloc(num, sizeof (profile_t *));
 
 		for (i = 0; i < num; i++) {
-			(*target)[i] = createProfile(NULL, line[i], 0, -1);
+			(*target)[i] = createProfile(NULL, line[i], 0, -1, true);
 			free(line[i]);
 		}
 		free(line);
@@ -236,6 +244,7 @@ static int32_t scanpropaths(char *input, profile_t *** target) {
 	return num;
 }
 
+// @deprecated
 static int32_t scanprovols(char *input, profile_t ** target, int32_t max) {
 	char **line;
 	int32_t i, num;
@@ -249,6 +258,90 @@ static int32_t scanprovols(char *input, profile_t ** target, int32_t max) {
 
 	return (num == max);
 }
+
+static uint32_t scannames(char *input) {
+	char **line;
+	uint32_t i, num;
+	profile_t ***target = &_cconfig->profile;
+
+	num = scanparts(input, &line);
+	if (num > 0) {
+		*target = (profile_t **) falloc(num, sizeof (profile_t *));
+
+		for (i = 0; i < num; i++) {
+			(*target)[i] = createProfile(line[i], NULL, 0, -1, false);
+			free(line[i]);
+		}
+		free(line);
+	}
+	return num;
+}
+
+static bool scanurls(char *input) {
+	char **line;
+	uint32_t i, num;
+	profile_t **target = _cconfig->profile;
+	uint32_t max = _cconfig->profiles;
+
+	num = scanparts(input, &line);
+	for (i = 0; i < MIN(max, num); i++) {
+		target[i]->name = line[i];
+	}
+	free(line);
+
+	return (num == _cconfig->profiles);
+}
+
+static bool scanvolumes(char *input) {
+	char **line;
+	uint32_t i, num;
+	profile_t **target = _cconfig->profile;
+	uint32_t max = _cconfig->profiles;
+
+	num = scanparts(input, &line);
+	for (i = 0; i < MIN(max, num); i++) {
+		target[i]->volume = atoi(line[i]);
+		free(line[i]);
+	}
+	free(line);
+
+	return (num == _cconfig->profiles);
+}
+
+static bool scanfavplays(char *input) {
+	char **line;
+	uint32_t i, num;
+	profile_t **target = _cconfig->profile;
+	uint32_t max = _cconfig->profiles;
+
+	num = scanparts(input, &line);
+	for (i = 0; i < MIN(max, num); i++) {
+		target[i]->favplay = atoi(line[i]);
+		free(line[i]);
+	}
+	free(line);
+
+	return (num == _cconfig->profiles);
+}
+
+static bool scanids(char *input) {
+	char **line;
+	uint32_t i, num;
+	profile_t **target = _cconfig->profile;
+	uint32_t max = _cconfig->profiles;
+
+	num = scanparts(input, &line);
+	for (i = 0; i < MIN(max, num); i++) {
+		target[i]->id = atoi(line[i]);
+		if (target[i]->id > _cconfig->maxid)
+			_cconfig->maxid = target[i]->id;
+		free(line[i]);
+	}
+	free(line);
+
+	return (num == _cconfig->profiles);
+}
+
 
 static int32_t scancodes(char *input, int32_t * codes) {
 	char **line;
@@ -283,6 +376,7 @@ mpconfig_t *readConfig(void) {
 	char *home = NULL;
 	FILE *fp;
 	int32_t i;
+	uint32_t streamcnt = 0;		// legacy!
 
 	home = getenv("HOME");
 	if (home == NULL) {
@@ -305,7 +399,6 @@ mpconfig_t *readConfig(void) {
 	_cconfig->root = NULL;
 	_cconfig->current = NULL;
 	_cconfig->volume = 80;
-	_cconfig->pvolume = 80;
 	_cconfig->active = 1;
 	_cconfig->playtime = 0;
 	_cconfig->remtime = 0;
@@ -373,25 +466,58 @@ mpconfig_t *readConfig(void) {
 			if (strstr(line, "channel=") == line) {
 				_cconfig->channel = strdup(pos);
 			}
+
+			/*** legacy read **********************************************************/
 			if (strstr(line, "profiles=") == line) {
 				_cconfig->profiles = scanpronames(pos, &_cconfig->profile, -1);
 			}
 			if (strstr(line, "volume=") == line) {
-				_cconfig->pvolume = atoi(pos);
+				// _cconfig->pvolume = atoi(pos); ignored
 			}
 			if (strstr(line, "streams=") == line) {
-				_cconfig->streams = scanpropaths(pos, &_cconfig->stream);
+				streamcnt = scanpropaths(pos, &_cconfig->profile);
+				_cconfig->profiles += streamcnt;
 			}
 			if (strstr(line, "snames=") == line) {
-				if (!scanpronames(pos, &_cconfig->stream, _cconfig->streams)) {
+				if (!scanpronames(pos, &_cconfig->profile, streamcnt)) {
 					fclose(fp);
 					fail(F_FAIL,
 						 "Number of streams and stream names does not match!");
 				}
 			}
 			if (strstr(line, "svolumes=") == line) {
-				if (!scanprovols(pos, _cconfig->stream, _cconfig->streams)) {
+				if (!scanprovols(pos, _cconfig->profile, streamcnt)) {
 					addMessage(0, "Number of stream volumes does not match!");
+				}
+			}
+			/*** legacy read **********************************************************/
+
+			if (strstr(line, "name=") == line) {
+				_cconfig->profiles = scannames(pos);
+			}
+			if (strstr(line, "url=") == line) {
+				if (!scanurls(pos)) {
+					addMessage(0,
+							   "Number of urls and profiles does not match!");
+				}
+			}
+			if (strstr(line, "volume=") == line) {
+				if (!scanvolumes(pos)) {
+					addMessage(0,
+							   "Number of volumes and profiles does not match!");
+				}
+			}
+			if (strstr(line, "favplay=") == line) {
+				if (!scanfavplays(pos)) {
+					addMessage(0,
+							   "Number of favplays and profiles does not match!");
+				}
+			}
+			if (strstr(line, "id=") == line) {
+				_cconfig->maxid = scanids(pos);
+				if (_cconfig->maxid == 0) {
+					fclose(fp);
+					fail(F_FAIL, "Number of ids and profiles does not match!");
 				}
 			}
 			if (strstr(line, "active=") == line) {
@@ -438,7 +564,7 @@ mpconfig_t *readConfig(void) {
 	pthread_mutex_unlock(&conflock);
 
 	for (i = 0; i < MAXCLIENT; i++) {
-		_notify[i] = MPCOMM_STAT;
+		_notify[i] |= MPCOMM_STAT;
 	}
 
 	return _cconfig;
@@ -450,7 +576,7 @@ mpconfig_t *readConfig(void) {
  */
 void writeConfig(const char *musicpath) {
 	char conffile[MAXPATHLEN + 1];	/*  = "mixplay.conf"; */
-	int32_t i;
+	uint32_t i;
 	FILE *fp;
 	char *home = NULL;
 
@@ -487,35 +613,34 @@ void writeConfig(const char *musicpath) {
 		fprintf(fp, "\npassword=%s", _cconfig->password);
 		if (_cconfig->profiles == 0) {
 			fprintf(fp, "\nactive=1");
-			fprintf(fp, "\nprofiles=0:mixplay;");
+			fprintf(fp, "\nname=mixplay;");
+			fprintf(fp, "\nurl=;");
 			fprintf(fp, "\nvolume=80;");
+			fprintf(fp, "\nfavplay=0;");
+			fprintf(fp, "\nid=1;");
 		}
 		else {
-			fprintf(fp, "\nactive=%i", _cconfig->active);
-			fprintf(fp, "\nprofiles=");
+			fprintf(fp, "\nactive=%" PRId32, _cconfig->active);
+			fprintf(fp, "\nname=");
 			for (i = 0; i < _cconfig->profiles; i++) {
-				fprintf(fp, "%i:%s;", _cconfig->profile[i]->favplay,
-						_cconfig->profile[i]->name);
+				fprintf(fp, "%s;", _cconfig->profile[i]->name);
 			}
-		}
-		fprintf(fp, "\nvolume=");
-		if (_cconfig->active > 0) {
-			fprintf(fp, "%" PRId32 ";", _cconfig->volume);
-		}
-		else {
-			fprintf(fp, "%" PRId32 ";", _cconfig->pvolume);
-		}
-		fprintf(fp, "\nstreams=");
-		for (i = 0; i < _cconfig->streams; i++) {
-			fprintf(fp, "%s;", _cconfig->stream[i]->stream);
-		}
-		fprintf(fp, "\nsnames=");
-		for (i = 0; i < _cconfig->streams; i++) {
-			fprintf(fp, "%s;", _cconfig->stream[i]->name);
-		}
-		fprintf(fp, "\nsvolumes=");
-		for (i = 0; i < _cconfig->streams; i++) {
-			fprintf(fp, "%i;", _cconfig->stream[i]->volume);
+			fprintf(fp, "\npfav=");
+			for (i = 0; i < _cconfig->profiles; i++) {
+				fprintf(fp, "%" PRId32 ";", _cconfig->profile[i]->favplay);
+			}
+			fprintf(fp, "\npurl=");
+			for (i = 0; i < _cconfig->profiles; i++) {
+				fprintf(fp, "%s;", _cconfig->profile[i]->url);
+			}
+			fprintf(fp, "\nvolume=");
+			for (i = 0; i < _cconfig->profiles; i++) {
+				fprintf(fp, "%" PRId32 ";", _cconfig->profile[i]->volume);
+			}
+			fprintf(fp, "\nid=");
+			for (i = 0; i < _cconfig->profiles; i++) {
+				fprintf(fp, "%" PRId32 ";", _cconfig->profile[i]->id);
+			}
 		}
 		fprintf(fp, "\nskipdnp=%i", _cconfig->skipdnp);
 		fprintf(fp, "\nsleepto=%i", _cconfig->sleepto);
@@ -583,8 +708,8 @@ void freeProfile(profile_t * profile) {
 		if (profile->name != NULL) {
 			free(profile->name);
 		}
-		if (profile->stream != NULL) {
-			free(profile->stream);
+		if (profile->url != NULL) {
+			free(profile->url);
 		}
 		free(profile);
 	}
@@ -594,7 +719,7 @@ void freeProfile(profile_t * profile) {
  * frees the static parts of the config
  */
 void freeConfigContents() {
-	int32_t i;
+	uint32_t i;
 
 	assert(_cconfig != NULL);
 
@@ -607,11 +732,6 @@ void freeConfigContents() {
 	_cconfig->profiles = 0;
 	sfree((char **) &(_cconfig->profile));
 
-	for (i = 0; i < _cconfig->streams; i++) {
-		freeProfile(_cconfig->stream[i]);
-	}
-	_cconfig->streams = 0;
-	sfree((char **) &(_cconfig->stream));
 	sfree((char **) &(_cconfig->channel));
 	sfree((char **) &(_cconfig->password));
 	sfree((char **) &(_cconfig->streamURL));
@@ -936,8 +1056,9 @@ int32_t toggleFavplay() {
 	return 0;
 }
 
-profile_t *createProfile(const char *name, const char *stream,
-						 const uint32_t favplay, const int32_t vol) {
+/* todo: cleanup legacy */
+profile_t *createProfile(const char *name, const char *url,
+						 const uint32_t favplay, const int32_t vol, bool id) {
 	profile_t *profile = (profile_t *) falloc(1, sizeof (profile_t));
 
 	if (name) {
@@ -946,14 +1067,18 @@ profile_t *createProfile(const char *name, const char *stream,
 	else {
 		profile->name = NULL;
 	}
-	if (stream) {
-		profile->stream = strdup(stream);
+	if (url) {
+		profile->url = strdup(url);
 	}
 	else {
-		profile->stream = NULL;
+		profile->url = NULL;
 	}
 	profile->favplay = favplay;
 	profile->volume = vol;
+	if (id == true) {
+		getConfig()->maxid++;
+		profile->id = getConfig()->maxid;
+	}
 	return profile;
 }
 
@@ -1001,6 +1126,31 @@ mptitle_t *wipeTitles(mptitle_t * root) {
 
 	return NULL;
 }
+
+profile_t *getProfile(uint32_t id) {
+	mpconfig_t *control = getConfig();
+
+	for (uint32_t i = 0; i < control->profiles; i++) {
+		if (control->profile[i]->id == id)
+			return control->profile[i];
+	}
+	return NULL;
+}
+
+int32_t getProfileIndex(uint32_t id) {
+	mpconfig_t *control = getConfig();
+
+	for (int32_t i = 0; i < (int32_t) control->profiles; i++) {
+		if (control->profile[i]->id == id)
+			return i;
+	}
+	return -1;
+}
+
+bool isStream(profile_t * profile) {
+	return (profile->url[0] != '\0');
+}
+
 
 /*
  * block all signals that would interrupt the execution flow

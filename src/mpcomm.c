@@ -87,7 +87,10 @@ static jsonObject *jsonAddProfiles(jsonObject * jo, const char *key,
 
 	jo = jsonInitArr(jo, key);
 	for (i = 0; i < num; i++) {
-		jsonAddArrElement(jo, vals[i]->name, json_string);
+		jsonObject *profile = jsonAddStr(NULL, "name", vals[i]->name);
+
+		jsonAddInt(profile, "id", vals[i]->id);
+		jsonAddArrElement(jo, profile, json_object);
 	}
 	return jo;
 }
@@ -226,7 +229,6 @@ char *serializeStatus(int32_t clientid, int32_t type) {
 		jsonAddStr(jo, "musicdir", data->musicdir);
 		jsonAddProfiles(jo, "profile", data->profile, data->profiles);
 		jsonAddInt(jo, "skipdnp", data->skipdnp);
-		jsonAddProfiles(jo, "sname", data->stream, data->streams);
 		jsonAddInt(jo, "sleepto", data->sleepto);
 		jsonAddInt(jo, "debug", getDebug());
 	}

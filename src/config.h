@@ -134,9 +134,10 @@ extern const char *_mprccmdstrings[MPRC_NUM];
  */
 typedef struct {
 	char *name;					/* name to display */
-	char *stream;				/* URL to load if any */
+	char *url;					/* URL to load or NULL for mix */
 	int32_t volume;				/* last volume */
-	uint32_t favplay;			/* favplay flag for profiles */
+	uint32_t favplay;			/* favplay flag for mixes */
+	uint32_t id;				/* unique id */
 } profile_t;
 
 /**
@@ -146,12 +147,12 @@ typedef struct {
 typedef struct {
 	char *musicdir;				/* path to the music */
 	char *password;				/* password to lock up quit, scan and info */
-	int32_t active;				/* active >0 = profile / 0=none / <0 = stream */
-	int32_t profiles;			/* number of profiles */
+	uint32_t active;			/* id of the current profile */
+	uint32_t profiles;			/* number of profiles */
 	profile_t **profile;		/* profiles */
-	int32_t pvolume;			/* default volume for profiles */
-	int32_t streams;			/* number of streams */
-	profile_t **stream;			/*streams */
+//  int32_t pvolume;            /* default volume for profiles */
+//  uint32_t streams;           /* number of streams */
+//  profile_t **stream;         /* streams */
 	mptitle_t *root;			/* the root title */
 	searchresults_t *found;		/* buffer list to contain searchresults etc */
 	mpplaylist_t *current;		/* the current title */
@@ -169,7 +170,7 @@ typedef struct {
 	int32_t volume;				/* current volume [0..100] */
 	char *channel;				/* the name of the ALSA master channel */
 	int32_t debug;
-	char *streamURL;
+	char *streamURL;			/* needed to load a new stream */
 	msgbuf_t *msg;				/* generic message buffer */
 	int32_t port;
 	uint32_t mpmode;			/* playmode, see PM_* */
@@ -185,6 +186,7 @@ typedef struct {
 	char *rcdev;				/* device by-id of the remote control */
 	int32_t rccodes[MPRC_NUM];	/* command codes for the remote */
 	uint32_t spread;
+	uint32_t maxid;				/* highest profile id */
 } mpconfig_t;
 
 /* message request types */
@@ -207,10 +209,15 @@ void freeConfig(void);
 void freeConfigContents(void);
 int32_t getFavplay();
 int32_t toggleFavplay();
+
+#define CP_NEWID ((uint32_t)-1)
 profile_t *createProfile(const char *name, const char *stream,
-						 const uint32_t favplay, const int32_t vol);
+						 const uint32_t favplay, const int32_t vol, bool id);
 void freeProfile(profile_t * profile);
 mpplaylist_t *getCurrent();
+profile_t *getProfile(uint32_t id);
+int32_t getProfileIndex(uint32_t id);
+bool isStream(profile_t * profile);
 
 void incDebug(void);
 int32_t getDebug(void);

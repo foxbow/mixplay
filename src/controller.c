@@ -319,7 +319,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 	char *tpos;
 	uint32_t insert = 0;
 	int32_t order;
-	int32_t profile;
+	uint32_t profileid;
 	mpcmd_t cmd;
 
 	if ((rcmd == mpc_idle) ||
@@ -522,8 +522,8 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			addMessage(-1, "No profile given!");
 		}
 		else if (asyncTest()) {
-			profile = atoi(arg);
-			if ((profile != 0) && (profile != config->active)) {
+			profileid = atoi(arg);
+			if ((profileid != 0) && (profileid != config->active)) {
 				if (!(config->mpmode & (PM_STREAM | PM_DATABASE))) {
 					wipeTitles(config->root);
 				}
@@ -531,18 +531,12 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 				config->mpmode |= PM_SWITCH;
 				/* write database if needed */
 				dbWrite(0);
-				if (config->active < 0) {
-					config->stream[(-config->active) - 1]->volume =
-						config->volume;
-				}
-				else if (config->active > 0) {
-					config->pvolume = config->volume;
-				}
-				config->active = profile;
+				getProfile(config->active)->volume = config->volume;
+				config->active = profileid;
 				asyncRun(plSetProfile);
 			}
 			else {
-				addMessage(0, "Invalid profile %i", profile);
+				addMessage(0, "Invalid profile %i", profileid);
 				pthread_mutex_unlock(&_asynclock);
 			}
 		}
@@ -554,25 +548,21 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		}
 		else if ((config->current != NULL) && asyncTest()) {
 			/* save the current stream */
+			config->profiles++;
+			config->profile =
+				(profile_t **) frealloc(config->profile,
+										config->profiles *
+										sizeof (profile_t *));
 			if (config->active == 0) {
-				config->streams++;
-				config->stream =
-					(profile_t **) frealloc(config->stream,
-											config->streams *
-											sizeof (profile_t *));
-				config->stream[config->streams - 1] =
-					createProfile(arg, config->streamURL, 0, config->volume);
-				config->active = -(config->streams);
+				config->profile[config->profiles - 1] =
+					createProfile(arg, config->streamURL, 0, config->volume,
+								  true);
+				config->active = config->profile[config->profiles - 1]->id;
 			}
 			/* just add argument as new profile */
 			else {
-				config->profiles++;
-				config->profile =
-					(profile_t **) frealloc(config->profile,
-											config->profiles *
-											sizeof (profile_t *));
 				config->profile[config->profiles - 1] =
-					createProfile(arg, NULL, 0, config->volume);
+					createProfile(arg, NULL, 0, config->volume, true);
 			}
 			writeConfig(NULL);
 			pthread_mutex_unlock(&_asynclock);
@@ -593,8 +583,8 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 											config->profiles *
 											sizeof (profile_t *));
 				config->profile[config->profiles - 1] =
-					createProfile(arg, NULL, 0, config->volume);
-				config->active = config->profiles;
+					createProfile(arg, NULL, 0, config->volume, true);
+				config->active = config->profile[config->profiles - 1]->id;
 				writeList(mpc_fav);
 				writeList(mpc_dnp);
 
@@ -611,59 +601,36 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		}
 		else {
 			if (asyncTest()) {
-				profile = atoi(arg);
-				if (profile > 0) {
-					if (profile == 1) {
+				profileid = atoi(arg);
+				int profileidx = getProfileIndex(profileid);
+
+				if (profileidx != -1) {
+					if (profileid == 1) {
 						addMessage(-1, "mixplay cannot be removed.");
 					}
-					else if (profile == config->active) {
+					else if (profileid == config->active) {
 						addMessage(-1, "Cannot remove active profile!");
 					}
-					else if (profile > config->profiles) {
-						addMessage(-1, "Profile #%i does not exist!", profile);
-					}
 					else {
-						free(config->profile[profile - 1]);
-						for (int i = profile; i < config->profiles; i++) {
+						free(config->profile[profileidx]);
+						for (uint32_t i = profileidx + 1; i < config->profiles;
+							 i++) {
 							config->profile[i - 1] = config->profile[i];
-							if (i == config->active) {
-								config->active = config->active - 1;
-							}
 						}
 						config->profiles--;
-						writeConfig(NULL);
-					}
-				}
-				else if (profile < 0) {
-					profile = (-profile);
-					if (profile > config->streams) {
-						addMessage(-1, "Stream #%i does not exist!", profile);
-					}
-					else if (-profile == config->active) {
-						addMessage(-1, "Cannot remove active profile!");
-					}
-					else {
-						freeProfile(config->stream[profile - 1]);
-						for (int i = profile; i < config->streams; i++) {
-							config->stream[i - 1] = config->stream[i];
-							if (i == config->active) {
-								config->active = config->active - 1;
-							}
-						}
-						config->streams--;
-						config->stream =
-							(profile_t **) frealloc(config->stream,
-													config->streams *
+						config->profile =
+							(profile_t **) frealloc(config->profile,
+													config->profiles *
 													sizeof (profile_t *));
-
 						writeConfig(NULL);
 					}
 				}
 				else {
-					addMessage(-1, "Cannot remove empty profile!");
+					addMessage(-1, "Profile #%i does not exist!", profileid);
 				}
-				pthread_mutex_unlock(&_asynclock);
+
 			}
+			pthread_mutex_unlock(&_asynclock);
 		}
 		break;
 
