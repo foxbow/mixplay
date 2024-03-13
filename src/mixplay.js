@@ -1649,9 +1649,9 @@ function updateConfig (data) {
     citems[0] = document.createElement('em')
     citems[0].innerHTML = 'No channels'  
   } else {
+    profiles = []
     for (i = 0; i < data.profile.length; i++) {
       // update profiles
-      profiles = []
       profiles[data.profile[i].id] = data.profile[i]
       name = data.profile[i].name
       id = data.profile[i].id

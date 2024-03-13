@@ -623,6 +623,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 													config->profiles *
 													sizeof (profile_t *));
 						writeConfig(NULL);
+						notifyChange(MPCOMM_CONFIG);
 					}
 				}
 				else {
