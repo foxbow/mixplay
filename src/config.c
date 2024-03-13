@@ -139,6 +139,9 @@ mpconfig_t *getConfig() {
 	return _cconfig;
 }
 
+/**
+ * this may block to make sure current has a sensible state
+ */
 inline mpplaylist_t *getCurrent() {
 	return getConfig()->current;
 }
@@ -188,6 +191,8 @@ static int32_t scanparts(char *line, char ***target) {
  *       >0 - read stream names
  * @deprecated
  */
+static int32_t cstart = 0;		// offset for profiles
+
 static int32_t scanpronames(char *input, profile_t *** target, int32_t max) {
 	char **line;
 	int32_t i, num;
@@ -195,8 +200,8 @@ static int32_t scanpronames(char *input, profile_t *** target, int32_t max) {
 	num = scanparts(input, &line);
 	// read names for existing channels
 	if (max > 0) {
-		for (i = 0; i < MIN(max, num); i++) {
-			(*target)[i]->name = line[i];
+		for (i = cstart; i < MIN(max, num) + cstart; i++) {
+			(*target)[i]->name = line[i - cstart];
 		}
 		free(line);
 		// return true if numbers match
@@ -232,10 +237,12 @@ static int32_t scanpropaths(char *input, profile_t *** target) {
 	num = scanparts(input, &line);
 
 	if (num > 0) {
-		*target = (profile_t **) falloc(num, sizeof (profile_t *));
+		*target =
+			(profile_t **) frealloc(*target,
+									(num + cstart) * sizeof (profile_t *));
 
 		for (i = 0; i < num; i++) {
-			(*target)[i] = createProfile(NULL, line[i], 0, -1, true);
+			(*target)[i + cstart] = createProfile(NULL, line[i], 0, 50, true);
 			free(line[i]);
 		}
 		free(line);
@@ -251,7 +258,7 @@ static int32_t scanprovols(char *input, profile_t ** target, int32_t max) {
 
 	num = scanparts(input, &line);
 	for (i = 0; i < MIN(max, num); i++) {
-		target[i]->volume = atoi(line[i]);
+		target[i + cstart]->volume = atoi(line[i]);
 		free(line[i]);
 	}
 	free(line);
@@ -470,6 +477,7 @@ mpconfig_t *readConfig(void) {
 			/*** legacy read **********************************************************/
 			if (strstr(line, "profiles=") == line) {
 				_cconfig->profiles = scanpronames(pos, &_cconfig->profile, -1);
+				cstart = _cconfig->profiles;
 			}
 			if (strstr(line, "volume=") == line) {
 				// _cconfig->pvolume = atoi(pos); ignored
@@ -631,7 +639,9 @@ void writeConfig(const char *musicpath) {
 			}
 			fprintf(fp, "\npurl=");
 			for (i = 0; i < _cconfig->profiles; i++) {
-				fprintf(fp, "%s;", _cconfig->profile[i]->url);
+				char *val = _cconfig->profile[i]->url;
+
+				fprintf(fp, "%s;", val != NULL ? val : "");
 			}
 			fprintf(fp, "\nvolume=");
 			for (i = 0; i < _cconfig->profiles; i++) {
@@ -904,7 +914,11 @@ bool isDebug(void) {
 	return (_cconfig->debug > 1);
 }
 
-/* returns true if the player is not normally playing */
+/** 
+ * returns true if the player is not normally playing 
+ *
+ * this may block to make sure the state is sane
+ */
 int32_t playerIsBusy(void) {
 	int32_t res = 0;
 	mpconfig_t *control = getConfig();
@@ -1029,7 +1043,7 @@ char *fullpath(const char *file) {
 
 	pbuff[0] = 0;
 	if (file[0] != '/') {
-		strtcpy(pbuff, getConfig()->musicdir, MAXPATHLEN);
+		strtcpy(pbuff, _cconfig->musicdir, MAXPATHLEN);
 		strtcat(pbuff, file, MAXPATHLEN);
 	}
 	else {
@@ -1039,8 +1053,8 @@ char *fullpath(const char *file) {
 }
 
 int32_t getFavplay() {
-	if (getConfig()->active > 0) {
-		return getConfig()->profile[getConfig()->active - 1]->favplay;
+	if (_cconfig->active > 0) {
+		return getProfile(_cconfig->active)->favplay;
 	}
 	return 0;
 }
@@ -1048,8 +1062,8 @@ int32_t getFavplay() {
 int32_t toggleFavplay() {
 	profile_t *profile;
 
-	if (getConfig()->active > 0) {
-		profile = getConfig()->profile[getConfig()->active - 1];
+	if (_cconfig->active > 0) {
+		profile = getProfile(_cconfig->active);
 		profile->favplay = !profile->favplay;
 		return profile->favplay;
 	}
@@ -1076,8 +1090,8 @@ profile_t *createProfile(const char *name, const char *url,
 	profile->favplay = favplay;
 	profile->volume = vol;
 	if (id == true) {
-		getConfig()->maxid++;
-		profile->id = getConfig()->maxid;
+		_cconfig->maxid++;
+		profile->id = _cconfig->maxid;
 	}
 	return profile;
 }
@@ -1128,27 +1142,23 @@ mptitle_t *wipeTitles(mptitle_t * root) {
 }
 
 profile_t *getProfile(uint32_t id) {
-	mpconfig_t *control = getConfig();
-
-	for (uint32_t i = 0; i < control->profiles; i++) {
-		if (control->profile[i]->id == id)
-			return control->profile[i];
+	for (uint32_t i = 0; i < _cconfig->profiles; i++) {
+		if (_cconfig->profile[i]->id == id)
+			return _cconfig->profile[i];
 	}
 	return NULL;
 }
 
 int32_t getProfileIndex(uint32_t id) {
-	mpconfig_t *control = getConfig();
-
-	for (int32_t i = 0; i < (int32_t) control->profiles; i++) {
-		if (control->profile[i]->id == id)
+	for (int32_t i = 0; i < (int32_t) _cconfig->profiles; i++) {
+		if (_cconfig->profile[i]->id == id)
 			return i;
 	}
 	return -1;
 }
 
 bool isStream(profile_t * profile) {
-	return (profile->url[0] != '\0');
+	return ((profile->url != NULL) && (profile->url[0] != '\0'));
 }
 
 
