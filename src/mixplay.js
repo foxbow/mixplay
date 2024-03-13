@@ -33,6 +33,7 @@ var shortcuts = []
 var curvol = 0
 var inUpdate = 0
 var lastsearch = ''
+var profiles = []
 
 function debugLog (txt) {
   if (debug) {
@@ -1629,77 +1630,72 @@ function updateShortcuts (data) {
  * update basic configuration values from the reply
  */
 function updateConfig (data) {
-  var e
-  var items = []
+  const pl = document.getElementById('profiles')
+  const cl = document.getElementById('channels')
   var choices = []
   var i
   var lineid = 4000
   var name
-  /* set profile list */
-  e = document.getElementById('profiles')
-  wipeElements(e)
+  /* set profile/channel lists */
+  wipeElements(pl)
+  wipeElements(cl)
+  var pitems = []
+  var pnum=0
+  var citems = []
+  var cnum=0
   if (data.profile.length === 0) {
-    items[0] = document.createElement('em')
-    items[0].innerHTML = 'No profiles?'
+    pitems[0] = document.createElement('em')
+    pitems[0].innerHTML = 'No profiles?'
+    citems[0] = document.createElement('em')
+    citems[0].innerHTML = 'No channels'  
   } else {
     for (i = 0; i < data.profile.length; i++) {
+      // update profiles
+      profiles = []
+      profiles[data.profile[i].id] = data.profile[i]
       name = data.profile[i].name
       id = data.profile[i].id
       choices = []
-      if (i !== (active - 1)) {
+      if (id !== active) {
         choices.push(['&#x25B6;', 0x06])
-        if (i !== 0) {
+        if (id !== 1) {
           choices.push(['X', 0x18])
         }
       } else {
         name = '&#x25B6; ' + name
       }
       choices.push(['&#x2665;', 'shortcut']) /* FAV */
-      items[i] = popselect(choices, id,
-        name, 0, lineid++)
-    }
-  }
-  tabify(e, 'prolist', items, 11)
-
-  e = document.getElementById('channels')
-  items = []
-  wipeElements(e)
-  if (data.sname.length === 0) {
-    items[0] = document.createElement('em')
-    items[0].innerHTML = 'No channels'
-  } else {
-    for (i = 0; i < data.sname.length; i++) {
-      name = data.sname[i].name
-      id = data.sname[i].id
-      choices = []
-      if (i !== -(active + 1)) {
-        choices.push(['&#x25B6;', 0x06])
-        choices.push(['X', 0x18])
+      if (data.profile[i].url === '') {
+        pitems[pnum++] = popselect(choices, id,
+          name, 0, lineid++)
       } else {
-        name = '&#x25B6; ' + name
+        citems[cnum++] = popselect(choices, id,
+          name, 0, lineid++)
       }
-      choices.push(['&#x2665;', 'shortcut']) /* FAV */
-      items[i] = popselect(choices, id,
-        name, 0, lineid++)
+    }
+    if (cnum === 0) {
+      citems[0] = document.createElement('em')
+      citems[0].innerHTML = 'No channels'  
     }
   }
-  tabify(e, 'chanlist', items, 11)
-
+  tabify(pl, 'prolist', pitems, 11)
+  tabify(cl, 'chanlist', citems, 11)
+ 
   updateShortcuts(data)
 
-  if (active > 0) {
+  if (active == 0) {
+    setElement('active', 'No active profile/channel')
+  } else if (profiles[active].url === '') {
     if (favplay) {
       setElement('active', 'Playing favplay ' +
-          data.profile[active - 1].name)
+          profiles[active].name)
     } else {
       setElement('active', 'Playing profile ' +
-          data.profile[active - 1].name)
+          profiles[active].name)
     }
-  } else if (active < 0) {
-    setElement('active', 'Tuned in to ' +
-          data.sname[-active - 1].name)
   } else {
-    setElement('active', 'No active profile/channel')
+    setElement('active', 'Tuned in to ' +
+          profiles[active].name)
   }
   /*  idlesleep = data.sleepto * 1000 */
 

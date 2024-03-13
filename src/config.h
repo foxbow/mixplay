@@ -150,9 +150,6 @@ typedef struct {
 	uint32_t active;			/* id of the current profile */
 	uint32_t profiles;			/* number of profiles */
 	profile_t **profile;		/* profiles */
-//  int32_t pvolume;            /* default volume for profiles */
-//  uint32_t streams;           /* number of streams */
-//  profile_t **stream;         /* streams */
 	mptitle_t *root;			/* the root title */
 	searchresults_t *found;		/* buffer list to contain searchresults etc */
 	mpplaylist_t *current;		/* the current title */
@@ -210,7 +207,6 @@ void freeConfigContents(void);
 int32_t getFavplay();
 int32_t toggleFavplay();
 
-#define CP_NEWID ((uint32_t)-1)
 profile_t *createProfile(const char *name, const char *stream,
 						 const uint32_t favplay, const int32_t vol, bool id);
 void freeProfile(profile_t * profile);

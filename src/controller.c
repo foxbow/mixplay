@@ -628,9 +628,8 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 				else {
 					addMessage(-1, "Profile #%i does not exist!", profileid);
 				}
-
+				pthread_mutex_unlock(&_asynclock);
 			}
-			pthread_mutex_unlock(&_asynclock);
 		}
 		break;
 

@@ -213,13 +213,13 @@ static int32_t scanpronames(char *input, profile_t *** target, int32_t max) {
 
 		for (i = 0; i < num; i++) {
 			if (line[i][1] == ':') {
-				(*target)[i] = createProfile(line[i] + 2, NULL, 0, -1, true);
+				(*target)[i] = createProfile(line[i] + 2, NULL, 0, 50, true);
 				if (line[i][0] == '1') {
 					(*target)[i]->favplay = 1;
 				}
 			}
 			else {
-				(*target)[i] = createProfile(line[i], NULL, 0, -1, true);
+				(*target)[i] = createProfile(line[i], NULL, 0, 50, true);
 			}
 			free(line[i]);
 		}
@@ -292,7 +292,7 @@ static bool scanurls(char *input) {
 
 	num = scanparts(input, &line);
 	for (i = 0; i < MIN(max, num); i++) {
-		target[i]->name = line[i];
+		target[i]->url = line[i];
 	}
 	free(line);
 
@@ -495,7 +495,7 @@ mpconfig_t *readConfig(void) {
 			}
 			if (strstr(line, "svolumes=") == line) {
 				if (!scanprovols(pos, _cconfig->profile, streamcnt)) {
-					addMessage(0, "Number of stream volumes does not match!");
+					printf("Number of stream volumes does not match!\n");
 				}
 			}
 			/*** legacy read **********************************************************/
@@ -505,25 +505,22 @@ mpconfig_t *readConfig(void) {
 			}
 			if (strstr(line, "url=") == line) {
 				if (!scanurls(pos)) {
-					addMessage(0,
-							   "Number of urls and profiles does not match!");
+					printf("Number of urls and profiles does not match!}n");
 				}
 			}
-			if (strstr(line, "volume=") == line) {
+			if (strstr(line, "vol=") == line) {
 				if (!scanvolumes(pos)) {
-					addMessage(0,
-							   "Number of volumes and profiles does not match!");
+					printf("Number of volumes and profiles does not match!\n");
 				}
 			}
-			if (strstr(line, "favplay=") == line) {
+			if (strstr(line, "fav=") == line) {
 				if (!scanfavplays(pos)) {
-					addMessage(0,
-							   "Number of favplays and profiles does not match!");
+					printf
+						("Number of favplays and profiles does not match!\n");
 				}
 			}
 			if (strstr(line, "id=") == line) {
-				_cconfig->maxid = scanids(pos);
-				if (_cconfig->maxid == 0) {
+				if (!scanids(pos)) {
 					fclose(fp);
 					fail(F_FAIL, "Number of ids and profiles does not match!");
 				}
@@ -531,7 +528,7 @@ mpconfig_t *readConfig(void) {
 			if (strstr(line, "active=") == line) {
 				_cconfig->active = atoi(pos);
 				if (_cconfig->active == 0) {
-					addMessage(0, "Setting default profile!");
+					printf("Setting default profile!\n");
 					_cconfig->active = 1;
 				}
 			}
@@ -623,7 +620,7 @@ void writeConfig(const char *musicpath) {
 			fprintf(fp, "\nactive=1");
 			fprintf(fp, "\nname=mixplay;");
 			fprintf(fp, "\nurl=;");
-			fprintf(fp, "\nvolume=80;");
+			fprintf(fp, "\nvol=80;");
 			fprintf(fp, "\nfavplay=0;");
 			fprintf(fp, "\nid=1;");
 		}
@@ -633,17 +630,17 @@ void writeConfig(const char *musicpath) {
 			for (i = 0; i < _cconfig->profiles; i++) {
 				fprintf(fp, "%s;", _cconfig->profile[i]->name);
 			}
-			fprintf(fp, "\npfav=");
+			fprintf(fp, "\nfav=");
 			for (i = 0; i < _cconfig->profiles; i++) {
 				fprintf(fp, "%" PRId32 ";", _cconfig->profile[i]->favplay);
 			}
-			fprintf(fp, "\npurl=");
+			fprintf(fp, "\nurl=");
 			for (i = 0; i < _cconfig->profiles; i++) {
 				char *val = _cconfig->profile[i]->url;
 
 				fprintf(fp, "%s;", val != NULL ? val : "");
 			}
-			fprintf(fp, "\nvolume=");
+			fprintf(fp, "\nvol=");
 			for (i = 0; i < _cconfig->profiles; i++) {
 				fprintf(fp, "%" PRId32 ";", _cconfig->profile[i]->volume);
 			}

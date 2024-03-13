@@ -93,6 +93,10 @@ void setStream(char const *const stream, char const *const name) {
 		control->list = 0;
 	}
 
+	/* no strdup() as this will be recycled on each setStream() call */
+	control->streamURL =
+		(char *) frealloc(control->streamURL, strlen(stream) + 1);
+	strcpy(control->streamURL, stream);
 	addMessage(MPV + 1, "Play Stream %s (%s)", name, stream);
 }
 
@@ -182,12 +186,12 @@ void *setProfile(void *arg) {
 			control->active = 1;
 		else
 			control->active = oactive;
+		/* todo: get rid of this recursion! */
 		return setProfile(NULL);
 	}
 
 	/* stream selected */
 	if (isStream(profile)) {
-		setVolume(profile->volume);
 		setStream(profile->url, profile->name);
 	}
 	/* profile selected */
@@ -240,7 +244,8 @@ void *setProfile(void *arg) {
 
 	notifyChange(MPCOMM_CONFIG);
 
-	usleep(500);				// why?
+//  usleep(500);                // why?
+	setVolume(profile->volume);
 	startPlayer();
 
 	/* make sure that progress messages are removed */
@@ -251,12 +256,10 @@ void *setProfile(void *arg) {
 
 /* returns the name of the current profile or channel */
 static const char *getProfileName(int32_t profile) {
-	mpconfig_t *config = getConfig();
-
 	if (profile == 0) {
 		return "NONE";
 	}
-	return config->profile[profile]->name;
+	return getProfile(profile)->name;
 }
 
 /* kills (and restarts) the player loop and decoders

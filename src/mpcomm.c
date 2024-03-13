@@ -81,16 +81,26 @@ void unlockClient(int32_t client) {
 	}
 }
 
+static jsonObject *jsonAddProfile(jsonObject * jo, const char *key,
+								  const profile_t * profile) {
+	jsonObject *val = NULL;
+
+	val = jsonAddStr(NULL, "name", profile->name);
+	jsonAddInt(val, "id", profile->id);
+	jsonAddStr(val, "url", profile->url);
+
+	return jsonAddObj(jo, key, val);
+}
+
 static jsonObject *jsonAddProfiles(jsonObject * jo, const char *key,
 								   profile_t ** vals, const int32_t num) {
 	int32_t i;
 
 	jo = jsonInitArr(jo, key);
 	for (i = 0; i < num; i++) {
-		jsonObject *profile = jsonAddStr(NULL, "name", vals[i]->name);
+		jsonObject *jsonProfile = jsonAddProfile(NULL, "profile", vals[i]);
 
-		jsonAddInt(profile, "id", vals[i]->id);
-		jsonAddArrElement(jo, profile, json_object);
+		jsonAddArrElement(jo, jsonProfile, json_object);
 	}
 	return jo;
 }
