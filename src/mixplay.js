@@ -162,7 +162,7 @@ function sendArg (cmd) {
  * 
  * todo: is ok ever used as a function?
  */
-function showConfirm (msg, ok, arg) {
+function showConfirm (msg, ok, arg="") {
   const cdiv = document.getElementById('confirm')
   if (cdiv.className === 'hide') {
     document.getElementById('confmsg').innerHTML = msg
@@ -579,7 +579,7 @@ function sendCMDArg (cmd, arg) {
     }
     shortcuts.push(arg)
     setCookies()
-    doUpdate |= 8
+    updateShortcuts()
     return
   }
 
@@ -589,7 +589,7 @@ function sendCMDArg (cmd, arg) {
     if (~pos) {
       shortcuts.splice(pos, 1)
       setCookies()
-      doUpdate |= 8
+      updateShortcuts()
     } else {
       showConfirm(arg + ' is no shortcut in ' + shortcuts + '?!')
     }
@@ -627,7 +627,7 @@ function sendCMDArg (cmd, arg) {
       adaptUI(-1)
       break
     case 0x18: /* mpc_remprof */
-      showConfirm('Remove ' + arg + '?', 0x98, arg)
+      showConfirm('Remove ' + profiles[arg].name + '?', 0x98, arg)
       return
     case 0x98: /* confirm remprof */
       cmd = 0x18
@@ -1575,12 +1575,11 @@ function updateUI () {
 
 /*
  * update the local shortcuts from cookie-data
- * config data is needed to align shortcut IDs with actual profiles/channels
  */
-function updateShortcuts (data) {
+function updateShortcuts () {
   const e = document.getElementById('shortcuts')
   var items = []
-  var i
+  var i=0
   var name
   var choices
   var lineid = 5000
@@ -1590,29 +1589,13 @@ function updateShortcuts (data) {
     items[0] = document.createElement('em')
     items[0].innerHTML = 'No shortcuts'
   } else {
-    for (i = 0; i < shortcuts.length; i++) {
-      var idx = 0
-      var name = ""
+    while (i < shortcuts.length) {
+      name = ""
       var id = shortcuts[i]
-      for (p = 0; p<data.sname.length; p++) {
-        if (id == data.sname[p].id) {
-          name = data.sname[p].name;
-          idx = -(p+1)
-          break
-        }
-      }
-      if(p < data.sname.length) {
-        for (p = 0; p<data.profile.length; p++) {
-          if (id == data.profile[p].id) {
-            name = data.profile[p].name;
-            idx = p+1
-            break
-          }
-        }
-      }
-      if (name != "") {
+      if (profiles[id]) {
+        name = profiles[id].name
         choices = []
-        if (idx !== active) {
+        if (id !== active) {
           choices.push(['&#x25B6;', 0x06])
         } else {
           name = '&#x25B6; ' + name
@@ -1620,6 +1603,10 @@ function updateShortcuts (data) {
         choices.push(['X', 'remsc'])
         items[i] = popselect(choices, id,
           name, 0, lineid++)
+        i++
+      } else {
+        shortcuts.splice(i, 1)
+        setCookies()
       }
     }
   }
@@ -1681,7 +1668,7 @@ function updateConfig (data) {
   tabify(pl, 'prolist', pitems, 11)
   tabify(cl, 'chanlist', citems, 11)
  
-  updateShortcuts(data)
+  updateShortcuts()
 
   if (active == 0) {
     setElement('active', 'No active profile/channel')
