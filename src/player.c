@@ -673,7 +673,7 @@ void *reader( __attribute__ ((unused))
 									if (strcasecmp
 										(control->current->title->title,
 										 "Nachrichten") == 0) {
-										if (control->volume >= 0) {
+										if (control->volume > 0) {
 											automute = true;
 											toggleMute();
 										}
@@ -682,8 +682,7 @@ void *reader( __attribute__ ((unused))
 									if (strcasecmp
 										(control->current->title->title,
 										 "Wetter") == 0) {
-										if (automute
-											&& (control->volume == -2)) {
+										if (automute && (control->volume <= 0)) {
 											toggleMute();
 											automute = false;
 										}
@@ -692,7 +691,7 @@ void *reader( __attribute__ ((unused))
 								}
 								else {
 									/* unmute on normal titles */
-									if (automute && (control->volume == -2)) {
+									if (automute && (control->volume <= 0)) {
 										automute = false;
 										toggleMute();
 									}
