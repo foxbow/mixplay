@@ -281,6 +281,8 @@ function isActive (tab) {
 }
 
 function isPlay () {
+  /* don't steal keypresses when the keyboard is visible */
+  if (kbddiv && (kbddiv.className === '')) return false;
   return (isActive('extra0') ||
     ((isActive('extra1') && isActive('dnpfav0'))))
 }

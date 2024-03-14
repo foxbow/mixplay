@@ -84,7 +84,10 @@ static void _volumeUpdateHook() {
 	 * don't read before arg is NULL as someone may be
 	 * trying to set the volume right now */
 	if (config->volume != NOAUDIO) {
+		int32_t volbuf = config->volume;
 		config->volume = getVolume();
+		if ((volbuf == AUTOMUTE) && (config->volume < 0))
+			config->volume=AUTOMUTE;
 	}
 }
 

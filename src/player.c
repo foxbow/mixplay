@@ -456,10 +456,10 @@ void *reader( __attribute__ ((unused))
 	/* check if we can control the system's volume */
 	control->volume = getVolume();
 	switch (control->volume) {
-	case -2:
+	case MUTED:
 		addMessage(MPV + 1, "Hardware volume is muted");
 		break;
-	case -1:
+	case NOAUDIO:
 		addMessage(0, "Hardware volume control is diabled");
 		control->channel = NULL;
 		break;
@@ -634,11 +634,11 @@ void *reader( __attribute__ ((unused))
 								 * just be overwriten. If the current title is some channel 
 								 * info overwrite that too. Like this channel info will be 
 								 * shown but not put in the history */
-								if ((control->current->title->album[0] != '\0')
+								if ((control->current->title->album[0] == '\0')
 									||
 									(strcasecmp
 									 (control->current->title->artist,
-									  control->current->title->album) != 0)) {
+									  control->current->title->album) == 0)) {
 									strip(control->current->title->display,
 										  apos, MAXPATHLEN - 1);
 								}

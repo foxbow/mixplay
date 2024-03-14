@@ -45,7 +45,10 @@ static long openAudio(char const *const channel) {
 	}
 
 	snd_mixer_attach(_handle, "default");
-	snd_mixer_selem_register(_handle, NULL, NULL);
+	if (snd_mixer_selem_register(_handle, NULL, NULL) < 0) {
+		addMessage(0, "Can't register handle");
+		return NOAUDIO;
+	}
 	snd_mixer_load(_handle);
 
 	snd_mixer_selem_id_alloca(&sid);
