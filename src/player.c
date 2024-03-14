@@ -630,14 +630,23 @@ void *reader( __attribute__ ((unused))
 								(apos, control->current->title->display)) {
 
 								/* The album field contains the stream name. If it is not set
-								 * then this is the first title, otherwise create a new entry
-								 * to store the current title */
-								if (strlen(control->current->title->album) > 0) {
+								 * then this is the first title, and the current dummy will 
+								 * just be overwriten. If the current title is some channel 
+								 * info overwrite that too. Like this channel info will be 
+								 * shown but not put in the history */
+								if ((control->current->title->album[0] != '\0')
+									||
+									(strcasecmp
+									 (control->current->title->artist,
+									  control->current->title->album) != 0)) {
+									strip(control->current->title->display,
+										  apos, MAXPATHLEN - 1);
+								}
+								else {
+									/* create a new title */
 									control->current =
 										addPLDummy(control->current, apos);
 								}
-								strip(control->current->title->display, apos,
-									  MAXPATHLEN - 1);
 
 								/* if possible cut up title and artist
 								 * This fails if the artist has a ' - ' in the name but it's
@@ -669,10 +678,7 @@ void *reader( __attribute__ ((unused))
 									 control->current->title->album) == 0) {
 									/* mute news */
 									if ((control->volume > 0) && (strcasecmp
-																  (control->
-																   current->
-																   title->
-																   title,
+																  (control->current->title->title,
 																   "Nachrichten")
 																  == 0)) {
 										toggleMute();
