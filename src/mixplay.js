@@ -579,7 +579,6 @@ function sendCMDArg (cmd, arg) {
     }
     shortcuts.push(arg)
     setCookies()
-    updateShortcuts()
     return
   }
 
@@ -589,7 +588,6 @@ function sendCMDArg (cmd, arg) {
     if (~pos) {
       shortcuts.splice(pos, 1)
       setCookies()
-      updateShortcuts()
     } else {
       showConfirm(arg + ' is no shortcut in ' + shortcuts + '?!')
     }
@@ -1606,9 +1604,9 @@ function updateShortcuts () {
         i++
       } else {
         shortcuts.splice(i, 1)
-        setCookies()
       }
     }
+    setCookies()
   }
   tabify(e, 'sclist', items, 11)
 }
@@ -1954,6 +1952,7 @@ function setCookies () {
   } else {
     document.cookie = 'MPshortcuts=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
   }
+  updateShortcuts()
 }
 
 /*
