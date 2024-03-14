@@ -578,7 +578,7 @@ function sendCMDArg (cmd, arg) {
       if (arg === shortcuts[i]) return
     }
     shortcuts.push(arg)
-    setCookies()
+    updateShortcuts()
     return
   }
 
@@ -587,7 +587,7 @@ function sendCMDArg (cmd, arg) {
     var pos = shortcuts.indexOf(arg + '')
     if (~pos) {
       shortcuts.splice(pos, 1)
-      setCookies()
+      updateShortcuts()
     } else {
       showConfirm(arg + ' is no shortcut in ' + shortcuts + '?!')
     }
@@ -1737,7 +1737,7 @@ function switchUI () {
     smallUI = -1
   } else {
     adaptUI(1)
-    setCookies()
+    updateShortcuts()
   }
 }
 
@@ -1899,7 +1899,7 @@ function tap () {
   playtimer = 0
   if (smallUI === -1) {
     smallUI = 2
-    setCookies()
+    updateShortcuts()
     el.className = ''
     return
   }
@@ -1952,7 +1952,6 @@ function setCookies () {
   } else {
     document.cookie = 'MPshortcuts=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
   }
-  updateShortcuts()
 }
 
 /*
