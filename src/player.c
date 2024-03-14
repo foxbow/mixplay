@@ -477,9 +477,6 @@ void *reader( __attribute__ ((unused))
 	 * TODO: nothing in this loop shall block so setting the watchdog will
 	 * cause a restart in any case! */
 	do {
-		// set if muted for news
-		bool automute = false;
-
 		if ((poll(pfd, 2 * (fading + 1), 500) == 0) &&
 			(control->mpmode & PM_STREAM) && (control->status != mpc_idle)) {
 
@@ -586,26 +583,27 @@ void *reader( __attribute__ ((unused))
 						break;
 					}
 
-					/* sanity check, this is almost assert worthy */
+					/* sanity check */
 					if (control->current == NULL) {
-						addMessage(0, "Premature stream info!");
-						break;
+						fail(F_FAIL, "No current title list for stream!");
 					}
 
 					/* Stream name */
 					if (NULL != strstr(line, "ICY-NAME: ")) {
 						/* if prev is NULL it would mean the stream started before
 						 * it was set - shouldn't ever happen */
-						if (control->current->prev != NULL) {
-							strip(control->current->prev->title->title,
-								  line + 13, NAMELEN - 1);
-							notifyChange(MPCOMM_TITLES);
+						if (control->current->prev == NULL) {
+							fail(F_FAIL, "Stream started on it's own!");
 						}
+
+						strip(control->current->prev->title->title,
+							  line + 13, NAMELEN - 1);
+						notifyChange(MPCOMM_TITLES);
 					}
 
 					/* metadata, usually title info */
 					if (NULL != strstr(line, "ICY-META")) {
-						/* StreamTitle='artist-title' -> apos[,tpos] */
+						/* StreamTitle='artist - title' -> apos[,tpos] */
 						char *apos = strstr(line, "StreamTitle='");
 
 						if (apos != NULL) {
@@ -670,32 +668,32 @@ void *reader( __attribute__ ((unused))
 									(control->current->title->artist,
 									 control->current->title->album) == 0) {
 									/* mute news */
-									if ((strcasecmp
-										 (control->current->title->title,
-										  "Nachrichten") == 0)
-										&& (control->volume > 0)) {
-										automute = true;
-										setMute(1);
+									if ((control->volume > 0) && (strcasecmp
+																  (control->
+																   current->
+																   title->
+																   title,
+																   "Nachrichten")
+																  == 0)) {
+										toggleMute();
+										control->volume = AUTOMUTE;
 									}
 									/* unmute weather report */
 									/*  *INDENT-OFF*  */
-									if (automute && (strcasecmp
-													 (control->current->title->
+									if ((control->volume == AUTOMUTE) && 
+										(strcasecmp (control->current->title->
 													  title, "Wetter") == 0)) {
 									/*  *INDENT-ON*  */					
-									setMute(0);
-									automute = false;
+									toggleMute();
 								}
-								/* keep current state on something else */
 							}
-							else if (automute) {
-								automute = false;
-								setMute(0);
+							else if (control->volume == AUTOMUTE) {
+								toggleMute();
 							}
 							notifyChange(MPCOMM_TITLES);
-						}
-					}
-				}
+						}		/* title changed */
+					}			/* stream title */
+				}				/* ICY META */
 				break;
 
 case 'T':						/* TAG reply */

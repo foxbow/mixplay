@@ -242,7 +242,7 @@ static int32_t scanpropaths(char *input, profile_t *** target) {
 									(num + cstart) * sizeof (profile_t *));
 
 		for (i = 0; i < num; i++) {
-			(*target)[i + cstart] = createProfile(NULL, line[i], 0, 50, true);
+			(*target)[i + cstart] = createProfile(NULL, line[i], 0, 80, true);
 			free(line[i]);
 		}
 		free(line);

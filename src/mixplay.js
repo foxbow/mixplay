@@ -729,7 +729,7 @@ function progWheel (e) {
 function ctrlVol (e) {
   const pos = e.clientX - this.offsetLeft
   const third = this.clientWidth / 3
-  if (curvol === -2) {
+  if (curvol < 0) {
     sendCMD(0x1d)
   } else {
     if (pos < third) {
@@ -1463,8 +1463,10 @@ function playerUpdate (data) {
     document.getElementById('volumebar').className = ''
   } else if (curvol === -1) {
     enableElement('volume', 0)
-  } else {
+  } else if (curvol === -2) {
     document.getElementById('volumebar').className = 'mute'
+  } else {
+    document.getElementById('volumebar').className = 'automute'
   }
 
   if (data.msg !== '') {

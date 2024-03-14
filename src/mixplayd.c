@@ -83,7 +83,7 @@ static void _volumeUpdateHook() {
 	/* read current Hardware volume in case it changed externally
 	 * don't read before arg is NULL as someone may be
 	 * trying to set the volume right now */
-	if (config->volume != -1) {
+	if (config->volume != NOAUDIO) {
 		config->volume = getVolume();
 	}
 }

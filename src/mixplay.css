@@ -144,7 +144,7 @@ p#ctitle:hover {
 }
 
 .popup:hover {
-
+	cursor: default;
 }
 
 #volume:hover, .clickline:hover {
@@ -172,6 +172,10 @@ p#ctitle:hover {
 
 div#volumebar.mute {
 	background-color: rgba(200,100,000,.5);
+}
+
+div#volumebar.automute {
+	background-color: rgba(100,200,000,.5);
 }
 
 /* album */

@@ -35,13 +35,13 @@ static long openAudio(char const *const channel) {
 
 	if (channel == NULL || strlen(channel) == 0) {
 		addMessage(0, "No audio channel set");
-		return -1;
+		return NOAUDIO;
 	}
 
 	snd_mixer_open(&_handle, 0);
 	if (_handle == NULL) {
 		addMessage(1, "No ALSA support");
-		return -1;
+		return NOAUDIO;
 	}
 
 	snd_mixer_attach(_handle, "default");
@@ -59,7 +59,7 @@ static long openAudio(char const *const channel) {
 	if (_elem == NULL) {
 		addMessage(0, "Can't find channel %s!", channel);
 		closeAudio();
-		return -1;
+		return NOAUDIO;
 	}
 
 	return 0;
@@ -82,15 +82,15 @@ long controlVolume(long volume, int32_t absolute) {
 	config = getConfig();
 	channel = config->channel;
 
-	if (config->volume == -1) {
+	if (config->volume == NOAUDIO) {
 		addMessage(0, "Volume control is not supported!");
-		return -1;
+		return NOAUDIO;
 	}
 
 	if (_handle == NULL) {
 		if (openAudio(channel) != 0) {
-			config->volume = -1;
-			return -1;
+			config->volume = NOAUDIO;
+			return NOAUDIO;
 		}
 	}
 
@@ -106,8 +106,8 @@ long controlVolume(long volume, int32_t absolute) {
 		snd_mixer_selem_get_playback_switch(_elem, SND_MIXER_SCHN_FRONT_LEFT,
 											&mswitch);
 		if (mswitch == 0) {
-			config->volume = -2;
-			return -2;
+			config->volume = MUTED;
+			return MUTED;
 		}
 	}
 
@@ -133,25 +133,22 @@ long controlVolume(long volume, int32_t absolute) {
 }
 
 /*
- * sets the mute state
- * flag:   -1 - toggle
- *          0 - unmute
- *          1 - mute
- * returns -1 if mute is not supported
- *         -2 if mute was enabled
+ * toggles the mute state
+ * returns NOMUTE if mute is not supported
+ *         MUTED  if mute was enabled
  *         the current volume on unmute
  */
-long setMute(int flag) {
+long toggleMute() {
 	mpconfig_t *config = getConfig();
 	int32_t mswitch;
 
-	if (config->volume == -1) {
-		return -1;
+	if (config->volume == NOAUDIO) {
+		return NOAUDIO;
 	}
 	if (_handle == NULL) {
 		if (openAudio(config->channel) != 0) {
-			config->volume = -1;
-			return -1;
+			config->volume = NOAUDIO;
+			return NOAUDIO;
 		}
 	}
 	if (_elem == NULL) {
@@ -160,15 +157,12 @@ long setMute(int flag) {
 	}
 
 	if (snd_mixer_selem_has_playback_switch(_elem)) {
-		if (flag < 0)
-			snd_mixer_selem_get_playback_switch(_elem,
-												SND_MIXER_SCHN_FRONT_LEFT,
-												&mswitch);
-		else
-			mswitch = flag ? 0 : 1;
+		snd_mixer_selem_get_playback_switch(_elem,
+											SND_MIXER_SCHN_FRONT_LEFT,
+											&mswitch);
 		if (mswitch == 1) {
 			snd_mixer_selem_set_playback_switch_all(_elem, 0);
-			config->volume = -2;
+			config->volume = MUTED;
 		}
 		else {
 			snd_mixer_selem_set_playback_switch_all(_elem, 1);
@@ -176,7 +170,7 @@ long setMute(int flag) {
 		}
 	}
 	else {
-		return -1;
+		return NOAUDIO;
 	}
 
 	return config->volume;
