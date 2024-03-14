@@ -133,12 +133,15 @@ long controlVolume(long volume, int32_t absolute) {
 }
 
 /*
- * toggles the mute states
+ * sets the mute state
+ * flag:   -1 - toggle
+ *          0 - unmute
+ *          1 - mute
  * returns -1 if mute is not supported
  *         -2 if mute was enabled
  *         the current volume on unmute
  */
-long toggleMute() {
+long setMute(int flag) {
 	mpconfig_t *config = getConfig();
 	int32_t mswitch;
 
@@ -157,8 +160,12 @@ long toggleMute() {
 	}
 
 	if (snd_mixer_selem_has_playback_switch(_elem)) {
-		snd_mixer_selem_get_playback_switch(_elem, SND_MIXER_SCHN_FRONT_LEFT,
-											&mswitch);
+		if (flag < 0)
+			snd_mixer_selem_get_playback_switch(_elem,
+												SND_MIXER_SCHN_FRONT_LEFT,
+												&mswitch);
+		else
+			mswitch = flag ? 0 : 1;
 		if (mswitch == 1) {
 			snd_mixer_selem_set_playback_switch_all(_elem, 0);
 			config->volume = -2;

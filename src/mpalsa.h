@@ -10,14 +10,14 @@
 #include <stdint.h>
 
 long controlVolume(long volume, int32_t absolute);
-long toggleMute();
+long setMute(int);
 void closeAudio();
 
 /*
  * naming wrappers for controlVolume
  */
 #define setVolume(v)	controlVolume(v,1)
-#define getVolume()	 controlVolume(0,0)
+#define getVolume()	    controlVolume(0,0)
 #define adjustVolume(d) controlVolume(d,0)
-
+#define toggleMute(x)   setMute(-1)
 #endif

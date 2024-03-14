@@ -632,7 +632,7 @@ void *reader( __attribute__ ((unused))
 								(apos, control->current->title->display)) {
 
 								/* The album field contains the stream name. If it is not set
-								 * then this is the first title, otherwise create a new enntry
+								 * then this is the first title, otherwise create a new entry
 								 * to store the current title */
 								if (strlen(control->current->title->album) > 0) {
 									control->current =
@@ -670,31 +670,25 @@ void *reader( __attribute__ ((unused))
 									(control->current->title->artist,
 									 control->current->title->album) == 0) {
 									/* mute news */
-									if (strcasecmp
-										(control->current->title->title,
-										 "Nachrichten") == 0) {
-										if (control->volume > 0) {
-											automute = true;
-											toggleMute();
-										}
+									if ((strcasecmp
+										 (control->current->title->title,
+										  "Nachrichten") == 0)
+										&& (control->volume > 0)) {
+										automute = true;
+										setMute(1);
 									}
 									/* unmute weather report */
-									if (strcasecmp
-										(control->current->title->title,
-										 "Wetter") == 0) {
-										if (automute && (control->volume <= 0)) {
-											toggleMute();
-											automute = false;
-										}
+									if (automute && (strcasecmp
+													 (control->current->title->
+													  title, "Wetter") == 0)) {
+										setMute(0);
+										automute = false;
 									}
 									/* keep current state on something else */
 								}
-								else {
-									/* unmute on normal titles */
-									if (automute && (control->volume <= 0)) {
-										automute = false;
-										toggleMute();
-									}
+								else if (automute) {
+									automute = false;
+									setMute(0);
 								}
 								notifyChange(MPCOMM_TITLES);
 							}
