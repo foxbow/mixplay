@@ -13,6 +13,7 @@
 
 static snd_mixer_t *_handle = NULL;
 static snd_mixer_elem_t *_elem = NULL;
+static snd_mixer_selem_id_t *_sid = NULL;
 
 /**
  * disconnects from the mixer and frees all resources
@@ -22,6 +23,8 @@ void closeAudio() {
 		snd_mixer_detach(_handle, "default");
 		snd_mixer_close(_handle);
 		snd_config_update_free_global();
+		/* apparently _sid has already been free()d here */
+		// snd_mixer_selem_id_free(_sid);
 		_handle = NULL;
 		_elem = NULL;
 	}
@@ -31,33 +34,38 @@ void closeAudio() {
  * tries to connect to the mixer
  */
 static long openAudio(char const *const channel) {
-	snd_mixer_selem_id_t *sid = NULL;
-
 	if (channel == NULL || strlen(channel) == 0) {
+		/* shouldn't this be deadly? */
 		addMessage(0, "No audio channel set");
 		return NOAUDIO;
 	}
 
 	snd_mixer_open(&_handle, 0);
 	if (_handle == NULL) {
-		addMessage(1, "No ALSA support");
+		/* shouldn't this be deadly? */
+		addMessage(0, "No ALSA support");
 		return NOAUDIO;
 	}
 
-	snd_mixer_attach(_handle, "default");
+	if (snd_mixer_attach(_handle, "default") < 0) {
+		/* shouldn't this be deadly? */
+		addMessage(0, "Can't attach to default mixer!");
+		return NOAUDIO;
+	}
 	if (snd_mixer_selem_register(_handle, NULL, NULL) < 0) {
+		/* shouldn't this be deadly? */
 		addMessage(0, "Can't register handle");
 		return NOAUDIO;
 	}
 	snd_mixer_load(_handle);
 
-	snd_mixer_selem_id_alloca(&sid);
-	snd_mixer_selem_id_set_index(sid, 0);
-	snd_mixer_selem_id_set_name(sid, channel);
-	_elem = snd_mixer_find_selem(_handle, sid);
+	snd_mixer_selem_id_alloca(&_sid);
+	snd_mixer_selem_id_set_index(_sid, 0);
+	snd_mixer_selem_id_set_name(_sid, channel);
+	_elem = snd_mixer_find_selem(_handle, _sid);
 	/**
 	 * for some reason this can't be free'd explicitly.. ALSA is weird!
-	 * snd_mixer_selem_id_free(_sid);
+	 * 
 	 */
 	if (_elem == NULL) {
 		addMessage(0, "Can't find channel %s!", channel);
@@ -75,7 +83,7 @@ static long openAudio(char const *const channel) {
  * if abs is 0 'volume' is regarded as a relative value
  * if ALSA does not work or the current card cannot be selected -1 is returned
  */
-long controlVolume(long volume, int32_t absolute) {
+long controlVolume(long volume, bool absolute) {
 	long min, max;
 	int32_t mswitch = 0;
 	long retval = 0;
@@ -91,16 +99,19 @@ long controlVolume(long volume, int32_t absolute) {
 	}
 
 	if (_handle == NULL) {
-		if (openAudio(channel) != 0) {
+		if (openAudio(channel) == NOAUDIO) {
 			config->volume = NOAUDIO;
 			return NOAUDIO;
 		}
 	}
 
 	/* for some reason this can happen and lead to an assert error
-	 * Give a slight warning and return default  */
+	 * Give a slight warning and return default as this commonly only
+	 * happens when setting the initial volume of the new profile */
 	if (_elem == NULL) {
 		addMessage(1, "Volume control is not fully initialized!");
+		if (absolute)
+			return volume;
 		return config->volume;
 	}
 
@@ -109,7 +120,10 @@ long controlVolume(long volume, int32_t absolute) {
 		snd_mixer_selem_get_playback_switch(_elem, SND_MIXER_SCHN_FRONT_LEFT,
 											&mswitch);
 		if (mswitch == 0) {
-			config->volume = MUTED;
+			/* if muted from the outside, set to MUTED, otherwise don't 
+			 * accidentially overwrite an AUTOMUTE */
+			if (config->volume > 0)
+				config->volume = MUTED;
 			return MUTED;
 		}
 	}
@@ -155,6 +169,8 @@ long toggleMute() {
 		}
 	}
 	if (_elem == NULL) {
+		/* make this one a pop-up, so the user has a clue why nothing 
+		 * happened when he clicked the mute button */
 		addMessage(-1, "Volume control is not fully initialized!");
 		return config->volume;
 	}

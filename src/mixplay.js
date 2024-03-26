@@ -1464,11 +1464,11 @@ function playerUpdate (data) {
     document.getElementById('volumebar').style.width = curvol + '%'
     document.getElementById('volumebar').className = ''
   } else if (curvol === -1) {
-    enableElement('volume', 0)
-  } else if (curvol === -2) {
     document.getElementById('volumebar').className = 'mute'
-  } else {
+  } else if (curvol === -2) {
     document.getElementById('volumebar').className = 'automute'
+  } else {
+    enableElement('volume', 0)
   }
 
   if (data.msg !== '') {
