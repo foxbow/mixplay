@@ -39,13 +39,14 @@
 #include "build/mixplay_svg.h"
 #include "build/mixplay_png.h"
 #include "build/manifest_json.h"
+#include "build/bookmarklet_js.h"
 
 #ifndef VERSION
 #define VERSION "developer"
 #endif
 
 /* message offset */
-#define MPV 10
+#define MPV 0
 
 /* the kind of request that came in */
 typedef enum {
@@ -533,6 +534,13 @@ static void *clientHandler(void *args) {
 					else if (strstr(pos, "/version ") == pos) {
 						state = req_version;
 					}
+					/* HACK to support bookmarklet without HTTPS
+					 * todo: remove as soon as HTTPS is supported... */
+					else if ((strstr(pos, "/cmd") == pos)
+							 && ((mpcmd_t) reqInfo.cmd == mpc_path)) {
+						state = req_command;
+						cmd = (mpcmd_t) reqInfo.cmd;
+					}
 					else {
 						send(sock, "HTTP/1.0 404 Not Found\015\012\015\012",
 							 25, 0);
@@ -951,9 +959,48 @@ int32_t startServer() {
 	mpconfig_t *control = getConfig();
 	int32_t mainsocket = -1;
 	int32_t val = 1;
+	char host[MP_HOSTLEN];
 	char port[20];
 	struct addrinfo hints;
 	struct addrinfo *result, *rp;
+	struct hostent *host_entry;
+	struct in_addr **addr_list;
+
+	snprintf(port, 19, "%d", control->port);
+
+	/* retrieve hostname */
+	if (gethostname(host, MP_HOSTLEN - 1) == -1) {
+		addMessage(0, "Could not get hostname, using 'localhost'!");
+		strcpy(host, "localhost");
+	}
+
+	/* Check if the hostname can be resolved
+	 * this may succeed even if it's just an /etc/hosts entry but then
+	 * we claim the maintainer knows what they are doing... */
+	host_entry = gethostbyname(host);
+	if (host_entry == NULL) {
+		fail(errno, "%s does not resolve to any address!", host);
+	}
+
+	/* yes, this is about 4 bytes more than we need but with strings it's always
+	 * better to have a buffer */
+	size_t bmlen = static_bookmarklet_js_len + strlen(host) + strlen(port);
+
+	control->bookmarklet = calloc(bmlen, 1);
+	if (control->bookmarklet == NULL) {
+		fail(errno, "Out of memory while creating bookmarklet!");
+	}
+	snprintf(control->bookmarklet, bmlen, (const char *) static_bookmarklet_js,
+			 host, port);
+
+	/* we have the data so we may as well print it on demand */
+	if (getDebug() > 1) {
+		addr_list = (struct in_addr **) host_entry->h_addr_list;
+		for (int i = 0; addr_list[i] != NULL; i++) {
+			addMessage(0, "IP address %d: %s\n", i + 1,
+					   inet_ntoa(*addr_list[i]));
+		}
+	}
 
 	memset(&hints, 0, sizeof (hints));
 	hints.ai_family = AF_INET6;
@@ -964,7 +1011,6 @@ int32_t startServer() {
 	hints.ai_addr = NULL;
 	hints.ai_next = NULL;
 
-	snprintf(port, 19, "%d", control->port);
 	if (getaddrinfo(NULL, port, &hints, &result) != 0) {
 		addMessage(0, "Could not get addrinfo!");
 		return -1;

@@ -421,6 +421,7 @@ mpconfig_t *readConfig(void) {
 	_cconfig->msg->lines = 0;
 	_cconfig->msg->current = 0;
 	_cconfig->port = MP_PORT;
+	_cconfig->bookmarklet = NULL;
 	_cconfig->isDaemon = 0;
 	_cconfig->searchDNP = 0;
 	_cconfig->streamURL = NULL;
@@ -732,6 +733,7 @@ void freeConfigContents() {
 
 	sfree(&(_cconfig->dbname));
 	sfree(&(_cconfig->musicdir));
+	sfree(&(_cconfig->bookmarklet));
 
 	for (i = 0; i < _cconfig->profiles; i++) {
 		freeProfile(_cconfig->profile[i]);

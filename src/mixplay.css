@@ -231,7 +231,7 @@ div#progress {
 	margin-bottom: 0.2em;
 }
 
-button {
+button, a {
 	background-color: transparent;
 	background-image: linear-gradient( to right bottom, lightblue, darkblue 20%, darkblue 80%, black );
 	font-size: 1em;

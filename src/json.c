@@ -1198,17 +1198,20 @@ jsonObject *jsonRead(char *json) {
 	return jo;
 }
 
-static char *sizeCheck(char *json, size_t *len) {
+static char *sizeCheckAdd(char *json, size_t *len, size_t add) {
 	char *ret = NULL;
 
-	/* an if *should* be enough */
-	while (strlen(json) > (*len) - JSON_LOWATER) {
+	while (strlen(json) > (*len) - (add + JSON_LOWATER)) {
 		*len = (*len) + JSON_INCBUFF;
 		ret = (char *) realloc(json, *len);
 		assert(ret != NULL);
 		json = ret;
 	}
 	return json;
+}
+
+static char *sizeCheck(char *json, size_t *len) {
+	return sizeCheckAdd(json, len, JSON_LOWATER);
 }
 
 /**
@@ -1220,6 +1223,8 @@ static char *jsonWriteVal(jsonObject * jo, char *json, size_t *len) {
 	switch (jo->type) {
 	case json_string:
 		strcat(json, "\"");
+		/* strings may be longer than JSON_LOWATER, so take extra care */
+		json = sizeCheckAdd(json, len, strlen((char *) jo->val));
 		strcat(json, (char *) jo->val);
 		strcat(json, "\"");
 		break;

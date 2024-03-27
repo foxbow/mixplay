@@ -15,6 +15,7 @@
 #include <stdbool.h>
 #include "msgbuf.h"
 
+#define MP_HOSTLEN 256
 #define MP_MSGLEN 512
 #define MAXCLIENT 100
 
@@ -170,6 +171,7 @@ typedef struct {
 	char *streamURL;			/* needed to load a new stream */
 	msgbuf_t *msg;				/* generic message buffer */
 	int32_t port;
+	char *bookmarklet;			/* the code for the 'play' bookmarklet */
 	uint32_t mpmode;			/* playmode, see PM_* */
 	uint32_t sleepto;			/* idle timeout for clients */
 	uint32_t dbDirty;

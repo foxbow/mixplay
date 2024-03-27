@@ -1621,6 +1621,7 @@ function updateShortcuts () {
 function updateConfig (data) {
   const pl = document.getElementById('profiles')
   const cl = document.getElementById('channels')
+  const bm = document.getElementById('bmlet')
   var choices = []
   var i
   var lineid = 4000
@@ -1691,6 +1692,13 @@ function updateConfig (data) {
   /* client debug is off but the server is in full debug mode */
   if ((debug === false) && (data.debug > 1)) {
     toggleDebug()
+  }
+
+  if (data.bookmarklet.length > 0) {
+    enableElement('bmlet', 1)
+    bm.href='javascript:'+data.bookmarklet
+  } else {
+    enableElement('bmlet', 0)
   }
 }
 

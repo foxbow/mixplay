@@ -36,6 +36,7 @@ static/mixplay.css
 static/mprc.html
 static/mpplayer.html
 static/mpplayer.js
+static/bookmarklet.js
 
 # Object files
 *.o
