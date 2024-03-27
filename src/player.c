@@ -677,15 +677,14 @@ void *reader( __attribute__ ((unused))
 									(control->current->title->artist,
 									 control->current->title->album) == 0) {
 									/* mute news */
-									if ((control->volume > 0) && (strcasecmp
-																  (control->current->title->title,
-																   "Nachrichten")
-																  == 0)) {
+									/*  *INDENT-OFF*  */
+									if ((control->volume > 0) && 
+									    (strcasecmp(control->current->title->title,
+													"Nachrichten") == 0)) {
 										toggleMute();
 										control->volume = AUTOMUTE;
 									}
 									/* unmute weather report */
-									/*  *INDENT-OFF*  */
 									if ((control->volume == AUTOMUTE) && 
 										(strcasecmp (control->current->title->
 													  title, "Wetter") == 0)) {
