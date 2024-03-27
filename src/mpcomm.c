@@ -81,13 +81,26 @@ void unlockClient(int32_t client) {
 	}
 }
 
+static jsonObject *jsonAddProfile(jsonObject * jo, const char *key,
+								  const profile_t * profile) {
+	jsonObject *val = NULL;
+
+	val = jsonAddStr(NULL, "name", profile->name);
+	jsonAddInt(val, "id", profile->id);
+	jsonAddStr(val, "url", profile->url);
+
+	return jsonAddObj(jo, key, val);
+}
+
 static jsonObject *jsonAddProfiles(jsonObject * jo, const char *key,
 								   profile_t ** vals, const int32_t num) {
 	int32_t i;
 
 	jo = jsonInitArr(jo, key);
 	for (i = 0; i < num; i++) {
-		jsonAddArrElement(jo, vals[i]->name, json_string);
+		jsonObject *jsonProfile = jsonAddProfile(NULL, "profile", vals[i]);
+
+		jsonAddArrElement(jo, jsonProfile, json_object);
 	}
 	return jo;
 }
@@ -226,9 +239,10 @@ char *serializeStatus(int32_t clientid, int32_t type) {
 		jsonAddStr(jo, "musicdir", data->musicdir);
 		jsonAddProfiles(jo, "profile", data->profile, data->profiles);
 		jsonAddInt(jo, "skipdnp", data->skipdnp);
-		jsonAddProfiles(jo, "sname", data->stream, data->streams);
 		jsonAddInt(jo, "sleepto", data->sleepto);
 		jsonAddInt(jo, "debug", getDebug());
+		jsonAddStr(jo, "bookmarklet",
+				   data->bookmarklet ? data->bookmarklet : "");
 	}
 	jsonAddInt(jo, "active", data->active);
 	jsonAddInt(jo, "playtime", data->playtime);

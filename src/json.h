@@ -10,10 +10,10 @@
 
 #include <stddef.h>
 
-/* if less than JSON_LOWATER bytes are unused in the string it will be
+/* if less than 2*JSON_LOWATER bytes are unused in the string it will be
  * increased by JSON_INCBUFF bytes
  */
-#define JSON_LOWATER 128
+#define JSON_LOWATER 64
 #define JSON_INCBUFF 512
 /*
  * JSON defined datatypes

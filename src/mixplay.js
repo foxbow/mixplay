@@ -33,6 +33,7 @@ var shortcuts = []
 var curvol = 0
 var inUpdate = 0
 var lastsearch = ''
+var profiles = []
 
 function debugLog (txt) {
   if (debug) {
@@ -161,7 +162,7 @@ function sendArg (cmd) {
  * 
  * todo: is ok ever used as a function?
  */
-function showConfirm (msg, ok, arg) {
+function showConfirm (msg, ok, arg="") {
   const cdiv = document.getElementById('confirm')
   if (cdiv.className === 'hide') {
     document.getElementById('confmsg').innerHTML = msg
@@ -280,6 +281,8 @@ function isActive (tab) {
 }
 
 function isPlay () {
+  /* don't steal keypresses when the keyboard is visible */
+  if (kbddiv && (kbddiv.className === '')) return false;
   return (isActive('extra0') ||
     ((isActive('extra1') && isActive('dnpfav0'))))
 }
@@ -577,8 +580,7 @@ function sendCMDArg (cmd, arg) {
       if (arg === shortcuts[i]) return
     }
     shortcuts.push(arg)
-    setCookies()
-    doUpdate |= 8
+    updateShortcuts()
     return
   }
 
@@ -587,8 +589,7 @@ function sendCMDArg (cmd, arg) {
     var pos = shortcuts.indexOf(arg + '')
     if (~pos) {
       shortcuts.splice(pos, 1)
-      setCookies()
-      doUpdate |= 8
+      updateShortcuts()
     } else {
       showConfirm(arg + ' is no shortcut in ' + shortcuts + '?!')
     }
@@ -626,7 +627,7 @@ function sendCMDArg (cmd, arg) {
       adaptUI(-1)
       break
     case 0x18: /* mpc_remprof */
-      showConfirm('Remove ' + arg + '?', 0x98, arg)
+      showConfirm('Remove ' + profiles[arg].name + '?', 0x98, arg)
       return
     case 0x98: /* confirm remprof */
       cmd = 0x18
@@ -730,7 +731,7 @@ function progWheel (e) {
 function ctrlVol (e) {
   const pos = e.clientX - this.offsetLeft
   const third = this.clientWidth / 3
-  if (curvol === -2) {
+  if (curvol < 0) {
     sendCMD(0x1d)
   } else {
     if (pos < third) {
@@ -1463,9 +1464,11 @@ function playerUpdate (data) {
     document.getElementById('volumebar').style.width = curvol + '%'
     document.getElementById('volumebar').className = ''
   } else if (curvol === -1) {
-    enableElement('volume', 0)
-  } else {
     document.getElementById('volumebar').className = 'mute'
+  } else if (curvol === -2) {
+    document.getElementById('volumebar').className = 'automute'
+  } else {
+    enableElement('volume', 0)
   }
 
   if (data.msg !== '') {
@@ -1574,12 +1577,11 @@ function updateUI () {
 
 /*
  * update the local shortcuts from cookie-data
- * config data is needed to align shortcut IDs with actual profiles/channels
  */
-function updateShortcuts (data) {
+function updateShortcuts () {
   const e = document.getElementById('shortcuts')
   var items = []
-  var i
+  var i=0
   var name
   var choices
   var lineid = 5000
@@ -1589,16 +1591,13 @@ function updateShortcuts (data) {
     items[0] = document.createElement('em')
     items[0].innerHTML = 'No shortcuts'
   } else {
-    for (i = 0; i < shortcuts.length; i++) {
+    while (i < shortcuts.length) {
+      name = ""
       var id = shortcuts[i]
-      if (id !== 0) {
-        if (id < 0) {
-          name = data.sname[-id - 1]
-        } else {
-          name = data.profile[id - 1]
-        }
+      if (profiles[id]) {
+        name = profiles[id].name
         choices = []
-        if (id !== -(active + 1)) {
+        if (id !== active) {
           choices.push(['&#x25B6;', 0x06])
         } else {
           name = '&#x25B6; ' + name
@@ -1606,93 +1605,100 @@ function updateShortcuts (data) {
         choices.push(['X', 'remsc'])
         items[i] = popselect(choices, id,
           name, 0, lineid++)
+        i++
       } else {
-        debugLog('Illegal channel 0 in shortcuts! (' + i + ')')
+        shortcuts.splice(i, 1)
       }
     }
+    setCookies()
   }
   tabify(e, 'sclist', items, 11)
 }
 
 /*
- * update basic configuration valöues from the reply
+ * update basic configuration values from the reply
  */
 function updateConfig (data) {
-  var e
-  var items = []
+  const pl = document.getElementById('profiles')
+  const cl = document.getElementById('channels')
+  const bm = document.getElementById('bmlet')
   var choices = []
   var i
   var lineid = 4000
   var name
-  /* set profile list */
-  e = document.getElementById('profiles')
-  wipeElements(e)
+  /* set profile/channel lists */
+  wipeElements(pl)
+  wipeElements(cl)
+  var pitems = []
+  var pnum=0
+  var citems = []
+  var cnum=0
   if (data.profile.length === 0) {
-    items[0] = document.createElement('em')
-    items[0].innerHTML = 'No profiles?'
+    pitems[0] = document.createElement('em')
+    pitems[0].innerHTML = 'No profiles?'
+    citems[0] = document.createElement('em')
+    citems[0].innerHTML = 'No channels'  
   } else {
+    profiles = []
     for (i = 0; i < data.profile.length; i++) {
-      name = data.profile[i]
+      // update profiles
+      profiles[data.profile[i].id] = data.profile[i]
+      name = data.profile[i].name
+      id = data.profile[i].id
       choices = []
-      if (i !== (active - 1)) {
+      if (id !== active) {
         choices.push(['&#x25B6;', 0x06])
-        if (i !== 0) {
+        if (id !== 1) {
           choices.push(['X', 0x18])
         }
       } else {
         name = '&#x25B6; ' + name
       }
       choices.push(['&#x2665;', 'shortcut']) /* FAV */
-      items[i] = popselect(choices, i + 1,
-        name, 0, lineid++)
-    }
-  }
-  tabify(e, 'prolist', items, 11)
-
-  e = document.getElementById('channels')
-  items = []
-  wipeElements(e)
-  if (data.sname.length === 0) {
-    items[0] = document.createElement('em')
-    items[0].innerHTML = 'No channels'
-  } else {
-    for (i = 0; i < data.sname.length; i++) {
-      name = data.sname[i]
-      choices = []
-      if (i !== -(active + 1)) {
-        choices.push(['&#x25B6;', 0x06])
-        choices.push(['X', 0x18])
+      if (data.profile[i].url === '') {
+        pitems[pnum++] = popselect(choices, id,
+          name, 0, lineid++)
       } else {
-        name = '&#x25B6; ' + name
+        citems[cnum++] = popselect(choices, id,
+          name, 0, lineid++)
       }
-      choices.push(['&#x2665;', 'shortcut']) /* FAV */
-      items[i] = popselect(choices, -(i + 1),
-        name, 0, lineid++)
+    }
+    if (cnum === 0) {
+      citems[0] = document.createElement('em')
+      citems[0].innerHTML = 'No channels'  
     }
   }
-  tabify(e, 'chanlist', items, 11)
+  tabify(pl, 'prolist', pitems, 11)
+  tabify(cl, 'chanlist', citems, 11)
+ 
+  updateShortcuts()
 
-  updateShortcuts(data)
-
-  if (active > 0) {
+  if (active == 0) {
+    setElement('active', 'No active profile/channel')
+  } else if (profiles[active].url === '') {
     if (favplay) {
       setElement('active', 'Playing favplay ' +
-          data.profile[active - 1])
+          profiles[active].name)
     } else {
       setElement('active', 'Playing profile ' +
-          data.profile[active - 1])
+          profiles[active].name)
     }
-  } else if (active < 0) {
-    setElement('active', 'Tuned in to ' +
-          data.sname[-active - 1])
   } else {
-    setElement('active', 'No active profile/channel')
+    setElement('active', 'Tuned in to ' +
+          profiles[active].name)
   }
   /*  idlesleep = data.sleepto * 1000 */
 
   /* client debug is off but the server is in full debug mode */
   if ((debug === false) && (data.debug > 1)) {
     toggleDebug()
+  }
+
+  if (data.bookmarklet.length > 0) {
+    enableElement('bmlet', 1)
+    bm.href='javascript:'+data.bookmarklet
+  } else {
+    enableElement('bmlet', 0)
   }
 }
 
@@ -1743,7 +1749,7 @@ function switchUI () {
     smallUI = -1
   } else {
     adaptUI(1)
-    setCookies()
+    updateShortcuts()
   }
 }
 
@@ -1905,7 +1911,7 @@ function tap () {
   playtimer = 0
   if (smallUI === -1) {
     smallUI = 2
-    setCookies()
+    updateShortcuts()
     el.className = ''
     return
   }
