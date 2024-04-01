@@ -6,7 +6,7 @@ if (window.getSelection) {
     // xmlhttp.open('POST', '%s:%s/mpctrl/cmd?' + JSON.stringify({ cmd: 0x17, arg: url, clientid: 0 }), true)
     // xmlhttp.send()
     // window.alert('Sent')
-    location.assign('%s:%s/mpctrl/cmd?' + JSON.stringify({ cmd: 0x17, arg: url, clientid: 0 }))
+    location.assign('http://%s:%s/mpctrl/cmd?' + JSON.stringify({ cmd: 0x17, arg: url, clientid: 0 }))
   } else {
     window.alert('Nothing selected!')
   }
