@@ -625,8 +625,9 @@ void *reader( __attribute__ ((unused))
 							*aend = 0;
 
 							/* only do this if the title actually changed
-							 * some streams mix up upper and lower cases in titles */
-							if (strcasecmp
+							 * some streams mix up title descriptions in weird ways, so we 
+							 * just check for similar enough to pass a fuzzy search */
+							if (!checkSim
 								(apos, control->current->title->display)) {
 
 								/* The album field contains the stream name. If it is not set
@@ -688,274 +689,276 @@ void *reader( __attribute__ ((unused))
 									if ((control->volume == AUTOMUTE) && 
 										(strcasecmp (control->current->title->
 													  title, "Wetter") == 0)) {
+									toggleMute();
+									}
 									/*  *INDENT-ON*  */					
+								}
+								else if (control->volume == AUTOMUTE) {
 									toggleMute();
 								}
-							}
-							else if (control->volume == AUTOMUTE) {
-								toggleMute();
-							}
-							notifyChange(MPCOMM_TITLES);
-						}		/* title changed */
-					}			/* stream title */
-				}				/* ICY META */
-				break;
-
-case 'T':						/* TAG reply */
-				addMessage(MPV + 1, "Got TAG reply?!");
-				break;
-
-case 'J':						/* JUMP reply */
-				break;
-
-case 'S':						/* Status message after loading a song (stream info) */
-				break;
-
-case 'F':						/* Status message during playing (frame info) */
-				/* $1   = framecount (int32_t)
-				 * $2   = frames left this song (int32_t)
-				 * in  = seconds (float)
-				 * rem = seconds left (float)
-				 */
-				tpos = strrchr(line, ' ');
-				if (tpos == NULL) {
-					addMessage(0, "Error in Frame info: %s", line);
+								notifyChange(MPCOMM_TITLES);
+							}	/* title changed */
+						}		/* stream title */
+					}			/* ICY META */
 					break;
-				}
-				rem = strtof(tpos, NULL);
-				*tpos = 0;
-				tpos = strrchr(line, ' ');
-				if (tpos == NULL) {
-					addMessage(0, "Error in Frame info: %s", line);
+
+				case 'T':		/* TAG reply */
+					addMessage(MPV + 1, "Got TAG reply?!");
 					break;
-				}
-				intime = strtof(tpos, NULL);
 
-				/* fade in if needed */
-				if (invol < 100) {
-					invol++;
-					snprintf(line, MAXPATHLEN, "volume %i\n", invol);
-					toPlayer(0, line);
-				}
-
-				if (intime != oldtime) {
-					oldtime = intime;
-				}
-				else {
+				case 'J':		/* JUMP reply */
 					break;
-				}
 
-				control->playtime = (uint32_t) roundf(intime);
-				/* file play */
-				if (!(control->mpmode & PM_STREAM)) {
-					control->percent = (100 * intime) / (rem + intime);
-					control->remtime = (uint32_t) roundf(rem);
+				case 'S':		/* Status message after loading a song (stream info) */
+					break;
 
-					/* we could just be switching from playlist to database */
-					if (control->current == NULL) {
-						if (!(control->mpmode & PM_SWITCH)) {
-							addMessage(MPV + 1,
-									   "No current title and not switching!");
-						}
+				case 'F':		/* Status message during playing (frame info) */
+					/* $1   = framecount (int32_t)
+					 * $2   = frames left this song (int32_t)
+					 * in  = seconds (float)
+					 * rem = seconds left (float)
+					 */
+					tpos = strrchr(line, ' ');
+					if (tpos == NULL) {
+						addMessage(0, "Error in Frame info: %s", line);
 						break;
 					}
-
-					/* Is the player initializing or changing profiles */
-					if (playerIsBusy()) {
+					rem = strtof(tpos, NULL);
+					*tpos = 0;
+					tpos = strrchr(line, ' ');
+					if (tpos == NULL) {
+						addMessage(0, "Error in Frame info: %s", line);
 						break;
 					}
+					intime = strtof(tpos, NULL);
 
-					/* this is bad! */
-					if (control->current->title == NULL) {
-						addMessage(0, "No current title!");
-						break;
+					/* fade in if needed */
+					if (invol < 100) {
+						invol++;
+						snprintf(line, MAXPATHLEN, "volume %i\n", invol);
+						toPlayer(0, line);
 					}
 
-					if ((fading) && (rem <= control->fade)) {
-						/* should the playcount be increased? */
-						playCount(control->current->title, p_skipped);
-						p_skipped = 0;
-
-						if (control->current->next == control->current) {
-							control->status = mpc_idle;	/* Single song: STOP */
-						}
-						else {
-							control->current = control->current->next;
-							/* swap players */
-							fdset = fdset ? 0 : 1;
-							invol = 0;
-							outvol = 100;
-							toPlayer(0, "volume 0\n");
-							sendplay();
-							plCheck(true);
-						}
-					}
-				}
-				break;
-
-case 'P':						/* Player status */
-				cmd = atoi(&line[3]);
-
-				switch (cmd) {
-				case 0:		/* STOP */
-					addMessage(MPV + 1, "FG Player stopped");
-					/* player was not yet fully initialized or the current
-					 * profile/stream has changed start again */
-					if (control->status == mpc_stop) {
-						control->status = mpc_idle;
-						break;
-					}
-					/* unclear how this happens... */
-					if (control->status == mpc_start) {
-						break;
-					}
-					/* stream stopped playing (PAUSE/switch profile) */
-					else if (control->mpmode & PM_STREAM) {
-						addMessage(MPV + 1, "Stream stopped");
-						/* stream stopped without user interaction */
-						if (control->status == mpc_play) {
-							addMessage(MPV + 1, "Trying to restart stream");
-							control->status = mpc_start;
-							sendplay();
-						}
-						else {
-							control->status = mpc_idle;
-						}
-					}
-					/* we're playing a playlist */
-					else if ((control->current != NULL) &&
-							 !(control->mpmode & PM_SWITCH)) {
-						addMessage(MPV + 2, "Title change");
-						if (p_order == 1) {
-							if (playCount(control->current->title, p_skipped)
-								== 1) {
-								p_order = 0;
-							}
-							p_skipped = 0;
-						}
-
-						if (p_order < 0) {
-							while ((control->current->prev != NULL)
-								   && p_order < 0) {
-								control->current = control->current->prev;
-								p_order++;
-							}
-							/* ignore skip before first title in playlist */
-						}
-
-						if (p_order > 0) {
-							while ((control->current->next != NULL)
-								   && p_order > 0) {
-								control->current = control->current->next;
-								p_order--;
-							}
-							/* stop on end of playlist */
-							if (p_order > 0) {
-								control->status = mpc_idle;	/* stop */
-							}
-						}
-
-						if (control->status != mpc_idle) {
-							sendplay();
-						}
-
-						if (control->mpmode == PM_DATABASE) {
-							plCheck(true);
-						}
-					}
-					/* always re-enable proper playorder after stop */
-					p_order = 1;
-					break;
-
-				case 1:		/* PAUSE */
-					control->status = mpc_pause;
-					break;
-
-				case 2:		/* PLAY */
-					if (control->mpmode & PM_SWITCH) {
-						addMessage(MPV + 1,
-								   "Playing profile #%" PRIu32 ": %s",
-								   control->active,
-								   getProfileName(control->active));
-						control->mpmode &= ~PM_SWITCH;
-						if (control->active != 0) {
-							writeConfig(NULL);
-							oactive = control->active;
-						}
-					}
-					control->status = mpc_play;
-					notifyChange(MPCOMM_CONFIG);
-					break;
-
-				default:
-					addMessage(0, "Unknown status %i on FG player!\n%s",
-							   cmd, line);
-					break;
-				}
-				break;
-
-case 'V':						/* volume reply */
-				break;
-
-case 'E':
-				addMessage(0, "FG: %s!", line + 3);
-				if (control->current != NULL) {
-					if (control->mpmode & PM_STREAM) {
-						addMessage(MPV + 1,
-								   "FG: %s <- %s\n Name: %s\n URL: %s",
-								   getProfileName(control->active),
-								   getProfileName(oactive),
-								   control->current->title->display,
-								   control->streamURL);
+					if (intime != oldtime) {
+						oldtime = intime;
 					}
 					else {
+						break;
+					}
+
+					control->playtime = (uint32_t) roundf(intime);
+					/* file play */
+					if (!(control->mpmode & PM_STREAM)) {
+						control->percent = (100 * intime) / (rem + intime);
+						control->remtime = (uint32_t) roundf(rem);
+
+						/* we could just be switching from playlist to database */
+						if (control->current == NULL) {
+							if (!(control->mpmode & PM_SWITCH)) {
+								addMessage(MPV + 1,
+										   "No current title and not switching!");
+							}
+							break;
+						}
+
+						/* Is the player initializing or changing profiles */
+						if (playerIsBusy()) {
+							break;
+						}
+
+						/* this is bad! */
+						if (control->current->title == NULL) {
+							addMessage(0, "No current title!");
+							break;
+						}
+
+						if ((fading) && (rem <= control->fade)) {
+							/* should the playcount be increased? */
+							playCount(control->current->title, p_skipped);
+							p_skipped = 0;
+
+							if (control->current->next == control->current) {
+								control->status = mpc_idle;	/* Single song: STOP */
+							}
+							else {
+								control->current = control->current->next;
+								/* swap players */
+								fdset = fdset ? 0 : 1;
+								invol = 0;
+								outvol = 100;
+								toPlayer(0, "volume 0\n");
+								sendplay();
+								plCheck(true);
+							}
+						}
+					}
+					break;
+
+				case 'P':		/* Player status */
+					cmd = atoi(&line[3]);
+
+					switch (cmd) {
+					case 0:	/* STOP */
+						addMessage(MPV + 1, "FG Player stopped");
+						/* player was not yet fully initialized or the current
+						 * profile/stream has changed start again */
+						if (control->status == mpc_stop) {
+							control->status = mpc_idle;
+							break;
+						}
+						/* unclear how this happens... */
+						if (control->status == mpc_start) {
+							break;
+						}
+						/* stream stopped playing (PAUSE/switch profile) */
+						else if (control->mpmode & PM_STREAM) {
+							addMessage(MPV + 1, "Stream stopped");
+							/* stream stopped without user interaction */
+							if (control->status == mpc_play) {
+								addMessage(MPV + 1,
+										   "Trying to restart stream");
+								control->status = mpc_start;
+								sendplay();
+							}
+							else {
+								control->status = mpc_idle;
+							}
+						}
+						/* we're playing a playlist */
+						else if ((control->current != NULL) &&
+								 !(control->mpmode & PM_SWITCH)) {
+							addMessage(MPV + 2, "Title change");
+							if (p_order == 1) {
+								if (playCount
+									(control->current->title, p_skipped)
+									== 1) {
+									p_order = 0;
+								}
+								p_skipped = 0;
+							}
+
+							if (p_order < 0) {
+								while ((control->current->prev != NULL)
+									   && p_order < 0) {
+									control->current = control->current->prev;
+									p_order++;
+								}
+								/* ignore skip before first title in playlist */
+							}
+
+							if (p_order > 0) {
+								while ((control->current->next != NULL)
+									   && p_order > 0) {
+									control->current = control->current->next;
+									p_order--;
+								}
+								/* stop on end of playlist */
+								if (p_order > 0) {
+									control->status = mpc_idle;	/* stop */
+								}
+							}
+
+							if (control->status != mpc_idle) {
+								sendplay();
+							}
+
+							if (control->mpmode == PM_DATABASE) {
+								plCheck(true);
+							}
+						}
+						/* always re-enable proper playorder after stop */
+						p_order = 1;
+						break;
+
+					case 1:	/* PAUSE */
+						control->status = mpc_pause;
+						break;
+
+					case 2:	/* PLAY */
+						if (control->mpmode & PM_SWITCH) {
+							addMessage(MPV + 1,
+									   "Playing profile #%" PRIu32 ": %s",
+									   control->active,
+									   getProfileName(control->active));
+							control->mpmode &= ~PM_SWITCH;
+							if (control->active != 0) {
+								writeConfig(NULL);
+								oactive = control->active;
+							}
+						}
+						control->status = mpc_play;
+						notifyChange(MPCOMM_CONFIG);
+						break;
+
+					default:
+						addMessage(0, "Unknown status %i on FG player!\n%s",
+								   cmd, line);
+						break;
+					}
+					break;
+
+				case 'V':		/* volume reply */
+					break;
+
+				case 'E':
+					addMessage(0, "FG: %s!", line + 3);
+					if (control->current != NULL) {
+						if (control->mpmode & PM_STREAM) {
+							addMessage(MPV + 1,
+									   "FG: %s <- %s\n Name: %s\n URL: %s",
+									   getProfileName(control->active),
+									   getProfileName(oactive),
+									   control->current->title->display,
+									   control->streamURL);
+						}
+						else {
 							/*  *INDENT-OFF*  */
 							addMessage(MPV+1, "FG: %i\n> Name: %s\n> Path: %s",
 									   control->current->title->key,
 									   control->current->title->display,
 									   fullpath(control->current->title->path));
 							/*  *INDENT-ON*  */
+						}
+					}
+					return killPlayers(1);
+					break;
+
+				default:
+					addMessage(0, "Warning: %s", line);
+					break;
+				}				/* case line[1] */
+			}					/* if line starts with '@' */
+			else {
+				/* verbosity 1 as sometimes tags appear here which confuses on level 0 */
+				addMessage(MPV + 1, "Raw: %s", line);
+			}
+		}						/* FD_ISSET( p_status ) */
+
+		if (pfd[fdset ? 3 : 1].revents & POLLIN) {
+			key = readline(line, MAXPATHLEN, p_error[fdset][0]);
+			if (key > 1) {
+				if (strstr(line, "rror: ")) {
+					addMessage(0, "%s", line);
+					return killPlayers(1);
+				}
+				else if (strstr(line, "Warning: ") == line) {
+					/* ignore content-type warnings */
+					if (!strstr(line, "content-type")) {
+						addMessage(0, "FE: %s", line);
 					}
 				}
-				return killPlayers(1);
-				break;
-
-default:
-				addMessage(0, "Warning: %s", line);
-				break;
-			}					/* case line[1] */
-		}						/* if line starts with '@' */
-		else {
-			/* verbosity 1 as sometimes tags appear here which confuses on level 0 */
-			addMessage(MPV + 1, "Raw: %s", line);
-		}
-	}							/* FD_ISSET( p_status ) */
-
-	if (pfd[fdset ? 3 : 1].revents & POLLIN) {
-		key = readline(line, MAXPATHLEN, p_error[fdset][0]);
-		if (key > 1) {
-			if (strstr(line, "rror: ")) {
-				addMessage(0, "%s", line);
-				return killPlayers(1);
-			}
-			else if (strstr(line, "Warning: ") == line) {
-				/* ignore content-type warnings */
-				if (!strstr(line, "content-type")) {
-					addMessage(0, "FE: %s", line);
+				else {
+					addMessage(MPV + 1, "FE: %s", line);
 				}
 			}
-			else {
-				addMessage(MPV + 1, "FE: %s", line);
-			}
 		}
-	}
-	updateUI();
+		updateUI();
 	}
 	while ((control->status != mpc_quit) && (control->status != mpc_reset));
 
 	dbWrite(0);
 
 	return NULL;
-	}
+}
 
 #undef MPV

@@ -15,6 +15,9 @@
 
 #define MAXPATHLEN 256
 
+/* similarity index for checksim */
+#define SIMGUARD 70
+
 /*
  * string helper functions that avoid target buffer overflows
  */
@@ -30,6 +33,8 @@ void fail(const int32_t error, const char *msg, ...)
 /**
  * General utility functions
  */
+bool patMatch(const char *text, const char *pat);
+bool checkSim(const char *text, const char *pat);
 int32_t strltcpy(char *dest, const char *src, const size_t len);
 int32_t strltcat(char *dest, const char *src, const size_t len);
 char *strip(char *dest, const char *src, const size_t len);

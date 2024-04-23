@@ -1381,6 +1381,7 @@ function playerUpdate (data) {
     enableElement('doublet', !isstream)
     enableElement('fav', !isstream)
     enableElement('clprof', !isstream)
+    if (isstream) switchTabByRef('dnpfav', 0)
   }
 
   if ((data.clientid > 0) && (clientid !== data.clientid)) {
