@@ -11,9 +11,6 @@
 /* do not return more than 100 titles */
 #define MAXSEARCH 100
 
-/* similarity index for checksim */
-#define SIMGUARD 70
-
 /* flags - keep clear of range bits! */
 #define MP_NONE  0x0000
 #define MP_FAV   0x0001			/* Favourite */
@@ -124,6 +121,4 @@ uint32_t getPlaycount(bool high);
 
 void dumpState(void);
 
-/* exported for unittests */
-int32_t checkSim(const char *text, const char *pat);
 #endif /* _MUSICMGR_H_ */
