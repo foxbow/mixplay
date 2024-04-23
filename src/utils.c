@@ -15,6 +15,74 @@
 #include "utils.h"
 
 /*
+ * checks if pat has a matching in text. If text is shorter than pat then
+ * the test fails.
+ */
+bool patMatch(const char *text, const char *pat) {
+	char *lotext;
+	char *lopat;
+	int32_t best = 0;
+	int32_t res;
+	int32_t plen = strlen(pat);
+	int32_t tlen = strlen(text);
+	int32_t i, j;
+
+	/* The pattern must not be longer than the text! */
+	if (tlen < plen) {
+		return false;
+	}
+
+	/* A pattern must deliver at least some information */
+	if (strlen(pat) < 2) {
+		return false;
+	}
+
+	/* prepare the pattern */
+	lopat = (char *) falloc(strlen(pat) + 3, 1);
+	strltcpy(lopat + 1, pat, plen + 1);
+	lopat[0] = 0;
+	lopat[plen + 1] = 0;
+
+	/* prepare the text */
+	lotext = (char *) falloc(tlen + 1, 1);
+	strltcpy(lotext, text, tlen + 1);
+
+	/* check */
+	for (i = 0; i <= (tlen - plen); i++) {
+		res = 0;
+		for (j = i; j < plen + i; j++) {
+			if ((lotext[j] == lopat[j - i]) ||
+				(lotext[j] == lopat[j - i + 1]) ||
+				(lotext[j] == lopat[j - i + 2])) {
+				res++;
+			}
+			if (res > best) {
+				best = res;
+			}
+		}
+	}
+
+	/* compute percentual match */
+	res = (100 * best) / plen;
+	free(lotext);
+	free(lopat);
+	return (res >= SIMGUARD);
+}
+
+/*
+ * symmetric patMatch that checks if text is shorter than pattern
+ * used for artist checking in addNewTitle
+ */
+bool checkSim(const char *text, const char *pat) {
+	if (strlen(text) < strlen(pat)) {
+		return patMatch(pat, text);
+	}
+	else {
+		return patMatch(text, pat);
+	}
+}
+
+/*
  * like strncpy but len is the max len of the target string, not the number of
  * bytes to copy.
  * Also the target string is always terminated with a 0 byte
