@@ -638,6 +638,10 @@ void *reader( __attribute__ ((unused))
 								if ((control->current->title->album[0] == '\0')
 									||
 									(strcasecmp
+									 (control->current->title->title,
+									  control->current->title->album) == 0)
+									||
+									(strcasecmp
 									 (control->current->title->artist,
 									  control->current->title->album) == 0)) {
 									strip(control->current->title->display,
@@ -661,8 +665,9 @@ void *reader( __attribute__ ((unused))
 									strip(control->current->title->title,
 										  tpos + 3, NAMELEN - 1);
 								}
+
 								/* can't find a title, so everything goes into the title
-								 * line (this is centered on the display) */
+								 * line (this is centered and large on the display) */
 								else {
 									strip(control->current->title->title, apos,
 										  NAMELEN - 1);
@@ -687,9 +692,9 @@ void *reader( __attribute__ ((unused))
 									}
 									/* unmute weather report */
 									if ((control->volume == AUTOMUTE) && 
-										(strcasecmp (control->current->title->
-													  title, "Wetter") == 0)) {
-									toggleMute();
+										(strcasecmp (control->current->title->title,
+													 "Wetter") == 0)) {
+										toggleMute();
 									}
 									/*  *INDENT-ON*  */					
 								}
