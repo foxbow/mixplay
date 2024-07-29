@@ -213,13 +213,16 @@ static int32_t scanpronames(char *input, profile_t *** target, int32_t max) {
 
 		for (i = 0; i < num; i++) {
 			if (line[i][1] == ':') {
-				(*target)[i] = createProfile(line[i] + 2, NULL, 0, 50, true);
+				(*target)[i] =
+					createProfile(line[i] + 2, NULL, 0, _cconfig->volume,
+								  true);
 				if (line[i][0] == '1') {
 					(*target)[i]->favplay = 1;
 				}
 			}
 			else {
-				(*target)[i] = createProfile(line[i], NULL, 0, 50, true);
+				(*target)[i] =
+					createProfile(line[i], NULL, 0, _cconfig->volume, true);
 			}
 			free(line[i]);
 		}
