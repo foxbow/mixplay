@@ -10,18 +10,31 @@ function mpstopper() {
         echo "Stopping mixplayd.."
         kill ${PID}
         if [ $? != 0 ]; then
-            echo "Error while stopping mixplayd.."
-            echo -n "${LIST}"
+            echo "Error while stopping mixplayd"
+            echo "${LIST}"
             exit
         fi
         for i in {1..5}; do
           sleep 1
-          if [ ! -f /tmp/mixplayd.pid ]; then
+          kill -0 ${PID} 2> /dev/null
+          if [ $? = 1 ]; then
             return
           fi
         done
         echo "Killing mixplayd!"
         kill -9 ${PID}
+        if [ $? != 0 ]; then
+            echo "Error while killing mixplayd"
+            echo "${LIST}"
+            exit
+        fi
+        for i in {1..5}; do
+          sleep 1
+          kill -0 ${PID} 2> /dev/null
+          if [ $? = 1 ]; then
+            return
+          fi
+        done
     else
       echo "mixplayd(${PID}) does not exist!"
     fi
@@ -43,3 +56,4 @@ if [ "$1" = "-r" ]; then
     echo "${MP} is not available!"
   fi
 fi
+

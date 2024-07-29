@@ -46,7 +46,7 @@
 #endif
 
 /* message offset */
-#define MPV 0
+#define MPV 10
 
 /* the kind of request that came in */
 typedef enum {

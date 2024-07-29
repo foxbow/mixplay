@@ -40,10 +40,20 @@ static long openAudio(char const *const channel) {
 		return NOAUDIO;
 	}
 
-	snd_mixer_open(&_handle, 0);
-	if (_handle == NULL) {
+	int rv = snd_mixer_open(&_handle, 0);
+
+	if (rv < 0) {
 		/* shouldn't this be deadly? */
 		addMessage(0, "No ALSA support");
+		addError(-rv);
+		return NOAUDIO;
+	}
+
+	usleep(250000);				// TODO: removeme!!
+
+	if (_handle == NULL) {
+		// can this even happen?
+		addMessage(0, "No more ALSA support?");
 		return NOAUDIO;
 	}
 
@@ -65,7 +75,6 @@ static long openAudio(char const *const channel) {
 	_elem = snd_mixer_find_selem(_handle, _sid);
 	/**
 	 * for some reason this can't be free'd explicitly.. ALSA is weird!
-	 * 
 	 */
 	if (_elem == NULL) {
 		addMessage(0, "Can't find channel %s!", channel);
