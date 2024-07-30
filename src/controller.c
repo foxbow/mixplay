@@ -531,7 +531,9 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 				config->mpmode |= PM_SWITCH;
 				/* write database if needed */
 				dbWrite(0);
-				getProfile(config->active)->volume = config->volume;
+				if (config->active != 0) {
+					getProfile(config->active)->volume = config->volume;
+				}
 				config->active = profileid;
 				asyncRun(plSetProfile);
 			}

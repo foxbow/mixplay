@@ -990,8 +990,8 @@ int32_t startServer() {
 	if (control->bookmarklet == NULL) {
 		fail(errno, "Out of memory while creating bookmarklet!");
 	}
-	snprintf(control->bookmarklet, bmlen, (const char *) static_bookmarklet_js,
-			 host, port);
+	snprintf(control->bookmarklet, bmlen,
+			 (const char *) &static_bookmarklet_js[0], host, port);
 
 	/* we have the data so we may as well print it on demand */
 	if (getDebug() > 1) {

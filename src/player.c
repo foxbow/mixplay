@@ -637,11 +637,11 @@ void *reader( __attribute__ ((unused))
 								 * shown but not put in the history */
 								if ((control->current->title->album[0] == '\0')
 									||
-									(strcasecmp
+									(!checkSim
 									 (control->current->title->title,
 									  control->current->title->album) == 0)
 									||
-									(strcasecmp
+									(!checkSim
 									 (control->current->title->artist,
 									  control->current->title->album) == 0)) {
 									strip(control->current->title->display,
