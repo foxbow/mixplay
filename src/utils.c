@@ -14,9 +14,68 @@
 
 #include "utils.h"
 
+/**
+ * checks if a character is a divisor
+ * used in patPrep to remove 'fancy' characters before
+ * checking similarity of strings
+ */
+static bool isdiv(const char c) {
+	switch (c) {
+	case '-':
+	case '/':
+	case '.':
+	case ',':
+	case ':':
+	case ';':
+	case '&':
+	case '+':
+	case '*':
+	case '(':
+	case ')':
+	case '[':
+	case ']':
+		return true;
+		break;
+	}
+	return false;
+}
+
+/**
+ * prepares the text in src for comparing, meaning:
+ * 1. multiple whitespaces are combined into one
+ * 2. divisors are removed (-,.:;/)
+ * 3. text is turned lowercase
+ * 
+ * returns the length of the resulting string
+ */
+static int patPrep(char *tgt, const char *src, int len) {
+	int tpos = 0;
+	bool sflag = false;
+
+	for (int pos = 0; pos < len; pos++) {
+		// reduce whitespaces
+		if (isspace(src[pos])) {
+			if (sflag)
+				continue;
+			sflag = true;
+		}
+		else
+			sflag = false;
+
+		// skip divisors
+		if (isdiv(src[pos]))
+			continue;
+
+		tgt[tpos++] = tolower(src[pos]);
+	}
+
+	tgt[tpos] = 0;
+	return tpos;
+}
+
 /*
  * checks if pat has a matching in text. If text is shorter than pat then
- * the test fails.
+ * the test fails by definition.
  */
 bool patMatch(const char *text, const char *pat) {
 	char *lotext;
@@ -39,13 +98,13 @@ bool patMatch(const char *text, const char *pat) {
 
 	/* prepare the pattern */
 	lopat = (char *) falloc(strlen(pat) + 3, 1);
-	strltcpy(lopat + 1, pat, plen + 1);
+	patPrep(lopat + 1, pat, plen);
 	lopat[0] = 0;
 	lopat[plen + 1] = 0;
 
 	/* prepare the text */
 	lotext = (char *) falloc(tlen + 1, 1);
-	strltcpy(lotext, text, tlen + 1);
+	patPrep(lotext, text, tlen);
 
 	/* check */
 	for (i = 0; i <= (tlen - plen); i++) {
@@ -64,8 +123,8 @@ bool patMatch(const char *text, const char *pat) {
 
 	/* compute percentual match */
 	res = (100 * best) / plen;
-	free(lotext);
-	free(lopat);
+	sfree(&lotext);
+	sfree(&lopat);
 	return (res >= SIMGUARD);
 }
 
