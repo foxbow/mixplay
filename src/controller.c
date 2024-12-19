@@ -102,7 +102,6 @@ static int32_t playResults(mpcmd_t range, const char *arg,
  */
 void unlockController(void) {
 	int32_t cnt = 0;
-	char msg[32];
 
 	/* this must only be called when stopping or restarting the player! */
 	assert((getConfig()->status == mpc_quit) ||
@@ -118,8 +117,7 @@ void unlockController(void) {
 	 * restart =/ It may make sense to remember the tid of the current async
 	 * operation and terminate that explicitly. */
 	while ((pthread_mutex_trylock(&_asynclock) == EBUSY) && (cnt++ < 5)) {
-		snprintf(msg, 32, "async blocked! retrying %i", cnt);
-		activity(0, msg);
+		activity(0, "async blocked! retrying %i", cnt);
 		sleep(1);				// poll every second (give up after 5s)
 	}
 	pthread_mutex_unlock(&_asynclock);

@@ -1291,8 +1291,6 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 							 uint32_t * pcount, uint64_t maxcount) {
 	mptitle_t *runner = guard;
 
-	activity(2, "Adding title(s)");
-
 	/* zero steps is a bad idea but may happen, since we play with randum
 	 * numbers */
 	if (steps == 0) {
@@ -1476,7 +1474,6 @@ static int32_t addNewTitle(void) {
 	}
 
 	/* step through the playlist and check for repeats */
-	activity(2, "Adding title");
 	do {
 		/* skip searched titles */
 		if (pl->title->flags & MP_INPL) {
@@ -1643,6 +1640,7 @@ void plCheck(bool fill) {
 	/* fill up the playlist with new titles */
 	if (fill) {
 		while (cnt < 10) {
+			activity(0, "Add title %i", cnt);
 			addNewTitle();
 			cnt++;
 		}

@@ -132,7 +132,7 @@ const char *mpcString(mpcmd_t rawcmd) {
  */
 mpconfig_t *getConfig() {
 	pthread_mutex_lock(&conflock);
-	if (_cconfig == NULL) {
+	while (_cconfig == NULL) {
 		pthread_cond_wait(&confinit, &conflock);
 	}
 	pthread_mutex_unlock(&conflock);
@@ -480,7 +480,7 @@ mpconfig_t *readConfig(void) {
 
 			/*** legacy read **********************************************************/
 			if (strstr(line, "profiles=") == line) {
-				_cconfig->profiles = scanpronames(pos, &_cconfig->profile, -1);
+				_cconfig->profiles = scanpronames(pos, &_cconfig->profile, 0);
 				cstart = _cconfig->profiles;
 			}
 			if (strstr(line, "volume=") == line) {
@@ -943,13 +943,23 @@ char *getCurrentActivity(void) {
  * Print message in debug interface when debuglevel is < n, so -1 means
  * the activity is not shown in debuginterface
  */
-void activity(int32_t v, const char *act) {
-	if (strcmp(act, _curact)) {
-		strtcpy(_curact, act, MP_ACTLEN);
+void activity(int32_t v, const char *act, ...) {
+	static char newact[76];
+	va_list args;
+
+	va_start(args, act);
+	vsprintf(newact, act, args);
+	va_end(args);
+
+	if (strcmp(newact, _curact)) {
+		strtcpy(_curact, newact, MP_ACTLEN);
 		notifyChange(MPCOMM_TITLES);
 		if (getDebug() >= v) {
 			printf("\r* %s\r", _curact);
 		}
+	}
+	else {
+		addMessage(0, "'%s' should probably have a throbber!", act);
 	}
 }
 

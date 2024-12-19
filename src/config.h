@@ -227,7 +227,8 @@ void addMessage(int32_t v, const char *msg, ...)
 
 char *getCurrentActivity(void);
 
-void activity(int32_t v, const char *act);
+void activity(int32_t v, const char *msg, ...)
+	__attribute__ ((__format__(__printf__, 2, 3)));
 
 void updateUI(void);
 

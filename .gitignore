@@ -73,3 +73,9 @@ static/bookmarklet.js
 
 # Logfiles
 *.log
+
+# Coredumps
+core*
+
+# coverity archives
+*cov.tgz

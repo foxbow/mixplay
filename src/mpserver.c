@@ -795,7 +795,10 @@ static void *clientHandler(void *args) {
 				break;
 
 			case req_mp3:		/* send mp3 */
-				stat(fullpath(title->path), &sbuf);
+				if (stat(fullpath(title->path), &sbuf) == -1) {
+					addMessage(0, "Could not stat %s", fullpath(title->path));
+					break;
+				}
 				/* remove anything non-ascii7bit from the filename so asian
 				 * smartphones don't consider the filename to be hanzi */
 				sprintf(commdata,

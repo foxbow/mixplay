@@ -139,6 +139,7 @@ uint64_t msgBufGetLastRead(msgbuf_t * msgbuf) {
 void msgBuffClear(msgbuf_t * msgbuf) {
 	clmessage *line;
 
+	pthread_mutex_lock(msgbuf->msgLock);
 	while ((line = msgBuffGet(msgbuf)) != NULL) {
 		free(line->msg);
 		free(line);
@@ -147,6 +148,7 @@ void msgBuffClear(msgbuf_t * msgbuf) {
 	msgbuf->current = 0;
 	msgbuf->count = 0;
 	msgbuf->unread = 0;
+	pthread_mutex_unlock(msgbuf->msgLock);
 }
 
 /*

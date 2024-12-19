@@ -1,6 +1,6 @@
 #!/bin/bash
 
-COVPATH=../cov-analysis-linux64-2021.12.1/bin/
+COVPATH=../cov-analysis-linux64-2023.12.2/bin/
 
 # temporary set coverity path to the right installation
 
