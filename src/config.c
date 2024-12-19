@@ -959,7 +959,7 @@ void activity(int32_t v, const char *act, ...) {
 		}
 	}
 	else {
-		addMessage(0, "'%s' should probably have a throbber!", act);
+		addMessage(1, "'%s' should probably have a throbber!", act);
 	}
 }
 
