@@ -86,6 +86,7 @@ static const char *mpccommand[] = {
 	"reset",
 	"pause",
 	"clone",
+	"upload",
 	"idle"
 };
 

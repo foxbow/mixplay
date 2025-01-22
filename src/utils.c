@@ -266,15 +266,17 @@ char *fetchline(FILE * fp) {
 /**
  * reads from the fd into the line buffer until either a CR
  * comes or the fd stops sending characters.
- * returns number of read bytes or -1 on overflow.
+ * returns number of read bytes, -1 on overflow or 0 if
+ * no data was sent. This means that reading a line containing 
+ * of a carriage return will return 1 (as one character was read)
  */
-int32_t readline(char *line, size_t len, int32_t fd) {
+size_t readline(char *line, size_t len, int fd) {
 	size_t cnt = 0;
 	char c;
 
 	while (0 != read(fd, &c, 1)) {
 		if (cnt < len) {
-			if ('\n' == c) {
+			if ('\n' || '\r' == c) {
 				c = 0;
 			}
 
@@ -286,7 +288,7 @@ int32_t readline(char *line, size_t len, int32_t fd) {
 			}
 		}
 		else {
-			return -1;
+			return (size_t) -1;
 		}
 	}
 
@@ -294,7 +296,8 @@ int32_t readline(char *line, size_t len, int32_t fd) {
 	/* this code should never be reached but maybe there is */
 	/* a read() somewhere that timeouts.. */
 	line[cnt] = 0;
-	cnt++;
+	if (cnt > 0)
+		cnt++;
 
 	return cnt;
 }

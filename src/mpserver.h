@@ -11,10 +11,22 @@
 /* basic communication block size */
 #define MP_BLKSIZE 512
 
+typedef enum {
+	filenotfound = -2,
+	illegal = -1,
+	none = 0,
+	get = 1,
+	post = 2,
+	getfile = 3,
+	postfile = 4
+} mpMethod;
+
 typedef struct {
 	int32_t cmd;
 	char *arg;
 	int32_t clientid;
+	mpMethod method;
+	char *data;					// filename for GET or boundary for multipart
 } mpReqInfo;
 
 int32_t startServer();
