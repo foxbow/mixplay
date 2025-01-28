@@ -70,10 +70,10 @@ static uint32_t _heartbeat[MAXCLIENT];	/* glabal clientID marker */
 
 /* return an unused clientid
    this gives out clientids in ascending order, even if a previous clientid
-	 is already free again. This is done to avoid mobile clients reconnecting
-	 with their old clientid causing mix-ups if that id was already recycled.
-	 It still may happen but there nedd to be ~100 connects while the client
-	 was offline. Good enough for now */
+   is already free again. This is done to avoid mobile clients reconnecting
+   with their old clientid causing mix-ups if that id was already recycled.
+   It still may happen but there nedd to be ~100 connects while the client
+   was offline. Good enough for now */
 static int32_t getFreeClient(void) {
 	static uint32_t maxclientid = 0;
 	int32_t i;

@@ -44,7 +44,7 @@ bool startsWith(const char *text, const char *prefix);
 bool isURL(const char *uri);
 bool isDir(const char *path);
 char *fetchline(FILE * fp);
-int32_t readline(char *line, size_t len, int32_t fd);
+size_t readline(char *line, size_t len, int fd);
 char *abspath(char *path, const char *basedir, const size_t len);
 void *falloc(size_t num, size_t size);
 void *frealloc(void *old, size_t size);

@@ -14,6 +14,7 @@ msgbuf_t *msgBuffInit() {
 	msgBuf->count = 0;
 	msgBuf->unread = 0;
 	pthread_mutex_init(msgBuf->msgLock, NULL);
+	msgBuf->shutdown = false;
 	return msgBuf;
 }
 
@@ -27,6 +28,8 @@ uint64_t msgBuffAdd(msgbuf_t * msgbuf, char *line) {
 
 	msg->msg = strdup(line);
 	msg->cid = getCurClient();
+	if (msgbuf->shutdown)
+		return 0;
 	pthread_mutex_lock(msgbuf->msgLock);
 	/* overflow? */
 	if (msgbuf->lines == MSGNUM) {
@@ -56,10 +59,9 @@ uint64_t msgBuffAdd(msgbuf_t * msgbuf, char *line) {
  * returns the current message and removes it from the buffer
  * Return pointer must be free'd after use!
  */
-clmessage *msgBuffGet(msgbuf_t * msgbuf) {
+static clmessage *msgBuffGet(msgbuf_t * msgbuf) {
 	clmessage *retval = NULL;
 
-	pthread_mutex_lock(msgbuf->msgLock);
 	if (msgbuf->lines > 0) {
 		retval = msgbuf->msg[msgbuf->current];
 		msgbuf->msg[msgbuf->current] = NULL;
@@ -67,7 +69,6 @@ clmessage *msgBuffGet(msgbuf_t * msgbuf) {
 		msgbuf->lines--;
 		msgbuf->unread--;
 	}
-	pthread_mutex_unlock(msgbuf->msgLock);
 	return retval;
 }
 
@@ -81,6 +82,8 @@ const clmessage *msgBuffPeek(msgbuf_t * msgbuf, uint64_t msgno) {
 	const clmessage *retval = NULL;
 	int32_t pos;
 
+	if (msgbuf->shutdown)
+		return NULL;
 	pthread_mutex_lock(msgbuf->msgLock);
 	if (msgno < msgbuf->count) {
 		/* Avoid Underflows! */
@@ -112,6 +115,8 @@ char *msgBuffAll(msgbuf_t * msgbuf) {
 	buff = (char *) falloc(len, 1);
 	buff[0] = 0;
 
+	if (msgbuf->shutdown)
+		return buff;
 	pthread_mutex_lock(msgbuf->msgLock);
 	for (int i = 0; i < msgbuf->lines; i++) {
 		lineno = (i + msgbuf->current) % MSGNUM;
@@ -136,10 +141,9 @@ uint64_t msgBufGetLastRead(msgbuf_t * msgbuf) {
 /**
  * empties the message buffer
  */
-void msgBuffClear(msgbuf_t * msgbuf) {
+static void msgBuffClear(msgbuf_t * msgbuf) {
 	clmessage *line;
 
-	pthread_mutex_lock(msgbuf->msgLock);
 	while ((line = msgBuffGet(msgbuf)) != NULL) {
 		free(line->msg);
 		free(line);
@@ -148,13 +152,16 @@ void msgBuffClear(msgbuf_t * msgbuf) {
 	msgbuf->current = 0;
 	msgbuf->count = 0;
 	msgbuf->unread = 0;
-	pthread_mutex_unlock(msgbuf->msgLock);
 }
 
 /*
  * Discards the message buffer and all contents
  */
 void msgBuffDiscard(msgbuf_t * msgbuf) {
+	msgbuf->shutdown = true;
+	/* make sure that the mutex is unlocked */
+	pthread_mutex_trylock(msgbuf->msgLock);
+	pthread_mutex_unlock(msgbuf->msgLock);
 	msgBuffClear(msgbuf);
 	free(msgbuf->msgLock);
 	free(msgbuf);
