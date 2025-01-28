@@ -2,6 +2,7 @@
 #define __MSGBUF_H__ 1
 #include <pthread.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #define MSGNUM 20
 
@@ -20,6 +21,7 @@ typedef struct {
 	uint64_t count;				/* the number of the last message */
 	int32_t unread;				/* the number of never read messages */
 	pthread_mutex_t *msgLock;	/* mutex to control access to the messages */
+	bool shutdown;
 } msgbuf_t;
 
 /**
@@ -27,10 +29,8 @@ typedef struct {
  */
 msgbuf_t *msgBuffInit();
 uint64_t msgBuffAdd(msgbuf_t * msgbuf, char *line);
-clmessage *msgBuffGet(msgbuf_t * msgbuf);
 const clmessage *msgBuffPeek(msgbuf_t * msgbuf, uint64_t msgno);
 char *msgBuffAll(msgbuf_t * msgbuf);
-void msgBuffClear(msgbuf_t * msgbuf);
 void msgBuffDiscard(msgbuf_t * msgbuf);
 uint64_t msgBufGetLastRead(msgbuf_t * msgbuf);
 #endif
