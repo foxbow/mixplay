@@ -276,7 +276,10 @@ size_t readline(char *line, size_t len, int fd) {
 
 	while (0 != read(fd, &c, 1)) {
 		if (cnt < len) {
-			if ('\n' || '\r' == c) {
+			if (c == '\r') {
+				continue;
+			}
+			if (c == '\n') {
 				c = 0;
 			}
 
