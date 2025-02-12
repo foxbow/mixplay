@@ -16,7 +16,6 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <pthread.h>
 #include <netdb.h>
 #include <poll.h>
 
@@ -943,6 +942,9 @@ static void *mpserver(void *arg) {
 				(&pid, NULL, clientHandler, (void *) (long) client_sock) < 0) {
 				addMessage(0, "Could not create client handler thread!");
 			}
+			else {
+				pthread_setname_np(pid, "clientHandler");
+			}
 		}
 	}
 	addMessage(0, "Server stopped");
@@ -1045,6 +1047,7 @@ int32_t startServer() {
 	addMessage(MPV + 1, "bind() done");
 
 	pthread_create(&control->stid, NULL, mpserver, (void *) (long) mainsocket);
+	pthread_setname_np(control->stid, "mpserver");
 
 	return 0;
 }

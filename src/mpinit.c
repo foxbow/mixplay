@@ -147,9 +147,11 @@ int32_t initAll() {
 
 	/* start the actual player */
 	pthread_create(&control->rtid, NULL, reader, NULL);
+	pthread_setname_np(control->rtid, "player");
 
 	/* Runs as thread to have updates in the UI */
 	pthread_create(&tid, NULL, setProfile, NULL);
+	pthread_setname_np(tid, "init_setProfile");
 	pthread_detach(tid);
 
 	return 0;

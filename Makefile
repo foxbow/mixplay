@@ -4,10 +4,11 @@ SRCDIR=src
 OBJDIR=build
 
 CCFLAGS+=-DVERSION=\"$(VERSION)\"
+CCFLAGS+=-D_GNU_SOURCE -std=gnu11 -Wall -Wextra -Werror -pedantic -I .
 
 ifdef MPDEBUG
 # force compilation with -g
-CCFLAGS+=-std=gnu11 -Wall -Wextra -pedantic -Werror -I . -g
+CCFLAGS+=-g
 ifeq ($(MPDEBUG),2)
 # enable address sanitizer
 CCFLAGS+=-fsanitize=address
@@ -16,9 +17,9 @@ endif
 else
 # master branch is built with -O2, dev branches with -g
 ifeq ($(shell git rev-parse --abbrev-ref HEAD),master)
-CCFLAGS+=-std=gnu11 -Wall -Wextra -Werror -pedantic -I . -O2
+CCFLAGS+=-O2
 else
-CCFLAGS+=-std=gnu11 -Wall -Wextra -pedantic -Werror -I . -g
+CCFLAGS+=-g
 endif
 endif
 

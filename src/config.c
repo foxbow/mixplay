@@ -921,8 +921,8 @@ bool isDebug(void) {
  *
  * this may block to make sure the state is sane
  */
-int32_t playerIsBusy(void) {
-	int32_t res = 0;
+bool playerIsBusy(void) {
+	bool res = 0;
 	mpconfig_t *control = getConfig();
 
 	res = (control->status == mpc_start) || (control->mpmode & PM_SWITCH);
