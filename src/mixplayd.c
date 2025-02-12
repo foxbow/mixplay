@@ -254,6 +254,7 @@ int32_t main(int32_t argc, char **argv) {
 		if (getDebug()) {
 			addUpdateHook(&_debugHidUpdateHook);
 			pthread_create(&hidtid, NULL, debugHID, NULL);
+			pthread_setname_np(hidtid, "debugHID");
 		}
 		addUpdateHook(&_volumeUpdateHook);
 

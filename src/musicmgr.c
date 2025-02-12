@@ -1433,11 +1433,6 @@ static int32_t addNewTitle(void) {
 	maxpcount = getPlaycount(true);
 	addMessage(2, "Playcount [%" PRIu32 ":%" PRIu32 "]", pcount, maxpcount);
 
-	/* Do not unset the TDARK flag while still filling up the playlist */
-	if (countflag(MP_INPL) > MIN(num, 10)) {
-		unsetFlags(MP_TDARK);
-	}
-
 	/* are there playable titles at all? */
 	if (countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE) == 0) {
 		fail(F_FAIL, "No titles to be played!");
@@ -1639,6 +1634,7 @@ void plCheck(bool fill) {
 
 	/* fill up the playlist with new titles */
 	if (fill) {
+		unsetFlags(MP_TDARK);
 		while (cnt < 10) {
 			activity(0, "Add title %i", cnt);
 			addNewTitle();

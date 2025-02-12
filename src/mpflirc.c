@@ -55,6 +55,7 @@ pthread_t startFLIRC(int32_t fd) {
 		addMessage(0, "Could not create mpHID thread!");
 		return -1;
 	}
+	pthread_setname_np(tid, "mpFLIRC");
 	return tid;
 }
 

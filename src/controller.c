@@ -9,7 +9,6 @@
  *	  Author: bweber
  */
 
-#include <pthread.h>
 #include <errno.h>
 #include <unistd.h>
 
@@ -304,6 +303,9 @@ static void asyncRun(void *cmd(void *)) {
 
 	if (pthread_create(&pid, NULL, cmd, &_asynclock) < 0) {
 		addMessage(0, "Could not create async thread!");
+	}
+	else {
+		pthread_setname_np(pid, "tmpcmdhndlr");
 	}
 }
 

@@ -245,7 +245,7 @@ void wipeSearchList(mpconfig_t *);
 
 mptitle_t *wipeTitles(mptitle_t * root);
 marklist_t *wipeList(marklist_t * root);
-int32_t playerIsBusy(void);
+bool playerIsBusy(void);
 void blockSigint();
 
 int32_t getNotify(int32_t);

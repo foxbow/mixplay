@@ -6,7 +6,6 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <sys/stat.h>
-#include <pthread.h>
 #include <termios.h>
 #include <assert.h>
 #include <linux/input.h>
@@ -276,7 +275,12 @@ size_t readline(char *line, size_t len, int fd) {
 
 	while (0 != read(fd, &c, 1)) {
 		if (cnt < len) {
-			if ('\n' || '\r' == c) {
+			// skip CR to properly digest CR/LF
+			if (c == '\r') {
+				continue;
+			}
+			// LR means line end
+			if (c == '\n') {
 				c = 0;
 			}
 
