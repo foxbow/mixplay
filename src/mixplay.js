@@ -723,6 +723,7 @@ function progWheel (e) {
 
 /*
  * tap on the volume bar.
+ * On lineout always toggle
  * On mute just unmute, otherwise:
  * left third  - decrease volume
  * mid third   - mute
@@ -1468,7 +1469,10 @@ function playerUpdate (data) {
     document.getElementById('volumebar').className = 'mute'
   } else if (curvol === -2) {
     document.getElementById('volumebar').className = 'automute'
+  } else if (curvol === -4) {
+    document.getElementById('volumebar').className = 'lineout'
   } else {
+    /* TODO: uncollapse buttons */
     enableElement('volume', 0)
   }
 

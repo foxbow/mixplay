@@ -531,7 +531,8 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 				config->mpmode |= PM_SWITCH;
 				/* write database if needed */
 				dbWrite(0);
-				if (config->active != 0) {
+				/* do not touch volume when muted or lineout is active */
+				if ((config->active != 0) && (config->volume > 0)) {
 					getProfile(config->active)->volume = config->volume;
 				}
 				config->active = profileid;
@@ -549,6 +550,10 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			addMessage(-1, "No name given!");
 		}
 		else if ((config->current != NULL) && asyncTest()) {
+			int32_t cvol = config->volume;
+
+			if (cvol < 0)
+				cvol = DEFAULT_VOLUME;
 			/* save the current stream */
 			config->profiles++;
 			config->profile =
@@ -557,14 +562,13 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 										sizeof (profile_t *));
 			if (config->active == 0) {
 				config->profile[config->profiles - 1] =
-					createProfile(arg, config->streamURL, 0, config->volume,
-								  true);
+					createProfile(arg, config->streamURL, 0, cvol, true);
 				config->active = config->profile[config->profiles - 1]->id;
 			}
 			/* just add argument as new profile */
 			else {
 				config->profile[config->profiles - 1] =
-					createProfile(arg, NULL, 0, config->volume, true);
+					createProfile(arg, NULL, 0, cvol, true);
 			}
 			writeConfig(NULL);
 			pthread_mutex_unlock(&_asynclock);
@@ -577,6 +581,10 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			addMessage(-1, "No profile given!");
 		}
 		else if ((config->current != NULL) && asyncTest()) {
+			int32_t cvol = config->volume;
+
+			if (cvol < 0)
+				cvol = DEFAULT_VOLUME;
 			/* only clone profiles */
 			if (config->active > 0) {
 				config->profiles++;
@@ -585,7 +593,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 											config->profiles *
 											sizeof (profile_t *));
 				config->profile[config->profiles - 1] =
-					createProfile(arg, NULL, 0, config->volume, true);
+					createProfile(arg, NULL, 0, cvol, true);
 				config->active = config->profile[config->profiles - 1]->id;
 				writeList(mpc_fav);
 				writeList(mpc_dnp);
