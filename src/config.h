@@ -175,18 +175,18 @@ typedef struct {
 	uint32_t mpmode;			/* playmode, see PM_* */
 	uint32_t sleepto;			/* idle timeout for clients */
 	uint32_t dbDirty;
-	/* flags for mpmode */
-	uint32_t searchDNP:1;
-	/* other flags */
-	uint32_t fade;				/* controls fading between titles */
-	uint32_t isDaemon:1;
-	uint32_t inUI:1;			/* flag to show if the UI is active */
-	uint32_t list:1;			/* remote playlist */
-	uint32_t lineout:1;			/* enable line-out 100% volume */
 	char *rcdev;				/* device by-id of the remote control */
 	int32_t rccodes[MPRC_NUM];	/* command codes for the remote */
 	uint32_t spread;
 	uint32_t maxid;				/* highest profile id */
+	uint32_t lineout;			/* enable line-out at fix volume */
+	uint32_t fade;				/* controls fading between titles */
+	/* flags for mpmode */
+	uint32_t searchDNP:1;
+	/* other flags */
+	uint32_t isDaemon:1;
+	uint32_t inUI:1;			/* flag to show if the UI is active */
+	uint32_t list:1;			/* remote playlist */
 } mpconfig_t;
 
 /* message request types */
