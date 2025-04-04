@@ -178,6 +178,10 @@ div#volumebar.automute {
 	background-color: rgba(100,200,000,.5);
 }
 
+div#volumebar.lineout {
+	background-color: rgba(100,100,200,.5);
+}
+
 /* album */
 #lscroll, #ascroll {
 	font-size: 1.25em;

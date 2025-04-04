@@ -558,6 +558,9 @@ mpconfig_t *readConfig(void) {
 					fail(F_FAIL, "Wrong number of RC codes!");
 				}
 			}
+			if (strstr(line, "lineout=") == line) {
+				_cconfig->lineout = (*pos == '0') ? 0 : 1;
+			}
 			free(line);
 		}
 		while (!feof(fp));
@@ -675,6 +678,7 @@ void writeConfig(const char *musicpath) {
 				fprintf(fp, "%i;", _cconfig->rccodes[i]);
 			}
 		}
+		fprintf(fp, "\nlineout=%d", _cconfig->lineout ? 1 : 0);
 		fprintf(fp, "\n");
 		fclose(fp);
 	}

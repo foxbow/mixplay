@@ -15,6 +15,9 @@
 #define MUTED    (-1)
 #define AUTOMUTE (-2)
 #define NOAUDIO  (-3)
+#define LINEOUT  (-4)			// either mute or 100%
+
+#define DEFAULT_VOLUME (80)
 
 long controlVolume(long volume, bool absolute);
 long toggleMute(void);

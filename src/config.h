@@ -182,6 +182,7 @@ typedef struct {
 	uint32_t isDaemon:1;
 	uint32_t inUI:1;			/* flag to show if the UI is active */
 	uint32_t list:1;			/* remote playlist */
+	uint32_t lineout:1;			/* enable line-out 100% volume */
 	char *rcdev;				/* device by-id of the remote control */
 	int32_t rccodes[MPRC_NUM];	/* command codes for the remote */
 	uint32_t spread;
