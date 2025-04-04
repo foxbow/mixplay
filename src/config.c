@@ -559,7 +559,7 @@ mpconfig_t *readConfig(void) {
 				}
 			}
 			if (strstr(line, "lineout=") == line) {
-				_cconfig->lineout = (*pos == '0') ? 0 : 1;
+				_cconfig->lineout = atoi(pos);
 			}
 			free(line);
 		}
@@ -678,7 +678,7 @@ void writeConfig(const char *musicpath) {
 				fprintf(fp, "%i;", _cconfig->rccodes[i]);
 			}
 		}
-		fprintf(fp, "\nlineout=%d", _cconfig->lineout ? 1 : 0);
+		fprintf(fp, "\nlineout=%i", _cconfig->lineout);
 		fprintf(fp, "\n");
 		fclose(fp);
 	}
