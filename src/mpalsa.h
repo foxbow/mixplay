@@ -15,7 +15,7 @@
 #define MUTED    (-1)
 #define AUTOMUTE (-2)
 #define NOAUDIO  (-3)
-#define LINEOUT  (-4)			// either mute or 100%
+#define LINEOUT  (-4)			// either mute or fixed volume
 
 #define DEFAULT_VOLUME (80)
 

@@ -149,9 +149,10 @@ long controlVolume(long volume, bool absolute) {
 		retval += volume;
 	}
 
-	if (config->lineout) {
+	if (config->lineout > 0) {
 		retval = LINEOUT;
-		snd_mixer_selem_set_playback_volume_all(_elem, max);
+		snd_mixer_selem_set_playback_volume_all(_elem,
+												(config->lineout * max) / 100);
 	}
 	else {
 		if (retval < 0)
