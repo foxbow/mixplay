@@ -34,6 +34,7 @@ var curvol = 0
 var inUpdate = 0
 var lastsearch = ''
 var profiles = []
+var lineout = 0
 
 function debugLog (txt) {
   if (debug) {
@@ -1699,6 +1700,8 @@ function updateConfig (data) {
     toggleDebug()
   }
 
+  lineout = data.lineout;
+
   if (data.bookmarklet.length > 0) {
     enableElement('bmlet', 1)
     bm.href='javascript:'+data.bookmarklet
@@ -1773,6 +1776,9 @@ function toggleDebug () {
   debug = !debug
   if (debug) {
     addText('ClientID: ' + clientid)
+    if (volume < 0) {
+      addText('Line volume: ' + lineout)
+    }
     setElement('debug', 'Standard')
   } else {
     setElement('debug', 'Extra')

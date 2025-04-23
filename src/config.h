@@ -62,7 +62,7 @@ typedef enum {
 	mpc_reset,
 	mpc_pause,					/* 0x20 */
 	mpc_clone,
-	mpc_idle,
+	mpc_idle,					/* must be the last command */
 	/* by order of strength - fav-title beats dnp-album */
 	mpc_genre = 1 << 8,			/* 0x0100 */
 	mpc_artist = 1 << 9,		/* 0x0200 */
@@ -71,7 +71,6 @@ typedef enum {
 	mpc_display = 1 << 12,		/* 0x1000 */
 	mpc_substr = 1 << 13,		/* 0x2000 */
 	mpc_fuzzy = 1 << 14,		/* 0x4000 */
-	mpc_mix = 1 << 14			/* 0x4000 */
 } mpcmd_t;
 
 /* some filtermasks */
@@ -88,15 +87,15 @@ typedef enum {
 /* commands that can be used on a remote control */
 /* just use the key down event */
 #define MPRC_SINGLE 7
-/* use repoeated events */
+/* use repeated events */
 #define MPRC_REPEAT 2
-#define MPRC_NUM MPRC_SINGLE+MPRC_REPEAT
+#define MPRC_NUM (MPRC_SINGLE+MPRC_REPEAT)
 
 extern const mpcmd_t _mprccmds[MPRC_NUM];
 extern const char *_mprccmdstrings[MPRC_NUM];
 
 /*
- * qualifiers for mpc_dnp, mpc_fav and mpc_(long)search
+ * qualifiers for mpc_dnp, mpc_fav and mpc_search
  * 0FSR RRRR 000C CCCC
  */
 /* extract raw command */
@@ -116,8 +115,6 @@ extern const char *_mprccmdstrings[MPRC_NUM];
 #define MPC_EQALBUM(x) (MPC_RANGE(x)==mpc_album)
 #define MPC_EQGENRE(x) (MPC_RANGE(x)==mpc_genre)
 #define MPC_EQDISPLAY(x) (MPC_RANGE(x)==mpc_display)
-/* shuffle enabled? */
-#define MPC_ISSHUFFLE(x) ( x & mpc_mix )
 /* shall it be a substring */
 #define MPC_ISSUBSTR(x) (x & mpc_substr )
 /* shall it be fuzzy */
