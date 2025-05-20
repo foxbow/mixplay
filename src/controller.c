@@ -586,20 +586,14 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			if (cvol < 0)
 				cvol = DEFAULT_VOLUME;
 			/* only clone profiles */
-			if (config->active > 0) {
-				config->profiles++;
-				config->profile =
-					(profile_t **) frealloc(config->profile,
-											config->profiles *
-											sizeof (profile_t *));
-				config->profile[config->profiles - 1] =
-					createProfile(arg, NULL, 0, cvol, true);
-				config->active = config->profile[config->profiles - 1]->id;
-				writeList(mpc_fav);
-				writeList(mpc_dnp);
+			if (!isStreamId(config->active)) {
+				if (copyProfile(config->active, arg) > 0) {
+					writeList(mpc_fav);
+					writeList(mpc_dnp);
 
-				writeConfig(NULL);
-				notifyChange(MPCOMM_CONFIG);
+					writeConfig(NULL);
+					notifyChange(MPCOMM_CONFIG);
+				}
 			}
 			pthread_mutex_unlock(&_asynclock);
 		}
