@@ -209,11 +209,13 @@ int32_t toggleFavplay();
 
 profile_t *createProfile(const char *name, const char *stream,
 						 const uint32_t favplay, const int32_t vol, bool id);
+uint32_t copyProfile(uint32_t id, const char *name);
 void freeProfile(profile_t * profile);
 mpplaylist_t *getCurrent();
 profile_t *getProfile(uint32_t id);
 int32_t getProfileIndex(uint32_t id);
 bool isStream(profile_t * profile);
+bool isStreamId(uint32_t id);
 
 void incDebug(void);
 int32_t getDebug(void);

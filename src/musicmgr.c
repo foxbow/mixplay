@@ -31,8 +31,13 @@ int32_t getListPath(mpcmd_t cmd, char path[MAXPATHLEN]) {
 		snprintf(path, MAXPATHLEN, "%s/.mixplay/mixplay.dbl", getenv("HOME"));
 	}
 	else {
+		profile_t *profile = getProfile(getConfig()->active);
+
+		if (profile != NULL) {
+			return -1;
+		}
 		snprintf(path, MAXPATHLEN, "%s/.mixplay/%s.", getenv("HOME"),
-				 getConfig()->profile[getConfig()->active - 1]->name);
+				 profile->name);
 		if (MPC_CMD(cmd) == mpc_fav) {
 			strtcat(path, "fav", MAXPATHLEN);
 		}

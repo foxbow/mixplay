@@ -1112,6 +1112,43 @@ profile_t *createProfile(const char *name, const char *url,
 	return profile;
 }
 
+/* copy an existing profile and add it to the list of profiles */
+uint32_t copyProfile(uint32_t id, const char *name) {
+	profile_t *orig = getProfile(id);
+
+	if (orig == NULL) {
+		return 0;
+	}
+	profile_t *profile = (profile_t *) falloc(1, sizeof (profile_t));
+
+	if (name != NULL) {
+		profile->name = strdup(name);
+	}
+	else {
+		profile->name = orig->name;
+	}
+	/* this does not make a lot of sense, but who knows what ideas come up */
+	if (orig->url) {
+		profile->url = strdup(orig->url);
+	}
+	else {
+		profile->url = NULL;
+	}
+	profile->favplay = orig->favplay;
+	profile->volume = orig->volume;
+	_cconfig->maxid++;
+	profile->id = _cconfig->maxid;
+
+	_cconfig->profile = (profile_t **) frealloc(_cconfig->profile,
+												_cconfig->profiles *
+												sizeof (profile_t *));
+	_cconfig->profile[_cconfig->profiles] = profile;
+	_cconfig->active = profile->id;
+	_cconfig->profiles++;
+
+	return profile->id;
+}
+
 /**
  * discards a list of markterms and frees the memory
  * returns NULL for intuitive calling
@@ -1162,6 +1199,7 @@ profile_t *getProfile(uint32_t id) {
 		if (_cconfig->profile[i]->id == id)
 			return _cconfig->profile[i];
 	}
+	addMessage(0, "No profile with id %d", id);
 	return NULL;
 }
 
@@ -1177,6 +1215,14 @@ bool isStream(profile_t * profile) {
 	return ((profile->url != NULL) && (profile->url[0] != '\0'));
 }
 
+bool isStreamId(uint32_t id) {
+	profile_t *profile = getProfile(id);
+
+	if (profile != NULL) {
+		return isStream(profile);
+	}
+	return false;
+}
 
 /*
  * block all signals that would interrupt the execution flow
