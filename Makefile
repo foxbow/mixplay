@@ -67,12 +67,6 @@ server: $(OBJDIR)/dep.d bin/mixplayd bin/mprcinit
 
 clients: $(OBJDIR)/dep.d $(CLIENTS)
 
-# handy when vscode messes up the dependency file
-nodep: remdep all
-
-remdep:
-	rm -f build/dep.d
-
 clean:
 	rm -f $(OBJDIR)/[!R]*
 	rm -f bin/mixplayd
