@@ -17,8 +17,6 @@
 #define NOAUDIO  (-3)
 #define LINEOUT  (-4)			// either mute or fixed volume
 
-#define DEFAULT_VOLUME (80)
-
 long controlVolume(long volume, bool absolute);
 long toggleMute(void);
 void closeAudio(void);

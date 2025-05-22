@@ -997,7 +997,8 @@ jsonObject *jsonAddStr(jsonObject * jo, const char *key, const char *val) {
 	jo = jsonAppend(jo, key);
 	jo->type = json_string;
 	if (val == NULL) {
-		jo->val = NULL;
+		/* We treat NULL strings as empty strings */
+		jo->val = strdup("");
 	}
 	else {
 		jo->val = jsonEncode(val);
@@ -1222,6 +1223,7 @@ static char *jsonWriteVal(jsonObject * jo, char *json, size_t *len) {
 	json = sizeCheck(json, len);
 	switch (jo->type) {
 	case json_string:
+		assert(jo->val != NULL);
 		strcat(json, "\"");
 		/* strings may be longer than JSON_LOWATER, so take extra care */
 		json = sizeCheckAdd(json, len, strlen((char *) jo->val));

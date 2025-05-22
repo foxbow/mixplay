@@ -22,6 +22,8 @@
 /* standard crossfade value */
 #define FADESECS 4
 
+#define DEFAULT_VOLUME (90)
+
 /*
  * commands and states
  * caveat: when changing this check *mpc_command[] in config.c too!
@@ -203,14 +205,12 @@ mpconfig_t *readConfig(void);
 mpconfig_t *getConfig(void);
 mpconfig_t *createConfig(void);
 void freeConfig(void);
-void freeConfigContents(void);
+void freeProfile(profile_t * profile);
 int32_t getFavplay();
 int32_t toggleFavplay();
 
-profile_t *createProfile(const char *name, const char *stream,
-						 const uint32_t favplay, const int32_t vol, bool id);
+profile_t *addProfile(const char *name, const char *url, bool newid);
 uint32_t copyProfile(uint32_t id, const char *name);
-void freeProfile(profile_t * profile);
 mpplaylist_t *getCurrent();
 profile_t *getProfile(uint32_t id);
 int32_t getProfileIndex(uint32_t id);
