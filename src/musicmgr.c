@@ -33,7 +33,7 @@ int32_t getListPath(mpcmd_t cmd, char path[MAXPATHLEN]) {
 	else {
 		profile_t *profile = getProfile(getConfig()->active);
 
-		if (profile != NULL) {
+		if (profile == NULL) {
 			return -1;
 		}
 		snprintf(path, MAXPATHLEN, "%s/.mixplay/%s.", getenv("HOME"),
