@@ -569,7 +569,7 @@ static void *clientHandler(void *args) {
 							else if (getConfig()->found->state ==
 									 mpsearch_idle) {
 								setCommand(cmd, reqInfo.arg);
-								reqInfo.arg = NULL;
+								sfree(&(reqInfo.arg));
 								running |= CL_SRC;
 							}
 							/* this case should not be possible at all! */
@@ -742,7 +742,7 @@ static void *clientHandler(void *args) {
 						}
 					}
 					setCommand(cmd, reqInfo.arg);
-					reqInfo.arg = NULL;
+					sfree(&(reqInfo.arg));
 				}
 				sprintf(commdata, "HTTP/1.1 204 No Content\015\012\015\012");
 				len = strlen(commdata);

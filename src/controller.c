@@ -554,22 +554,9 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 
 			if (cvol < 0)
 				cvol = DEFAULT_VOLUME;
-			/* save the current stream */
-			config->profiles++;
-			config->profile =
-				(profile_t **) frealloc(config->profile,
-										config->profiles *
-										sizeof (profile_t *));
-			if (config->active == 0) {
-				config->profile[config->profiles - 1] =
-					createProfile(arg, config->streamURL, 0, cvol, true);
-				config->active = config->profile[config->profiles - 1]->id;
-			}
-			/* just add argument as new profile */
-			else {
-				config->profile[config->profiles - 1] =
-					createProfile(arg, NULL, 0, cvol, true);
-			}
+			profile_t *profile = addProfile(arg, config->streamURL, true);
+
+			profile->volume = cvol;
 			writeConfig(NULL);
 			pthread_mutex_unlock(&_asynclock);
 			notifyChange(MPCOMM_CONFIG);
@@ -581,10 +568,6 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			addMessage(-1, "No profile given!");
 		}
 		else if ((config->current != NULL) && asyncTest()) {
-			int32_t cvol = config->volume;
-
-			if (cvol < 0)
-				cvol = DEFAULT_VOLUME;
 			/* only clone profiles */
 			if (!isStreamId(config->active)) {
 				if (copyProfile(config->active, arg) > 0) {
@@ -616,7 +599,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 						addMessage(-1, "Cannot remove active profile!");
 					}
 					else {
-						free(config->profile[profileidx]);
+						freeProfile(config->profile[profileidx]);
 						for (uint32_t i = profileidx + 1; i < config->profiles;
 							 i++) {
 							config->profile[i - 1] = config->profile[i];

@@ -1776,7 +1776,9 @@ function toggleDebug () {
   debug = !debug
   if (debug) {
     addText('ClientID: ' + clientid)
-    addText('Line volume: ' + lineout)
+    if (lineout > 0) {
+      addText('Line volume: ' + lineout)
+    }
     setElement('debug', 'Standard')
   } else {
     setElement('debug', 'Extra')
