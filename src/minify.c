@@ -50,9 +50,10 @@ static int32_t scanChar(int32_t next) {
 /*
  * scans and prints a number of characters
  * used to identify <pre> and </pre> tags
- * as long as the scanned characters match the pattern, the print and print
- * will continue. If the pattern matches, the next character is returned. If
- * it it does not match, the negative if the first unmatched character is
+ * as long as the scanned characters match the pattern, they are printed and 
+ * the scan will continue. 
+ * If the pattern matches, the next character is returned. 
+ * If it it does not match, the negative of the first unmatched character is
  * returned.
  * The -1 for EOF is forwarded as is.
  */
@@ -79,7 +80,7 @@ static int32_t scanFor(const char *pat, int32_t next) {
 int32_t main(int32_t argc, char **argv) {
 	int32_t current, next;
 	uint32_t code = 0;			// does the current line need a semicolon at the end?
-	uint32_t mode = 0;			// 1 - //, 2 - /* */, 3 - '', 4 - "", 5 - <!--, 6 - <pre>
+	uint32_t mode = 0;			// 0 - txt, 1 - //, 2 - /* */, 3 - '', 4 - "", 5 - <!--, 6 - <pre>
 	uint32_t html = 0;
 	int32_t assign = -1;
 	uint32_t blevel[10];
@@ -91,7 +92,7 @@ int32_t main(int32_t argc, char **argv) {
 	}
 
 	while (current != -1) {
-		next = getchar();
+		next = getchar();		// get lookahead
 		switch (mode) {
 		case 0:				// standard
 			switch (current) {
