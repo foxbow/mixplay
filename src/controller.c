@@ -674,22 +674,26 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 	case mpc_search:
 		if (config->mpmode & PM_STREAM)
 			break;
-		/* if we mix two searches we're in trouble!
-		 * this duplicates the check in mpserver, so it should never happen */
-		assert(config->found->state == mpsearch_idle);
+		else {
+			char *term = arg;
 
-		if (arg == NULL) {
-			if (MPC_ISARTIST(rcmd)) {
-				arg = strdup(ctitle->artist);
+			/* if we mix two searches we're in trouble!
+			 * this duplicates the check in mpserver, so it should never happen */
+			assert(config->found->state == mpsearch_idle);
+
+			if (term == NULL) {
+				if (MPC_ISARTIST(rcmd)) {
+					term = ctitle->artist;
+				}
+				else {
+					term = ctitle->album;
+				}
 			}
-			else {
-				arg = strdup(ctitle->album);
+
+			if (search(MPC_MODE(rcmd), term) == -1) {
+				addMessage(0, "Too many titles found!");
 			}
 		}
-		if (search(MPC_MODE(rcmd), arg) == -1) {
-			addMessage(0, "Too many titles found!");
-		}
-		sfree(&arg);
 
 		break;
 
