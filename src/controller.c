@@ -30,8 +30,7 @@ static pthread_mutex_t _asynclock = PTHREAD_MUTEX_INITIALIZER;
  * arg - either a title key or a string
  * insert - play next or append to the end of the playlist
  */
-static int32_t playResults(mpcmd_t range, const char *arg,
-						   const int32_t insert) {
+static int32_t playResults(mpcmd_t range, const char *arg, const bool insert) {
 	mpconfig_t *config = getConfig();
 	mpplaylist_t *pos = config->current;
 	mpplaylist_t *res = config->found->titles;
@@ -39,7 +38,7 @@ static int32_t playResults(mpcmd_t range, const char *arg,
 	int32_t key = atoi(arg);
 
 	/* insert results at current pos or at the end? */
-	if ((pos != NULL) && (insert == 0)) {
+	if ((pos != NULL) && (!insert)) {
 		while (pos->next != NULL) {
 			pos = pos->next;
 		}
@@ -317,7 +316,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 	mptitle_t *ctitle = getCurrentTitle();	/* the title commands should use */
 	mpconfig_t *config = getConfig();
 	char *tpos;
-	uint32_t insert = 0;
+	bool insert = false;
 	int32_t order;
 	uint32_t profileid;
 	mpcmd_t cmd;
@@ -700,7 +699,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 	case mpc_insert:
 		if (config->mpmode & PM_STREAM)
 			break;
-		insert = 1;
+		insert = true;
 		/* fallthrough */
 
 	case mpc_append:
@@ -709,7 +708,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		if (arg != NULL) {
 			playResults(MPC_RANGE(rcmd), arg, insert);
 		}
-		insert = 0;
+		insert = false;
 		break;
 
 	case mpc_setvol:
