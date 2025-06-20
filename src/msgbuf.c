@@ -24,12 +24,14 @@ msgbuf_t *msgBuffInit() {
  * returns the current message number
  */
 uint64_t msgBuffAdd(msgbuf_t * msgbuf, char *line) {
+	if (msgbuf->shutdown)
+		return 0;
+
 	clmessage *msg = (clmessage *) falloc(1, sizeof (clmessage));
 
 	msg->msg = strdup(line);
 	msg->cid = getCurClient();
-	if (msgbuf->shutdown)
-		return 0;
+
 	pthread_mutex_lock(msgbuf->msgLock);
 	/* overflow? */
 	if (msgbuf->lines == MSGNUM) {
@@ -160,7 +162,6 @@ static void msgBuffClear(msgbuf_t * msgbuf) {
 void msgBuffDiscard(msgbuf_t * msgbuf) {
 	msgbuf->shutdown = true;
 	/* make sure that the mutex is unlocked */
-	pthread_mutex_trylock(msgbuf->msgLock);
 	pthread_mutex_unlock(msgbuf->msgLock);
 	msgBuffClear(msgbuf);
 	free(msgbuf->msgLock);

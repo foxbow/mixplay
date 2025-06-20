@@ -877,6 +877,7 @@ static void *clientHandler(void *args) {
 		unlockClient(reqInfo.clientid);
 		config->found->state = mpsearch_idle;
 	}
+	pthread_mutex_unlock(&_sendlock);
 	close(sock);
 	sfree(&manifest);
 	sfree(&commdata);
