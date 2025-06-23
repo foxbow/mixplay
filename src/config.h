@@ -23,6 +23,8 @@
 #define FADESECS 4
 
 #define DEFAULT_VOLUME (90)
+/* default line out adaption for local MP3 play */
+#define VOLUME_PROFILE (+5)
 
 /*
  * commands and states

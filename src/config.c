@@ -985,13 +985,14 @@ profile_t *addProfile(const char *name, const char *url, bool newid) {
 	profile_t *profile = (profile_t *) falloc(1, sizeof (profile_t));
 
 	profile->name = strdup(name);
+	profile->volume = DEFAULT_VOLUME;
 	if (url != NULL) {
 		profile->url = strdup(url);
 	}
 	else {
 		profile->url = NULL;
+		profile->volume += VOLUME_PROFILE;
 	}
-	profile->volume = DEFAULT_VOLUME;
 	if (newid) {
 		_cconfig->maxid++;
 		profile->id = _cconfig->maxid;

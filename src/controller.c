@@ -549,13 +549,6 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			addMessage(-1, "No name given!");
 		}
 		else if ((config->current != NULL) && asyncTest()) {
-			int32_t cvol = config->volume;
-
-			if (cvol < 0)
-				cvol = DEFAULT_VOLUME;
-			profile_t *profile = addProfile(arg, config->streamURL, true);
-
-			profile->volume = cvol;
 			writeConfig(NULL);
 			pthread_mutex_unlock(&_asynclock);
 			notifyChange(MPCOMM_CONFIG);
