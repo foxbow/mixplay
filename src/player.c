@@ -244,7 +244,6 @@ void *setProfile(void *arg) {
 
 	notifyChange(MPCOMM_CONFIG);
 
-//  usleep(500);                // why?
 	setVolume(profile->volume);
 	startPlayer();
 

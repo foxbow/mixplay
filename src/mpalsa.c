@@ -149,22 +149,21 @@ long controlVolume(long volume, bool absolute) {
 		retval += volume;
 	}
 
+	if (retval < 0)
+		retval = 0;
+	if (retval > 100)
+		retval = 100;
+	uint32_t newvol = retval;
+
 	if (config->lineout > 0) {
 		retval = LINEOUT;
-		uint32_t linevol = config->lineout;
+		newvol = config->lineout;
 
 		if (!isStream(getProfile(config->active)))
-			linevol += VOLUME_PROFILE;
-		snd_mixer_selem_set_playback_volume_all(_elem,
-												(config->lineout * max) / 100);
+			newvol += VOLUME_PROFILE;
+		addMessage(1, "Set lineout volume to %d", newvol);
 	}
-	else {
-		if (retval < 0)
-			retval = 0;
-		if (retval > 100)
-			retval = 100;
-		snd_mixer_selem_set_playback_volume_all(_elem, (retval * max) / 100);
-	}
+	snd_mixer_selem_set_playback_volume_all(_elem, (newvol * max) / 100);
 	config->volume = retval;
 	return retval;
 }
