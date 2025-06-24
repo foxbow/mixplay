@@ -988,10 +988,10 @@ profile_t *addProfile(const char *name, const char *url, bool newid) {
 	profile->volume = DEFAULT_VOLUME;
 	if (url != NULL) {
 		profile->url = strdup(url);
+		profile->volume += VOLUME_STREAM;
 	}
 	else {
 		profile->url = NULL;
-		profile->volume += VOLUME_PROFILE;
 	}
 	if (newid) {
 		_cconfig->maxid++;

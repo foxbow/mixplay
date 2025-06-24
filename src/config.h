@@ -24,7 +24,7 @@
 
 #define DEFAULT_VOLUME (90)
 /* default line out adaption for local MP3 play */
-#define VOLUME_PROFILE (+5)
+#define VOLUME_STREAM (-10)
 
 /*
  * commands and states
