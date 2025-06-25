@@ -561,7 +561,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		}
 		else if ((config->current != NULL) && asyncTest()) {
 			/* only clone profiles */
-			if (!isStreamId(config->active)) {
+			if (!isStreamActive()) {
 				if (copyProfile(config->active, arg) > 0) {
 					writeList(mpc_fav);
 					writeList(mpc_dnp);

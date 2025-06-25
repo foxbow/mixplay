@@ -159,7 +159,7 @@ long controlVolume(long volume, bool absolute) {
 		retval = LINEOUT;
 		newvol = config->lineout;
 
-		if (isStream(getProfile(config->active)))
+		if (isStreamActive())
 			newvol += VOLUME_STREAM;
 	}
 	snd_mixer_selem_set_playback_volume_all(_elem, (newvol * max) / 100);

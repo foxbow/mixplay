@@ -22,7 +22,7 @@
 /* standard crossfade value */
 #define FADESECS 4
 
-#define DEFAULT_VOLUME (90)
+#define DEFAULT_VOLUME (100)
 /* default line out adaption for local MP3 play */
 #define VOLUME_STREAM (-10)
 
@@ -217,7 +217,8 @@ mpplaylist_t *getCurrent();
 profile_t *getProfile(uint32_t id);
 int32_t getProfileIndex(uint32_t id);
 bool isStream(profile_t * profile);
-bool isStreamId(uint32_t id);
+
+#define isStreamActive() isStream(getProfile(getConfig()->active))
 
 void incDebug(void);
 int32_t getDebug(void);
