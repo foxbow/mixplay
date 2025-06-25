@@ -549,6 +549,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			addMessage(-1, "No name given!");
 		}
 		else if ((config->current != NULL) && asyncTest()) {
+			addProfile(arg, config->streamURL, true);
 			writeConfig(NULL);
 			pthread_mutex_unlock(&_asynclock);
 			notifyChange(MPCOMM_CONFIG);

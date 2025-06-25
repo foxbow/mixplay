@@ -22,8 +22,8 @@
 /* standard crossfade value */
 #define FADESECS 4
 
-#define DEFAULT_VOLUME (100)
-/* default line out adaption for local MP3 play */
+#define DEFAULT_VOLUME (90)
+/* default line out adaption for internet stream play */
 #define VOLUME_STREAM (-10)
 
 /*
