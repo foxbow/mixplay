@@ -138,7 +138,7 @@ long controlVolume(long volume, bool absolute) {
 	}
 
 	snd_mixer_selem_get_playback_volume_range(_elem, &min, &max);
-	if (absolute != 0) {
+	if (absolute) {
 		retval = volume;
 	}
 	else {
@@ -149,18 +149,20 @@ long controlVolume(long volume, bool absolute) {
 		retval += volume;
 	}
 
+	if (retval < 0)
+		retval = 0;
+	if (retval > 100)
+		retval = 100;
+	uint32_t newvol = retval;
+
 	if (config->lineout > 0) {
 		retval = LINEOUT;
-		snd_mixer_selem_set_playback_volume_all(_elem,
-												(config->lineout * max) / 100);
+		newvol = config->lineout;
+
+		if (isStreamActive())
+			newvol += VOLUME_STREAM;
 	}
-	else {
-		if (retval < 0)
-			retval = 0;
-		if (retval > 100)
-			retval = 100;
-		snd_mixer_selem_set_playback_volume_all(_elem, (retval * max) / 100);
-	}
+	snd_mixer_selem_set_playback_volume_all(_elem, (newvol * max) / 100);
 	config->volume = retval;
 	return retval;
 }

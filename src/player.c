@@ -244,8 +244,6 @@ void *setProfile(void *arg) {
 
 	notifyChange(MPCOMM_CONFIG);
 
-//  usleep(500);                // why?
-	setVolume(profile->volume);
 	startPlayer();
 
 	/* make sure that progress messages are removed */
@@ -890,6 +888,7 @@ void *reader( __attribute__ ((unused))
 								writeConfig(NULL);
 								oactive = control->active;
 							}
+							setVolume(getProfile(control->active)->volume);
 						}
 						control->status = mpc_play;
 						notifyChange(MPCOMM_CONFIG);

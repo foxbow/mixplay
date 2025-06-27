@@ -23,6 +23,8 @@
 #define FADESECS 4
 
 #define DEFAULT_VOLUME (90)
+/* default line out adaption for internet stream play */
+#define VOLUME_STREAM (-10)
 
 /*
  * commands and states
@@ -179,6 +181,7 @@ typedef struct {
 	uint32_t spread;
 	uint32_t maxid;				/* highest profile id */
 	uint32_t lineout;			/* enable line-out at fix volume */
+	int32_t linestream;			/* stream play volume modifier */
 	uint32_t fade;				/* controls fading between titles */
 	/* flags for mpmode */
 	uint32_t searchDNP:1;
@@ -215,7 +218,8 @@ mpplaylist_t *getCurrent();
 profile_t *getProfile(uint32_t id);
 int32_t getProfileIndex(uint32_t id);
 bool isStream(profile_t * profile);
-bool isStreamId(uint32_t id);
+
+#define isStreamActive() isStream(getProfile(getConfig()->active))
 
 void incDebug(void);
 int32_t getDebug(void);

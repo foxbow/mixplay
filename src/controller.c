@@ -549,13 +549,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			addMessage(-1, "No name given!");
 		}
 		else if ((config->current != NULL) && asyncTest()) {
-			int32_t cvol = config->volume;
-
-			if (cvol < 0)
-				cvol = DEFAULT_VOLUME;
-			profile_t *profile = addProfile(arg, config->streamURL, true);
-
-			profile->volume = cvol;
+			addProfile(arg, config->streamURL, true);
 			writeConfig(NULL);
 			pthread_mutex_unlock(&_asynclock);
 			notifyChange(MPCOMM_CONFIG);
@@ -568,7 +562,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		}
 		else if ((config->current != NULL) && asyncTest()) {
 			/* only clone profiles */
-			if (!isStreamId(config->active)) {
+			if (!isStreamActive()) {
 				if (copyProfile(config->active, arg) > 0) {
 					writeList(mpc_fav);
 					writeList(mpc_dnp);
