@@ -20,6 +20,7 @@
 #include <syslog.h>
 #include <signal.h>
 
+#include "mpalsa.h"
 #include "utils.h"
 #include "config.h"
 #include "musicmgr.h"
@@ -319,7 +320,7 @@ mpconfig_t *readConfig(void) {
 	/* Set some default values */
 	_cconfig->root = NULL;
 	_cconfig->current = NULL;
-	_cconfig->volume = 80;
+	_cconfig->volume = DEFAULT_VOLUME;
 	_cconfig->active = 1;
 	_cconfig->playtime = 0;
 	_cconfig->remtime = 0;
@@ -341,6 +342,8 @@ mpconfig_t *readConfig(void) {
 	_cconfig->streamURL = NULL;
 	_cconfig->rcdev = NULL;
 	_cconfig->mpmode = PM_NONE;
+	_cconfig->lineout = 0;
+	_cconfig->linestream = VOLUME_STREAM;
 
 	snprintf(_cconfig->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", home);
 
@@ -444,6 +447,9 @@ mpconfig_t *readConfig(void) {
 			}
 			if (strstr(line, "lineout=") == line) {
 				_cconfig->lineout = atoi(pos);
+			}
+			if (strstr(line, "linestream=") == line) {
+				_cconfig->linestream = atoi(pos);
 			}
 			free(line);
 		}
@@ -563,6 +569,7 @@ void writeConfig(const char *musicpath) {
 			}
 		}
 		fprintf(fp, "\nlineout=%i", _cconfig->lineout);
+		fprintf(fp, "\nlinestream=%i", _cconfig->linestream);
 		fprintf(fp, "\n");
 		fclose(fp);
 	}
@@ -985,14 +992,23 @@ profile_t *addProfile(const char *name, const char *url, bool newid) {
 	profile_t *profile = (profile_t *) falloc(1, sizeof (profile_t));
 
 	profile->name = strdup(name);
-	profile->volume = DEFAULT_VOLUME;
+	profile->url = NULL;
+	profile->volume = getConfig()->volume;
+
+	/* adapt volume if needed */
+	if (profile->volume == LINEOUT)
+		profile->volume = getConfig()->lineout;
+	else if (profile->volume < 1)
+		profile->volume = DEFAULT_VOLUME;
+
+	/* set stream settings */
 	if (url != NULL) {
 		profile->url = strdup(url);
-		profile->volume += VOLUME_STREAM;
+		if ((getConfig()->volume == LINEOUT) || (!isStreamActive())) {
+			profile->volume += getConfig()->linestream;
+		}
 	}
-	else {
-		profile->url = NULL;
-	}
+
 	if (newid) {
 		_cconfig->maxid++;
 		profile->id = _cconfig->maxid;

@@ -181,6 +181,7 @@ typedef struct {
 	uint32_t spread;
 	uint32_t maxid;				/* highest profile id */
 	uint32_t lineout;			/* enable line-out at fix volume */
+	int32_t linestream;			/* stream play volume modifier */
 	uint32_t fade;				/* controls fading between titles */
 	/* flags for mpmode */
 	uint32_t searchDNP:1;
