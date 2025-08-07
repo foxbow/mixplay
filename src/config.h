@@ -217,6 +217,7 @@ uint32_t copyProfile(uint32_t id, const char *name);
 mpplaylist_t *getCurrent();
 profile_t *getProfile(uint32_t id);
 int32_t getProfileIndex(uint32_t id);
+int32_t getProfileVolume(uint32_t id);
 bool isStream(profile_t * profile);
 
 #define isStreamActive() isStream(getProfile(getConfig()->active))

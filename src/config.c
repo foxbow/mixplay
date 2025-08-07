@@ -513,11 +513,13 @@ void writeConfig(const char *musicpath) {
 		fprintf(fp, "[mixplay]");
 		fprintf(fp, "\nmusicdir=%s", _cconfig->musicdir);
 		fprintf(fp, "\npassword=%s", _cconfig->password);
+		fprintf(fp, "\nlineout=%i", _cconfig->lineout);
+		fprintf(fp, "\nlinestream=%i", _cconfig->linestream);
 		if (_cconfig->profiles == 0) {
 			fprintf(fp, "\nactive=1");
 			fprintf(fp, "\nname=mixplay;");
 			fprintf(fp, "\nurl=;");
-			fprintf(fp, "\nvol=80;");
+			fprintf(fp, "\nvol=%i;", DEFAULT_VOLUME);
 			fprintf(fp, "\nfavplay=0;");
 			fprintf(fp, "\nid=1;");
 		}
@@ -568,8 +570,6 @@ void writeConfig(const char *musicpath) {
 				fprintf(fp, "%i;", _cconfig->rccodes[i]);
 			}
 		}
-		fprintf(fp, "\nlineout=%i", _cconfig->lineout);
-		fprintf(fp, "\nlinestream=%i", _cconfig->linestream);
 		fprintf(fp, "\n");
 		fclose(fp);
 	}
@@ -993,19 +993,19 @@ profile_t *addProfile(const char *name, const char *url, bool newid) {
 
 	profile->name = strdup(name);
 	profile->url = NULL;
-	profile->volume = getConfig()->volume;
+	profile->volume = _cconfig->volume;
 
 	/* adapt volume if needed */
 	if (profile->volume == LINEOUT)
-		profile->volume = getConfig()->lineout;
+		profile->volume = _cconfig->lineout;
 	else if (profile->volume < 1)
 		profile->volume = DEFAULT_VOLUME;
 
 	/* set stream settings */
 	if (url != NULL) {
 		profile->url = strdup(url);
-		if ((getConfig()->volume == LINEOUT) || (!isStreamActive())) {
-			profile->volume += getConfig()->linestream;
+		if ((_cconfig->volume == LINEOUT) || (!isStreamActive())) {
+			profile->volume += _cconfig->linestream;
 		}
 	}
 
@@ -1095,6 +1095,10 @@ mptitle_t *wipeTitles(mptitle_t * root) {
 }
 
 profile_t *getProfile(uint32_t id) {
+	/* catch URL play */
+	if (id == 0) {
+		return NULL;
+	}
 	for (uint32_t i = 0; i < _cconfig->profiles; i++) {
 		if (_cconfig->profile[i]->id == id)
 			return _cconfig->profile[i];
@@ -1111,17 +1115,30 @@ int32_t getProfileIndex(uint32_t id) {
 	return -1;
 }
 
+/* we need to have special handling for URL play */
+int32_t getProfileVolume(uint32_t id) {
+	if (id == 0) {
+		return getConfig()->volume + getConfig()->lineout;
+	}
+	profile_t *profile = getProfile(id);
+
+	if (profile != NULL) {
+		return profile->volume;
+	}
+	return getConfig()->volume;
+}
+
 bool isStream(profile_t * profile) {
+	if (profile == NULL) {
+		return true;
+	}
 	return ((profile->url != NULL) && (profile->url[0] != '\0'));
 }
 
 bool isStreamId(uint32_t id) {
-	profile_t *profile = getProfile(id);
+	return isStream(getProfile(id));
 
-	if (profile != NULL) {
-		return isStream(profile);
-	}
-	return false;
+	return true;
 }
 
 /*
