@@ -255,7 +255,7 @@ void *setProfile(void *arg) {
 /* returns the name of the current profile or channel */
 static const char *getProfileName(int32_t profile) {
 	if (profile == 0) {
-		return "NONE";
+		return "[URL]";
 	}
 	return getProfile(profile)->name;
 }
@@ -888,7 +888,7 @@ void *reader( __attribute__ ((unused))
 								writeConfig(NULL);
 								oactive = control->active;
 							}
-							setVolume(getProfile(control->active)->volume);
+							setVolume(getProfileVolume(control->active));
 						}
 						control->status = mpc_play;
 						notifyChange(MPCOMM_CONFIG);
