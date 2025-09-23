@@ -184,11 +184,11 @@ typedef struct {
 	int32_t linestream;			/* stream play volume modifier */
 	uint32_t fade;				/* controls fading between titles */
 	/* flags for mpmode */
-	uint32_t searchDNP:1;
+	bool searchDNP;
 	/* other flags */
-	uint32_t isDaemon:1;
-	uint32_t inUI:1;			/* flag to show if the UI is active */
-	uint32_t list:1;			/* remote playlist */
+	bool isDaemon;
+	bool inUI;					/* flag to show if the UI is active */
+	bool playlist;				/* remote playlist */
 } mpconfig_t;
 
 /* message request types */
