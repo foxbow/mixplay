@@ -717,7 +717,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 	case mpc_smode:
 		if (config->mpmode & PM_STREAM)
 			break;
-		config->searchDNP = ~(config->searchDNP);
+		config->searchDNP = !config->searchDNP;
 		break;
 
 	case mpc_deldnp:

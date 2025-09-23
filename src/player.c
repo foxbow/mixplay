@@ -87,10 +87,10 @@ void setStream(char const *const stream, char const *const name) {
 	notifyChange(MPCOMM_TITLES);
 	if (endsWith(stream, ".m3u") || endsWith(stream, ".pls")) {
 		addMessage(MPV + 1, "Remote playlist..");
-		control->list = 1;
+		control->playlist = true;
 	}
 	else {
-		control->list = 0;
+		control->playlist = false;
 	}
 
 	/* no strdup() as this will be recycled on each setStream() call */
@@ -126,7 +126,7 @@ void sendplay(void) {
 			addMessage(-1, "Not loading stream on active player!");
 			return;
 		}
-		if (control->list) {
+		if (control->playlist) {
 			strcpy(line, "loadlist 1 ");
 		}
 		strtcat(line, control->streamURL, MAXPATHLEN + 6);
@@ -177,7 +177,7 @@ void *setProfile(void *arg) {
 	}
 
 	active = control->active;
-	control->searchDNP = 0;
+	control->searchDNP = false;
 
 	profile = getProfile(active);
 	if (profile == NULL) {

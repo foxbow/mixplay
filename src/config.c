@@ -332,13 +332,13 @@ mpconfig_t *readConfig(void) {
 	_cconfig->sleepto = 0;
 	_cconfig->debug = 0;
 	_cconfig->fade = FADESECS;
-	_cconfig->inUI = 0;
+	_cconfig->inUI = false;
 	_cconfig->msg->lines = 0;
 	_cconfig->msg->current = 0;
 	_cconfig->port = MP_PORT;
 	_cconfig->bookmarklet = NULL;
-	_cconfig->isDaemon = 0;
-	_cconfig->searchDNP = 0;
+	_cconfig->isDaemon = false;
+	_cconfig->searchDNP = false;
 	_cconfig->streamURL = NULL;
 	_cconfig->rcdev = NULL;
 	_cconfig->mpmode = PM_NONE;

@@ -919,7 +919,7 @@ static void *mpserver(void *arg) {
 	/* enable inUI even when not in daemon mode
 	 * even if there is no clienthandler yet, messages should be
 	 * queued so the first client will see them. */
-	control->inUI = 1;
+	control->inUI = true;
 
 	/* Start main loop */
 	pfd.fd = mainsocket;

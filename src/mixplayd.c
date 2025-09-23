@@ -225,7 +225,7 @@ int32_t main(int32_t argc, char **argv) {
 			return -1;
 		}
 		openlog("mixplayd", LOG_PID, LOG_DAEMON);
-		control->isDaemon = 1;
+		control->isDaemon = true;
 	}
 
 	if (access(PIDPATH, F_OK) != 0) {
@@ -287,7 +287,7 @@ int32_t main(int32_t argc, char **argv) {
 			pthread_join(hidtid, NULL);
 		}
 		addMessage(1, "Server stopped");
-		control->inUI = 0;
+		control->inUI = false;
 		addMessage(0, "Player terminated gracefully");
 	}
 
