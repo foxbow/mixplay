@@ -7,19 +7,19 @@ CCFLAGS+=-DVERSION=\"$(VERSION)\"
 CCFLAGS+=-D_GNU_SOURCE -std=gnu11 -Wall -Wextra -Werror -pedantic -I .
 
 ifdef MPDEBUG
-# force compilation with -g
-CCFLAGS+=-g
+# force compilation with -ggdb
+CCFLAGS+=-ggdb
 ifeq ($(MPDEBUG),2)
 # enable address sanitizer
 CCFLAGS+=-fsanitize=address
 LIBS=-lasan
 endif
 else
-# master branch is built with -O2, dev branches with -g
+# master branch is built with -O2, dev branches with -ggdb
 ifeq ($(shell git rev-parse --abbrev-ref HEAD),master)
 CCFLAGS+=-O2
 else
-CCFLAGS+=-g
+CCFLAGS+=-ggdb
 endif
 endif
 

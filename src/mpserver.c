@@ -817,8 +817,9 @@ static void *clientHandler(void *args) {
 				len = 0;
 				/* even though we sent a Content-Length Chrome still waits on the
 				 * connection. So either the length is wrong or ignored forcing
-				 * us to close the connection and force the download to end */
-				running &= ~CL_RUN;
+				 * us to close the connection and force the download to end.
+				 * This seems to be fixed...
+				 * running &= ~CL_RUN; */
 				break;
 
 			case req_current:	/* return "artist - title" line */
