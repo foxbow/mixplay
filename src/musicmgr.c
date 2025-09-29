@@ -377,22 +377,22 @@ static int32_t getDirs(const char *cd, struct dirent ***dirlist) {
  * returns 1 on equality and 0 on differerences.
  * This is not equal to stricmp/strcasecmp!
  */
-static int32_t strieq(const char *t1, const char *t2) {
+static bool strieq(const char *t1, const char *t2) {
 	size_t len = strlen(t1);
 
 	if (len != strlen(t2))
-		return 0;
+		return false;
 	do {
 		if (tolower(t1[len]) != tolower(t2[len]))
-			return 0;
+			return false;
 	} while (len-- > 0);
-	return 1;
+	return true;
 }
 
 /*
  * matches term with pattern in search.
  */
-static int32_t isMatch(const char *term, const char *pat, const mpcmd_t range) {
+static bool isMatch(const char *term, const char *pat, const mpcmd_t range) {
 	char loterm[MAXPATHLEN];
 
 	if (MPC_ISFUZZY(range)) {
@@ -485,7 +485,7 @@ int32_t search(const mpcmd_t range, const char *pat) {
 	mptitle_t *runner = root;
 	searchresults_t *res = control->found;
 	uint32_t i = 0;
-	uint32_t valid = 0;
+	bool valid = false;
 	uint32_t found = 0;
 	char *lopat;
 
@@ -511,14 +511,20 @@ int32_t search(const mpcmd_t range, const char *pat) {
 		found = 0;
 
 		/* ugly but at least somewhat understandable how titles get filtered */
-		if (getFavplay()) {
-			valid = runner->flags & MP_FAV;
+		if (isStreamActive()) {
+			/* only filter out doublets */
+			valid = !(runner->flags & MP_DBL);
 		}
 		else {
-			valid = !(runner->flags & (MP_DNP | MP_DBL));
-		}
-		if (getConfig()->searchDNP) {
-			valid = !valid;
+			if (getFavplay()) {
+				valid = runner->flags & MP_FAV;
+			}
+			else {
+				valid = !(runner->flags & (MP_DNP | MP_DBL));
+			}
+			if (getConfig()->searchDNP) {
+				valid = !valid;
+			}
 		}
 
 		if (valid) {
@@ -555,7 +561,7 @@ int32_t search(const mpcmd_t range, const char *pat) {
 			if (MPC_ISARTIST(found)) {
 				/* check for new artist */
 				for (i = 0; (i < res->anum)
-					 && strcmp(res->artists[i], runner->artist); i++);
+					 && !strieq(res->artists[i], runner->artist); i++);
 				if (i == res->anum) {
 					res->anum++;
 					res->artists =
@@ -596,6 +602,9 @@ int32_t search(const mpcmd_t range, const char *pat) {
 			}
 		}
 		runner = runner->next;
+		/* we hit the limit, no sense in searching on */
+		if (res->tnum > MAXSEARCH)
+			break;
 	} while (runner != root);
 
 	/* result can be sent out now */
