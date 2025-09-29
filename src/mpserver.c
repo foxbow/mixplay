@@ -592,7 +592,7 @@ static void *clientHandler(void *args) {
 					if ((strstr(pos, "/ ") == pos) ||
 						(strstr(pos, "/index.html ") == pos)) {
 						pthread_mutex_lock(&_sendlock);
-						fname = "static/mixplay.html";
+						fname = "src/mixplay.html";
 						fdata = static_mixplay_html;
 						flen = static_mixplay_html_len;
 						mtype = "text/html; charset=utf-8";
@@ -602,21 +602,21 @@ static void *clientHandler(void *args) {
 							 (strstr(pos, "/rc.html ") == pos) ||
 							 (strstr(pos, "/mprc.html ") == pos)) {
 						pthread_mutex_lock(&_sendlock);
-						fname = "static/mprc.html";
+						fname = "src/mprc.html";
 						fdata = static_mprc_html;
 						flen = static_mprc_html_len;
 						mtype = "text/html; charset=utf-8";
 					}
 					else if (strstr(pos, "/mixplay.css ") == pos) {
 						pthread_mutex_lock(&_sendlock);
-						fname = "static/mixplay.css";
+						fname = "src/mixplay.css";
 						fdata = static_mixplay_css;
 						flen = static_mixplay_css_len;
 						mtype = "text/css; charset=utf-8";
 					}
 					else if (strstr(pos, "/mixplay.js ") == pos) {
 						pthread_mutex_lock(&_sendlock);
-						fname = "static/mixplay.js";
+						fname = "src/mixplay.js";
 						fdata = static_mixplay_js;
 						flen = static_mixplay_js_len;
 						mtype = "application/javascript; charset=utf-8";
@@ -639,14 +639,14 @@ static void *clientHandler(void *args) {
 					else if ((strstr(pos, "/mpplayer.html ") == pos) ||
 							 (strstr(pos, "/mpplayer ") == pos)) {
 						pthread_mutex_lock(&_sendlock);
-						fname = "static/mpplayer.html";
+						fname = "src/mpplayer.html";
 						fdata = static_mpplayer_html;
 						flen = static_mpplayer_html_len;
 						mtype = "text/html; charset=utf-8";
 					}
 					else if (strstr(pos, "/mpplayer.js ") == pos) {
 						pthread_mutex_lock(&_sendlock);
-						fname = "static/mpplayer.js";
+						fname = "src/mpplayer.js";
 						fdata = static_mpplayer_js;
 						flen = static_mpplayer_js_len;
 						mtype = "application/javascript; charset=utf-8";
