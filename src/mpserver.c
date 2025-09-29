@@ -248,35 +248,6 @@ static size_t serviceUnavailable(char *commdata) {
 
 #define ROUNDUP(a,b) (((a/b)+1)*b)
 
-/* filters out anything that is not ASCII 7Bit and replaces any sequence with a
-   single underscore. Used to create non UTF-8 filenames when downloading
-   a title */
-static char *plaintext(const char *text) {
-	static char res[MAXPATHLEN + 1];
-	uint8_t special = 0;
-	size_t i, j = 0;
-
-	if (strlen(text) > MAXPATHLEN) {
-		addMessage(0, "String %s too long!", text);
-		return strdup("none.mp3");
-	}
-	for (i = 0; i < strlen(text); i++) {
-		if (text[i] > 0) {
-			res[j++] = text[i];
-			special = 0;
-		}
-		else if (special == 0) {
-			res[j++] = '_';
-			special = 1;
-		}
-		else {
-			special = 0;
-		}
-	}
-	res[j] = 0;
-	return res;
-}
-
 /**
  * This will handle a connection
  *
@@ -803,12 +774,8 @@ static void *clientHandler(void *args) {
 				sprintf(commdata,
 						"HTTP/1.1 200 OK\015\012Content-Type: audio/mpeg;\015\012"
 						"Content-Length: %ld;\015\012"
-						"Content-Disposition: attachment; "
-						"filename=\"%s.mp3\"; "
-						"filename*=utf-8''%s.mp3;"
-						"\015\012\015\012",
-						sbuf.st_size, plaintext(title->display),
-						title->display);
+						"Content-Disposition: attachment; filename=\"%s.mp3\""
+						"\015\012\015\012", sbuf.st_size, title->display);
 				send(sock, commdata, strlen(commdata), 0);
 				line[0] = 0;
 				filePost(sock, fullpath(title->path));
@@ -817,9 +784,8 @@ static void *clientHandler(void *args) {
 				len = 0;
 				/* even though we sent a Content-Length Chrome still waits on the
 				 * connection. So either the length is wrong or ignored forcing
-				 * us to close the connection and force the download to end.
-				 * This seems to be fixed...
-				 * running &= ~CL_RUN; */
+				 * us to close the connection and force the download to end. */
+				running &= ~CL_RUN;
 				break;
 
 			case req_current:	/* return "artist - title" line */
