@@ -159,7 +159,6 @@ void *setProfile(void *arg) {
 	profile_t *profile;
 	int32_t num;
 	uint32_t active;
-	static uint32_t lastact = 0;	/* last active profile (not channel!) */
 	mpconfig_t *control = getConfig();
 	char *home = getenv("HOME");
 
@@ -190,6 +189,28 @@ void *setProfile(void *arg) {
 		return setProfile(NULL);
 	}
 
+	/* only load database if it has not yet been used */
+	if (control->root == NULL) {
+		control->root = dbGetMusic();
+		if (NULL == control->root) {
+			addMessage(0, "Scanning musicdir");
+			num = dbAddTitles(control->musicdir);
+			if (0 == num) {
+				fail(F_FAIL, "No music found at %s!", control->musicdir);
+			}
+			addMessage(0, "Added %i titles.", num);
+			control->root = dbGetMusic();
+			if (NULL == control->root) {
+				fail(F_FAIL,
+					 "No music found at %s for database %s!\nThis should never happen!",
+					 control->musicdir, control->dbname);
+			}
+		}
+	}
+	else {
+		cleanTitles(true);
+	}
+
 	/* stream selected */
 	if (isStream(profile)) {
 		setStream(profile->url, profile->name);
@@ -198,45 +219,16 @@ void *setProfile(void *arg) {
 	else {
 		addMessage(MPV + 1, "Playmode=%u", control->mpmode);
 
-		/* only load database if it has not yet been used */
-		if (control->root == NULL) {
-			control->root = dbGetMusic();
-			if (NULL == control->root) {
-				addMessage(0, "Scanning musicdir");
-				num = dbAddTitles(control->musicdir);
-				if (0 == num) {
-					fail(F_FAIL, "No music found at %s!", control->musicdir);
-				}
-				addMessage(0, "Added %i titles.", num);
-				control->root = dbGetMusic();
-				if (NULL == control->root) {
-					fail(F_FAIL,
-						 "No music found at %s for database %s!\nThis should never happen!",
-						 control->musicdir, control->dbname);
-				}
-			}
+		control->mpmode = PM_DATABASE | PM_SWITCH;
+		control->dnplist = wipeList(control->dnplist);
+		control->favlist = wipeList(control->favlist);
+		control->dnplist = loadList(mpc_dnp);
+		control->favlist = loadList(mpc_fav);
+		if (control->dbllist == NULL) {
+			control->dbllist = loadList(mpc_doublets);
+			applyDNPlist(control->dbllist, 1);
 		}
-
-		/* last database play was on the same profile, so just wipe playlist */
-		if (lastact == control->active) {
-			wipePlaylist(control);
-			control->mpmode = PM_DATABASE | PM_SWITCH;
-		}
-		/* last database play was a different profile, so clean up all */
-		else {
-			cleanTitles(true);
-			control->mpmode = PM_DATABASE | PM_SWITCH;
-			control->dnplist = wipeList(control->dnplist);
-			control->favlist = wipeList(control->favlist);
-			control->dnplist = loadList(mpc_dnp);
-			control->favlist = loadList(mpc_fav);
-			if (control->dbllist == NULL) {
-				control->dbllist = loadList(mpc_doublets);
-				applyDNPlist(control->dbllist, 1);
-			}
-			applyLists(1);
-			lastact = control->active;
-		}
+		applyLists(1);
 		setArtistSpread();
 		plCheck(true);
 		addMessage(MPV + 1, "Profile set to %s.", profile->name);
