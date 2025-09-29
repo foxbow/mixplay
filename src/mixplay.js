@@ -1277,6 +1277,12 @@ function searchUpdate (data) {
       choices.push(['&#x276f;&#x276f;', 0x1014]) // append
       items[0] = popselect(choices, 0, 'All results', 0, lineid++)
     }
+    else {
+      /* dummy entry to keep items array in line */
+      items[0] = document.createElement('p')
+      items[0].className = 'nopopselect'
+      items[0].innerHTML = 'Results:'
+    }
     for (i = 0; i < data.titles.length; i++) {
       choices = []
       if (!isstream) {
@@ -1376,19 +1382,14 @@ function playerUpdate (data) {
     isstream = (data.mpmode & 1) /* PM_STREAM */
     enableElement('goprev', !isstream)
     enableElement('gonext', !isstream)
+    enableElement('fav', !isstream)
     enableElement('dnp', !isstream)
     enableElement('setfavplay', !isstream)
     enableElement('searchmode', !isstream)
     enableElement('lscroll', !isstream)
-    enableElement('cdnpfav0', !isstream)
     enableElement('cdnpfav1', !isstream)
     enableElement('cdnpfav2', !isstream)
     enableElement('cdnpfav3', !isstream)
-    enableElement('rescan', !isstream)
-    enableElement('dbinfo', !isstream)
-    enableElement('playcnt', !isstream)
-    enableElement('doublet', !isstream)
-    enableElement('fav', !isstream)
     enableElement('clprof', !isstream)
     if (isstream) switchTabByRef('dnpfav', 0)
   }
