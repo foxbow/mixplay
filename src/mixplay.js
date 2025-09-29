@@ -1209,11 +1209,13 @@ function searchUpdate (data) {
     for (i = 0; i < data.albums.length; i++) {
       choices = []
       choices.push(['&#x26b2;', 0x0413]) // search album
-      if (!favplay || data.searchDNP) {
-        choices.push(['&#x2665;', 0x0409]) // fav
-      }
-      if (!data.searchDNP) {
-        choices.push(['&#x2620;', 0x040a]) // dnp
+      if (!isstream) {
+        if (!favplay || data.searchDNP) {
+          choices.push(['&#x2665;', 0x0409]) // fav
+        }
+        if (!data.searchDNP) {
+          choices.push(['&#x2620;', 0x040a]) // dnp
+        }
       }
 
       items[i] = popselect(choices,
@@ -1237,11 +1239,13 @@ function searchUpdate (data) {
     for (i = 0; i < data.artists.length; i++) {
       choices = []
       choices.push(['&#x26b2;', 0x0213]) // search
-      if (!favplay || data.searchDNP) {
-        choices.push(['&#x2665;', 0x0209]) // fav
-      }
-      if (!data.searchDNP) {
-        choices.push(['&#x2620;', 0x020a]) // dnp
+      if (!isstream) {
+        if (!favplay || data.searchDNP) {
+          choices.push(['&#x2665;', 0x0209]) // fav
+        }
+        if (!data.searchDNP) {
+          choices.push(['&#x2620;', 0x020a]) // dnp
+        }
       }
       items[i] = popselect(choices,
         data.artists[i],
@@ -1262,26 +1266,35 @@ function searchUpdate (data) {
     enableElement('csearch0', 1)
     switchTabByRef('search', 0)
     choices = []
-    if (!favplay || data.searchDNP) {
-      choices.push(['&#x2665;', 0x1009]) // fav
-    }
-    if (!data.searchDNP) {
-      choices.push(['&#x2620;', 0x100a]) // dnp
-    }
-    choices.push(['&#x276f;', 0x100c]) // next
-    choices.push(['&#x276f;&#x276f;', 0x1014]) // append
-    items[0] = popselect(choices, 0, 'All results', 0, lineid++)
-
-    for (i = 0; i < data.titles.length; i++) {
-      choices = []
-      if (!(data.titles[i].flags & 1)) {
+    if (!isstream) {
+      if (!favplay || data.searchDNP) {
         choices.push(['&#x2665;', 0x1009]) // fav
       }
-      if (!(data.titles[i].flags & 2)) {
+      if (!data.searchDNP) {
         choices.push(['&#x2620;', 0x100a]) // dnp
       }
       choices.push(['&#x276f;', 0x100c]) // next
       choices.push(['&#x276f;&#x276f;', 0x1014]) // append
+      items[0] = popselect(choices, 0, 'All results', 0, lineid++)
+    }
+    else {
+      /* dummy entry to keep items array in line */
+      items[0] = document.createElement('p')
+      items[0].className = 'nopopselect'
+      items[0].innerHTML = 'Results:'
+    }
+    for (i = 0; i < data.titles.length; i++) {
+      choices = []
+      if (!isstream) {
+        if (!(data.titles[i].flags & 1)) {
+          choices.push(['&#x2665;', 0x1009]) // fav
+        }
+        if (!(data.titles[i].flags & 2)) {
+          choices.push(['&#x2620;', 0x100a]) // dnp
+        }
+        choices.push(['&#x276f;', 0x100c]) // next
+        choices.push(['&#x276f;&#x276f;', 0x1014]) // append
+      }
       choices.push(['&#x1f4be;', 'download'])
       items[i + 1] = popselect(choices,
         data.titles[i].key,
@@ -1369,19 +1382,14 @@ function playerUpdate (data) {
     isstream = (data.mpmode & 1) /* PM_STREAM */
     enableElement('goprev', !isstream)
     enableElement('gonext', !isstream)
+    enableElement('fav', !isstream)
     enableElement('dnp', !isstream)
     enableElement('setfavplay', !isstream)
-    enableElement('cextra3', !isstream)
+    enableElement('searchmode', !isstream)
     enableElement('lscroll', !isstream)
-    enableElement('cdnpfav0', !isstream)
     enableElement('cdnpfav1', !isstream)
     enableElement('cdnpfav2', !isstream)
     enableElement('cdnpfav3', !isstream)
-    enableElement('rescan', !isstream)
-    enableElement('dbinfo', !isstream)
-    enableElement('playcnt', !isstream)
-    enableElement('doublet', !isstream)
-    enableElement('fav', !isstream)
     enableElement('clprof', !isstream)
     if (isstream) switchTabByRef('dnpfav', 0)
   }

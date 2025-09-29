@@ -668,9 +668,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		 * unlocking the server to send the reply and finally sets it to idle
 		 * again, unlocking the player */
 	case mpc_search:
-		if (config->mpmode & PM_STREAM)
-			break;
-		else {
+		{
 			char *term = arg;
 
 			/* if we mix two searches we're in trouble!

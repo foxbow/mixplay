@@ -248,35 +248,6 @@ static size_t serviceUnavailable(char *commdata) {
 
 #define ROUNDUP(a,b) (((a/b)+1)*b)
 
-/* filters out anything that is not ASCII 7Bit and replaces any sequence with a
-   single underscore. Used to create non UTF-8 filenames when downloading
-   a title */
-static char *plaintext(const char *text) {
-	static char res[MAXPATHLEN + 1];
-	uint8_t special = 0;
-	size_t i, j = 0;
-
-	if (strlen(text) > MAXPATHLEN) {
-		addMessage(0, "String %s too long!", text);
-		return strdup("none.mp3");
-	}
-	for (i = 0; i < strlen(text); i++) {
-		if (text[i] > 0) {
-			res[j++] = text[i];
-			special = 0;
-		}
-		else if (special == 0) {
-			res[j++] = '_';
-			special = 1;
-		}
-		else {
-			special = 0;
-		}
-	}
-	res[j] = 0;
-	return res;
-}
-
 /**
  * This will handle a connection
  *
@@ -592,7 +563,7 @@ static void *clientHandler(void *args) {
 					if ((strstr(pos, "/ ") == pos) ||
 						(strstr(pos, "/index.html ") == pos)) {
 						pthread_mutex_lock(&_sendlock);
-						fname = "static/mixplay.html";
+						fname = "src/mixplay.html";
 						fdata = static_mixplay_html;
 						flen = static_mixplay_html_len;
 						mtype = "text/html; charset=utf-8";
@@ -602,21 +573,21 @@ static void *clientHandler(void *args) {
 							 (strstr(pos, "/rc.html ") == pos) ||
 							 (strstr(pos, "/mprc.html ") == pos)) {
 						pthread_mutex_lock(&_sendlock);
-						fname = "static/mprc.html";
+						fname = "src/mprc.html";
 						fdata = static_mprc_html;
 						flen = static_mprc_html_len;
 						mtype = "text/html; charset=utf-8";
 					}
 					else if (strstr(pos, "/mixplay.css ") == pos) {
 						pthread_mutex_lock(&_sendlock);
-						fname = "static/mixplay.css";
+						fname = "src/mixplay.css";
 						fdata = static_mixplay_css;
 						flen = static_mixplay_css_len;
 						mtype = "text/css; charset=utf-8";
 					}
 					else if (strstr(pos, "/mixplay.js ") == pos) {
 						pthread_mutex_lock(&_sendlock);
-						fname = "static/mixplay.js";
+						fname = "src/mixplay.js";
 						fdata = static_mixplay_js;
 						flen = static_mixplay_js_len;
 						mtype = "application/javascript; charset=utf-8";
@@ -639,14 +610,14 @@ static void *clientHandler(void *args) {
 					else if ((strstr(pos, "/mpplayer.html ") == pos) ||
 							 (strstr(pos, "/mpplayer ") == pos)) {
 						pthread_mutex_lock(&_sendlock);
-						fname = "static/mpplayer.html";
+						fname = "src/mpplayer.html";
 						fdata = static_mpplayer_html;
 						flen = static_mpplayer_html_len;
 						mtype = "text/html; charset=utf-8";
 					}
 					else if (strstr(pos, "/mpplayer.js ") == pos) {
 						pthread_mutex_lock(&_sendlock);
-						fname = "static/mpplayer.js";
+						fname = "src/mpplayer.js";
 						fdata = static_mpplayer_js;
 						flen = static_mpplayer_js_len;
 						mtype = "application/javascript; charset=utf-8";
@@ -803,12 +774,8 @@ static void *clientHandler(void *args) {
 				sprintf(commdata,
 						"HTTP/1.1 200 OK\015\012Content-Type: audio/mpeg;\015\012"
 						"Content-Length: %ld;\015\012"
-						"Content-Disposition: attachment; "
-						"filename=\"%s.mp3\"; "
-						"filename*=utf-8''%s.mp3;"
-						"\015\012\015\012",
-						sbuf.st_size, plaintext(title->display),
-						title->display);
+						"Content-Disposition: attachment; filename=\"%s.mp3\""
+						"\015\012\015\012", sbuf.st_size, title->display);
 				send(sock, commdata, strlen(commdata), 0);
 				line[0] = 0;
 				filePost(sock, fullpath(title->path));
@@ -817,7 +784,7 @@ static void *clientHandler(void *args) {
 				len = 0;
 				/* even though we sent a Content-Length Chrome still waits on the
 				 * connection. So either the length is wrong or ignored forcing
-				 * us to close the connection and force the download to end */
+				 * us to close the connection and force the download to end. */
 				running &= ~CL_RUN;
 				break;
 
