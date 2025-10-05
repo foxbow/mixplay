@@ -501,13 +501,14 @@ int32_t search(const mpcmd_t range, const char *pat) {
 	}
 
 	if (pat == NULL) {
+		runner = runner->prev;
 		for (i = 0; i < 10; i++) {
-			runner = runner->prev;
-		}
-		while (runner != root) {
 			res->titles = appendToPL(runner, res->titles, 0);
 			res->tnum++;
-			runner=runner->next;
+			runner=runner->prev;
+			if (runner == root) {
+				break;
+			}
 		}
 	}
 	else {

@@ -207,9 +207,6 @@ void *setProfile(void *arg) {
 			}
 		}
 	}
-	else {
-		cleanTitles(true);
-	}
 
 	/* stream selected */
 	if (isStream(profile)) {
@@ -228,6 +225,7 @@ void *setProfile(void *arg) {
 			control->dbllist = loadList(mpc_doublets);
 			applyDNPlist(control->dbllist, 1);
 		}
+		cleanTitles(true);
 		applyLists(1);
 		setArtistSpread();
 		plCheck(true);
