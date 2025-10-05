@@ -234,6 +234,7 @@ void *setProfile(void *arg) {
 		addMessage(MPV + 1, "Profile set to %s.", profile->name);
 	}
 
+	setTnum();
 	notifyChange(MPCOMM_CONFIG);
 
 	startPlayer();

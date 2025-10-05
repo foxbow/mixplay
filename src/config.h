@@ -189,6 +189,7 @@ typedef struct {
 	bool isDaemon;
 	bool inUI;					/* flag to show if the UI is active */
 	bool playlist;				/* remote playlist */
+	uint32_t tnum;              /* number of titles in the current profile */
 } mpconfig_t;
 
 /* message request types */

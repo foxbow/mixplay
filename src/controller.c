@@ -467,6 +467,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			break;
 		if (checkPasswd(arg)) {
 			asyncRun(plCheckDoublets);
+			setTnum();
 		}
 		break;
 
@@ -475,6 +476,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			break;
 		if (checkPasswd(arg)) {
 			asyncRun(plDbClean);
+			setTnum();
 		}
 		break;
 
@@ -505,6 +507,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			if (getFavplay()) {
 				setArtistSpread();
 			}
+			setTnum();
 		}
 		break;
 
@@ -652,8 +655,11 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		break;
 
 	case mpc_dbinfo:
-		if (config->mpmode & PM_STREAM)
+		if (config->mpmode & PM_STREAM) {
+			asyncRun(plDbInfo);
 			break;
+		}
+		/* TODO: very unintuitive! */
 		if ((arg) && checkPasswd(arg)) {
 			asyncRun(plDbFix);
 		}

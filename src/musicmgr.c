@@ -488,7 +488,6 @@ int32_t search(const mpcmd_t range, const char *pat) {
 
 	/* enter while the last result has not been sent yet! */
 	assert(res->state != mpsearch_done);
-	// assert(pat != NULL);
 
 	/* free buffer playlist, the arrays will not get lost due to the realloc later */
 	wipeSearchList(control);
@@ -765,6 +764,7 @@ void applyLists(int32_t clean) {
 	applyFAVlist(control->favlist);
 	applyDNPlist(control->dnplist, 0);
 	unlockPlaylist();
+	setTnum();
 	notifyChange(MPCOMM_LISTS);
 }
 
@@ -1215,6 +1215,29 @@ uint64_t countTitles(const uint32_t inc, const uint32_t exc) {
 	while (runner != base);
 
 	return cnt;
+}
+
+/**
+ * sets the number of active titles in the profiile or all titles
+ */
+void setTnum(void) {
+	uint32_t tnum = getConfig()->tnum;
+	if (isStreamActive()) {
+		mptitle_t *root=getConfig()->root;
+		if (root != NULL) {
+			getConfig()->tnum = root->prev->key;
+		}
+		else {
+			getConfig()->tnum = 0;
+		}
+	}
+	else {
+		getConfig()->tnum = countTitles(getFavplay()? MP_FAV : MP_ALL, MP_DNP|MP_DBL);
+	}
+	if (tnum != getConfig()->tnum) {
+		/* the number of titles changes, notify clients */
+		notifyChange(MPCOMM_CONFIG);
+	}
 }
 
 /**

@@ -35,6 +35,7 @@ var inUpdate = 0
 var lastsearch = ''
 var profiles = []
 var lineout = 0
+var allnum = 0
 
 function debugLog (txt) {
   if (debug) {
@@ -1703,12 +1704,14 @@ function updateConfig (data) {
   }
   /*  idlesleep = data.sleepto * 1000 */
 
+  /* these should be elements.. */
+  lineout = data.lineout;
+  allnum = data.tnum;
+
   /* client debug is off but the server is in full debug mode */
   if ((debug === false) && (data.debug > 1)) {
     toggleDebug()
   }
-
-  lineout = data.lineout;
 
   if (data.bookmarklet.length > 0) {
     enableElement('bmlet', 1)
@@ -1786,6 +1789,9 @@ function toggleDebug () {
     addText('ClientID: ' + clientid)
     if (lineout > 0) {
       addText('Line volume: ' + lineout)
+    }
+    if (allnum > 0) {
+      addText(allnum + ' active titles')
     }
     setElement('debug', 'Standard')
   } else {
