@@ -675,7 +675,9 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			 * this duplicates the check in mpserver, so it should never happen */
 			assert(config->found->state == mpsearch_idle);
 
-			if (term == NULL) {
+			/* if the term is unset but the fuzzy is flag, return the latest 
+			 * ten new titles */
+			if ((term == NULL) && !MPC_ISFUZZY(rcmd)) {
 				if (MPC_ISARTIST(rcmd)) {
 					term = ctitle->artist;
 				}

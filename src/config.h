@@ -74,7 +74,7 @@ typedef enum {
 	mpc_title = 1 << 11,		/* 0x0800 */
 	mpc_display = 1 << 12,		/* 0x1000 */
 	mpc_substr = 1 << 13,		/* 0x2000 */
-	mpc_fuzzy = 1 << 14,		/* 0x4000 */
+	mpc_fuzzy = 1 << 14,		/* 0x4000 - experimental newest with empty term */
 } mpcmd_t;
 
 /* some filtermasks */
