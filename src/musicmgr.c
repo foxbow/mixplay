@@ -501,17 +501,19 @@ int32_t search(const mpcmd_t range, const char *pat) {
 	}
 
 	if (pat == NULL) {
+		/* just return the last 10 titles in the database */
 		runner = runner->prev;
 		for (i = 0; i < 10; i++) {
 			res->titles = appendToPL(runner, res->titles, 0);
 			res->tnum++;
-			runner=runner->prev;
+			runner = runner->prev;
 			if (runner == root) {
 				break;
 			}
 		}
 	}
 	else {
+		/* actual search */
 		/* whatever pattern we get, ignore case */
 		char *lopat = toLower(strdup(pat));
 		bool valid = false;
@@ -543,11 +545,13 @@ int32_t search(const mpcmd_t range, const char *pat) {
 				}
 
 				/* from a result point of view display(, path) and title are the same */
-				if (MPC_ISDISPLAY(range) && isMatch(runner->display, lopat, range)) {
+				if (MPC_ISDISPLAY(range)
+					&& isMatch(runner->display, lopat, range)) {
 					found |= mpc_title;
 				}
 
-				if (MPC_ISARTIST(range) && isMatch(runner->artist, lopat, range)) {
+				if (MPC_ISARTIST(range)
+					&& isMatch(runner->artist, lopat, range)) {
 					found |= mpc_artist;
 
 					/* Add albums and titles if search was for artists only */
@@ -570,38 +574,38 @@ int32_t search(const mpcmd_t range, const char *pat) {
 				if (MPC_ISARTIST(found)) {
 					/* check for new artist */
 					for (i = 0; (i < res->anum)
-						&& !strieq(res->artists[i], runner->artist); i++);
+						 && !strieq(res->artists[i], runner->artist); i++);
 					if (i == res->anum) {
 						res->anum++;
 						res->artists =
 							(char **) frealloc(res->artists,
-											res->anum * sizeof (char *));
+											   res->anum * sizeof (char *));
 						res->artists[i] = runner->artist;
 					}
 				}
 
 				if (MPC_ISALBUM(found)) {
 					/* check for new albums */
-					for (i = 0;
-						(i < res->lnum) && !strieq(res->albums[i], runner->album);
-						i++);
+					for (i = 0; (i < res->lnum)
+						 && !strieq(res->albums[i], runner->album); i++);
 					if (i == res->lnum) {
 						/* album not yet in list */
 						res->lnum++;
 						res->albums =
 							(char **) frealloc(res->albums,
-											res->lnum * sizeof (char *));
+											   res->lnum * sizeof (char *));
 						res->albums[i] = runner->album;
 						res->albart =
 							(char **) frealloc(res->albart,
-											res->lnum * sizeof (char *));
+											   res->lnum * sizeof (char *));
 						res->albart[i] = runner->artist;
 					}
 					/* fuzzy comparation to avoid collabs turning an album into a sampler */
 					else if (!strieq(res->albart[i], ARTIST_SAMPLER) &&
-							!checkSim(res->albart[i], runner->artist)) {
+							 !checkSim(res->albart[i], runner->artist)) {
 						addMessage(1, "%s is considered a sampler (%s <> %s).",
-								runner->album, runner->artist, res->albart[i]);
+								   runner->album, runner->artist,
+								   res->albart[i]);
 						res->albart[i] = ARTIST_SAMPLER;
 					}
 				}
@@ -1223,8 +1227,10 @@ uint64_t countTitles(const uint32_t inc, const uint32_t exc) {
  */
 void setTnum(void) {
 	uint32_t tnum = getConfig()->tnum;
+
 	if (isStreamActive()) {
-		mptitle_t *root=getConfig()->root;
+		mptitle_t *root = getConfig()->root;
+
 		if (root != NULL) {
 			getConfig()->tnum = root->prev->key;
 		}
@@ -1233,7 +1239,8 @@ void setTnum(void) {
 		}
 	}
 	else {
-		getConfig()->tnum = countTitles(getFavplay()? MP_FAV : MP_ALL, MP_DNP|MP_DBL);
+		getConfig()->tnum =
+			countTitles(getFavplay()? MP_FAV : MP_ALL, MP_DNP | MP_DBL);
 	}
 	if (tnum != getConfig()->tnum) {
 		/* the number of titles changes, notify clients */
