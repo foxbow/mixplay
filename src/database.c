@@ -466,9 +466,6 @@ int32_t dbAddTitles(char *basedir) {
 			fsroot->next->prev = fsroot->prev;
 
 			/* add title to dbroot */
-			if (getFavplay()) {
-				fsroot->flags = MP_DNP;
-			}
 			if (dbroot == NULL) {
 				dbroot = fsroot;
 				dbroot->prev = dbroot;

@@ -74,7 +74,7 @@ typedef enum {
 	mpc_title = 1 << 11,		/* 0x0800 */
 	mpc_display = 1 << 12,		/* 0x1000 */
 	mpc_substr = 1 << 13,		/* 0x2000 */
-	mpc_fuzzy = 1 << 14,		/* 0x4000 */
+	mpc_fuzzy = 1 << 14,		/* 0x4000 - experimental newest with empty term */
 } mpcmd_t;
 
 /* some filtermasks */
@@ -189,6 +189,7 @@ typedef struct {
 	bool isDaemon;
 	bool inUI;					/* flag to show if the UI is active */
 	bool playlist;				/* remote playlist */
+	uint32_t tnum;				/* number of titles in the current profile */
 } mpconfig_t;
 
 /* message request types */
