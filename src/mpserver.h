@@ -8,14 +8,10 @@
 #ifndef _MPSERVER_H_
 #define _MPSERVER_H_
 
+#include "musicmgr.h"			// for mptitle_t
+
 /* basic communication block size */
 #define MP_BLKSIZE 512
-
-typedef struct {
-	int32_t cmd;
-	char *arg;
-	int32_t clientid;
-} mpReqInfo;
 
 int32_t startServer();
 

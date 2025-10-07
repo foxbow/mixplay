@@ -681,7 +681,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			 * this duplicates the check in mpserver, so it should never happen */
 			assert(config->found->state == mpsearch_idle);
 
-			/* if the term is unset but the fuzzy is set, return the last ten
+			/* if the term is unset but the fuzzy bit is set, return the last ten
 			 * titles in the database */
 			if ((term == NULL) && !MPC_ISFUZZY(rcmd)) {
 				if (MPC_ISARTIST(rcmd)) {

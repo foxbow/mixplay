@@ -47,6 +47,47 @@
 /* message offset */
 #define MPV 10
 
+/* lock for fname, flen, fdata and mtype */
+static pthread_mutex_t _sendlock = PTHREAD_MUTEX_INITIALIZER;
+
+static uint32_t _numclients = 0;
+static uint32_t _heartbeat[MAXCLIENT];	/* glabal clientID marker */
+
+/* for search polling and retrying */
+static const struct timespec ts = {
+	.tv_nsec = 250000,
+	.tv_sec = 0
+};
+
+#define CL_STP 0				// client is dying
+#define CL_RUN 1				// client is running
+#define CL_ONE 2				// one-shot client
+#define CL_SRC 4				// active search
+#define CL_DTA 8				// data available after fetchRequest
+
+#define ROUNDUP(a,b) (((a/b)+1)*b)
+
+/* all the static files that we are prepared to serve */
+typedef enum {
+	f_none = -1,
+	f_index = 0,
+	f_mprc,
+	f_mpcss,
+	f_mpjs,
+	f_mpico,
+	f_mppl,
+	f_mppng,
+	f_mppljs,
+	f_mani
+} filedefs;
+
+typedef struct {
+	const char *fname;
+	const uint8_t *fdata;
+	const size_t flen;
+	const char *mtype;
+} fileinfo_t;
+
 /* the kind of request that came in */
 typedef enum {
 	req_none = 0,
@@ -61,17 +102,28 @@ typedef enum {
 	req_current
 } httpstate;
 
-/* lock for fname, flen, fdata and mtype */
-static pthread_mutex_t _sendlock = PTHREAD_MUTEX_INITIALIZER;
-
-static uint32_t _numclients = 0;
-static uint32_t _heartbeat[MAXCLIENT];	/* glabal clientID marker */
+/* the parameter set that needs to be accesses by all parts */
+typedef struct {
+	int sock;
+	char *commdata;
+	ssize_t commsize;
+	uint32_t running;
+	mptitle_t *title;
+	httpstate state;
+	int32_t fullstat;
+	filedefs filedef;
+	int32_t cmd;
+	char *arg;
+	int32_t clientid;
+	char *fname;
+	size_t len;
+} chandle_t;
 
 /* return an unused clientid
    this gives out clientids in ascending order, even if a previous clientid
    is already free again. This is done to avoid mobile clients reconnecting
    with their old clientid causing mix-ups if that id was already recycled.
-   It still may happen but there nedd to be ~100 connects while the client
+   It still may happen but there need to be ~100 connects while the client
    was offline. Good enough for now */
 static int32_t getFreeClient(void) {
 	static uint32_t maxclientid = 0;
@@ -106,7 +158,7 @@ static void triggerClient(int32_t client) {
 	for (run = 0; run < MAXCLIENT; run++) {
 		if (run == client) {
 			if (_heartbeat[run] == 0) {
-				/* client remebered it's ID while server considered it dead */
+				/* client remembered it's ID while server considered it dead */
 				addMessage(MPV + 0, "Client %" PRId32 " got resurrected!",
 						   run + 1);
 				_numclients++;
@@ -124,7 +176,7 @@ static void triggerClient(int32_t client) {
 					 * invoked this function! If we see this, we probably
 					 * need to mutex lock the client functions... */
 					if (_numclients < 1) {
-						addMessage(0, "Client count out of sync!");
+						addMessage(-1, "Client count out of sync!");
 						_numclients = 1;
 					}
 					/* make sure that the server won't get blocked on a dead client */
@@ -203,7 +255,7 @@ static char *strdec(char *target, const char *src) {
 	return target;
 }
 
-static int32_t fillReqInfo(mpReqInfo * info, char *line) {
+static int32_t fillReqInfo(chandle_t * info, char *line) {
 	jsonObject *jo = NULL;
 	char *jsonLine = (char *) falloc(strlen(line), 1);
 	int32_t rc = 0;
@@ -241,12 +293,566 @@ static size_t serviceUnavailable(char *commdata) {
 	return strlen(commdata);
 }
 
-#define CL_STP 0
-#define CL_RUN 1
-#define CL_ONE 2
-#define CL_SRC 4
+static void fetchRequest(chandle_t * handle) {
+	struct pollfd pfd;
 
-#define ROUNDUP(a,b) (((a/b)+1)*b)
+	pfd.fd = handle->sock;
+	pfd.events = POLLIN;
+
+	/* Either an error or a timeout */
+	while ((handle->running != CL_STP) && (poll(&pfd, 1, 250) <= 0)) {
+		int deathcount = 0;
+
+		switch (errno) {
+		case EINTR:
+			/* the poll was interrupted by a signal,
+			 * not worth bailing out */
+			addMessage(MPV + 1, "poll(%i): Interrupt", handle->sock);
+			break;
+		case EBADF:
+			addMessage(MPV + 1, "poll(%i): Dead Socket", handle->sock);
+			handle->running = CL_STP;
+			break;
+		case EINVAL:
+			addMessage(MPV + 1, "Invalid fds on %i", handle->sock);
+			handle->running = CL_STP;
+			break;
+		case ENOMEM:
+			addMessage(MPV + 1, "poll(%i): No memory", handle->sock);
+			handle->running = CL_STP;
+			break;
+		default:
+			if (deathcount++ > 7) {
+				/* timeout, no one was calling for two seconds */
+				addMessage(MPV + 2, "Reaping unused clienthandler");
+				handle->running = CL_STP;
+			}
+		}
+	}
+
+	/* fetch data if any */
+	if (pfd.revents & POLLIN) {
+		ssize_t recvd = 0;
+
+		memset(handle->commdata, 0, handle->commsize);
+		ssize_t retval;
+
+		do {
+			retval =
+				recv(handle->sock, handle->commdata + recvd,
+					 handle->commsize - recvd, MSG_DONTWAIT);
+			if (retval == -1) {
+				/* check for deadly errors, EAGAIN and EWOULDBLOCK should just loop */
+				if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
+					nanosleep(&ts, NULL);
+					retval = 0;
+				}
+				else {
+					addMessage(MPV + 1, "Read error on socket!\n%s",
+							   strerror(errno));
+					/* The socket got broken so the client should terminate too */
+					handle->running = CL_STP;
+				}
+			}
+			else if (retval == handle->commsize - recvd) {
+				/* read buffer is full, expand and go on */
+				recvd = handle->commsize;
+				handle->commsize += MP_BLKSIZE;
+				handle->commdata =
+					(char *) frealloc(handle->commdata, handle->commsize);
+				memset(handle->commdata + recvd, 0, MP_BLKSIZE);
+			}
+			else {
+				/* everything fit into the buffer, we're done */
+				recvd += retval;
+				retval = -1;
+				handle->running = CL_DTA;
+			}
+		} while (retval != -1);
+
+		/* data available but zero bytes read */
+		if (recvd == 0) {
+			addMessage(MPV + 1, "Client disconnected");
+			handle->running = CL_STP;
+		}
+	}
+}
+
+typedef enum {
+	met_error = 0,
+	met_get,
+	met_post,
+	met_file
+} method_t;
+
+static void parseRequest(chandle_t * handle) {
+	method_t method = met_error;
+	mpcmd_t cmd = mpc_idle;
+	mpconfig_t *config = getConfig();
+
+	addMessage(MPV + 3, "%s", handle->commdata);
+	char *end = strchr(handle->commdata, ' ');
+	char *pos = end + 1;
+
+	if (end == NULL) {
+		addMessage(MPV + 1, "Malformed HTTP: %s", handle->commdata);
+		method = met_error;
+	}
+	else {
+		*end = 0;
+		if (strcasecmp(handle->commdata, "get") == 0) {
+			method = met_get;
+		}
+		else if (strcasecmp(handle->commdata, "post") == 0) {
+			method = met_post;
+		}
+		else {
+			addMessage(0, "Unsupported method: %s", handle->commdata);
+			method = met_error;
+		}
+	}
+
+	if (method != met_error) {
+		/* parse the rest of the request */
+		end = strchr(pos, ' ');
+		if (end != NULL) {
+			*(end + 1) = 0;
+			/* has an argument? */
+			char *arg = strchr(pos, '?');
+
+			if (arg != NULL) {
+				*arg = 0;
+				arg++;
+				if (fillReqInfo(handle, arg)) {
+					addMessage(MPV + 1, "Malformed arguments: %s", arg);
+					method = met_error;
+				}
+			}
+		}
+
+		/* new update client request */
+		if (handle->clientid == -1) {
+			handle->clientid = getFreeClient();
+			if (handle->clientid == -1) {
+				/* no free clientid - no service */
+				handle->state = req_noservice;
+				return;
+			}
+			initMsgCnt(handle->clientid);
+			addNotify(handle->clientid, MPCOMM_TITLES);
+		}
+
+		/* a valid client came in */
+		if (handle->clientid > 0) {
+			handle->running |= CL_RUN;
+			triggerClient(handle->clientid);
+		}
+
+		if (end == NULL) {
+			addMessage(MPV + 1, "Malformed request %s", pos);
+			method = met_error;
+		}
+		/* control command */
+		else if (strstr(pos, "/mpctrl/")) {
+			pos = pos + strlen("/mpctrl");
+		}
+		/* everything else is treated like a GET <path> */
+		else {
+			if (method == met_get) {
+				method = met_file;
+				if (handle->running & CL_RUN) {
+					/* an update client is fetching a file, that's bad since
+					 * Chrome seems to get stuck on file transfers as long
+					 * as the socket remains connected. So terminate this
+					 * handler after sending the file. */
+					handle->running &= ~CL_RUN;
+				}
+			}
+			else {
+				addMessage(MPV + 1, "Invalid POST request!");
+				method = met_error;
+			}
+		}
+	}
+
+	switch (method) {
+	case met_get:				/* GET mpcmd */
+		if (strcmp(pos, "/status") == 0) {
+			handle->state = req_update;
+			/* make sure no one asks for searchresults */
+			handle->fullstat |= (handle->cmd & ~MPCOMM_RESULT);
+			addMessage(MPV + 1, "Statusrequest: 0x%x", handle->fullstat);
+		}
+		else if (strstr(pos, "/title/") == pos) {
+			pos += 7;
+			int index = atoi(pos);
+
+			if ((config->current != NULL) && (index == 0)) {
+				handle->title = config->current->title;
+			}
+			else {
+				handle->title = getTitleByIndex(index);
+			}
+
+			if (strstr(pos, "info ") == pos) {
+				handle->state = req_current;
+			}
+			else if (handle->title != NULL) {
+				pthread_mutex_lock(&_sendlock);
+				handle->state = req_mp3;
+			}
+			else {
+				send(handle->sock,
+					 "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
+				handle->running = CL_STP;
+			}
+		}
+		else if (strstr(pos, "/version ") == pos) {
+			handle->state = req_version;
+		}
+		/* HACK to support bookmarklet without HTTPS
+		 * todo: remove as soon as HTTPS is supported... */
+		else if ((strstr(pos, "/cmd") == pos)
+				 && ((mpcmd_t) handle->cmd == mpc_path)) {
+			handle->state = req_command;
+			cmd = (mpcmd_t) handle->cmd;
+		}
+		else {
+			send(handle->sock, "HTTP/1.0 404 Not Found\015\012\015\012",
+				 25, 0);
+			handle->running = CL_STP;
+		}
+		break;
+	case met_post:				/* POST */
+		if (strstr(pos, "/cmd") == pos) {
+			handle->state = req_command;
+			cmd = (mpcmd_t) handle->cmd;
+			addMessage(MPV + 1, "Got command 0x%04x - %s '%s'",
+					   cmd, mpcString(cmd), handle->arg ? handle->arg : "");
+			/* search is synchronous
+			 * This is ugly! This code *should* go into the next
+			 * step, but we need the searchresults then already.
+			 * Changing (cleaning) this would mean a complete
+			 * redesign of the server - which may not be the worst
+			 * plan anyways...
+			 */
+			if (MPC_CMD(cmd) == mpc_search) {
+				handle->state = req_update;
+				if (setCurClient(handle->clientid) == -1) {
+					addMessage(-1, "Server is blocked!");
+					handle->len = serviceUnavailable(handle->commdata);
+				}
+				else if (getConfig()->found->state == mpsearch_idle) {
+					setCommand(cmd, handle->arg);
+					sfree(&(handle->arg));
+					handle->running |= CL_SRC;
+				}
+				/* this case should not be possible at all! */
+				else {
+					addMessage(-1, "Already searching!");
+					unlockClient(handle->clientid);
+					handle->len = serviceUnavailable(handle->commdata);
+				}
+			}
+		}
+		else {					/* unresolvable POST request */
+			send(handle->sock,
+				 "HTTP/1.0 406 Not Acceptable\015\012\015\012", 31, 0);
+			handle->running = CL_STP;
+		}
+		break;
+	case met_file:				/* get file */
+		handle->state = req_file;
+		if ((strstr(pos, "/ ") == pos) || (strstr(pos, "/index.html ") == pos)) {
+			pthread_mutex_lock(&_sendlock);
+			handle->filedef = f_index;
+		}
+		else if ((strstr(pos, "/rc ") == pos) ||
+				 (strstr(pos, "/mprc ") == pos) ||
+				 (strstr(pos, "/rc.html ") == pos) ||
+				 (strstr(pos, "/mprc.html ") == pos)) {
+			pthread_mutex_lock(&_sendlock);
+			handle->filedef = f_mprc;
+		}
+		else if (strstr(pos, "/mixplay.css ") == pos) {
+			pthread_mutex_lock(&_sendlock);
+			handle->filedef = f_mpcss;
+		}
+		else if (strstr(pos, "/mixplay.js ") == pos) {
+			pthread_mutex_lock(&_sendlock);
+			handle->filedef = f_mpjs;
+		}
+		else if ((strstr(pos, "/mixplay.svg ") == pos) ||
+				 (strstr(pos, "/favicon.ico ") == pos)) {
+			pthread_mutex_lock(&_sendlock);
+			handle->filedef = f_mpico;
+		}
+		else if (strstr(pos, "/mixplay.png ") == pos) {
+			pthread_mutex_lock(&_sendlock);
+			handle->filedef = f_mppng;
+		}
+		else if ((strstr(pos, "/mpplayer.html ") == pos) ||
+				 (strstr(pos, "/mpplayer ") == pos)) {
+			pthread_mutex_lock(&_sendlock);
+			handle->filedef = f_mppl;
+		}
+		else if (strstr(pos, "/mpplayer.js ") == pos) {
+			pthread_mutex_lock(&_sendlock);
+			handle->filedef = f_mppljs;
+		}
+		else if (strstr(pos, "/manifest.json ") == pos) {
+			pthread_mutex_lock(&_sendlock);
+			handle->filedef = f_mani;
+		}
+		else {
+			addMessage(MPV + 1, "Illegal get %s", pos);
+			send(handle->sock, "HTTP/1.0 404 Not Found\015\012\015\012",
+				 26, 0);
+			handle->running = CL_STP;
+		}
+		break;
+	case met_error:
+		addMessage(MPV + 1, "Illegal method %s", handle->commdata);
+		send(handle->sock,
+			 "HTTP/1.0 405 Method Not Allowed\015\012\015\012", 35, 0);
+		handle->running = CL_STP;
+		break;
+	default:
+		addMessage(0, "Unknown method %i!", method);
+		handle->running = CL_STP;
+		break;
+	}							/* switch(method) */
+}
+
+static void sendReply(chandle_t * handle) {
+	char *jsonLine = NULL;
+	char line[MAXPATHLEN] = "";
+	struct stat sbuf;
+	mpconfig_t *config = getConfig();
+
+	fileinfo_t served[] = {
+		{.fname = "src/mixplay.html",
+		 .fdata = static_mixplay_html,
+		 .flen = static_mixplay_html_len,
+		 .mtype = "text/html; charset=utf-8"},
+		{.fname = "src/mprc.html",
+		 .fdata = static_mprc_html,
+		 .flen = static_mprc_html_len,
+		 .mtype = "text/html; charset=utf-8"},
+		{.fname = "src/mixplay.css",
+		 .fdata = static_mixplay_css,
+		 .flen = static_mixplay_css_len,
+		 .mtype = "text/css; charset=utf-8"},
+		{.fname = "src/mixplay.js",
+		 .fdata = static_mixplay_js,
+		 .flen = static_mixplay_js_len,
+		 .mtype = "application/javascript; charset=utf-8"},
+		{.fname = "static/mixplay.svg",
+		 .fdata = static_mixplay_svg,
+		 .flen = static_mixplay_svg_len,
+		 .mtype = "image/svg+xml"},
+		{.fname = "src/mpplayer.html",
+		 .fdata = static_mpplayer_html,
+		 .flen = static_mpplayer_html_len,
+		 .mtype = "text/html; charset=utf-8"},
+		{.fname = "static/mixplay.png",
+		 .fdata = static_mixplay_png,
+		 .flen = static_mixplay_png_len,
+		 .mtype = "image/png"},
+		{.fname = "src/mpplayer.js",
+		 .fdata = static_mpplayer_js,
+		 .flen = static_mpplayer_js_len,
+		 .mtype = "application/javascript; charset=utf-8"},
+		{.fname = "static/manifest.json",
+		 .fdata = static_manifest_json,
+		 .flen = static_manifest_json_len,
+		 .mtype = "application/manifest+json; charset=utf-8"}
+	};
+
+	memset(handle->commdata, 0, handle->commsize);
+	mpcmd_t cmd = mpc_idle;
+	fileinfo_t *filedef;
+
+	switch (handle->state) {
+	case req_none:
+		handle->len = 0;
+		break;
+
+	case req_update:			/* get update */
+		/* only look at the search state if this is the searcher */
+		if ((handle->running & CL_SRC)
+			&& (config->found->state != mpsearch_idle)) {
+			handle->fullstat |= MPCOMM_RESULT;
+			/* poll until the search is done */
+			while (config->found->state == mpsearch_busy) {
+				nanosleep(&ts, NULL);
+			}
+		}
+		/* add flags that have been set outside */
+		handle->fullstat |= getNotify(handle->clientid);
+		clearNotify(handle->clientid);
+
+		jsonLine = serializeStatus(handle->clientid, handle->fullstat);
+		if (jsonLine != NULL) {
+			sprintf(handle->commdata,
+					"HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012",
+					(int32_t) strlen(jsonLine));
+			while ((ssize_t) (strlen(jsonLine) + strlen(handle->commdata) + 8)
+				   > handle->commsize) {
+				handle->commsize += MP_BLKSIZE;
+				handle->commdata =
+					(char *) frealloc(handle->commdata, handle->commsize);
+			}
+			strcat(handle->commdata, jsonLine);
+			handle->len = strlen(handle->commdata);
+			sfree(&jsonLine);
+			/* do not clear result flag! */
+			handle->fullstat &= MPCOMM_RESULT;
+		}
+		else {
+			addMessage(0, "Could not turn status into JSON");
+			handle->len = serviceUnavailable(handle->commdata);
+		}
+		break;
+
+	case req_command:			/* set command */
+		cmd = MPC_CMD(handle->cmd);
+		if (cmd < mpc_idle) {
+			/* check commands that lock the reply channel */
+			if ((cmd == mpc_dbinfo) || (cmd == mpc_dbclean) ||
+				(cmd == mpc_doublets)) {
+				if (setCurClient(handle->clientid) == -1) {
+					addMessage(MPV + 1, "%s was blocked!", mpcString(cmd));
+					handle->len = serviceUnavailable(handle->commdata);
+					break;
+				}
+			}
+			setCommand(handle->cmd, handle->arg);
+			sfree(&(handle->arg));
+		}
+		sprintf(handle->commdata, "HTTP/1.1 204 No Content\015\012\015\012");
+		handle->len = strlen(handle->commdata);
+		break;
+
+	case req_unknown:			/* unknown command */
+		sprintf(handle->commdata,
+				"HTTP/1.1 501 Not Implemented\015\012\015\012");
+		handle->len = strlen(handle->commdata);
+		break;
+
+	case req_noservice:		/* service unavailable */
+		handle->len = serviceUnavailable(handle->commdata);
+		break;
+
+	case req_file:				/* send file */
+		filedef = &served[handle->filedef];
+		if (getDebug() && (stat(filedef->fname, &sbuf) == 0)) {
+			size_t flen = sbuf.st_size;
+
+			sprintf(handle->commdata,
+					"HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012Content-Length: %zu;\015\012\015\012",
+					filedef->mtype, flen);
+			send(handle->sock, handle->commdata, strlen(handle->commdata), 0);
+			filePost(handle->sock, filedef->fname);
+		}
+		else {
+			sprintf(handle->commdata,
+					"HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012Content-Length: %zu;\015\012\015\012",
+					filedef->mtype, filedef->flen);
+			send(handle->sock, handle->commdata, strlen(handle->commdata), 0);
+			handle->len = 0;
+			while (handle->len < filedef->flen) {
+				handle->len +=
+					send(handle->sock, filedef->fdata + handle->len,
+						 filedef->flen - handle->len, 0);
+			}
+		}
+		pthread_mutex_unlock(&_sendlock);
+		handle->len = 0;
+		break;
+
+	case req_config:			/* get config should be unreachable */
+		addMessage(-1, "Get config is deprecated!");
+		handle->len = serviceUnavailable(handle->commdata);
+		break;
+
+	case req_version:			/* get current build version */
+		sprintf(handle->commdata,
+				"HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
+				(int32_t) strlen(VERSION), VERSION);
+		handle->len = strlen(handle->commdata);
+		break;
+
+	case req_mp3:				/* send mp3 */
+		if (stat(fullpath(handle->title->path), &sbuf) == -1) {
+			addMessage(0, "Could not stat %s", fullpath(handle->title->path));
+			break;
+		}
+		/* remove anything non-ascii7bit from the filename so asian
+		 * smartphones don't consider the filename to be hanzi */
+		sprintf(handle->commdata,
+				"HTTP/1.1 200 OK\015\012Content-Type: audio/mpeg;\015\012"
+				"Content-Length: %ld;\015\012"
+				"Content-Disposition: attachment; filename=\"%s.mp3\""
+				"\015\012\015\012", sbuf.st_size, handle->title->display);
+		send(handle->sock, handle->commdata, strlen(handle->commdata), 0);
+		line[0] = 0;
+		filePost(handle->sock, fullpath(handle->title->path));
+		handle->title = NULL;
+		pthread_mutex_unlock(&_sendlock);
+		handle->len = 0;
+		/* even though we sent a Content-Length Browsers still wait on the
+		 * connection. So either the length is wrong or ignored or we 
+		 * misunderstood downloading things. So we force close the 
+		 * connection and force the download to end. */
+		handle->running &= ~CL_RUN;
+		break;
+
+	case req_current:			/* return "artist - title" line */
+		if (handle->title != NULL) {
+			snprintf(line, MAXPATHLEN, "%s - %s", handle->title->artist,
+					 handle->title->title);
+		}
+		else {
+			snprintf(line, MAXPATHLEN, "<initializing>");
+		}
+		sprintf(handle->commdata,
+				"HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
+				(int32_t) strlen(line), line);
+		handle->len = strlen(handle->commdata);
+		break;
+
+	}
+
+	if (handle->len > 0) {
+		size_t sent = 0, msglen = 0;
+
+		while (sent < handle->len) {
+			msglen =
+				send(handle->sock, handle->commdata + sent, handle->len - sent,
+					 0);
+			if (msglen > 0) {
+				sent += msglen;
+			}
+			else {
+				sent = handle->len;
+				addMessage(MPV + 1, "send failed");
+			}
+		}
+		if (handle->fullstat & MPCOMM_RESULT) {
+			config->found->state = mpsearch_idle;
+			if (handle->clientid == 0) {
+				addMessage(0, "Search reply goes to one-shot!");
+			}
+			unlockClient(handle->clientid);
+			/* clear result flag */
+			handle->fullstat &= ~MPCOMM_RESULT;
+			/* done searching */
+			handle->running &= ~CL_SRC;
+		}
+	}
+	handle->state = req_none;
+}
 
 /**
  * This will handle a connection
@@ -267,588 +873,64 @@ static size_t serviceUnavailable(char *commdata) {
  * again. It is not worth trying to clean up that id!
  */
 static void *clientHandler(void *args) {
-	int32_t sock;
-	size_t len = 0;
-	size_t sent, msglen;
-	uint32_t running = CL_ONE;
-	char *commdata = NULL;
-	char *jsonLine = NULL;
-	struct pollfd pfd;
 	mpconfig_t *config;
-	httpstate state = req_none;
-	char *pos = NULL;
-	char *end, *arg;
-	mpcmd_t cmd = mpc_idle;
-	static const char *mtype;
-	char line[MAXPATHLEN] = "";
+
+	chandle_t handle;
+
+	handle.running = CL_ONE;
+	handle.state = req_none;
+	handle.title = NULL;
+	handle.fullstat = MPCOMM_STAT;
+	handle.cmd = 0;
+	handle.arg = NULL;
+	handle.clientid = 0;
+	handle.sock = (int32_t) (long) args;
+	handle.filedef = f_none;
 
 	/* commsize needs at least to be large enough to hold the javascript file.
 	 * Round that size up to the next multiple of MP_BLOCKSIZE */
-	ssize_t commsize = ROUNDUP(static_mixplay_js_len, MP_BLKSIZE);
-	ssize_t retval = 0;
-	ssize_t recvd = 0;
-	static const char *fname;
-	static const uint8_t *fdata;
-	uint32_t flen = 0;
-	int32_t fullstat = MPCOMM_STAT;
-	int32_t index = 0;
-	mptitle_t *title = NULL;
-	struct stat sbuf;
-
-	/* for search polling */
-	struct timespec ts;
-
-	ts.tv_nsec = 250000;
-	ts.tv_sec = 0;
-
-	char *manifest = NULL;
-	uint32_t method = 0;
-	mpReqInfo reqInfo = { 0, NULL, 0 };
-
-	commdata = (char *) falloc(commsize, 1);
-	sock = (int32_t) (long) args;
-
-	pfd.fd = sock;
-	pfd.events = POLLIN;
+	handle.commsize = ROUNDUP(static_mixplay_js_len, MP_BLKSIZE);
+	handle.commdata = (char *) falloc(handle.commsize, 1);
 
 	config = getConfig();
 
 	/* this one may terminate all willy nilly */
 	pthread_detach(pthread_self());
 	addMessage(MPV + 3, "Client handler started");
+
+	/* handle a connection, this may be a one shot or a reusable one */
 	do {
-		int deathcount = 0;
+		/* fetchRequest */
+		fetchRequest(&handle);
 
-		/* Either an error or a timeout */
-		if (poll(&pfd, 1, 250) <= 0) {
-			switch (errno) {
-			case EINTR:
-				/* the poll was interrupted by a signal,
-				 * not worth bailing out */
-				addMessage(MPV + 1, "poll(%i): Interrupt", sock);
-				break;
-			case EBADF:
-				addMessage(MPV + 1, "poll(%i): Dead Socket", sock);
-				running = CL_STP;
-				break;
-			case EINVAL:
-				addMessage(MPV + 1, "Invalid fds on %i", sock);
-				running = CL_STP;
-				break;
-			case ENOMEM:
-				addMessage(MPV + 1, "poll(%i): No memory", sock);
-				running = CL_STP;
-				break;
-			default:
-				if (deathcount++ > 7) {
-					/* timeout, no one was calling for two seconds */
-					addMessage(MPV + 2, "Reaping unused clienthandler");
-					running = CL_STP;
-				}
-			}
+		/* all seems good now parse the request.. */
+		if (handle.running == CL_DTA) {
+			parseRequest(&handle);
 		}
-		deathcount = 0;
-
-		/* fetch data if any */
-		if (pfd.revents & POLLIN) {
-			memset(commdata, 0, commsize);
-			recvd = 0;
-			while ((retval =
-					recv(sock, commdata + recvd, commsize - recvd,
-						 MSG_DONTWAIT)) == commsize - recvd) {
-				recvd = commsize;
-				commsize += MP_BLKSIZE;
-				commdata = (char *) frealloc(commdata, commsize);
-				memset(commdata + recvd, 0, MP_BLKSIZE);
-			}
-
-			/* data available but zero bytes read */
-			if (retval == 0) {
-				if (recvd == 0) {
-					addMessage(MPV + 1, "Client disconnected");
-				}
-				else {
-					addMessage(MPV + 1, "Truncated request (%li): %s",
-							   (long) (commsize - recvd), commdata);
-				}
-				/* stop this client handler as we already have inconsistent
-				 * data at hand */
-				running = CL_STP;
-			}
-			/* an error occured, EAGAIN and EWOULDBLOCK are ignored */
-			else if ((retval == -1) &&
-					 (errno != EAGAIN) && (errno != EWOULDBLOCK)) {
-				addMessage(MPV + 1, "Read error on socket!\n%s",
-						   strerror(errno));
-				/* The socket got broken so the client should terminate too */
-				running = CL_STP;
-			}
-			/* all seems good now parse the request.. */
-			else {
-				method = 0;
-				// toLower(commdata);
-				addMessage(MPV + 3, "%s", commdata);
-				end = strchr(commdata, ' ');
-				if (end == NULL) {
-					addMessage(MPV + 1, "Malformed HTTP: %s", commdata);
-					method = -1;
-				}
-				else {
-					*end = 0;
-					pos = end + 1;
-					if (strcasecmp(commdata, "get") == 0) {
-						method = 1;
-					}
-					else if (strcasecmp(commdata, "post") == 0) {
-						method = 2;
-					}
-					else {
-						addMessage(0, "Unsupported method: %s", commdata);
-						method = 0;
-					}
-				}
-				if (method > 0) {
-					end = strchr(pos, ' ');
-					if (end != NULL) {
-						*(end + 1) = 0;
-						/* has an argument? */
-						arg = strchr(pos, '?');
-						if (arg != NULL) {
-							*arg = 0;
-							arg++;
-							if (fillReqInfo(&reqInfo, arg)) {
-								addMessage(MPV + 1, "Malformed arguments: %s",
-										   arg);
-								method = -1;
-							}
-						}
-					}
-
-					/* new update client request */
-					if (reqInfo.clientid == -1) {
-						reqInfo.clientid = getFreeClient();
-						if (reqInfo.clientid == -1) {
-							/* no free clientid - no service */
-							state = req_noservice;
-							break;
-						}
-						initMsgCnt(reqInfo.clientid);
-						addNotify(reqInfo.clientid, MPCOMM_TITLES);
-					}
-
-					/* a valid client came in */
-					if (reqInfo.clientid > 0) {
-						running |= CL_RUN;
-						triggerClient(reqInfo.clientid);
-					}
-
-					if (end == NULL) {
-						addMessage(MPV + 1, "Malformed request %s", pos);
-						method = -1;
-					}
-					/* control command */
-					else if (strstr(pos, "/mpctrl/")) {
-						pos = pos + strlen("/mpctrl");
-					}
-					/* everything else is treated like a GET <path> */
-					else {
-						if (method == 1) {
-							method = 3;
-							if (running & CL_RUN) {
-								/* an update client is fetching a file, that's bad since
-								 * Chrome seems to get stuck on file transfers as long
-								 * as the socket remains connected. So terminate this
-								 * handler after sending the file. */
-								running &= ~CL_RUN;
-							}
-						}
-						else {
-							addMessage(MPV + 1, "Invalid POST request!");
-							method = -1;
-						}
-					}
-				}
-				switch (method) {
-				case 1:		/* GET mpcmd */
-					if (strcmp(pos, "/status") == 0) {
-						state = req_update;
-						/* make sure no one asks for searchresults */
-						fullstat |= (reqInfo.cmd & ~MPCOMM_RESULT);
-						addMessage(MPV + 3, "Statusrequest: %i", fullstat);
-					}
-					else if (strstr(pos, "/title/") == pos) {
-						pos += 7;
-						index = atoi(pos);
-						if ((config->current != NULL) && (index == 0)) {
-							title = config->current->title;
-						}
-						else {
-							title = getTitleByIndex(index);
-						}
-
-						if (strstr(pos, "info ") == pos) {
-							state = req_current;
-						}
-						else if (title != NULL) {
-							pthread_mutex_lock(&_sendlock);
-							fname = title->path;
-							state = req_mp3;
-						}
-						else {
-							send(sock,
-								 "HTTP/1.0 404 Not Found\015\012\015\012", 25,
-								 0);
-							running = CL_STP;
-						}
-					}
-					else if (strstr(pos, "/version ") == pos) {
-						state = req_version;
-					}
-					/* HACK to support bookmarklet without HTTPS
-					 * todo: remove as soon as HTTPS is supported... */
-					else if ((strstr(pos, "/cmd") == pos)
-							 && ((mpcmd_t) reqInfo.cmd == mpc_path)) {
-						state = req_command;
-						cmd = (mpcmd_t) reqInfo.cmd;
-					}
-					else {
-						send(sock, "HTTP/1.0 404 Not Found\015\012\015\012",
-							 25, 0);
-						running = CL_STP;
-					}
-					break;
-				case 2:		/* POST */
-					if (strstr(pos, "/cmd") == pos) {
-						state = req_command;
-						cmd = (mpcmd_t) reqInfo.cmd;
-						addMessage(MPV + 1, "Got command 0x%04x - %s '%s'",
-								   cmd, mpcString(cmd),
-								   reqInfo.arg ? reqInfo.arg : "");
-						/* search is synchronous
-						 * This is ugly! This code *should* go into the next
-						 * step, but we need the searchresults then already.
-						 * Changing (cleaning) this would mean a complete
-						 * redesign of the server - which may not be the worst
-						 * plan anyways...
-						 */
-						if (MPC_CMD(cmd) == mpc_search) {
-							state = req_update;
-							if (setCurClient(reqInfo.clientid) == -1) {
-								addMessage(-1, "Server is blocked!");
-								len = serviceUnavailable(commdata);
-							}
-							else if (getConfig()->found->state ==
-									 mpsearch_idle) {
-								setCommand(cmd, reqInfo.arg);
-								sfree(&(reqInfo.arg));
-								running |= CL_SRC;
-							}
-							/* this case should not be possible at all! */
-							else {
-								addMessage(-1, "Already searching!");
-								unlockClient(reqInfo.clientid);
-								len = serviceUnavailable(commdata);
-							}
-						}
-					}
-					else {		/* unresolvable POST request */
-						send(sock,
-							 "HTTP/1.0 406 Not Acceptable\015\012\015\012", 31,
-							 0);
-						running = CL_STP;
-					}
-					break;
-				case 3:		/* get file */
-					state = req_file;
-					if ((strstr(pos, "/ ") == pos) ||
-						(strstr(pos, "/index.html ") == pos)) {
-						pthread_mutex_lock(&_sendlock);
-						fname = "src/mixplay.html";
-						fdata = static_mixplay_html;
-						flen = static_mixplay_html_len;
-						mtype = "text/html; charset=utf-8";
-					}
-					else if ((strstr(pos, "/rc ") == pos) ||
-							 (strstr(pos, "/mprc ") == pos) ||
-							 (strstr(pos, "/rc.html ") == pos) ||
-							 (strstr(pos, "/mprc.html ") == pos)) {
-						pthread_mutex_lock(&_sendlock);
-						fname = "src/mprc.html";
-						fdata = static_mprc_html;
-						flen = static_mprc_html_len;
-						mtype = "text/html; charset=utf-8";
-					}
-					else if (strstr(pos, "/mixplay.css ") == pos) {
-						pthread_mutex_lock(&_sendlock);
-						fname = "src/mixplay.css";
-						fdata = static_mixplay_css;
-						flen = static_mixplay_css_len;
-						mtype = "text/css; charset=utf-8";
-					}
-					else if (strstr(pos, "/mixplay.js ") == pos) {
-						pthread_mutex_lock(&_sendlock);
-						fname = "src/mixplay.js";
-						fdata = static_mixplay_js;
-						flen = static_mixplay_js_len;
-						mtype = "application/javascript; charset=utf-8";
-					}
-					else if ((strstr(pos, "/mixplay.svg ") == pos) ||
-							 (strstr(pos, "/favicon.ico ") == pos)) {
-						pthread_mutex_lock(&_sendlock);
-						fname = "static/mixplay.svg";
-						fdata = static_mixplay_svg;
-						flen = static_mixplay_svg_len;
-						mtype = "image/svg+xml";
-					}
-					else if (strstr(pos, "/mixplay.png ") == pos) {
-						pthread_mutex_lock(&_sendlock);
-						fname = "static/mixplay.png";
-						fdata = static_mixplay_png;
-						flen = static_mixplay_png_len;
-						mtype = "image/png";
-					}
-					else if ((strstr(pos, "/mpplayer.html ") == pos) ||
-							 (strstr(pos, "/mpplayer ") == pos)) {
-						pthread_mutex_lock(&_sendlock);
-						fname = "src/mpplayer.html";
-						fdata = static_mpplayer_html;
-						flen = static_mpplayer_html_len;
-						mtype = "text/html; charset=utf-8";
-					}
-					else if (strstr(pos, "/mpplayer.js ") == pos) {
-						pthread_mutex_lock(&_sendlock);
-						fname = "src/mpplayer.js";
-						fdata = static_mpplayer_js;
-						flen = static_mpplayer_js_len;
-						mtype = "application/javascript; charset=utf-8";
-					}
-					else if (strstr(pos, "/manifest.json ") == pos) {
-						pthread_mutex_lock(&_sendlock);
-						fname = "static/manifest.json";
-						fdata = static_manifest_json;
-						flen = static_manifest_json_len;
-						mtype = "application/manifest+json; charset=utf-8";
-					}
-					else {
-						addMessage(MPV + 1, "Illegal get %s", pos);
-						send(sock, "HTTP/1.0 404 Not Found\015\012\015\012",
-							 26, 0);
-						running = CL_STP;
-					}
-					break;
-				case -1:
-					addMessage(MPV + 1, "Illegal method %s", commdata);
-					send(sock,
-						 "HTTP/1.0 405 Method Not Allowed\015\012\015\012", 35,
-						 0);
-					running = CL_STP;
-					break;
-				case -2:		/* generic file not found */
-					send(sock, "HTTP/1.0 404 Not Found\015\012\015\012", 25,
-						 0);
-					running = CL_STP;
-					break;
-				default:
-					addMessage(0, "Unknown method %i!", method);
-					running = CL_STP;
-					break;
-				}				/* switch(method) */
-			}					/* switch(retval) */
-		}						/* if fd_isset */
 
 		/* send a reply if needed */
-		if (running != CL_STP) {
-			memset(commdata, 0, commsize);
-			switch (state) {
-			case req_none:
-				len = 0;
-				break;
+		if (handle.running != CL_STP) {
+			sendReply(&handle);
+		}
 
-			case req_update:	/* get update */
-				/* only look at the search state if this is the searcher */
-				if ((running & CL_SRC)
-					&& (config->found->state != mpsearch_idle)) {
-					fullstat |= MPCOMM_RESULT;
-					/* poll until the search is done */
-					while (config->found->state == mpsearch_busy) {
-						nanosleep(&ts, NULL);
-					}
-				}
-				/* add flags that have been set outside */
-				fullstat |= getNotify(reqInfo.clientid);
-				clearNotify(reqInfo.clientid);
-
-				jsonLine = serializeStatus(reqInfo.clientid, fullstat);
-				if (jsonLine != NULL) {
-					sprintf(commdata,
-							"HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012",
-							(int32_t) strlen(jsonLine));
-					while ((ssize_t) (strlen(jsonLine) + strlen(commdata) + 8)
-						   > commsize) {
-						commsize += MP_BLKSIZE;
-						commdata = (char *) frealloc(commdata, commsize);
-					}
-					strcat(commdata, jsonLine);
-					len = strlen(commdata);
-					sfree(&jsonLine);
-					/* do not clear result flag! */
-					fullstat &= MPCOMM_RESULT;
-				}
-				else {
-					addMessage(0, "Could not turn status into JSON");
-					len = serviceUnavailable(commdata);
-				}
-				break;
-
-			case req_command:	/* set command */
-				if (MPC_CMD(cmd) < mpc_idle) {
-					/* check commands that lock the reply channel */
-					if ((cmd == mpc_dbinfo) || (cmd == mpc_dbclean) ||
-						(cmd == mpc_doublets)) {
-						if (setCurClient(reqInfo.clientid) == -1) {
-							addMessage(MPV + 1, "%s was blocked!",
-									   mpcString(cmd));
-							len = serviceUnavailable(commdata);
-							break;
-						}
-					}
-					setCommand(cmd, reqInfo.arg);
-					sfree(&(reqInfo.arg));
-				}
-				sprintf(commdata, "HTTP/1.1 204 No Content\015\012\015\012");
-				len = strlen(commdata);
-				break;
-
-			case req_unknown:	/* unknown command */
-				sprintf(commdata,
-						"HTTP/1.1 501 Not Implemented\015\012\015\012");
-				len = strlen(commdata);
-				break;
-
-			case req_noservice:	/* service unavailable */
-				len = serviceUnavailable(commdata);
-				break;
-
-			case req_file:		/* send file */
-				if (getDebug() && (stat(fname, &sbuf) == 0)) {
-					flen = sbuf.st_size;
-					sprintf(commdata,
-							"HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012Content-Length: %i;\015\012\015\012",
-							mtype, flen);
-					send(sock, commdata, strlen(commdata), 0);
-					filePost(sock, fname);
-				}
-				else {
-					sprintf(commdata,
-							"HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012Content-Length: %i;\015\012\015\012",
-							mtype, flen);
-					send(sock, commdata, strlen(commdata), 0);
-					len = 0;
-					while (len < flen) {
-						len += send(sock, fdata + len, flen - len, 0);
-					}
-				}
-				pthread_mutex_unlock(&_sendlock);
-				len = 0;
-				break;
-
-			case req_config:	/* get config should be unreachable */
-				addMessage(-1, "Get config is deprecated!");
-				len = serviceUnavailable(commdata);
-				break;
-
-			case req_version:	/* get current build version */
-				sprintf(commdata,
-						"HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
-						(int32_t) strlen(VERSION), VERSION);
-				len = strlen(commdata);
-				break;
-
-			case req_mp3:		/* send mp3 */
-				if (stat(fullpath(title->path), &sbuf) == -1) {
-					addMessage(0, "Could not stat %s", fullpath(title->path));
-					break;
-				}
-				/* remove anything non-ascii7bit from the filename so asian
-				 * smartphones don't consider the filename to be hanzi */
-				sprintf(commdata,
-						"HTTP/1.1 200 OK\015\012Content-Type: audio/mpeg;\015\012"
-						"Content-Length: %ld;\015\012"
-						"Content-Disposition: attachment; filename=\"%s.mp3\""
-						"\015\012\015\012", sbuf.st_size, title->display);
-				send(sock, commdata, strlen(commdata), 0);
-				line[0] = 0;
-				filePost(sock, fullpath(title->path));
-				title = NULL;
-				pthread_mutex_unlock(&_sendlock);
-				len = 0;
-				/* even though we sent a Content-Length Chrome still waits on the
-				 * connection. So either the length is wrong or ignored forcing
-				 * us to close the connection and force the download to end. */
-				running &= ~CL_RUN;
-				break;
-
-			case req_current:	/* return "artist - title" line */
-				if (title != NULL) {
-					snprintf(line, MAXPATHLEN, "%s - %s", title->artist,
-							 title->title);
-				}
-				else {
-					snprintf(line, MAXPATHLEN, "<initializing>");
-				}
-				sprintf(commdata,
-						"HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
-						(int32_t) strlen(line), line);
-				len = strlen(commdata);
-				break;
-
-			}
-			state = req_none;
-
-			if (len > 0) {
-				sent = 0;
-				while (sent < len) {
-					msglen = send(sock, commdata + sent, len - sent, 0);
-					if (msglen > 0) {
-						sent += msglen;
-					}
-					else {
-						sent = len;
-						addMessage(MPV + 1, "send failed");
-					}
-				}
-				if (fullstat & MPCOMM_RESULT) {
-					config->found->state = mpsearch_idle;
-					if (reqInfo.clientid == 0) {
-						addMessage(0, "Search reply goes to one-shot!");
-					}
-					unlockClient(reqInfo.clientid);
-					/* clear result flag */
-					fullstat &= ~MPCOMM_RESULT;
-					/* done searching */
-					running &= ~CL_SRC;
-				}
-			}
-		}						/* if running */
 		if (config->status == mpc_quit) {
 			addMessage(0, "stopping handler");
-			running = CL_STP;
+			handle.running = CL_STP;
 		}
-		/* keep reqinfo.clientid though! */
-		sfree(&(reqInfo.arg));
-	} while (running & CL_RUN);
+
+		/* keep handle->clientid though! */
+		sfree(&(handle.arg));
+	} while (handle.running & CL_RUN);
 
 	addMessage(MPV + 3, "Client handler exited");
-	if (isCurClient(reqInfo.clientid)) {
-		addMessage(MPV + 1, "Unlocking client %i", reqInfo.clientid);
-		unlockClient(reqInfo.clientid);
+	if (isCurClient(handle.clientid)) {
+		addMessage(MPV + 1, "Unlocking client %i", handle.clientid);
+		unlockClient(handle.clientid);
 		config->found->state = mpsearch_idle;
 	}
 	pthread_mutex_unlock(&_sendlock);
-	close(sock);
-	sfree(&manifest);
-	sfree(&commdata);
-	sfree(&jsonLine);
+	close(handle.sock);
+	sfree(&(handle.commdata));
 
 	return NULL;
 }
