@@ -59,11 +59,9 @@ static const struct timespec ts = {
 	.tv_sec = 0
 };
 
-#define CL_STP 0				// client is dying
+#define CL_STP 0				// client is dying, skip all following steps
 #define CL_RUN 1				// client is running
-#define CL_ONE 2				// one-shot client
-#define CL_SRC 4				// active search
-#define CL_DTA 8				// data available after fetchRequest
+#define CL_SRC 2				// active search
 
 #define ROUNDUP(a,b) (((a/b)+1)*b)
 
@@ -366,7 +364,6 @@ static void fetchRequest(chandle_t * handle) {
 				/* everything fit into the buffer, we're done */
 				recvd += retval;
 				retval = -1;
-				handle->running = CL_DTA;
 			}
 		} while (retval != -1);
 
@@ -375,6 +372,11 @@ static void fetchRequest(chandle_t * handle) {
 			addMessage(MPV + 1, "Client disconnected");
 			handle->running = CL_STP;
 		}
+	}
+	else {
+		/* nothing came in */
+		addMessage(0, "Wrong channel?");
+		handle->running = CL_STP;
 	}
 }
 
@@ -460,13 +462,6 @@ static void parseRequest(chandle_t * handle) {
 		else {
 			if (method == met_get) {
 				method = met_file;
-				if (handle->running & CL_RUN) {
-					/* an update client is fetching a file, that's bad since
-					 * Chrome seems to get stuck on file transfers as long
-					 * as the socket remains connected. So terminate this
-					 * handler after sending the file. */
-					handle->running &= ~CL_RUN;
-				}
 			}
 			else {
 				addMessage(MPV + 1, "Invalid POST request!");
@@ -760,7 +755,6 @@ static void sendReply(chandle_t * handle) {
 					"HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012Content-Length: %zu;\015\012\015\012",
 					filedef->mtype, filedef->flen);
 			send(handle->sock, handle->commdata, strlen(handle->commdata), 0);
-			handle->len = 0;
 			while (handle->len < filedef->flen) {
 				handle->len +=
 					send(handle->sock, filedef->fdata + handle->len,
@@ -769,6 +763,7 @@ static void sendReply(chandle_t * handle) {
 		}
 		pthread_mutex_unlock(&_sendlock);
 		handle->len = 0;
+		handle->running &= ~CL_RUN;
 		break;
 
 	case req_config:			/* get config should be unreachable */
@@ -801,10 +796,6 @@ static void sendReply(chandle_t * handle) {
 		handle->title = NULL;
 		pthread_mutex_unlock(&_sendlock);
 		handle->len = 0;
-		/* even though we sent a Content-Length Browsers still wait on the
-		 * connection. So either the length is wrong or ignored or we 
-		 * misunderstood downloading things. So we force close the 
-		 * connection and force the download to end. */
 		handle->running &= ~CL_RUN;
 		break;
 
@@ -877,7 +868,7 @@ static void *clientHandler(void *args) {
 
 	chandle_t handle;
 
-	handle.running = CL_ONE;
+	handle.running = CL_RUN;
 	handle.state = req_none;
 	handle.title = NULL;
 	handle.fullstat = MPCOMM_STAT;
@@ -904,7 +895,7 @@ static void *clientHandler(void *args) {
 		fetchRequest(&handle);
 
 		/* all seems good now parse the request.. */
-		if (handle.running == CL_DTA) {
+		if (handle.running != CL_STP) {
 			parseRequest(&handle);
 		}
 
