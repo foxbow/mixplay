@@ -505,8 +505,6 @@ static void parseRequest(chandle_t * handle) {
 				method = met_file;
 			}
 			else {
-//              addMessage(0, "Invalid POST request!");
-//              method = met_error;
 				method = met_upload;
 			}
 		}
@@ -542,7 +540,8 @@ static void parseRequest(chandle_t * handle) {
 			}
 			else {
 				send(handle->sock,
-					 "HTTP/1.0 404 Not Found\015\012\015\012", 25, 0);
+					 "HTTP/1.0 404 Not Found\015\012Content-Length: 0\015\012\015\012",
+					 46, 0);
 				handle->running = CL_STP;
 			}
 		}
@@ -557,8 +556,9 @@ static void parseRequest(chandle_t * handle) {
 			cmd = (mpcmd_t) handle->cmd;
 		}
 		else {
-			send(handle->sock, "HTTP/1.0 404 Not Found\015\012\015\012",
-				 25, 0);
+			send(handle->sock,
+				 "HTTP/1.0 404 Not Found\015\012Content-Length: 0\015\012\015\012",
+				 46, 0);
 			handle->running = CL_STP;
 		}
 		break;
@@ -596,7 +596,8 @@ static void parseRequest(chandle_t * handle) {
 		}
 		else {					/* unresolvable POST request */
 			send(handle->sock,
-				 "HTTP/1.0 406 Not Acceptable\015\012\015\012", 31, 0);
+				 "HTTP/1.0 406 Not Acceptable\015\012Content-Length: 0\015\012\015\012",
+				 51, 0);
 			handle->running = CL_STP;
 		}
 		break;
@@ -645,22 +646,25 @@ static void parseRequest(chandle_t * handle) {
 		}
 		else {
 			addMessage(MPV + 1, "Illegal get %s", pos);
-			send(handle->sock, "HTTP/1.0 404 Not Found\015\012\015\012",
-				 26, 0);
+			send(handle->sock,
+				 "HTTP/1.0 404 Not Found\015\012Content-Length: 0\015\012\015\012",
+				 46, 0);
 			handle->running = CL_STP;
 		}
 		break;
 	case met_upload:
 		handle->state = req_none;
-		/* at this point just read the header, now parse for the parameters */
+		/* parse for the parameters */
 		addMessage(MPV + 1, "Upload init");
 
 		while (*(pos++) != '\0');
 		handle->filesz = 0;
 		handle->filerd = 0;
+		assert(handle->filefd == -1);
 		handle->boundary[0] = '\0';
 		char *pline = strcasestr(pos, "Content-Length: ");
 
+		/* content length and boundary are mandatory in this part */
 		if (pline != NULL) {
 			pline += strlen("Content-Length: ");
 			handle->filesz = atoi(pline);
@@ -686,16 +690,24 @@ static void parseRequest(chandle_t * handle) {
 			 * did not deserve any better */
 			addMessage(-1, "Upload init failed!");
 			send(handle->sock,
-				 "HTTP/1.0 405 Method Not Allowed\015\012\015\012", 35, 0);
+				 "HTTP/1.0 405 Method Not Allowed\015\012Content-Length: 0\015\012\015\012",
+				 55, 0);
 			handle->running = CL_STP;
+			break;
 		}
-		else {
-			sprintf(handle->commdata, "HTTP/1.1 100 Continue\015\012\015\012");
+		else if (strcasestr(pos, "filename=\"") == NULL) {
+			/* no filename, this will come with the next blob, so request it */
+			addMessage(MPV + 1, "Send 100 to continue data flow");
+			sprintf(handle->commdata,
+					"HTTP/1.1 100 Continue\015\012Content-Length: 0\015\012\015\012");
 			handle->len = strlen(handle->commdata);
 			handle->state = req_none;
+			break;
 		}
 
-		break;
+		/* filename is already in this part, okay */
+
+		// fall-through
 	case met_datainit:
 		/* the first chunk of data */
 		handle->state = req_none;
@@ -717,16 +729,19 @@ static void parseRequest(chandle_t * handle) {
 			if (strlen(handle->fname) < 5) {
 				addMessage(0, "Invalid / no name");
 				serviceUnavailable(handle);	/* add error */
+				handle->state = req_stop;
 				break;
 			}
-			addMessage(0, "Uploading: %s", handle->fname);
+			else {
+				addMessage(0, "Uploading: %s", handle->fname);
+			}
 		}
 
 		tline = strstr(tline, "\r\n\r\n");
 		if (tline == NULL) {
 			addMessage(-1, "No data found!");
 			serviceUnavailable(handle);	/* add error */
-			// handle->state=req_stop;
+			handle->state = req_stop;
 			break;
 		}
 		else {
@@ -740,15 +755,17 @@ static void parseRequest(chandle_t * handle) {
 			(pathname, MAXPATHLEN, "%supload/%s", config->musicdir,
 			 handle->fname) == MAXPATHLEN) {
 			addMessage(-1, "Path too long!");
+			/* keep on reading if any data comes in, even if it's just
+			 * going into /dev/null at this point */
+			handle->filerd = 1;
 			/* this is probably bad */
 			serviceUnavailable(handle);	/* add error */
-			break;
 		}
 		if (access(pathname, F_OK) == 0) {
 			addMessage(-1, "%s already exists", handle->fname);
-			/* this is probably bad */
 			serviceUnavailable(handle);	/* add error */
-			break;
+			handle->filerd = 1;
+			/* do not stop the loop, the client will retry! */
 		}
 		else {
 			handle->filefd =
@@ -758,7 +775,6 @@ static void parseRequest(chandle_t * handle) {
 						   strerror(errno));
 				/* this is probably bad */
 				serviceUnavailable(handle);	/* add error */
-				break;
 			}
 		}
 		/* fall-through */
@@ -776,7 +792,7 @@ static void parseRequest(chandle_t * handle) {
 			handle->commdata + (handle->commlen -
 								(strlen(handle->boundary) + 8));
 		if (strstr(tline, handle->boundary) != NULL) {
-			addMessage(0, "Last segment: %zu", handle->filesz);
+			addMessage(MPV + 1, "Last segment: %zu", handle->filesz);
 			// sprintf(handle->commdata, "HTTP/1.1 201 Created\015\012Content-Length: 0\015\012\015\012");
 			handle->filesz = 0;
 		}
@@ -785,31 +801,35 @@ static void parseRequest(chandle_t * handle) {
 			tline = handle->commdata + handle->commlen;
 		}
 
-		for (char *data = pos; data < tline; data++) {
-			write(handle->filefd, data, 1);
-			handle->filerd++;
+		if (handle->filefd > 0) {
+			for (char *data = pos; data < tline; data++) {
+				write(handle->filefd, data, 1);
+				handle->filerd++;
+			}
 		}
 
 		if (handle->filesz == 0) {
-			addMessage(0, "Done, read %zu bytes!", handle->filerd);
-			close(handle->filefd);
+			if (handle->filefd > 0) {
+				addMessage(MPV + 1, "Done, read %zu bytes!", handle->filerd);
+				close(handle->filefd);
+				handle->filefd = -1;
+			}
 			// TODO: add Title (to playlist?)
 			sprintf(handle->commdata,
-					"HTTP/1.1 204 No Content\015\012\015\012");
+					"HTTP/1.1 204 No Content\015\012Content-Length: 0\015\012\015\012");
 			handle->len = strlen(handle->commdata);
 		}
-
-		activity(0, "Upload %zu", handle->filesz - handle->filerd);
 
 		break;
 	case met_error:
 		addMessage(MPV + 1, "Illegal method %s", handle->commdata);
 		send(handle->sock,
-			 "HTTP/1.0 405 Method Not Allowed\015\012\015\012", 35, 0);
+			 "HTTP/1.0 405 Method Not Allowed\015\012Content-Length: 0\015\012\015\012",
+			 55, 0);
 		handle->running = CL_STP;
 		break;
 	default:
-		addMessage(0, "Unknown method %i!", method);
+		addMessage(MPV, "Unknown method %i!", method);
 		handle->running = CL_STP;
 		break;
 	}							/* switch(method) */
@@ -904,7 +924,7 @@ static void sendReply(chandle_t * handle) {
 			handle->fullstat &= MPCOMM_RESULT;
 		}
 		else {
-			addMessage(0, "Could not turn status into JSON");
+			addMessage(MPV, "Could not turn status into JSON");
 			serviceUnavailable(handle);
 		}
 		break;
@@ -924,13 +944,14 @@ static void sendReply(chandle_t * handle) {
 			setCommand(handle->cmd, handle->arg);
 			sfree(&(handle->arg));
 		}
-		sprintf(handle->commdata, "HTTP/1.1 204 No Content\015\012\015\012");
+		sprintf(handle->commdata,
+				"HTTP/1.1 204 No Content\015\012Content-Length: 0\015\012\015\012");
 		handle->len = strlen(handle->commdata);
 		break;
 
 	case req_unknown:			/* unknown command */
 		sprintf(handle->commdata,
-				"HTTP/1.1 501 Not Implemented\015\012\015\012");
+				"HTTP/1.1 501 Not Implemented\015\012Content-Length: 0\015\012\015\012");
 		handle->len = strlen(handle->commdata);
 		break;
 
@@ -1013,7 +1034,7 @@ static void sendReply(chandle_t * handle) {
 		break;
 
 	default:
-		addMessage(0, "No req_ set len=%zu", handle->len);
+		addMessage(MPV, "No req_ set len=%zu", handle->len);
 	}
 
 	if (handle->len > 0) {
@@ -1117,8 +1138,11 @@ static void *clientHandler(void *args) {
 		sfree(&(handle.arg));
 	} while (handle.running & CL_RUN);
 
-	if (handle.filesz != 0) {
-		addMessage(0, "Handler for ID %i just exited", handle.clientid);
+	if (handle.filefd > 0) {
+		addMessage(0, "Handler for %s just exited", handle.fname);
+		addMessage(0, "We probably ended up with a broken upload!");
+		close(handle.filefd);
+		handle.filefd = -1;
 	}
 
 	addMessage(MPV + 3, "Client handler exited");
