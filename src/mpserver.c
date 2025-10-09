@@ -982,6 +982,7 @@ static void sendReply(chandle_t * handle) {
 			filePost(handle->sock, filedef->fname);
 		}
 		else {
+			handle->len = 0;
 			sprintf(handle->commdata,
 					"HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012Content-Length: %zu;\015\012\015\012",
 					filedef->mtype, filedef->flen);
