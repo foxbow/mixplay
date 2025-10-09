@@ -59,7 +59,7 @@ static int32_t playResults(mpcmd_t range, const char *arg, const bool insert) {
 			}
 
 			while (res != NULL) {
-				pos = addToPL(res->title, pos, 0);
+				pos = addToPL(res->title, pos, false);
 				if (config->current == NULL) {
 					config->current = pos;
 				}
@@ -82,7 +82,7 @@ static int32_t playResults(mpcmd_t range, const char *arg, const bool insert) {
 		 * won't come back! It's not been played before? Then play it now and
 		 * whenever it's time comes.
 		 */
-		pos = addToPL(title, pos, 0);
+		pos = addToPL(title, pos, false);
 		if (config->current == NULL) {
 			config->current = pos;
 		}

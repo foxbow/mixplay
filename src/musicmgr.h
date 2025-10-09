@@ -80,8 +80,7 @@ struct marklist_s {
 /**
  * playlist functions
  */
-mpplaylist_t *addToPL(mptitle_t * title, mpplaylist_t * target,
-					  const int32_t mark);
+mpplaylist_t *addToPL(mptitle_t * title, mpplaylist_t * target, bool mark);
 mpplaylist_t *remFromPLByKey(const uint32_t key);
 mpplaylist_t *addPLDummy(mpplaylist_t * pl, const char *name);
 void plCheck(bool del);
@@ -92,6 +91,7 @@ mptitle_t *rewindTitles(mptitle_t * base);
 mptitle_t *loadPlaylist(const char *path);
 mptitle_t *insertTitle(mptitle_t * base, const char *path);
 int32_t search(const mpcmd_t range, const char *pat);
+mptitle_t *addNewPath(const char *path);
 
 void moveTitleByIndex(uint32_t from, uint32_t before);
 

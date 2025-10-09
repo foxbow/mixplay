@@ -124,6 +124,7 @@ typedef struct {
 	size_t filesz;
 	size_t filerd;
 	int filefd;
+	char fpath[MAXPATHLEN];
 } chandle_t;
 
 /* return an unused clientid
@@ -732,9 +733,6 @@ static void parseRequest(chandle_t * handle) {
 				handle->state = req_stop;
 				break;
 			}
-			else {
-				addMessage(0, "Uploading: %s", handle->fname);
-			}
 		}
 
 		tline = strstr(tline, "\r\n\r\n");
@@ -749,10 +747,8 @@ static void parseRequest(chandle_t * handle) {
 			pos = tline + 4;
 		}
 
-		char pathname[MAXPATHLEN];
-
 		if (snprintf
-			(pathname, MAXPATHLEN, "%supload/%s", config->musicdir,
+			(handle->fpath, MAXPATHLEN, "%supload/%s", config->musicdir,
 			 handle->fname) == MAXPATHLEN) {
 			addMessage(-1, "Path too long!");
 			/* keep on reading if any data comes in, even if it's just
@@ -761,21 +757,25 @@ static void parseRequest(chandle_t * handle) {
 			/* this is probably bad */
 			serviceUnavailable(handle);	/* add error */
 		}
-		if (access(pathname, F_OK) == 0) {
-			addMessage(-1, "%s already exists", handle->fname);
+		if (access(handle->fpath, F_OK) == 0) {
+			addMessage(0, "%s already exists", handle->fname);
 			serviceUnavailable(handle);	/* add error */
 			handle->filerd = 1;
 			/* do not stop the loop, the client will retry! */
 		}
 		else {
 			handle->filefd =
-				open(pathname, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+				open(handle->fpath, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 			if (handle->filefd == -1) {
 				addMessage(-1, "Could not write %s\n%s", handle->fname,
 						   strerror(errno));
 				/* this is probably bad */
 				serviceUnavailable(handle);	/* add error */
 			}
+			else {
+				addMessage(0, "Uploading: %s", handle->fname);
+			}
+
 		}
 		/* fall-through */
 	case met_dataflow:
@@ -801,6 +801,9 @@ static void parseRequest(chandle_t * handle) {
 			tline = handle->commdata + handle->commlen;
 		}
 
+		/* only write if there is a target
+		 * unfortunately it may happen that we need to download everything even though we are
+		 * no longer interested. If we just cancel the upload, the client may try again */
 		if (handle->filefd > 0) {
 			for (char *data = pos; data < tline; data++) {
 				write(handle->filefd, data, 1);
@@ -808,13 +811,21 @@ static void parseRequest(chandle_t * handle) {
 			}
 		}
 
+		/* all done, cleaning up */
 		if (handle->filesz == 0) {
 			if (handle->filefd > 0) {
-				addMessage(MPV + 1, "Done, read %zu bytes!", handle->filerd);
+				addMessage(0, "Done");
 				close(handle->filefd);
 				handle->filefd = -1;
+				mptitle_t *newt = addNewPath(handle->fpath);
+
+				if (!isStreamActive()) {
+					/* since we're playing from the database, add the new title immediately */
+					addToPL(newt, config->current, false);
+					notifyChange(MPCOMM_TITLES);
+				}
 			}
-			// TODO: add Title (to playlist?)
+
 			sprintf(handle->commdata,
 					"HTTP/1.1 204 No Content\015\012Content-Length: 0\015\012\015\012");
 			handle->len = strlen(handle->commdata);
@@ -1101,6 +1112,7 @@ static void *clientHandler(void *args) {
 	handle.filedef = f_none;
 	handle.filesz = 0;
 	handle.filerd = 0;
+	handle.filefd = -1;
 	handle.fname[0] = '\0';
 
 	/* commsize needs at least to be large enough to hold the javascript file.

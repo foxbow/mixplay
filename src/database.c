@@ -377,6 +377,39 @@ static int32_t dbAddTitle(int32_t db, mptitle_t * title) {
 	return 0;
 }
 
+/**
+ * the name is misleading, it just is chosen to match addNewPath()
+ * where it is used
+ */
+void dbAddPath(mptitle_t * title) {
+	int db = dbOpen();
+
+	if (db == -1) {
+		fail(-1, "Database is not available!");
+		return;
+	}
+	dbAddTitle(db, title);
+	dbClose(db);
+}
+
+uint32_t getMeanPlaycount() {
+	uint32_t count = 0, mean;
+	mptitle_t *dbrunner = getConfig()->root;
+
+	if (dbrunner == NULL)
+		return 0;
+
+	do {
+		/* find mean playcount */
+		if (!(dbrunner->flags & (MP_DNP | MP_DBL))) {
+			count++;
+			mean += dbrunner->playcount;
+		}
+		dbrunner = dbrunner->next;
+	}
+	while (dbrunner != getConfig()->root);
+	return mean / count;
+}
 
 /**
  * adds new titles to the database
@@ -387,7 +420,7 @@ int32_t dbAddTitles(char *basedir) {
 	mptitle_t *fsnext;
 	mptitle_t *dbroot;
 	mptitle_t *dbrunner;
-	uint32_t count = 0, mean = 0;
+	uint32_t mean = 0;
 	uint32_t index = 0;
 	int32_t num = 0, db = 0;
 
@@ -399,28 +432,8 @@ int32_t dbAddTitles(char *basedir) {
 		addMessage(0, "Adding new titles");
 		dbrunner = dbroot;
 
-		do {
-			/* find highest key */
-			if (index < dbrunner->key) {
-				index = dbrunner->key;
-			}
-			/* find mean playcount */
-			if (!(dbrunner->flags & (MP_DNP | MP_DBL))) {
-				count++;
-				mean += dbrunner->playcount;
-			}
-			dbrunner = dbrunner->next;
-		}
-		while (dbrunner != dbroot);
-
-		/* round down so new titles have a slightly better chance to be played
-		 * and to equalize favourites */
-		if (count > 0) {
-			mean = (mean / count);
-		}
-		else {
-			addMessage(-1, "No playable titles available!");
-		}
+		index = dbroot->prev->key;
+		mean = getMeanPlaycount();
 	}
 
 	addMessage(0, "Using mean playcount %d", mean);

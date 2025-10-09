@@ -104,7 +104,7 @@ mpplaylist_t *addPLDummy(mpplaylist_t * pl, const char *name) {
  * this function either returns pl or the head of the new playlist
  */
 static mpplaylist_t *appendToPL(mptitle_t * title, mpplaylist_t * pl,
-								const int32_t mark) {
+								bool mark) {
 	mpplaylist_t *runner = pl;
 
 	if (runner != NULL) {
@@ -277,8 +277,7 @@ mpplaylist_t *remFromPLByKey(const uint32_t key) {
  * default mixplay, otherwise it is a searched title and will be
  * played out of order or added to a playlist result.
  */
-mpplaylist_t *addToPL(mptitle_t * title, mpplaylist_t * target,
-					  const int32_t mark) {
+mpplaylist_t *addToPL(mptitle_t * title, mpplaylist_t * target, bool mark) {
 	mpplaylist_t *buf = NULL;
 
 	if (mark && (title->flags & MP_INPL)) {
@@ -504,7 +503,7 @@ int32_t search(const mpcmd_t range, const char *pat) {
 		/* just return the last 10 titles in the database */
 		runner = runner->prev;
 		for (i = 0; i < 10; i++) {
-			res->titles = appendToPL(runner, res->titles, 0);
+			res->titles = appendToPL(runner, res->titles, false);
 			res->tnum++;
 			runner = runner->prev;
 			if (runner == root) {
@@ -611,7 +610,7 @@ int32_t search(const mpcmd_t range, const char *pat) {
 				}
 
 				if (MPC_ISTITLE(found) && (res->tnum++ < MAXSEARCH)) {
-					res->titles = appendToPL(runner, res->titles, 0);
+					res->titles = appendToPL(runner, res->titles, false);
 				}
 			}
 			runner = runner->next;
@@ -1060,7 +1059,7 @@ static void moveTitle(mptitle_t * from, mptitle_t * before) {
 	if (frompos == NULL) {
 		/* add title as new one - should not happen */
 		addMessage(1, "Inserting %s as new!", from->display);
-		addToPL(from, topos, 0);
+		addToPL(from, topos, false);
 	}
 	else {
 		movePLEntry(frompos, topos);
@@ -1164,6 +1163,24 @@ mptitle_t *loadPlaylist(const char *path) {
 	return (current == NULL) ? NULL : current->next;
 }
 
+mptitle_t *addNewPath(const char *path) {
+	mptitle_t *tail = getConfig()->root->prev;
+	mptitle_t *newt = (mptitle_t *) falloc(1, sizeof (mptitle_t));
+
+	newt->key = tail->key + 1;
+	newt->playcount = getMeanPlaycount();
+	strtcpy(newt->path, path, MAXPATHLEN);
+
+	newt->next = tail->next;
+	newt->prev = tail;
+	tail->next = newt;
+	newt->next->prev = newt;
+
+	fillTagInfo(newt);
+
+	return newt;
+}
+
 /**
  * Insert an entry into the database list and fill it with
  * path and if available, mp3 tag info.
@@ -1190,6 +1207,7 @@ mptitle_t *insertTitle(mptitle_t * base, const char *path) {
 
 	return root;
 }
+
 
 /**
  * return the number of titles in the list
@@ -1519,7 +1537,7 @@ static int32_t addNewTitle(void) {
 
 	if (lastpat == NULL) {
 		/* No titles in the playlist yet, we're done! */
-		getConfig()->current = appendToPL(runner, NULL, 1);
+		getConfig()->current = appendToPL(runner, NULL, true);
 		return 1;
 	}
 
@@ -1583,7 +1601,7 @@ static int32_t addNewTitle(void) {
 			   (runner->flags & MP_FAV) ? runner->favpcount : runner->playcount,
 			   pcount, flagToChar(runner->flags), runner->key, runner->display);
 	/*  *INDENT-ON*  */
-	appendToPL(runner, getCurrent(), 1);
+	appendToPL(runner, getCurrent(), true);
 	return 1;
 }
 
