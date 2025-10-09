@@ -11,7 +11,7 @@
 #include "musicmgr.h"			// for mptitle_t
 
 /* basic communication block size */
-#define MP_BLKSIZE 512
+#define MP_BLKSIZE 1024
 
 int32_t startServer();
 

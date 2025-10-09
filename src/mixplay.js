@@ -697,6 +697,33 @@ function sendCMDArg (cmd, arg) {
   xmlhttp.send()
 }
 
+function sendUpload(event){
+  event.stopImmediatePropagation()
+  event.preventDefault()
+
+  const form = document.getElementById('upload')
+  const xmlhttp = new window.XMLHttpRequest()
+
+  xmlhttp.onreadystatechange = function () {
+    if (xmlhttp.readyState === 4) {
+      switch (xmlhttp.status) {
+        case 0:
+          // just consider things done and make sure they stay down
+          xmlhttp.abort()
+          break
+        case 503:
+          showConfirm('Sorry, we\'re busy!')
+          break
+        default:
+          showConfirm('Upload Error ' + xmlhttp.status)
+      }
+    }
+  }
+
+  xmlhttp.open('POST', '/')
+  xmlhttp.send(new FormData(form));
+}
+
 /* send command without arguments */
 function sendCMD (cmd) {
   sendCMDArg(cmd, '')
@@ -1708,6 +1735,8 @@ function updateConfig (data) {
   lineout = data.lineout;
   allnum = data.tnum;
 
+  enableElement('upload', data.upload);
+
   /* client debug is off but the server is in full debug mode */
   if ((debug === false) && (data.debug > 1)) {
     toggleDebug()
@@ -2022,6 +2051,7 @@ function initializeUI () {
   document.body.addEventListener('keypress', handleKey)
   document.body.addEventListener('keyup', blockSpace)
   document.body.addEventListener('click', function () { tap() })
+  document.getElementById('upload').addEventListener('submit', sendUpload)
   /* set initial tab and sizes */
   adaptUI(0)
   /* initialize scrolltext */

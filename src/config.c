@@ -87,6 +87,7 @@ static const char *mpccommand[] = {
 	"reset",
 	"pause",
 	"clone",
+	"upload",
 	"idle"
 };
 
@@ -383,6 +384,10 @@ mpconfig_t *readConfig(void) {
 					printf("%s is no valid directory!\n", _cconfig->musicdir);
 					exit(ENOENT);
 				}
+				char updir[MAXPATHLEN];
+
+				snprintf(updir, MAXPATHLEN, "%supload", _cconfig->musicdir);
+				_cconfig->canUpload = isDir(updir);
 			}
 			if (strstr(line, "password=") == line) {
 				sfree((char **) &(_cconfig->password));

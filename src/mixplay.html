@@ -78,6 +78,10 @@
         <p id='active'>No active profile/channel</p>
         <button id='dbinfo' onclick='sendCMD(0x12)'>Database info</button>
         <button id='reload' onclick='document.location.reload()'>Reset client</button>
+        <form id='upload'> <!-- enctype='multipart/form-data' method='post'> -->
+          <input name='userfile' type='file' accept="audio/mpeg"/>
+          <input type='submit' value='upload' />
+        </form>
         <button id='debug'  onclick='toggleDebug()'>Extra</button>
         <div id='debugdiv' class='hide'>
           <p id='status'></p>

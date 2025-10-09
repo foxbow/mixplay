@@ -245,6 +245,7 @@ char *serializeStatus(int32_t clientid, int32_t type) {
 		jsonAddStr(jo, "bookmarklet",
 				   data->bookmarklet ? data->bookmarklet : "");
 		jsonAddInt(jo, "tnum", data->tnum);
+		jsonAddBool(jo, "upload", data->canUpload);
 	}
 	jsonAddInt(jo, "active", data->active);
 	jsonAddInt(jo, "playtime", data->playtime);
