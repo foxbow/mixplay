@@ -719,18 +719,26 @@ function sendUpload(event){
   const xmlhttp = new window.XMLHttpRequest()
 
   xmlhttp.onreadystatechange = function () {
+	  addText('state-change to: ' + xmlhttp.readyState + '/' + xmlhttp.status)
     if (xmlhttp.readyState === 4) {
       switch (xmlhttp.status) {
         case 0:
           // just consider things done and make sure they stay down
           xmlhttp.abort()
           break
+        case 200:
+          // all is good!
+          break
         case 503:
           showConfirm('Sorry, we\'re busy!')
           break
+        case 405:
+          console.log('Upload rejected!');
+          break; 
         default:
           showConfirm('Upload Error ' + xmlhttp.status)
       }
+      xmlhttp.abort()
     }
   }
 

@@ -295,13 +295,6 @@ static int32_t fillReqInfo(chandle_t * info, char *line) {
 	return rc;
 }
 
-static void serviceUnavailable(chandle_t * handle) {
-	sprintf(handle->commdata,
-			"HTTP/1.1 503 Service Unavailable\015\012Content-Length: 0\015\012\015\012");
-	handle->len = strlen(handle->commdata);
-	handle->state = req_stop;
-}
-
 /**
  * just poll on a socket and wait for data
  * read all the data into the handlers commdata field on success
@@ -404,6 +397,30 @@ static void fetchRequest(chandle_t * handle) {
 }
 
 typedef enum {
+	rep_continue = 0,
+	rep_ok,
+	rep_created,
+	rep_bad_request,
+	rep_not_implemented,
+	rep_unavailable,
+} reply_t;
+
+static void prepareReply(chandle_t * handle, reply_t reply, bool stop) {
+	static const char *replies[] = {
+		"HTTP/1.0 100 Continue\015\012Content-Length: 0\015\012\015\012",
+		"HTTP/1.0 200 OK\015\012Content-Length: 2\015\012\015\012OK\015\012",
+		"HTTP/1.0 201 Created\015\012Content-Length: 2\015\012\015\012OK\015\012",
+		"HTTP/1.0 400 Bad Request\015\012Content-Length: 4\015\012\015\012Go Away!\015\012",
+		"HTTP/1.0 501 Not Implemented\015\012Content-Length: 0\015\012\015\012Go Away!\015\012",
+		"HTTP/1.0 503 Service Unavailable\015\012Content-Length: 0\015\012\015\012Go Away!\015\012",
+	};
+
+	strcpy(handle->commdata, replies[reply]);
+	handle->len = strlen(handle->commdata);
+	handle->state = stop ? req_stop : req_none;
+}
+
+typedef enum {
 	met_error = 0,
 	met_get,
 	met_post,
@@ -442,6 +459,14 @@ static void parseRequest(chandle_t * handle) {
 		}
 		else if (strcasecmp(handle->commdata, "post") == 0) {
 			method = met_post;
+		}
+		else if (strcasecmp(handle->commdata, "put") == 0) {
+			addMessage(0, "PUT is unsupported");
+			method = met_error;
+		}
+		else if (strcasecmp(handle->commdata, "head") == 0) {
+			addMessage(0, "HEAD is unsupported");
+			method = met_error;
 		}
 		else if ((handle->filesz > 0)
 				 && (strcasestr(handle->commdata, handle->boundary) != NULL)) {
@@ -585,7 +610,7 @@ static void parseRequest(chandle_t * handle) {
 				handle->state = req_update;
 				if (setCurClient(handle->clientid) == -1) {
 					addMessage(-1, "Server is blocked!");
-					serviceUnavailable(handle);
+					prepareReply(handle, rep_unavailable, true);
 				}
 				else if (getConfig()->found->state == mpsearch_idle) {
 					setCommand(cmd, handle->arg);
@@ -596,7 +621,7 @@ static void parseRequest(chandle_t * handle) {
 				else {
 					addMessage(-1, "Already searching!");
 					unlockClient(handle->clientid);
-					serviceUnavailable(handle);
+					prepareReply(handle, rep_unavailable, true);
 				}
 			}
 		}
@@ -704,10 +729,7 @@ static void parseRequest(chandle_t * handle) {
 		else if (strcasestr(pos, "filename=\"") == NULL) {
 			/* no filename, this will come with the next blob, so request it */
 			addMessage(MPV + 1, "Send 100 to continue data flow");
-			sprintf(handle->commdata,
-					"HTTP/1.1 100 Continue\015\012Content-Length: 0\015\012\015\012");
-			handle->len = strlen(handle->commdata);
-			handle->state = req_none;
+			prepareReply(handle, rep_continue, false);
 			break;
 		}
 
@@ -732,9 +754,10 @@ static void parseRequest(chandle_t * handle) {
 			}
 			/* force NULL */
 			handle->fname[FNLEN - 1] = '\0';
-			if (strlen(handle->fname) < 5) {
+			if (strlen(handle->fname) == 0) {
 				addMessage(0, "Invalid / no name");
-				serviceUnavailable(handle);	/* add error */
+				// check here!
+				prepareReply(handle, rep_bad_request, true);
 				break;
 			}
 		}
@@ -742,7 +765,7 @@ static void parseRequest(chandle_t * handle) {
 		tline = strstr(tline, "\r\n\r\n");
 		if (tline == NULL) {
 			addMessage(-1, "No data found!");
-			serviceUnavailable(handle);	/* add error */
+			prepareReply(handle, rep_bad_request, true);	/* add error */
 			break;
 		}
 		else {
@@ -759,11 +782,15 @@ static void parseRequest(chandle_t * handle) {
 			 * going into /dev/null at this point */
 			handle->filerd = 1;
 			/* this is probably bad */
-			serviceUnavailable(handle);	/* add error */
+			prepareReply(handle, rep_bad_request, true);
 		}
 		if (access(handle->fpath, F_OK) == 0) {
 			addMessage(0, "%s already exists", handle->fname);
-			serviceUnavailable(handle);	/* add error */
+			/* keep on reading if any data comes in, even if it's just
+			 * going into /dev/null at this point */
+			handle->filerd = 1;
+			prepareReply(handle, rep_bad_request, false);	/* add error */
+
 		}
 		else {
 			handle->filefd =
@@ -772,7 +799,7 @@ static void parseRequest(chandle_t * handle) {
 				addMessage(-1, "Could not write %s\n%s", handle->fname,
 						   strerror(errno));
 				/* this is probably bad */
-				serviceUnavailable(handle);	/* add error */
+				prepareReply(handle, rep_bad_request, true);	/* add error */
 			}
 			else {
 				addMessage(0, "Uploading: %s", handle->fname);
@@ -836,9 +863,7 @@ static void parseRequest(chandle_t * handle) {
 				}
 			}
 
-			sprintf(handle->commdata,
-					"HTTP/1.1 200 OK\015\012Content-Length: 0\015\012\015\012");
-			handle->len = strlen(handle->commdata);
+			prepareReply(handle, rep_created, false);
 		}
 
 		break;
@@ -946,7 +971,7 @@ static void sendReply(chandle_t * handle) {
 		}
 		else {
 			addMessage(MPV, "Could not turn status into JSON");
-			serviceUnavailable(handle);
+			prepareReply(handle, rep_unavailable, true);	/* add error */
 		}
 		break;
 
@@ -958,26 +983,22 @@ static void sendReply(chandle_t * handle) {
 				(cmd == mpc_doublets)) {
 				if (setCurClient(handle->clientid) == -1) {
 					addMessage(MPV + 1, "%s was blocked!", mpcString(cmd));
-					serviceUnavailable(handle);
+					prepareReply(handle, rep_unavailable, true);	/* add error */
 					break;
 				}
 			}
 			setCommand(handle->cmd, handle->arg);
 			sfree(&(handle->arg));
 		}
-		sprintf(handle->commdata,
-				"HTTP/1.1 204 No Content\015\012Content-Length: 0\015\012\015\012");
-		handle->len = strlen(handle->commdata);
+		prepareReply(handle, rep_not_implemented, false);	/* add error */
 		break;
 
 	case req_unknown:			/* unknown command */
-		sprintf(handle->commdata,
-				"HTTP/1.1 501 Not Implemented\015\012Content-Length: 0\015\012\015\012");
-		handle->len = strlen(handle->commdata);
+		prepareReply(handle, rep_not_implemented, false);
 		break;
 
 	case req_noservice:		/* service unavailable */
-		serviceUnavailable(handle);
+		prepareReply(handle, rep_unavailable, true);
 		break;
 
 	case req_file:				/* send file */
@@ -1010,7 +1031,7 @@ static void sendReply(chandle_t * handle) {
 
 	case req_config:			/* get config should be unreachable */
 		addMessage(-1, "Get config is deprecated!");
-		serviceUnavailable(handle);
+		prepareReply(handle, rep_unavailable, true);
 		break;
 
 	case req_version:			/* get current build version */
