@@ -344,6 +344,7 @@ mpconfig_t *readConfig(void) {
 	_cconfig->mpmode = PM_NONE;
 	_cconfig->lineout = 0;
 	_cconfig->linestream = VOLUME_STREAM;
+	_cconfig->process = 0;
 
 	snprintf(_cconfig->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", home);
 
@@ -717,6 +718,24 @@ void wipePlaylist(mpconfig_t * control) {
 		_wipePlaylist(control->current, control->mpmode & PM_STREAM, false);
 }
 
+/** 
+ * set info for the process bar
+ * 0, >99 - hide process bar and show download
+ * 1-99   - hide download, show process bar and set percentage 
+ */
+void setProcess(uint32_t percent) {
+	if (percent > 99) {
+		_cconfig->process = 0;
+	}
+	else {
+		_cconfig->process = percent;
+	}
+}
+
+uint32_t getProcess() {
+	return _cconfig->process;
+}
+
 /**
  * recursive free() to clean up all of the configuration
  */
@@ -766,7 +785,7 @@ void addMessage(int32_t v, const char *msg, ...) {
 	}
 
 	if (v < 1) {
-		/* normal status messages */
+		/* abnormal status messages */
 		if (v == -1) {
 			memmove(line + 6, line, MP_MSGLEN - 6);
 			memcpy(line, "ALERT:", 6);

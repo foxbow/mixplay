@@ -191,6 +191,7 @@ typedef struct {
 	bool playlist;				/* remote playlist */
 	uint32_t tnum;				/* number of titles in the current profile */
 	bool canUpload;
+	uint32_t process;
 } mpconfig_t;
 
 /* message request types */
@@ -221,6 +222,8 @@ profile_t *getProfile(uint32_t id);
 int32_t getProfileIndex(uint32_t id);
 int32_t getProfileVolume(uint32_t id);
 bool isStream(profile_t * profile);
+void setProcess(uint32_t percent);
+uint32_t getProcess(void);
 
 #define isStreamActive() isStream(getProfile(getConfig()->active))
 

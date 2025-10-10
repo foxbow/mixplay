@@ -299,7 +299,7 @@ static void serviceUnavailable(chandle_t * handle) {
 	sprintf(handle->commdata,
 			"HTTP/1.1 503 Service Unavailable\015\012Content-Length: 0\015\012\015\012");
 	handle->len = strlen(handle->commdata);
-	handle->state = req_none;
+	handle->state = req_stop;
 }
 
 /**
@@ -505,8 +505,13 @@ static void parseRequest(chandle_t * handle) {
 			if (method == met_get) {
 				method = met_file;
 			}
-			else {
+			else if (getProcess() == 0) {
+				/* no upload is running already so give it a try */
 				method = met_upload;
+			}
+			else {
+				/* looking bad */
+				method = met_error;
 			}
 		}
 	}
@@ -730,7 +735,6 @@ static void parseRequest(chandle_t * handle) {
 			if (strlen(handle->fname) < 5) {
 				addMessage(0, "Invalid / no name");
 				serviceUnavailable(handle);	/* add error */
-				handle->state = req_stop;
 				break;
 			}
 		}
@@ -739,12 +743,12 @@ static void parseRequest(chandle_t * handle) {
 		if (tline == NULL) {
 			addMessage(-1, "No data found!");
 			serviceUnavailable(handle);	/* add error */
-			handle->state = req_stop;
 			break;
 		}
 		else {
 			/* start of the actual data */
 			pos = tline + 4;
+			setProcess(0);
 		}
 
 		if (snprintf
@@ -760,8 +764,6 @@ static void parseRequest(chandle_t * handle) {
 		if (access(handle->fpath, F_OK) == 0) {
 			addMessage(0, "%s already exists", handle->fname);
 			serviceUnavailable(handle);	/* add error */
-			handle->filerd = 1;
-			/* do not stop the loop, the client will retry! */
 		}
 		else {
 			handle->filefd =
@@ -803,11 +805,19 @@ static void parseRequest(chandle_t * handle) {
 
 		/* only write if there is a target
 		 * unfortunately it may happen that we need to download everything even though we are
-		 * no longer interested. If we just cancel the upload, the client may try again */
+		 * no longer interested. If we just cancel the upload, the client may try again.
+		 * TODO: This is a problem on slow connections though! */
 		if (handle->filefd > 0) {
 			for (char *data = pos; data < tline; data++) {
+				uint32_t ratio = 100;
+
 				write(handle->filefd, data, 1);
 				handle->filerd++;
+				if (handle->filesz > 0) {
+					ratio =
+						(uint32_t) ((100 * handle->filerd) / handle->filesz);
+				}
+				setProcess(ratio);
 			}
 		}
 
@@ -827,7 +837,7 @@ static void parseRequest(chandle_t * handle) {
 			}
 
 			sprintf(handle->commdata,
-					"HTTP/1.1 204 No Content\015\012Content-Length: 0\015\012\015\012");
+					"HTTP/1.1 200 OK\015\012Content-Length: 0\015\012\015\012");
 			handle->len = strlen(handle->commdata);
 		}
 

@@ -253,11 +253,11 @@ char *serializeStatus(int32_t clientid, int32_t type) {
 	jsonAddInt(jo, "percent", data->percent);
 	jsonAddInt(jo, "volume", data->volume);
 	jsonAddInt(jo, "status", data->status);
-	jsonAddStr(jo, "mpstatus", mpcString(data->status));
 	jsonAddInt(jo, "mpmode", data->mpmode);
 	jsonAddBool(jo, "mpfavplay", getFavplay());
 	jsonAddBool(jo, "searchDNP", data->searchDNP);
 	jsonAddInt(jo, "clientid", clientid);
+	jsonAddInt(jo, "process", data->process);
 	/* broadcast */
 
 	if (clientid > 0) {

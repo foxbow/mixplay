@@ -1164,8 +1164,19 @@ mptitle_t *loadPlaylist(const char *path) {
 }
 
 mptitle_t *addNewPath(const char *path) {
-	mptitle_t *tail = getConfig()->root->prev;
+	mptitle_t *tail = getConfig()->root;
 	mptitle_t *newt = (mptitle_t *) falloc(1, sizeof (mptitle_t));
+
+	do {
+		if (strcmp(path, tail->path) == 0) {
+			/* should only happen during development */
+			addMessage(0, "Title alrady exists in database. Weird!");
+			free(newt);
+			return tail;
+		}
+		tail = tail->next;
+	}
+	while (tail != getConfig()->root);
 
 	newt->key = tail->key + 1;
 	newt->playcount = getMeanPlaycount();

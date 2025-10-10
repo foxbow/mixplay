@@ -523,6 +523,7 @@ function addText (text) {
   var line = ''
   var numlines = 10
   var b = document.getElementById('cextra2')
+  // TODO: is still still being used?
   if ((text.charAt(0) !== '+') && (b.className === 'inactive')) {
     b.className = 'alert'
   }
@@ -539,6 +540,19 @@ function addText (text) {
     msglines[numlines - 1] = text
   }
 
+  for (i = 0; i < msgpos; i++) {
+    if (msglines[i] !== '') {
+      line += msglines[i] + '<br>\n'
+    }
+  }
+  e.innerHTML = line
+}
+
+/* this should probably become an extra element or rather a process bar */
+function setText (text) {
+  var e = document.getElementById('messages')
+  var line = ''
+  msglines[0] = text
   for (i = 0; i < msgpos; i++) {
     if (msglines[i] !== '') {
       line += msglines[i] + '<br>\n'
@@ -1524,7 +1538,16 @@ function playerUpdate (data) {
     }
   }
 
-  setElement('status', data.mpstatus)
+  /* TODO: put this in a new widget! */
+  if (data.process > 0) {
+    enableElement('process', 1)
+    enableElement('upload', 0)
+    document.getElementById('processbar').style.width = data.process + '%'    
+  }
+  else {
+    enableElement('process', 0)
+    enableElement('upload', 1)
+  }
 }
 
 /*

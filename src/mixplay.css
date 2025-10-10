@@ -274,6 +274,20 @@ div.progress div {
 	background-color: rgba(100,100,200,.5);
 }
 
+div.process {
+	flex: 1;
+	margin: 0.3em;
+	height: 0.6em;
+	width: 100%;
+	background-color: rgba(100,100,100,.2);
+}
+
+div.process div {
+	height: 100%;
+	background-color: rgba(200, 0, 0, 0.5);
+}
+
+
 /* make download link look like a button */
 a.download {
 	text-decoration: none;
