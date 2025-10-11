@@ -732,7 +732,7 @@ static void parseRequest(chandle_t * handle) {
 			}
 			/* force NULL */
 			handle->fname[FNLEN - 1] = '\0';
-			if (strlen(handle->fname) < 5) {
+			if ((strlen(handle->fname) == 0) || (!endsWith(handle->fname, ".mp3"))) {
 				addMessage(0, "Invalid / no name");
 				serviceUnavailable(handle);	/* add error */
 				break;
@@ -745,11 +745,9 @@ static void parseRequest(chandle_t * handle) {
 			serviceUnavailable(handle);	/* add error */
 			break;
 		}
-		else {
-			/* start of the actual data */
-			pos = tline + 4;
-			setProcess(0);
-		}
+
+		/* start of the actual data */
+		pos = tline + 4;
 
 		if (snprintf
 			(handle->fpath, MAXPATHLEN, "%supload/%s", config->musicdir,
@@ -760,25 +758,29 @@ static void parseRequest(chandle_t * handle) {
 			handle->filerd = 1;
 			/* this is probably bad */
 			serviceUnavailable(handle);	/* add error */
+			break;
 		}
-		if (access(handle->fpath, F_OK) == 0) {
+		if ((access(handle->fpath, F_OK) == 0) || mp3FileExists(handle->fname)) {
 			addMessage(0, "%s already exists", handle->fname);
 			serviceUnavailable(handle);	/* add error */
+			break;
+		}
+
+		handle->filefd =
+			open(handle->fpath, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+		if (handle->filefd == -1) {
+			addMessage(-1, "Could not write %s\n%s", handle->fname,
+					strerror(errno));
+			/* this is probably bad */
+			serviceUnavailable(handle);	/* add error */
+			break;
 		}
 		else {
-			handle->filefd =
-				open(handle->fpath, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-			if (handle->filefd == -1) {
-				addMessage(-1, "Could not write %s\n%s", handle->fname,
-						   strerror(errno));
-				/* this is probably bad */
-				serviceUnavailable(handle);	/* add error */
-			}
-			else {
-				addMessage(0, "Uploading: %s", handle->fname);
-			}
-
+			addMessage(0, "Uploading: %s", handle->fname);
+			/* passed all tests so far */
+			setProcess(0);
 		}
+
 		/* fall-through */
 	case met_dataflow:
 		handle->state = req_none;

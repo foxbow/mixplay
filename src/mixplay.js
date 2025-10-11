@@ -1538,15 +1538,16 @@ function playerUpdate (data) {
     }
   }
 
-  /* TODO: put this in a new widget! */
-  if (data.process > 0) {
-    enableElement('process', 1)
-    enableElement('upload', 0)
-    document.getElementById('processbar').style.width = data.process + '%'    
-  }
-  else {
-    enableElement('process', 0)
-    enableElement('upload', 1)
+  if (upload === true) {
+    if (data.process > 0) {
+      enableElement('process', 1)
+      enableElement('upload', 0)
+      document.getElementById('processbar').style.width = data.process + '%'    
+    }
+    else {
+      enableElement('process', 0)
+      enableElement('upload', 1)
+    }
   }
 }
 
@@ -1755,10 +1756,9 @@ function updateConfig (data) {
   /*  idlesleep = data.sleepto * 1000 */
 
   /* these should be elements.. */
-  lineout = data.lineout;
-  allnum = data.tnum;
-
-  enableElement('upload', data.upload);
+  lineout = data.lineout
+  allnum = data.tnum
+  upload = data.upload
 
   /* client debug is off but the server is in full debug mode */
   if ((debug === false) && (data.debug > 1)) {
