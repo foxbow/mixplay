@@ -92,6 +92,7 @@ mptitle_t *loadPlaylist(const char *path);
 mptitle_t *insertTitle(mptitle_t * base, const char *path);
 int32_t search(const mpcmd_t range, const char *pat);
 mptitle_t *addNewPath(const char *path);
+bool mp3FileExists(const char *name);
 
 void moveTitleByIndex(uint32_t from, uint32_t before);
 

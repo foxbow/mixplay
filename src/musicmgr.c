@@ -1192,6 +1192,25 @@ mptitle_t *addNewPath(const char *path) {
 	return newt;
 }
 
+/*
+ * check if a file with the same name exists in the current database
+ * should just be used for actual filenames, paths can b echecked with
+ * access()
+ **/
+bool mp3FileExists(const char *name) {
+	mptitle_t *runner = getConfig()->root;
+
+	do {
+		if (endsWith(runner->path, name)) {
+			return true;
+		}
+		runner=runner->next;
+	}
+	while (runner != getConfig()->root);
+
+	return false;
+}
+
 /**
  * Insert an entry into the database list and fill it with
  * path and if available, mp3 tag info.

@@ -754,9 +754,8 @@ static void parseRequest(chandle_t * handle) {
 			}
 			/* force NULL */
 			handle->fname[FNLEN - 1] = '\0';
-			if (strlen(handle->fname) == 0) {
+			if ((strlen(handle->fname) == 0) || (!endsWith(handle->fname, ".mp3"))) {
 				addMessage(0, "Invalid / no name");
-				// check here!
 				prepareReply(handle, rep_bad_request, true);
 				break;
 			}

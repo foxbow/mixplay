@@ -9,6 +9,7 @@
 #define _JSON_H_
 
 #include <stddef.h>
+#include <stdbool.h>
 
 /* if less than 2*JSON_LOWATER bytes are unused in the string it will be
  * increased by JSON_INCBUFF bytes
@@ -50,7 +51,7 @@ char *jsonGetStr(jsonObject * jo, const char *key);
 int32_t jsonStrcpy(char *target, jsonObject * jo, const char *key,
 				   int32_t len);
 char **jsonGetStrs(jsonObject * jo, const char *key, int32_t * num);
-uint32_t jsonGetBool(jsonObject * jo, const char *key);
+bool jsonGetBool(jsonObject * jo, const char *key);
 jsonObject *jsonGetObj(jsonObject * jo, const char *key);
 int32_t jsonGetLength(jsonObject * jo, char *key);
 
@@ -59,7 +60,7 @@ jsonObject *jsonAddStrs(jsonObject * jo, const char *key, char **vals,
 						const int32_t num);
 jsonObject *jsonAddInt(jsonObject * jo, const char *key, const int32_t val);
 jsonObject *jsonAddObj(jsonObject * jo, const char *key, jsonObject * val);
-jsonObject *jsonAddBool(jsonObject * jo, const char *key, const uint32_t val);
+jsonObject *jsonAddBool(jsonObject * jo, const char *key, const bool val);
 
 jsonObject *jsonInitArr(jsonObject * jo, const char *key);
 int32_t jsonAddArrElement(jsonObject * jo, void *element, jsonType type);
