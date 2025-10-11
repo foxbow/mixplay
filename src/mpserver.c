@@ -770,7 +770,6 @@ static void parseRequest(chandle_t * handle) {
 		else {
 			/* start of the actual data */
 			pos = tline + 4;
-			setProcess(0);
 		}
 
 		if (snprintf
@@ -783,13 +782,12 @@ static void parseRequest(chandle_t * handle) {
 			/* this is probably bad */
 			prepareReply(handle, rep_bad_request, true);
 		}
-		if (access(handle->fpath, F_OK) == 0) {
+		if ((access(handle->fpath, F_OK) == 0) || mp3FileExists(handle->fname)) {
 			addMessage(0, "%s already exists", handle->fname);
 			/* keep on reading if any data comes in, even if it's just
 			 * going into /dev/null at this point */
 			handle->filerd = 1;
 			prepareReply(handle, rep_bad_request, false);	/* add error */
-
 		}
 		else {
 			handle->filefd =
@@ -802,6 +800,7 @@ static void parseRequest(chandle_t * handle) {
 			}
 			else {
 				addMessage(0, "Uploading: %s", handle->fname);
+				setProcess(0);
 			}
 
 		}
@@ -832,7 +831,7 @@ static void parseRequest(chandle_t * handle) {
 		/* only write if there is a target
 		 * unfortunately it may happen that we need to download everything even though we are
 		 * no longer interested. If we just cancel the upload, the client may try again.
-		 * TODO: This is a problem on slow connections though! */
+		 * TODO: This is a problem opn slow connections though! */
 		if (handle->filefd > 0) {
 			for (char *data = pos; data < tline; data++) {
 				uint32_t ratio = 100;

@@ -719,7 +719,7 @@ function sendUpload(event){
   const xmlhttp = new window.XMLHttpRequest()
 
   xmlhttp.onreadystatechange = function () {
-	  addText('state-change to: ' + xmlhttp.readyState + '/' + xmlhttp.status)
+    addText('state-change to: ' + xmlhttp.readyState + '/' + xmlhttp.status)
     if (xmlhttp.readyState === 4) {
       switch (xmlhttp.status) {
         case 0:
