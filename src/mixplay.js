@@ -715,14 +715,14 @@ function sendUpload(event) {
     addText('No file selected!')
   }
   else {
-    uploadFiles();
+    uploadFiles()
   }
 }
 
 function uploadFiles() {
   const form = document.getElementById('upload')
-  const formData = new FormData(form);
-  controller = new AbortController();
+  const formData = new FormData(form)
+  controller = new AbortController()
 
   const fetchOptions = {
     method: 'post',
@@ -738,7 +738,7 @@ function uploadFiles() {
       switch (response.status) {
         case 405: 
           console.log('Upload rejected!');
-          break;
+          break
         default:
           // something we did not expect!
           throw new Error(`HTTP error, status = ${response.status}`);
