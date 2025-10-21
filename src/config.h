@@ -205,6 +205,8 @@ typedef struct {
 #define MPCOMM_LISTS 4
 /* return immutable configuration */
 #define MPCOMM_CONFIG 8
+/* abort upload */
+#define MPCOMM_ABORT 16
 
 void writeConfig(const char *musicpath);
 mpconfig_t *readConfig(void);

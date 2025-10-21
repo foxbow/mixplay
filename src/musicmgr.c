@@ -1189,6 +1189,7 @@ mptitle_t *addNewPath(const char *path) {
 
 	fillTagInfo(newt);
 
+	dbMarkDirty();
 	return newt;
 }
 
@@ -1204,7 +1205,7 @@ bool mp3FileExists(const char *name) {
 		if (endsWith(runner->path, name)) {
 			return true;
 		}
-		runner=runner->next;
+		runner = runner->next;
 	}
 	while (runner != getConfig()->root);
 

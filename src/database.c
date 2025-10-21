@@ -293,6 +293,8 @@ mptitle_t *dbGetMusic() {
 		if ((dbentry.path[0] == '/') &&
 			(strstr(dbentry.path, getConfig()->musicdir) != dbentry.path)) {
 			strtcpy(dbentry.path, fullpath(&(dbentry.path[1])), MAXPATHLEN);
+			/* Do not use dbMarkDirty() here as that may trigger a write
+			 * on the open database! */
 			getConfig()->dbDirty = 1;
 		}
 		dbroot = addDBTitle(&dbentry, dbroot, index);
@@ -508,6 +510,12 @@ int32_t dbAddTitles(char *basedir) {
 	return num;
 }
 
+/**
+ * check if the 'range' part of the title is part of the path
+ * to the actual file. This is used to check if the title is
+ * part of a dedicated album or just floating in a mix dir
+ * or a sampler.
+ */
 static int32_t checkPath(mptitle_t * entry, int32_t range) {
 	char path[MAXPATHLEN];
 	char check[NAMELEN] = "";
@@ -575,6 +583,7 @@ int32_t dbNameCheck(void) {
 			runner = currentEntry->next;
 			do {
 				if (!(runner->flags & MP_MARK)) {
+					/* if the titles identify the same, check their paths */
 					if (strcmp(runner->display, currentEntry->display) == 0) {
 						match = 0;
 						if (checkPath(runner, mpc_artist)) {
@@ -596,6 +605,7 @@ int32_t dbNameCheck(void) {
 						case 3:	/* 0011 */
 						case 7:	/* 0111 */
 						case 11:	/* 1011 */
+							/* runner is in an album, currentEntry in a mix */
 							handleDBL(currentEntry);
 							addMessage(1, "Marked %s", currentEntry->path);
 							fprintf(fp, "## Original at %s\n", runner->path);
@@ -610,6 +620,7 @@ int32_t dbNameCheck(void) {
 						case 12:	/* 1100 */
 						case 13:	/* 1101 */
 						case 14:	/* 1110 */
+							/* currentEntry is in an album, runner in a mix */
 							handleDBL(runner);
 							addMessage(1, "Marked %s", runner->path);
 							fprintf(fp, "## Original at %s\n",
@@ -625,6 +636,7 @@ int32_t dbNameCheck(void) {
 						case 6:	/* 0110 */
 						case 9:	/* 1001 */
 						case 10:	/* 1010 */
+							/* both seem to be in a sampler/mix */
 							fprintf(fp, "## Uncertain match! Either:\n");
 							fprintf(fp, "#rm \"%s\"\n", currentEntry->path);
 							fprintf(fp,

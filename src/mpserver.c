@@ -108,8 +108,8 @@ typedef enum {
 typedef struct {
 	int sock;
 	char *commdata;
-	ssize_t commsize;
-	ssize_t commlen;
+	ssize_t commsize;			// the size of the commdata array
+	ssize_t commlen;			// length of data coming from the browser
 	uint32_t running;
 	mptitle_t *title;
 	httpstate state;
@@ -119,7 +119,7 @@ typedef struct {
 	char *arg;
 	int32_t clientid;
 	char fname[FNLEN];
-	size_t len;
+	size_t len;					// if set, size of data in commdata to send back to the browser
 	char boundary[NAMELEN];
 	size_t filesz;
 	size_t filerd;
@@ -308,7 +308,7 @@ static void fetchRequest(chandle_t * handle) {
 	/* reset buffer */
 	memset(handle->commdata, 0, handle->commsize);
 	handle->commlen = 0;
-
+	handle->len = 0;
 
 	/* Either an error or a timeout */
 	while ((handle->running != CL_STP) && (poll(&pfd, 1, 250) <= 0)) {
@@ -345,13 +345,12 @@ static void fetchRequest(chandle_t * handle) {
 
 	/* fetch data if any */
 	if (pfd.revents & POLLIN) {
-		ssize_t recvd = 0;
 		ssize_t retval;
 
 		do {
 			retval =
-				recv(handle->sock, handle->commdata + recvd,
-					 handle->commsize - recvd, MSG_DONTWAIT);
+				recv(handle->sock, handle->commdata + handle->commlen,
+					 handle->commsize - handle->commlen, MSG_DONTWAIT);
 			if (retval == -1) {
 				/* check for deadly errors, EAGAIN and EWOULDBLOCK should just loop */
 				if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
@@ -365,26 +364,23 @@ static void fetchRequest(chandle_t * handle) {
 					handle->running = CL_STP;
 				}
 			}
-			else if (retval == handle->commsize - recvd) {
+			else if (retval == handle->commsize - handle->commlen) {
 				/* read buffer is full, expand and go on */
-				recvd = handle->commsize;
+				handle->commlen = handle->commsize;
 				handle->commsize += MP_BLKSIZE;
 				handle->commdata =
 					(char *) frealloc(handle->commdata, handle->commsize);
-				memset(handle->commdata + recvd, 0, MP_BLKSIZE);
+				memset(handle->commdata + handle->commlen, 0, MP_BLKSIZE);
 			}
 			else {
 				/* everything fit into the buffer, we're done */
-				recvd += retval;
+				handle->commlen += retval;
 				retval = -1;
 			}
 		} while (retval != -1);
 
-		/* how much data did we get in this round? */
-		handle->commlen = recvd;
-
 		/* data available but zero bytes read */
-		if (recvd == 0) {
+		if (handle->commlen == 0) {
 			addMessage(MPV + 1, "Client disconnected");
 			handle->running = CL_STP;
 		}
@@ -401,6 +397,7 @@ typedef enum {
 	rep_ok,
 	rep_created,
 	rep_bad_request,
+	rep_not_found,
 	rep_not_implemented,
 	rep_unavailable,
 } reply_t;
@@ -409,8 +406,9 @@ static void prepareReply(chandle_t * handle, reply_t reply, bool stop) {
 	static const char *replies[] = {
 		"HTTP/1.0 100 Continue\015\012Content-Length: 0\015\012\015\012",
 		"HTTP/1.0 200 OK\015\012Content-Length: 2\015\012\015\012OK\015\012",
-		"HTTP/1.0 201 Created\015\012Content-Length: 2\015\012\015\012OK\015\012",
+		"HTTP/1.0 201 Created\015\012Content-Length: 2; Location: /\015\012\015\012OK\015\012",
 		"HTTP/1.0 400 Bad Request\015\012Content-Length: 4\015\012\015\012Go Away!\015\012",
+		"HTTP/1.0 404 Not Found\015\012Content-Length: 0\015\012\015\012",
 		"HTTP/1.0 501 Not Implemented\015\012Content-Length: 0\015\012\015\012Go Away!\015\012",
 		"HTTP/1.0 503 Service Unavailable\015\012Content-Length: 0\015\012\015\012Go Away!\015\012",
 	};
@@ -418,9 +416,13 @@ static void prepareReply(chandle_t * handle, reply_t reply, bool stop) {
 	strcpy(handle->commdata, replies[reply]);
 	handle->len = strlen(handle->commdata);
 	handle->state = stop ? req_stop : req_none;
+	if (reply == rep_bad_request) {
+		notifyChange(MPCOMM_ABORT);
+	}
 }
 
 typedef enum {
+	met_unset = -1,
 	met_error = 0,
 	met_get,
 	met_post,
@@ -435,7 +437,7 @@ typedef enum {
  *  to decide what the client wants. So check the headers and any payload 
  */
 static void parseRequest(chandle_t * handle) {
-	method_t method = met_error;
+	method_t method = met_unset;
 	mpcmd_t cmd = mpc_idle;
 	mpconfig_t *config = getConfig();
 
@@ -443,13 +445,19 @@ static void parseRequest(chandle_t * handle) {
 	char *end = strchr(handle->commdata, ' ');
 	char *pos = end + 1;
 
-	if (handle->filerd > 0) {
+	if (strlen(handle->fname) > 0) {
 		/* raw data for an active upload */
 		pos = handle->commdata;
 		method = met_dataflow;
 	}
+	else if ((handle->boundary[0] != '\0')
+			 && (strcasestr(handle->commdata, handle->boundary) != NULL)) {
+		/* start of raw data */
+		pos = handle->commdata;
+		method = met_datainit;
+	}
 	else if (end == NULL) {
-		addMessage(MPV + 1, "Malformed HTTP: %s", handle->commdata);
+		addMessage(MPV + 0, "Malformed HTTP: %s", handle->commdata);
 		method = met_error;
 	}
 	else {
@@ -461,21 +469,15 @@ static void parseRequest(chandle_t * handle) {
 			method = met_post;
 		}
 		else if (strcasecmp(handle->commdata, "put") == 0) {
-			addMessage(0, "PUT is unsupported");
+			addMessage(MPV + 0, "PUT is unsupported");
 			method = met_error;
 		}
 		else if (strcasecmp(handle->commdata, "head") == 0) {
-			addMessage(0, "HEAD is unsupported");
+			addMessage(MPV + 0, "HEAD is unsupported");
 			method = met_error;
 		}
-		else if ((handle->filesz > 0)
-				 && (strcasestr(handle->commdata, handle->boundary) != NULL)) {
-			pos = handle->commdata;
-			*end = ' ';
-			method = met_datainit;
-		}
 		else {
-			addMessage(0, "Unsupported method: %s", handle->commdata);
+			addMessage(MPV + 0, "Unsupported method: %s", handle->commdata);
 			method = met_error;
 		}
 	}
@@ -518,24 +520,25 @@ static void parseRequest(chandle_t * handle) {
 		}
 
 		if (end == NULL) {
-			addMessage(MPV + 1, "Malformed request %s", pos);
+			addMessage(MPV + 0, "Malformed request %s", pos);
 			method = met_error;
 		}
 		/* control command */
 		else if (strstr(pos, "/mpctrl/")) {
 			pos = pos + strlen("/mpctrl");
 		}
+		else if (strstr(pos, "/upload")) {
+			method = met_upload;
+			pos = pos + strlen("/upload");
+		}
 		/* everything else is treated like a GET <path> */
 		else {
 			if (method == met_get) {
 				method = met_file;
 			}
-			else if (getProcess() == 0) {
-				/* no upload is running already so give it a try */
-				method = met_upload;
-			}
 			else {
 				/* looking bad */
+				addMessage(MPV + 0, "Illegal request %s", handle->commdata);
 				method = met_error;
 			}
 		}
@@ -587,10 +590,7 @@ static void parseRequest(chandle_t * handle) {
 			cmd = (mpcmd_t) handle->cmd;
 		}
 		else {
-			send(handle->sock,
-				 "HTTP/1.0 404 Not Found\015\012Content-Length: 0\015\012\015\012",
-				 46, 0);
-			handle->running = CL_STP;
+			prepareReply(handle, rep_not_found, true);
 		}
 		break;
 	case met_post:				/* POST */
@@ -626,10 +626,8 @@ static void parseRequest(chandle_t * handle) {
 			}
 		}
 		else {					/* unresolvable POST request */
-			send(handle->sock,
-				 "HTTP/1.0 406 Not Acceptable\015\012Content-Length: 0\015\012\015\012",
-				 51, 0);
-			handle->running = CL_STP;
+			addMessage(MPV + 0, "Bad POST %s!", pos);
+			prepareReply(handle, rep_bad_request, true);
 		}
 		break;
 	case met_file:				/* get file */
@@ -677,10 +675,7 @@ static void parseRequest(chandle_t * handle) {
 		}
 		else {
 			addMessage(MPV + 1, "Illegal get %s", pos);
-			send(handle->sock,
-				 "HTTP/1.0 404 Not Found\015\012Content-Length: 0\015\012\015\012",
-				 46, 0);
-			handle->running = CL_STP;
+			prepareReply(handle, rep_not_found, true);
 		}
 		break;
 	case met_upload:
@@ -688,7 +683,8 @@ static void parseRequest(chandle_t * handle) {
 		/* parse for the parameters */
 		addMessage(MPV + 1, "Upload init");
 
-		while (*(pos++) != '\0');
+		// skip the request line
+		while (*(pos++) != '\n');
 		handle->filesz = 0;
 		handle->filerd = 0;
 		assert(handle->filefd == -1);
@@ -714,28 +710,27 @@ static void parseRequest(chandle_t * handle) {
 				addMessage(MPV + 0, "Init upload: %zu - %s", handle->filesz,
 						   handle->boundary);
 			}
+			else {
+				addMessage(MPV + 0, "No boundary found!");
+				prepareReply(handle, rep_bad_request, true);
+				break;
+			}
 		}
-
-		if (strlen(handle->boundary) == 0) {
-			/* something is wrong, bail out. This will kill the client session too but they 
-			 * did not deserve any better */
-			addMessage(-1, "Upload init failed!");
-			send(handle->sock,
-				 "HTTP/1.0 405 Method Not Allowed\015\012Content-Length: 0\015\012\015\012",
-				 55, 0);
-			handle->running = CL_STP;
+		else {
+			addMessage(MPV + 0, "No content length given!\n%s", pos);
+			prepareReply(handle, rep_bad_request, true);
 			break;
 		}
-		else if (strcasestr(pos, "filename=\"") == NULL) {
-			/* no filename, this will come with the next blob, so request it */
-			addMessage(MPV + 1, "Send 100 to continue data flow");
-			prepareReply(handle, rep_continue, false);
+
+		if (strcasestr(pos, "filename=\"") == NULL) {
+			/* no filename, this will come with the next blob, so skip to 
+			 * next block */
+			handle->state = req_none;
+			handle->len = 0;
 			break;
 		}
 
 		/* filename is already in this part, okay */
-
-		// fall-through
 	case met_datainit:
 		/* the first chunk of data */
 		handle->state = req_none;
@@ -754,16 +749,18 @@ static void parseRequest(chandle_t * handle) {
 			}
 			/* force NULL */
 			handle->fname[FNLEN - 1] = '\0';
-			if ((strlen(handle->fname) == 0) || (!endsWith(handle->fname, ".mp3"))) {
+			if ((strlen(handle->fname) == 0)
+				|| (!endsWith(handle->fname, ".mp3"))) {
 				addMessage(0, "Invalid / no name");
 				prepareReply(handle, rep_bad_request, true);
 				break;
 			}
+			tline = strstr(tline, "\r\n\r\n");
 		}
 
-		tline = strstr(tline, "\r\n\r\n");
 		if (tline == NULL) {
 			addMessage(-1, "No data found!");
+			addMessage(MPV + 0, "%s", handle->commdata);
 			prepareReply(handle, rep_bad_request, true);	/* add error */
 			break;
 		}
@@ -776,26 +773,26 @@ static void parseRequest(chandle_t * handle) {
 			(handle->fpath, MAXPATHLEN, "%supload/%s", config->musicdir,
 			 handle->fname) == MAXPATHLEN) {
 			addMessage(-1, "Path too long!");
-			/* keep on reading if any data comes in, even if it's just
-			 * going into /dev/null at this point */
-			handle->filerd = 1;
-			/* this is probably bad */
 			prepareReply(handle, rep_bad_request, true);
 		}
-		if ((access(handle->fpath, F_OK) == 0) || mp3FileExists(handle->fname)) {
+		if (access(handle->fpath, F_OK) == 0) {
 			addMessage(0, "%s already exists", handle->fname);
-			/* keep on reading if any data comes in, even if it's just
-			 * going into /dev/null at this point */
-			handle->filerd = 1;
 			prepareReply(handle, rep_bad_request, false);	/* add error */
 		}
-		else {
-			handle->filefd =
-				open(handle->fpath, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+		else if (mp3FileExists(handle->fname)) {
+			addMessage(0, "%s is already in the collection!", handle->fname);
+			/* allow upload for debugging */
+			if (getDebug() == 0) {
+				prepareReply(handle, rep_bad_request, false);	/* add error */
+			}
+		}
+
+		/* no error has been set, so start it all */
+		if (handle->len == 0) {
+			handle->filefd = open(handle->fpath, O_CREAT, 00644);
 			if (handle->filefd == -1) {
 				addMessage(-1, "Could not write %s\n%s", handle->fname,
 						   strerror(errno));
-				/* this is probably bad */
 				prepareReply(handle, rep_bad_request, true);	/* add error */
 			}
 			else {
@@ -820,7 +817,6 @@ static void parseRequest(chandle_t * handle) {
 								(strlen(handle->boundary) + 8));
 		if (strstr(tline, handle->boundary) != NULL) {
 			addMessage(MPV + 1, "Last segment: %zu", handle->filesz);
-			// sprintf(handle->commdata, "HTTP/1.1 201 Created\015\012Content-Length: 0\015\012\015\012");
 			handle->filesz = 0;
 		}
 		else {
@@ -829,9 +825,8 @@ static void parseRequest(chandle_t * handle) {
 		}
 
 		/* only write if there is a target
-		 * unfortunately it may happen that we need to download everything even though we are
-		 * no longer interested. If we just cancel the upload, the client may try again.
-		 * TODO: This is a problem opn slow connections though! */
+		 * this should not be an issue but a canceled upload may still 
+		 * send data to drop */
 		if (handle->filefd > 0) {
 			for (char *data = pos; data < tline; data++) {
 				uint32_t ratio = 100;
@@ -860,17 +855,17 @@ static void parseRequest(chandle_t * handle) {
 					notifyChange(MPCOMM_TITLES);
 				}
 			}
+			/* handle should be lost after this, but we clean up though */
+			handle->fname[0] = '\0';
+			handle->boundary[0] = '\0';
 
 			prepareReply(handle, rep_created, false);
 		}
 
 		break;
 	case met_error:
-		addMessage(MPV + 1, "Illegal method %s", handle->commdata);
-		send(handle->sock,
-			 "HTTP/1.0 405 Method Not Allowed\015\012Content-Length: 0\015\012\015\012",
-			 55, 0);
-		handle->running = CL_STP;
+		addMessage(MPV + 0, "Error: %s", handle->commdata);
+		prepareReply(handle, rep_bad_request, true);
 		break;
 	default:
 		addMessage(MPV, "Unknown method %i!", method);
@@ -981,14 +976,18 @@ static void sendReply(chandle_t * handle) {
 				(cmd == mpc_doublets)) {
 				if (setCurClient(handle->clientid) == -1) {
 					addMessage(MPV + 1, "%s was blocked!", mpcString(cmd));
-					prepareReply(handle, rep_unavailable, true);	/* add error */
+					prepareReply(handle, rep_unavailable, false);	/* add error */
 					break;
 				}
 			}
 			setCommand(handle->cmd, handle->arg);
 			sfree(&(handle->arg));
+			prepareReply(handle, rep_ok, false);
 		}
-		prepareReply(handle, rep_not_implemented, false);	/* add error */
+		else {
+			prepareReply(handle, rep_not_implemented, false);
+		}
+
 		break;
 
 	case req_unknown:			/* unknown command */
@@ -1144,6 +1143,9 @@ static void *clientHandler(void *args) {
 	handle.filerd = 0;
 	handle.filefd = -1;
 	handle.fname[0] = '\0';
+	handle.boundary[0] = '\0';
+	handle.len = 0;
+	handle.commlen = 0;
 
 	/* commsize needs at least to be large enough to hold the javascript file.
 	 * Round that size up to the next multiple of MP_BLOCKSIZE */

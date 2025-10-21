@@ -3,6 +3,7 @@
    MPCOMM_RESULT == 2 - searchresult
    MPCOMM_LISTS == 4 - dnp/fav lists
    MPCOMM_CONFIG == 8 - configuration
+   MPCOMM_ABORT == 16 - abort upload
    -1 - stopped */
 var doUpdate = 13
 var isstream = 0
@@ -36,6 +37,7 @@ var lastsearch = ''
 var profiles = []
 var lineout = 0
 var allnum = 0
+let controller
 
 function debugLog (txt) {
   if (debug) {
@@ -161,8 +163,6 @@ function sendArg (cmd) {
  *  - <num>            : sendCMD(<num>) on okay
  *  - function() {...} : callback to invoke on okay
  * arg is an optional argument to be given if ok is a number
- * 
- * todo: is ok ever used as a function?
  */
 function showConfirm (msg, ok, arg="") {
   const cdiv = document.getElementById('confirm')
@@ -685,10 +685,9 @@ function sendCMDArg (cmd, arg) {
         case 0:
           fail('CMD Error: connection lost!')
           break
-        case 200:
-          showConfirm('One shot command returned unexpected data!<br>' + xmlhttp.responseText)
+        case 200: 
           /* fallthrough */
-        case 204:
+        case 204: // legacy
           /* TODO: this is not correct! */
           if (doUpdate < 0) {
             document.location.reload()
@@ -711,39 +710,45 @@ function sendCMDArg (cmd, arg) {
   xmlhttp.send()
 }
 
-function sendUpload(event){
-  event.stopImmediatePropagation()
-  event.preventDefault()
+function sendUpload(event) {
+  event.preventDefault();
+  if (document.getElementById('filename').files.length == 0) {
+    addText('No file selected!')
+  }
+  else {
+    uploadFiles();
+  }
+}
 
+function uploadFiles() {
   const form = document.getElementById('upload')
-  const xmlhttp = new window.XMLHttpRequest()
+  const formData = new FormData(form);
+  controller = new AbortController();
 
-  xmlhttp.onreadystatechange = function () {
-    addText('state-change to: ' + xmlhttp.readyState + '/' + xmlhttp.status)
-    if (xmlhttp.readyState === 4) {
-      switch (xmlhttp.status) {
-        case 0:
-          // just consider things done and make sure they stay down
-          xmlhttp.abort()
-          break
-        case 200:
-          // all is good!
-          break
-        case 503:
-          showConfirm('Sorry, we\'re busy!')
-          break
-        case 405:
-          console.log('Upload rejected!');
-          break; 
-        default:
-          showConfirm('Upload Error ' + xmlhttp.status)
-      }
-      xmlhttp.abort()
-    }
+  const fetchOptions = {
+    method: 'post',
+    body: formData,
+    signal: controller.signal
   }
 
-  xmlhttp.open('POST', '/')
-  xmlhttp.send(new FormData(form));
+  json = JSON.stringify({ cmd: 0, clientid: -1 })
+  fetch('/upload?' + json, fetchOptions)
+  .then((response) => {
+    console.log('fetch returned:' + response.ok + '/' + response.status)
+    if (!response.ok) {
+      switch (response.status) {
+        case 405: 
+          console.log('Upload rejected!');
+          break;
+        default:
+          // something we did not expect!
+          throw new Error(`HTTP error, status = ${response.status}`);
+      }
+    }
+  })
+  .catch((error) => {
+    console.log('Upload Error ' + error.message)
+  })
 }
 
 /* send command without arguments */
@@ -1547,7 +1552,11 @@ function playerUpdate (data) {
   }
 
   if (upload === true) {
-    if (data.process > 0) {
+    if (data.type & 16) {
+      console.log('Server abort')
+      controller.abort()
+    }
+    else if (data.process > 0) {
       enableElement('process', 1)
       enableElement('upload', 0)
       document.getElementById('processbar').style.width = data.process + '%'    
@@ -1579,8 +1588,7 @@ function updateUI () {
           if (data !== undefined) {
             /* elCheapo locking */
             if (inUpdate++ > 1) {
-              /* TODO turn this into debugLog */
-              addText('Active update!')
+              console.log('Active update!')
               doUpdate |= data.type
             } else {
               /* standard update */
