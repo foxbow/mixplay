@@ -1179,7 +1179,7 @@ mptitle_t *addNewPath(const char *path) {
 	while (tail != getConfig()->root);
 
 	newt->key = tail->key + 1;
-	newt->playcount = getMeanPlaycount();
+	newt->playcount = getNewPlaycount();
 	strtcpy(newt->path, path, MAXPATHLEN);
 
 	newt->next = tail->next;

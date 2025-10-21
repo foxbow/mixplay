@@ -394,8 +394,12 @@ void dbAddPath(mptitle_t * title) {
 	dbClose(db);
 }
 
-uint32_t getMeanPlaycount() {
-	uint32_t count = 0, mean;
+/**
+ * make up a playcount for new titles to be added to the database
+ * Right now it's the max playcount - 1 or 0
+ */
+uint32_t getNewPlaycount() {
+	uint32_t mean = 0;
 	mptitle_t *dbrunner = getConfig()->root;
 
 	if (dbrunner == NULL)
@@ -403,14 +407,15 @@ uint32_t getMeanPlaycount() {
 
 	do {
 		/* find mean playcount */
-		if (!(dbrunner->flags & (MP_DNP | MP_DBL))) {
-			count++;
-			mean += dbrunner->playcount;
+		if (!(dbrunner->flags & (MP_DNP | MP_DBL))
+			&& (mean < dbrunner->playcount)) {
+			mean = dbrunner->playcount;
 		}
 		dbrunner = dbrunner->next;
 	}
 	while (dbrunner != getConfig()->root);
-	return mean / count;
+
+	return mean > 0 ? mean - 1 : mean;
 }
 
 /**
@@ -435,7 +440,7 @@ int32_t dbAddTitles(char *basedir) {
 		dbrunner = dbroot;
 
 		index = dbroot->prev->key;
-		mean = getMeanPlaycount();
+		mean = getNewPlaycount();
 	}
 
 	addMessage(0, "Using mean playcount %d", mean);

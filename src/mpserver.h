@@ -8,8 +8,6 @@
 #ifndef _MPSERVER_H_
 #define _MPSERVER_H_
 
-#include "musicmgr.h"			// for mptitle_t
-
 /* basic communication block size */
 #define MP_BLKSIZE 1024
 

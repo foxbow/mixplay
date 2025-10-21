@@ -730,7 +730,7 @@ static void parseRequest(chandle_t * handle) {
 			break;
 		}
 
-		/* filename is already in this part, okay */
+		/* fall-through - filename is already in this part */
 	case met_datainit:
 		/* the first chunk of data */
 		handle->state = req_none;

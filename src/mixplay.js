@@ -548,7 +548,6 @@ function addText (text) {
   e.innerHTML = line
 }
 
-/* this should probably become an extra element or rather a process bar */
 function setText (text) {
   var e = document.getElementById('messages')
   var line = ''
