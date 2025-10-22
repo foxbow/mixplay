@@ -91,8 +91,6 @@ typedef enum {
 	req_none = 0,
 	req_update,
 	req_command,
-	req_unknown,
-	req_noservice,
 	req_file,
 	req_config,
 	req_version,
@@ -422,8 +420,7 @@ static void prepareReply(chandle_t * handle, reply_t reply, bool stop) {
 }
 
 typedef enum {
-	met_unset = -1,
-	met_error = 0,
+	met_unset = 0,
 	met_get,
 	met_post,
 	met_file,
@@ -458,7 +455,8 @@ static void parseRequest(chandle_t * handle) {
 	}
 	else if (end == NULL) {
 		addMessage(MPV + 0, "Malformed HTTP: %s", handle->commdata);
-		method = met_error;
+		prepareReply(handle, rep_bad_request, true);
+		return;
 	}
 	else {
 		*end = 0;
@@ -468,17 +466,10 @@ static void parseRequest(chandle_t * handle) {
 		else if (strcasecmp(handle->commdata, "post") == 0) {
 			method = met_post;
 		}
-		else if (strcasecmp(handle->commdata, "put") == 0) {
-			addMessage(MPV + 0, "PUT is unsupported");
-			method = met_error;
-		}
-		else if (strcasecmp(handle->commdata, "head") == 0) {
-			addMessage(MPV + 0, "HEAD is unsupported");
-			method = met_error;
-		}
 		else {
 			addMessage(MPV + 0, "Unsupported method: %s", handle->commdata);
-			method = met_error;
+			prepareReply(handle, rep_not_implemented, true);
+			return;
 		}
 	}
 
@@ -496,7 +487,8 @@ static void parseRequest(chandle_t * handle) {
 				arg++;
 				if (fillReqInfo(handle, arg)) {
 					addMessage(0, "Malformed arguments: %s", arg);
-					method = met_error;
+					prepareReply(handle, rep_bad_request, true);
+					return;
 				}
 			}
 		}
@@ -506,7 +498,7 @@ static void parseRequest(chandle_t * handle) {
 			handle->clientid = getFreeClient();
 			if (handle->clientid == -1) {
 				/* no free clientid - no service */
-				handle->state = req_noservice;
+				prepareReply(handle, rep_unavailable, true);
 				return;
 			}
 			initMsgCnt(handle->clientid);
@@ -521,7 +513,8 @@ static void parseRequest(chandle_t * handle) {
 
 		if (end == NULL) {
 			addMessage(MPV + 0, "Malformed request %s", pos);
-			method = met_error;
+			prepareReply(handle, rep_bad_request, true);
+			return;
 		}
 		/* control command */
 		else if (strstr(pos, "/mpctrl/")) {
@@ -539,7 +532,8 @@ static void parseRequest(chandle_t * handle) {
 			else {
 				/* looking bad */
 				addMessage(MPV + 0, "Illegal request %s", handle->commdata);
-				method = met_error;
+				prepareReply(handle, rep_bad_request, true);
+				return;
 			}
 		}
 	}
@@ -573,10 +567,7 @@ static void parseRequest(chandle_t * handle) {
 				handle->state = req_mp3;
 			}
 			else {
-				send(handle->sock,
-					 "HTTP/1.0 404 Not Found\015\012Content-Length: 0\015\012\015\012",
-					 46, 0);
-				handle->running = CL_STP;
+				prepareReply(handle, rep_not_found, true);
 			}
 		}
 		else if (strstr(pos, "/version ") == pos) {
@@ -878,12 +869,8 @@ static void parseRequest(chandle_t * handle) {
 			unlockClient(handle->clientid);
 			prepareReply(handle, rep_created, false);
 		}
+		break;
 
-		break;
-	case met_error:
-		addMessage(MPV + 0, "Error: %s", handle->commdata);
-		prepareReply(handle, rep_bad_request, true);
-		break;
 	default:
 		addMessage(MPV, "Unknown method %i!", method);
 		handle->running = CL_STP;
@@ -989,8 +976,7 @@ static void sendReply(chandle_t * handle) {
 		cmd = MPC_CMD(handle->cmd);
 		if (cmd < mpc_idle) {
 			/* check commands that lock the reply channel */
-			if ((cmd == mpc_dbinfo) || (cmd == mpc_dbclean) ||
-				(cmd == mpc_doublets)) {
+			if (handle->clientid > 0) {
 				if (setCurClient(handle->clientid) == -1) {
 					addMessage(MPV + 1, "%s was blocked!", mpcString(cmd));
 					prepareReply(handle, rep_unavailable, false);	/* add error */
@@ -1004,15 +990,6 @@ static void sendReply(chandle_t * handle) {
 		else {
 			prepareReply(handle, rep_not_implemented, false);
 		}
-
-		break;
-
-	case req_unknown:			/* unknown command */
-		prepareReply(handle, rep_not_implemented, false);
-		break;
-
-	case req_noservice:		/* service unavailable */
-		prepareReply(handle, rep_unavailable, true);
 		break;
 
 	case req_file:				/* send file */

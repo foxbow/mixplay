@@ -31,6 +31,10 @@ static int32_t _curclient = -1;
  * worth the effort!
  */
 int32_t setCurClient(int32_t client) {
+	if (client < 1) {
+		addMessage(0, "Can't lock one shot client!");
+		return -1;
+	}
 	if (pthread_mutex_trylock(&_clientlock) == EBUSY) {
 		if (_curclient == client) {
 			addMessage(MPV + 1, "Client %i is already locked!", client);

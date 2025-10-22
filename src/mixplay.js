@@ -12,8 +12,6 @@ var msgpos = 0
 var scrolls = []
 var numscrolls = 0
 var favplay = 0
-var cmdtosend = ''
-var argtosend = ''
 var smallUI = 0
 var active = 0
 var swipest = []
@@ -569,6 +567,7 @@ function sendCMDArg (cmd, arg) {
   var code
   var e
   var text
+  var idtosend = 0 // default one shot
 
   debugLog('send ' + cmd + ' - ' + arg)
 
@@ -650,32 +649,24 @@ function sendCMDArg (cmd, arg) {
     /* all these commands have a progress */
     case 0x13: /* mpc_search */
       lastsearch = arg
-      if (cmdtosend === '') {
-        switchView(3)
-        e = document.getElementById('search0')
-        text = document.createElement('em')
-        text.innerHTML = '.. searching ..'
-        replaceChild(e, text)
-        e = document.getElementById('search1')
-        text = document.createElement('em')
-        text.innerHTML = '.. searching ..'
-        replaceChild(e, text)
-        e = document.getElementById('search2')
-        text = document.createElement('em')
-        text.innerHTML = '.. searching ..'
-        replaceChild(e, text)
-      }
+      switchView(3)
+      e = document.getElementById('search0')
+      text = document.createElement('em')
+      text.innerHTML = '.. searching ..'
+      replaceChild(e, text)
+      e = document.getElementById('search1')
+      text = document.createElement('em')
+      text.innerHTML = '.. searching ..'
+      replaceChild(e, text)
+      e = document.getElementById('search2')
+      text = document.createElement('em')
+      text.innerHTML = '.. searching ..'
+      replaceChild(e, text)
     /* fallthrough */
     case 0x08: /* mpc_dbclean */
     case 0x0b: /* mpc_doublets */
     case 0x12: /* mpc_dbinfo */
-      if (cmdtosend === '') {
-        cmdtosend = cmd
-        argtosend = arg
-      } else {
-        showConfirm('Busy, sorry.')
-      }
-      return
+      idtosend = clientid
   }
 
   xmlhttp.onreadystatechange = function () {
@@ -684,10 +675,13 @@ function sendCMDArg (cmd, arg) {
         case 0:
           fail('CMD Error: connection lost!')
           break
-        case 200: 
+        case 200:
+          if (xmlhttp.responseText.length > 3) {
+            debugLog('This is not OK: ' + xmlhttp.responseText)
+          }
           /* fallthrough */
         case 204: // legacy
-          /* TODO: this is not correct! */
+          /* TODO: this is not correct! Why not? */
           if (doUpdate < 0) {
             document.location.reload()
           }
@@ -701,9 +695,8 @@ function sendCMDArg (cmd, arg) {
     }
   }
 
-  /* one shots - fire and forget */
-  var json = JSON.stringify({ cmd: cmd, arg: arg, clientid: 0 })
-  debugLog('oreq: ' + json)
+  var json = JSON.stringify({ cmd: cmd, arg: arg, clientid: idtosend })
+  debugLog('creq: ' + json)
 
   xmlhttp.open('POST', '/mpctrl/cmd?' + json, true)
   xmlhttp.send()
@@ -733,11 +726,11 @@ function uploadFiles() {
   json = JSON.stringify({ cmd: 0, clientid: clientid })
   fetch('/upload?' + json, fetchOptions)
   .then((response) => {
-    console.log('fetch returned:' + response.ok + '/' + response.status)
+    debugLog('fetch returned:' + response.ok + '/' + response.status)
     if (!response.ok) {
       switch (response.status) {
         case 405: 
-          console.log('Upload rejected!');
+          debugLog('Upload rejected!');
           break
         default:
           // something we did not expect!
@@ -747,7 +740,7 @@ function uploadFiles() {
     controller = null
   })
   .catch((error) => {
-    console.log('Upload Error ' + error.message)
+    debugLog('Upload Error ' + error.message)
   })
 }
 
@@ -1553,7 +1546,7 @@ function playerUpdate (data) {
 
   if (upload === true) {
     if ((data.type & 16) && (controller !== null)) {
-      console.log('Server abort')
+      debugLog('Server abort')
       controller.abort()
     }
     else if (data.process > 0) {
@@ -1584,11 +1577,11 @@ function updateUI () {
           fail('CMD Error: connection lost!')
           break
         case 200:
-          data = JSON.parse(xmlhttp.responseText)
-          if (data !== undefined) {
+          if (xmlhttp.responseText.length > 3) {
+            data = JSON.parse(xmlhttp.responseText)
             /* elCheapo locking */
             if (inUpdate++ > 1) {
-              console.log('Active update!')
+              debugLog('Active update!')
               doUpdate |= data.type
             } else {
               /* standard update */
@@ -1634,26 +1627,17 @@ function updateUI () {
     } /* replyState === 4 */
   } /* readyState callback */
 
-  if (cmdtosend !== '') {
-    /* 'synchronous' command - reply has info */
-    json = JSON.stringify({ cmd: cmdtosend, arg: argtosend, clientid: clientid })
-    debugLog('areq: ' + json)
-    xmlhttp.open('POST', '/mpctrl/cmd?' + json, true)
-    cmdtosend = ''
-    argtosend = ''
+  if (doUpdate >= 0) {
+    json = JSON.stringify({ cmd: doUpdate, clientid: clientid })
+    doUpdate = 0
+    // debugLog('ureq: ' + json)
   } else {
-    if (doUpdate >= 0) {
-      json = JSON.stringify({ cmd: doUpdate, clientid: clientid })
-      doUpdate = 0
-      debugLog('ureq: ' + json)
-    } else {
-      /* reconnect and fetch new clientID */
-      clientid = -1
-      json = JSON.stringify({ cmd: 0, clientid: clientid })
-      debugLog('rreq: ' + json)
-    }
-    xmlhttp.open('GET', '/mpctrl/status?' + json, true)
+    /* reconnect and fetch new clientID */
+    clientid = -1
+    json = JSON.stringify({ cmd: 0, clientid: clientid })
+    debugLog('rreq: ' + json)
   }
+  xmlhttp.open('GET', '/mpctrl/status?' + json, true)
   xmlhttp.send()
 }
 
