@@ -683,6 +683,19 @@ static void parseRequest(chandle_t * handle) {
 		/* parse for the parameters */
 		addMessage(MPV + 1, "Upload init");
 
+		if (handle->clientid < 1) {
+			/* no, uploads must not be one-shots! */
+			addMessage(0, "No clientID!");
+			prepareReply(handle, rep_bad_request, true);
+			break;
+		}
+
+		if (setCurClient(handle->clientid) == -1) {
+			addMessage(0, "Server is blocked!");
+			prepareReply(handle, rep_unavailable, true);
+			break;
+		}
+
 		// skip the request line
 		while (*(pos++) != '\n');
 		handle->filesz = 0;
@@ -862,6 +875,7 @@ static void parseRequest(chandle_t * handle) {
 			handle->fname[0] = '\0';
 			handle->boundary[0] = '\0';
 
+			unlockClient(handle->clientid);
 			prepareReply(handle, rep_created, false);
 		}
 
@@ -1194,8 +1208,8 @@ static void *clientHandler(void *args) {
 
 	addMessage(MPV + 3, "Client handler exited");
 	if (isCurClient(handle.clientid)) {
-		addMessage(MPV + 1, "Unlocking client %i", handle.clientid);
 		unlockClient(handle.clientid);
+		addMessage(MPV + 1, "Unlocking client %i", handle.clientid);
 		config->found->state = mpsearch_idle;
 	}
 	pthread_mutex_unlock(&_sendlock);

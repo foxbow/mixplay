@@ -37,7 +37,7 @@ var lastsearch = ''
 var profiles = []
 var lineout = 0
 var allnum = 0
-let controller
+let controller = null
 
 function debugLog (txt) {
   if (debug) {
@@ -730,7 +730,7 @@ function uploadFiles() {
     signal: controller.signal
   }
 
-  json = JSON.stringify({ cmd: 0, clientid: -1 })
+  json = JSON.stringify({ cmd: 0, clientid: clientid })
   fetch('/upload?' + json, fetchOptions)
   .then((response) => {
     console.log('fetch returned:' + response.ok + '/' + response.status)
@@ -744,6 +744,7 @@ function uploadFiles() {
           throw new Error(`HTTP error, status = ${response.status}`);
       }
     }
+    controller = null
   })
   .catch((error) => {
     console.log('Upload Error ' + error.message)
@@ -1551,7 +1552,7 @@ function playerUpdate (data) {
   }
 
   if (upload === true) {
-    if (data.type & 16) {
+    if ((data.type & 16) && (controller !== null)) {
       console.log('Server abort')
       controller.abort()
     }
