@@ -751,6 +751,7 @@ static void parseRequest(chandle_t * handle) {
 			handle->fname[FNLEN - 1] = '\0';
 			if ((strlen(handle->fname) == 0)
 				|| (!endsWith(handle->fname, ".mp3"))) {
+				/* just a simple message as this may be a misclick */
 				addMessage(0, "Invalid / no name");
 				prepareReply(handle, rep_bad_request, true);
 				break;
@@ -772,15 +773,17 @@ static void parseRequest(chandle_t * handle) {
 		if (snprintf
 			(handle->fpath, MAXPATHLEN, "%supload/%s", config->musicdir,
 			 handle->fname) == MAXPATHLEN) {
+			/* Unlikely but not impossible if anyone tries to trigger
+			 * an overflow */
 			addMessage(-1, "Path too long!");
 			prepareReply(handle, rep_bad_request, true);
 		}
 		if (access(handle->fpath, F_OK) == 0) {
-			addMessage(0, "%s already exists", handle->fname);
+			addMessage(-1, "%s was already uploaded", handle->fname);
 			prepareReply(handle, rep_bad_request, false);	/* add error */
 		}
 		else if (mp3FileExists(handle->fname)) {
-			addMessage(0, "%s is already in the collection!", handle->fname);
+			addMessage(-1, "%s is already in the collection!", handle->fname);
 			/* allow upload for debugging */
 			if (getDebug() == 0) {
 				prepareReply(handle, rep_bad_request, false);	/* add error */
