@@ -670,29 +670,7 @@ function sendCMDArg (cmd, arg) {
   }
 
   xmlhttp.onreadystatechange = function () {
-    if (xmlhttp.readyState === 4) {
-      switch (xmlhttp.status) {
-        case 0:
-          fail('CMD Error: connection lost!')
-          break
-        case 200:
-          if (xmlhttp.responseText.length > 3) {
-            debugLog('This is not OK: ' + xmlhttp.responseText)
-          }
-          /* fallthrough */
-        case 204: // legacy
-          /* TODO: this is not correct! Why not? */
-          if (doUpdate < 0) {
-            document.location.reload()
-          }
-          break
-        case 503:
-          showConfirm('Sorry, we\'re busy!')
-          break
-        default:
-          fail('Received Error ' + xmlhttp.status + ' after sending 0x' + code)
-      }
-    }
+    checkReply(xmlhttp)
   }
 
   var json = JSON.stringify({ cmd: cmd, arg: arg, clientid: idtosend })
@@ -1561,6 +1539,61 @@ function playerUpdate (data) {
   }
 }
 
+function checkReply (xmlhttp: XMLHttpRequest) {
+  var data
+  if (xmlhttp.readyState === 4) {
+    switch (xmlhttp.status) {
+      case 0:
+        fail('CMD Error: connection lost!')
+        break
+      case 200:
+        /* there is payload beyond 'OK' so interpret it */
+        if (xmlhttp.responseText.length > 3) {
+          data = JSON.parse(xmlhttp.responseText)
+          /* elCheapo locking */
+          if (inUpdate++ > 1) {
+            debugLog('Active update!')
+            doUpdate |= data.type
+          } else {
+            /* standard update */
+            playerUpdate(data)
+            /* full update */
+            if (data.type & 1) {
+              fullUpdate(data)
+            }
+            /* search results */
+            if (data.type & 2) {
+              searchUpdate(data)
+            }
+            /* dnp/fav lists */
+            if (data.type & 4) {
+              dnpfavUpdate(data)
+            }
+            /* config */
+            if (data.type & 8) {
+              updateConfig(data)
+            }
+          }
+          inUpdate--
+        }
+        /* fallthrough */
+      case 204:
+        if (doUpdate < 0) {
+          document.location.reload()
+        }
+        break
+      case 503:
+        showConfirm('Sorry, we\'re busy!')
+        break
+      default:
+        fail('Received Error ' + xmlhttp.status)
+    }
+    if (doUpdate < 0) {
+      document.body.className = 'disconnect'
+    }
+  }
+}
+
 /*
  * get current status from the server and update the UI elements with the data
  * handles different types of status replies
@@ -1570,61 +1603,10 @@ function updateUI () {
   var json
 
   xmlhttp.onreadystatechange = function () {
-    var data
+    checkReply(xmlhttp)
     if (xmlhttp.readyState === 4) {
-      switch (xmlhttp.status) {
-        case 0:
-          fail('CMD Error: connection lost!')
-          break
-        case 200:
-          if (xmlhttp.responseText.length > 3) {
-            data = JSON.parse(xmlhttp.responseText)
-            /* elCheapo locking */
-            if (inUpdate++ > 1) {
-              debugLog('Active update!')
-              doUpdate |= data.type
-            } else {
-              /* standard update */
-              playerUpdate(data)
-              /* full update */
-              if (data.type & 1) {
-                fullUpdate(data)
-              }
-              /* search results */
-              if (data.type & 2) {
-                searchUpdate(data)
-              }
-              /* dnp/fav lists */
-              if (data.type & 4) {
-                dnpfavUpdate(data)
-              }
-              /* config */
-              if (data.type & 8) {
-                updateConfig(data)
-              }
-            }
-            inUpdate--
-          } else {
-            debugLog('JSON-less reply on status 200!')
-          }
-          /* fallthrough */
-        case 204:
-          if (doUpdate < 0) {
-            document.location.reload()
-          }
-          break
-        case 503:
-          showConfirm('Sorry, we\'re busy!')
-          break
-        default:
-          fail('Received Error ' + xmlhttp.status)
-      }
-      if (doUpdate < 0) {
-        document.body.className = 'disconnect'
-      }
-
       setTimeout(function () { updateUI() }, toval)
-    } /* replyState === 4 */
+    }
   } /* readyState callback */
 
   if (doUpdate >= 0) {
