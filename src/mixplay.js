@@ -1539,7 +1539,7 @@ function playerUpdate (data) {
   }
 }
 
-function checkReply (xmlhttp: XMLHttpRequest) {
+function checkReply (xmlhttp) {
   var data
   if (xmlhttp.readyState === 4) {
     switch (xmlhttp.status) {
