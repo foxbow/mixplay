@@ -404,7 +404,7 @@ static void prepareReply(chandle_t * handle, reply_t reply, bool stop) {
 	static const char *replies[] = {
 		"HTTP/1.0 100 Continue\015\012Content-Length: 0\015\012\015\012",
 		"HTTP/1.0 200 OK\015\012Content-Length: 2\015\012\015\012OK\015\012",
-		"HTTP/1.0 201 Created\015\012Content-Length: 2; Location: /\015\012\015\012OK\015\012",
+		"HTTP/1.0 201 Created\015\012Content-Length: 2\015\012Location: /\015\012\015\012OK\015\012",
 		"HTTP/1.0 400 Bad Request\015\012Content-Length: 4\015\012\015\012Go Away!\015\012",
 		"HTTP/1.0 404 Not Found\015\012Content-Length: 0\015\012\015\012",
 		"HTTP/1.0 501 Not Implemented\015\012Content-Length: 0\015\012\015\012Go Away!\015\012",
@@ -998,7 +998,7 @@ static void sendReply(chandle_t * handle) {
 			size_t flen = sbuf.st_size;
 
 			sprintf(handle->commdata,
-					"HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012Content-Length: %zu;\015\012\015\012",
+					"HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012Content-Length: %zu\015\012\015\012",
 					filedef->mtype, flen);
 			send(handle->sock, handle->commdata, strlen(handle->commdata), 0);
 			filePost(handle->sock, filedef->fname);
@@ -1006,7 +1006,7 @@ static void sendReply(chandle_t * handle) {
 		else {
 			handle->len = 0;
 			sprintf(handle->commdata,
-					"HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012Content-Length: %zu;\015\012\015\012",
+					"HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012Content-Length: %zu\015\012\015\012",
 					filedef->mtype, filedef->flen);
 			send(handle->sock, handle->commdata, strlen(handle->commdata), 0);
 			while (handle->len < filedef->flen) {
@@ -1017,7 +1017,8 @@ static void sendReply(chandle_t * handle) {
 		}
 		pthread_mutex_unlock(&_sendlock);
 		handle->len = 0;
-		handle->running &= ~CL_RUN;
+		/* Now it should work */
+		// handle->running &= ~CL_RUN;
 		break;
 
 	case req_config:			/* get config should be unreachable */
@@ -1027,7 +1028,7 @@ static void sendReply(chandle_t * handle) {
 
 	case req_version:			/* get current build version */
 		sprintf(handle->commdata,
-				"HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
+				"HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i\015\012\015\012%s",
 				(int32_t) strlen(VERSION), VERSION);
 		handle->len = strlen(handle->commdata);
 		break;
@@ -1041,7 +1042,7 @@ static void sendReply(chandle_t * handle) {
 		 * smartphones don't consider the filename to be hanzi */
 		sprintf(handle->commdata,
 				"HTTP/1.1 200 OK\015\012Content-Type: audio/mpeg;\015\012"
-				"Content-Length: %ld;\015\012"
+				"Content-Length: %ld\015\012"
 				"Content-Disposition: attachment; filename=\"%s.mp3\""
 				"\015\012\015\012", sbuf.st_size, handle->title->display);
 		send(handle->sock, handle->commdata, strlen(handle->commdata), 0);
@@ -1062,7 +1063,7 @@ static void sendReply(chandle_t * handle) {
 			snprintf(line, MAXPATHLEN, "<initializing>");
 		}
 		sprintf(handle->commdata,
-				"HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i;\015\012\015\012%s",
+				"HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i\015\012\015\012%s",
 				(int32_t) strlen(line), line);
 		handle->len = strlen(handle->commdata);
 		break;
