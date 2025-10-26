@@ -293,12 +293,43 @@ static int32_t fillReqInfo(chandle_t * info, char *line) {
 	return rc;
 }
 
+typedef enum {
+	rep_continue = 0,
+	rep_ok,
+	rep_created,
+	rep_bad_request,
+	rep_not_found,
+	rep_not_implemented,
+	rep_unavailable,
+} reply_t;
+
+static void prepareReply(chandle_t * handle, reply_t reply, bool stop) {
+	static const char *replies[] = {
+		"HTTP/1.0 100 Continue\015\012Content-Length: 0\015\012\015\012",
+		"HTTP/1.0 200 OK\015\012Content-Length: 2\015\012\015\012OK\015\012",
+		"HTTP/1.0 201 Created\015\012Content-Length: 2\015\012Location: /\015\012\015\012OK\015\012",
+		"HTTP/1.0 400 Bad Request\015\012Content-Length: 4\015\012\015\012Go Away!\015\012",
+		"HTTP/1.0 404 Not Found\015\012Content-Length: 0\015\012\015\012",
+		"HTTP/1.0 501 Not Implemented\015\012Content-Length: 0\015\012\015\012Go Away!\015\012",
+		"HTTP/1.0 503 Service Unavailable\015\012Content-Length: 0\015\012\015\012Go Away!\015\012",
+	};
+
+	strcpy(handle->commdata, replies[reply]);
+	handle->len = strlen(handle->commdata);
+	handle->state = stop ? req_stop : req_none;
+	if (reply == rep_bad_request) {
+		notifyChange(MPCOMM_ABORT);
+	}
+}
+
 /**
  * just poll on a socket and wait for data
  * read all the data into the handlers commdata field on success
  * do error handling otherwise.
+ * 
+ * returns true if data was delivered and false on none.
  */
-static void fetchRequest(chandle_t * handle) {
+static bool fetchRequest(chandle_t * handle) {
 	struct pollfd pfd;
 
 	pfd.fd = handle->sock;
@@ -337,6 +368,7 @@ static void fetchRequest(chandle_t * handle) {
 				addMessage(0, "Reaping unused clienthandler for %i",
 						   handle->clientid);
 				handle->running = CL_STP;
+				return false;
 			}
 		}
 	}
@@ -360,6 +392,7 @@ static void fetchRequest(chandle_t * handle) {
 							   strerror(errno));
 					/* The socket got broken so the client should terminate too */
 					handle->running = CL_STP;
+					return false;
 				}
 			}
 			else if (retval == handle->commsize - handle->commlen) {
@@ -376,47 +409,29 @@ static void fetchRequest(chandle_t * handle) {
 				retval = -1;
 			}
 		} while (retval != -1);
+	}
 
-		/* data available but zero bytes read */
-		if (handle->commlen == 0) {
-			addMessage(MPV + 1, "Client disconnected");
+	/* zero bytes read this should probably also have
+	 * death count so we don't do endless loopings */
+	if (handle->commlen == 0) {
+		if (handle->filefd > 0) {
+			/* We expect data but nothing came in, try again 
+			 * send a Continue? */
+			addMessage(MPV + 0, "Retrying for %i", handle->clientid);
+			nanosleep(&ts, NULL);
+			prepareReply(handle, rep_continue, false);
+		}
+		else {
+			/* This is not really correct but unless I find out which reply
+			 * chrome expects after successfully uploading form data we just
+			 * kill off the connection.. */
+			addMessage(MPV + 0, "Client %i disconnected prematurely", handle->clientid);
 			handle->running = CL_STP;
 		}
+		return false;
 	}
-	else {
-		/* nothing came in */
-		addMessage(0, "Wrong channel?");
-		handle->running = CL_STP;
-	}
-}
 
-typedef enum {
-	rep_continue = 0,
-	rep_ok,
-	rep_created,
-	rep_bad_request,
-	rep_not_found,
-	rep_not_implemented,
-	rep_unavailable,
-} reply_t;
-
-static void prepareReply(chandle_t * handle, reply_t reply, bool stop) {
-	static const char *replies[] = {
-		"HTTP/1.0 100 Continue\015\012Content-Length: 0\015\012\015\012",
-		"HTTP/1.0 200 OK\015\012Content-Length: 2\015\012\015\012OK\015\012",
-		"HTTP/1.0 201 Created\015\012Content-Length: 2\015\012Location: /\015\012\015\012OK\015\012",
-		"HTTP/1.0 400 Bad Request\015\012Content-Length: 4\015\012\015\012Go Away!\015\012",
-		"HTTP/1.0 404 Not Found\015\012Content-Length: 0\015\012\015\012",
-		"HTTP/1.0 501 Not Implemented\015\012Content-Length: 0\015\012\015\012Go Away!\015\012",
-		"HTTP/1.0 503 Service Unavailable\015\012Content-Length: 0\015\012\015\012Go Away!\015\012",
-	};
-
-	strcpy(handle->commdata, replies[reply]);
-	handle->len = strlen(handle->commdata);
-	handle->state = stop ? req_stop : req_none;
-	if (reply == rep_bad_request) {
-		notifyChange(MPCOMM_ABORT);
-	}
+	return true;
 }
 
 typedef enum {
@@ -675,7 +690,7 @@ static void parseRequest(chandle_t * handle) {
 		addMessage(MPV + 1, "Upload init");
 
 		if (handle->clientid < 1) {
-			/* no, uploads must not be one-shots! */
+			/* uploads must not be one-shots! */
 			addMessage(0, "No clientID!");
 			prepareReply(handle, rep_bad_request, true);
 			break;
@@ -1156,11 +1171,11 @@ static void *clientHandler(void *args) {
 	/* handle a connection, this may be a one shot or a reusable one */
 	do {
 		/* fetchRequest */
-		fetchRequest(&handle);
-
-		/* all seems good now parse the request.. */
-		if (handle.running != CL_STP) {
-			parseRequest(&handle);
+		if (fetchRequest(&handle)) {
+			/* all seems good now parse the request.. */
+			if (handle.running != CL_STP) {
+				parseRequest(&handle);
+			}
 		}
 
 		/* send a reply if needed */
@@ -1180,8 +1195,11 @@ static void *clientHandler(void *args) {
 	if (handle.filefd > 0) {
 		addMessage(0, "Handler for %s just exited", handle.fname);
 		addMessage(0, "We probably ended up with a broken upload!");
+		/* probably redundant */
+		unlockClient(handle.clientid);
 		close(handle.filefd);
 		handle.filefd = -1;
+		setProcess(0);
 	}
 
 	addMessage(MPV + 3, "Client handler exited");

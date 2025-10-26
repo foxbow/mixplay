@@ -714,8 +714,8 @@ function uploadFiles() {
           // something we did not expect!
           throw new Error(`HTTP error, status = ${response.status}`);
       }
+      controller = null
     }
-    controller = null
   })
   .catch((error) => {
     debugLog('Upload Error ' + error.message)
