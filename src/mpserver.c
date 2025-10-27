@@ -744,9 +744,8 @@ static void parseRequest(chandle_t * handle) {
 
 		if (strcasestr(pos, "filename=\"") == NULL) {
 			/* no filename, this will come with the next blob, so skip to 
-			 * next block */
-			handle->state = req_none;
-			handle->len = 0;
+			 * next block. The request is either needed or will be ignored */
+			prepareReply(handle, rep_continue, false);
 			break;
 		}
 
@@ -788,6 +787,12 @@ static void parseRequest(chandle_t * handle) {
 		else {
 			/* start of the actual data */
 			pos = tline + 4;
+			/* remove offset to actual file and final boundary marker 
+			 * so that filesz is the size of the actual file, not the length
+			 * of the file + metadata */
+			handle->filesz -=
+				(size_t) (pos - handle->commdata) + strlen(handle->boundary) +
+				8;
 		}
 
 		if (snprintf
@@ -803,7 +808,8 @@ static void parseRequest(chandle_t * handle) {
 			prepareReply(handle, rep_bad_request, false);	/* add error */
 		}
 		else if (mp3FileExists(handle->fname)) {
-			addMessage(-1, "%s<br>is already in the collection!", handle->fname);
+			addMessage(-1, "%s<br>is already in the collection!",
+					   handle->fname);
 			/* allow upload for debugging */
 			if (getDebug() == 0) {
 				prepareReply(handle, rep_bad_request, false);	/* add error */
@@ -812,7 +818,7 @@ static void parseRequest(chandle_t * handle) {
 
 		/* no error has been set, so start it all */
 		if (handle->len == 0) {
-			handle->filefd = open(handle->fpath, O_CREAT, 00644);
+			handle->filefd = open(handle->fpath, O_CREAT | O_WRONLY, 00644);
 			if (handle->filefd == -1) {
 				addMessage(-1, "Could not write<br>%s<br>%s", handle->fpath,
 						   strerror(errno));
@@ -838,11 +844,7 @@ static void parseRequest(chandle_t * handle) {
 		tline =
 			handle->commdata + (handle->commlen -
 								(strlen(handle->boundary) + 8));
-		if (strstr(tline, handle->boundary) != NULL) {
-			addMessage(MPV + 1, "Last segment: %zu", handle->filesz);
-			handle->filesz = 0;
-		}
-		else {
+		if (strstr(tline, handle->boundary) == NULL) {
 			/* end of block is end of data */
 			tline = handle->commdata + handle->commlen;
 		}
@@ -851,21 +853,41 @@ static void parseRequest(chandle_t * handle) {
 		 * this should not be an issue but a canceled upload may still 
 		 * send data to drop */
 		if (handle->filefd > 0) {
-			for (char *data = pos; data < tline; data++) {
-				uint32_t ratio = 100;
+			ssize_t len = (size_t) (tline - pos);
+			ssize_t sent = 0;
 
-				write(handle->filefd, data, 1);
-				handle->filerd++;
-				if (handle->filesz > 0) {
-					ratio =
-						(uint32_t) ((100 * handle->filerd) / handle->filesz);
+			do {
+				/* the write should always succeed but better safe than sorry */
+				sent +=
+					write(handle->filefd, (unsigned char *) (pos + sent),
+						  len - sent);
+				if (sent == -1) {
+					addMessage(-1, "Write error on %i<br>%s", handle->filefd,
+							   strerror(errno));
+					prepareReply(handle, rep_bad_request, true);
+					break;
 				}
-				setProcess(ratio);
-			}
+				else if (sent < len) {
+					addMessage(MPV + 0, "partial write of %zu", sent);
+				}
+			} while (sent < len);
+			handle->filerd += len;
+			setProcess((uint32_t) ((100 * handle->filerd) / handle->filesz));
+			addMessage(MPV + 1, "Wrote %zu / %zu", handle->filerd,
+					   handle->filesz);
+		}
+		else {
+			addMessage(MPV + 0, "Dummy read");
 		}
 
-		/* all done, cleaning up */
-		if (handle->filesz == 0) {
+
+		if (handle->filerd > handle->filesz) {
+			/* Truncate and hope for the best */
+			addMessage(-1, "Data is bigger than size!");
+			handle->filerd = handle->filesz;
+		}
+		else if (handle->filesz == handle->filerd) {
+			/* all done, cleaning up */
 			if (handle->filefd > 0) {
 				addMessage(0, "Done");
 				close(handle->filefd);

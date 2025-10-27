@@ -719,6 +719,7 @@ function uploadFiles() {
   })
   .catch((error) => {
     debugLog('Upload Error ' + error.message)
+    controller = null
   })
 }
 
