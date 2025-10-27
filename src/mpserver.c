@@ -305,13 +305,13 @@ typedef enum {
 
 static void prepareReply(chandle_t * handle, reply_t reply, bool stop) {
 	static const char *replies[] = {
-		"HTTP/1.0 100 Continue\015\012Content-Length: 0\015\012\015\012",
-		"HTTP/1.0 200 OK\015\012Content-Length: 2\015\012\015\012OK\015\012",
-		"HTTP/1.0 201 Created\015\012Content-Length: 2\015\012Location: /\015\012\015\012OK\015\012",
-		"HTTP/1.0 400 Bad Request\015\012Content-Length: 4\015\012\015\012Go Away!\015\012",
-		"HTTP/1.0 404 Not Found\015\012Content-Length: 0\015\012\015\012",
-		"HTTP/1.0 501 Not Implemented\015\012Content-Length: 0\015\012\015\012Go Away!\015\012",
-		"HTTP/1.0 503 Service Unavailable\015\012Content-Length: 0\015\012\015\012Go Away!\015\012",
+		"HTTP/1.1 100 Continue\015\012Content-Length: 0\015\012\015\012",
+		"HTTP/1.1 200 OK\015\012Content-Length: 2\015\012\015\012OK",
+		"HTTP/1.1 201 Created\015\012Content-Length: 2\015\012Location: /\015\012\015\012OK",
+		"HTTP/1.1 400 Bad Request\015\012Content-Length: 8\015\012\015\012Go Away!",
+		"HTTP/1.1 404 Not Found\015\012Content-Length: 0\015\012\015\012",
+		"HTTP/1.1 501 Not Implemented\015\012Content-Length: 8\015\012\015\012Go Away!",
+		"HTTP/1.1 503 Service Unavailable\015\012Content-Length: 8\015\012\015\012Go Away!",
 	};
 
 	strcpy(handle->commdata, replies[reply]);
@@ -415,17 +415,18 @@ static bool fetchRequest(chandle_t * handle) {
 	 * death count so we don't do endless loopings */
 	if (handle->commlen == 0) {
 		if (handle->filefd > 0) {
-			/* We expect data but nothing came in, try again 
-			 * send a Continue? */
+			/* We expect data but nothing came in, try again */
 			addMessage(MPV + 0, "Retrying for %i", handle->clientid);
 			nanosleep(&ts, NULL);
+			/* explicitly tell the client to continue */
 			prepareReply(handle, rep_continue, false);
 		}
 		else {
 			/* This is not really correct but unless I find out which reply
 			 * chrome expects after successfully uploading form data we just
 			 * kill off the connection.. */
-			addMessage(MPV + 0, "Client %i disconnected prematurely", handle->clientid);
+			addMessage(MPV + 0, "Client %i disconnected prematurely",
+					   handle->clientid);
 			handle->running = CL_STP;
 		}
 		return false;
