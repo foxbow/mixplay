@@ -305,13 +305,13 @@ typedef enum {
 
 static void prepareReply(chandle_t * handle, reply_t reply, bool stop) {
 	static const char *replies[] = {
-		"HTTP/1.1 100 Continue\015\012Content-Length: 0\015\012\015\012",
-		"HTTP/1.1 200 OK\015\012Content-Length: 2\015\012\015\012OK",
-		"HTTP/1.1 201 Created\015\012Content-Length: 2\015\012Location: /\015\012\015\012OK",
-		"HTTP/1.1 400 Bad Request\015\012Content-Length: 8\015\012\015\012Go Away!",
-		"HTTP/1.1 404 Not Found\015\012Content-Length: 0\015\012\015\012",
-		"HTTP/1.1 501 Not Implemented\015\012Content-Length: 8\015\012\015\012Go Away!",
-		"HTTP/1.1 503 Service Unavailable\015\012Content-Length: 8\015\012\015\012Go Away!",
+		"HTTP/1.0 100 Continue\015\012Content-Length: 0\015\012\015\012",
+		"HTTP/1.0 200 OK\015\012Content-Length: 2\015\012\015\012OK",
+		"HTTP/1.0 201 Created\015\012Content-Length: 2\015\012Location: /\015\012\015\012OK",
+		"HTTP/1.0 400 Bad Request\015\012Content-Length: 8\015\012\015\012Go Away!",
+		"HTTP/1.0 404 Not Found\015\012Content-Length: 0\015\012\015\012",
+		"HTTP/1.0 501 Not Implemented\015\012Content-Length: 8\015\012\015\012Go Away!",
+		"HTTP/1.0 503 Service Unavailable\015\012Content-Length: 8\015\012\015\012Go Away!",
 	};
 
 	strcpy(handle->commdata, replies[reply]);
@@ -968,7 +968,7 @@ static void sendReply(chandle_t * handle) {
 
 		if (jsonLine != NULL) {
 			sprintf(handle->commdata,
-					"HTTP/1.1 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012",
+					"HTTP/1.0 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012",
 					(int32_t) strlen(jsonLine));
 			while ((ssize_t) (strlen(jsonLine) + strlen(handle->commdata) + 8)
 				   > handle->commsize) {
@@ -1014,7 +1014,7 @@ static void sendReply(chandle_t * handle) {
 			size_t flen = sbuf.st_size;
 
 			sprintf(handle->commdata,
-					"HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012Content-Length: %zu\015\012\015\012",
+					"HTTP/1.0 200 OK\015\012Content-Type: %s;\015\012Content-Length: %zu\015\012\015\012",
 					filedef->mtype, flen);
 			send(handle->sock, handle->commdata, strlen(handle->commdata), 0);
 			filePost(handle->sock, filedef->fname);
@@ -1022,7 +1022,7 @@ static void sendReply(chandle_t * handle) {
 		else {
 			handle->len = 0;
 			sprintf(handle->commdata,
-					"HTTP/1.1 200 OK\015\012Content-Type: %s;\015\012Content-Length: %zu\015\012\015\012",
+					"HTTP/1.0 200 OK\015\012Content-Type: %s;\015\012Content-Length: %zu\015\012\015\012",
 					filedef->mtype, filedef->flen);
 			send(handle->sock, handle->commdata, strlen(handle->commdata), 0);
 			while (handle->len < filedef->flen) {
@@ -1044,7 +1044,7 @@ static void sendReply(chandle_t * handle) {
 
 	case req_version:			/* get current build version */
 		sprintf(handle->commdata,
-				"HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i\015\012\015\012%s",
+				"HTTP/1.0 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i\015\012\015\012%s",
 				(int32_t) strlen(VERSION), VERSION);
 		handle->len = strlen(handle->commdata);
 		break;
@@ -1057,7 +1057,7 @@ static void sendReply(chandle_t * handle) {
 		/* remove anything non-ascii7bit from the filename so asian
 		 * smartphones don't consider the filename to be hanzi */
 		sprintf(handle->commdata,
-				"HTTP/1.1 200 OK\015\012Content-Type: audio/mpeg;\015\012"
+				"HTTP/1.0 200 OK\015\012Content-Type: audio/mpeg;\015\012"
 				"Content-Length: %ld\015\012"
 				"Content-Disposition: attachment; filename=\"%s.mp3\""
 				"\015\012\015\012", sbuf.st_size, handle->title->display);
@@ -1079,7 +1079,7 @@ static void sendReply(chandle_t * handle) {
 			snprintf(line, MAXPATHLEN, "<initializing>");
 		}
 		sprintf(handle->commdata,
-				"HTTP/1.1 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i\015\012\015\012%s",
+				"HTTP/1.0 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i\015\012\015\012%s",
 				(int32_t) strlen(line), line);
 		handle->len = strlen(handle->commdata);
 		break;
