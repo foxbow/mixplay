@@ -59,7 +59,7 @@ static int32_t addToList(const char *line, mpcmd_t cmd) {
 
 	fp = fopen(path, "a");
 	if (NULL == fp) {
-		addMessage(-1, "Could not open %s", path);
+		addMessage(-1, "Could not open<br>%s", path);
 		return -1;
 	}
 

@@ -57,7 +57,7 @@ int32_t setArgument(const char *arg) {
 		return 1;
 	}
 
-	addMessage(-1, "Illegal argument '%s'!", arg);
+	addMessage(-1, "Illegal argument<br>'%s'", arg);
 	return 0;
 }
 

@@ -799,11 +799,11 @@ static void parseRequest(chandle_t * handle) {
 			prepareReply(handle, rep_bad_request, true);
 		}
 		if (access(handle->fpath, F_OK) == 0) {
-			addMessage(-1, "%s was already uploaded", handle->fname);
+			addMessage(-1, "%s<br> was already uploaded", handle->fname);
 			prepareReply(handle, rep_bad_request, false);	/* add error */
 		}
 		else if (mp3FileExists(handle->fname)) {
-			addMessage(-1, "%s is already in the collection!", handle->fname);
+			addMessage(-1, "%s<br>is already in the collection!", handle->fname);
 			/* allow upload for debugging */
 			if (getDebug() == 0) {
 				prepareReply(handle, rep_bad_request, false);	/* add error */
@@ -814,7 +814,7 @@ static void parseRequest(chandle_t * handle) {
 		if (handle->len == 0) {
 			handle->filefd = open(handle->fpath, O_CREAT, 00644);
 			if (handle->filefd == -1) {
-				addMessage(-1, "Could not write %s\n%s", handle->fname,
+				addMessage(-1, "Could not write<br>%s<br>%s", handle->fpath,
 						   strerror(errno));
 				prepareReply(handle, rep_bad_request, true);	/* add error */
 			}

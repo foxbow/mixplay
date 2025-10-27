@@ -185,7 +185,7 @@ static jsonObject *jsonAddList(jsonObject * jo, const char *key,
 		/* cut off musicdir if it's given, list->dir starts with 'p=' */
 		if (startsWith(list->dir, "p=")) {
 			if (strlen(list->dir) < len) {
-				addMessage(-1, "%s is an illegal list entry!", list->dir);
+				addMessage(-1, "%s<br>is an illegal list entry!", list->dir);
 			}
 			else {
 				jsonAddArrElement(jo, list->dir + len, json_string);

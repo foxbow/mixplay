@@ -552,7 +552,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			addMessage(-1, "No name given!");
 		}
 		else if (strchr(arg, '/')) {
-			addMessage(-1, "Illegal profile name. Don't use '/'!");
+			addMessage(-1, "Illegal profile name.<br>Don't use '/'!");
 		}
 		else if ((config->current != NULL) && asyncTest()) {
 			addProfile(arg, config->streamURL, true);
