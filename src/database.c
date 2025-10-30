@@ -437,8 +437,6 @@ int32_t dbAddTitles(char *basedir) {
 	}
 	else {
 		addMessage(0, "Adding new titles");
-		dbrunner = dbroot;
-
 		index = dbroot->prev->key;
 		mean = getNewPlaycount();
 	}

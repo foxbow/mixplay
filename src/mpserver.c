@@ -125,6 +125,32 @@ typedef struct {
 	char fpath[MAXPATHLEN];
 } chandle_t;
 
+
+/**
+ * wrapper around send() taking care of partial sends, retrying to send on
+ * partials. Returning
+ * 0 on error
+ * sent bytes on success
+ * -sent bytes on partial success
+ */
+static ssize_t sendloop(int fd, const void *data, ssize_t len) {
+	ssize_t pos = 0;
+	ssize_t sent = 0;
+
+	while (pos < len) {
+		sent = send(fd, (const char *) data + pos, len - pos, 0);
+		if (sent > 0) {
+			pos += sent;
+		}
+		else {
+			addMessage(MPV + 1, "send failed");
+			sent = -pos;
+			break;
+		}
+	}
+	return sent;
+}
+
 /* return an unused clientid
    this gives out clientids in ascending order, even if a previous clientid
    is already free again. This is done to avoid mobile clients reconnecting
@@ -338,11 +364,10 @@ static bool fetchRequest(chandle_t * handle) {
 	memset(handle->commdata, 0, handle->commsize);
 	handle->commlen = 0;
 	handle->len = 0;
+	int deathcount = 0;
 
 	/* Either an error or a timeout */
 	while ((handle->running != CL_STP) && (poll(&pfd, 1, 250) <= 0)) {
-		int deathcount = 0;
-
 		switch (errno) {
 		case EINTR:
 			/* the poll was interrupted by a signal,
@@ -1038,7 +1063,7 @@ static void sendReply(chandle_t * handle) {
 			sprintf(handle->commdata,
 					"HTTP/1.0 200 OK\015\012Content-Type: %s;\015\012Content-Length: %zu\015\012\015\012",
 					filedef->mtype, flen);
-			send(handle->sock, handle->commdata, strlen(handle->commdata), 0);
+			sendloop(handle->sock, handle->commdata, strlen(handle->commdata));
 			filePost(handle->sock, filedef->fname);
 		}
 		else {
@@ -1046,12 +1071,9 @@ static void sendReply(chandle_t * handle) {
 			sprintf(handle->commdata,
 					"HTTP/1.0 200 OK\015\012Content-Type: %s;\015\012Content-Length: %zu\015\012\015\012",
 					filedef->mtype, filedef->flen);
-			send(handle->sock, handle->commdata, strlen(handle->commdata), 0);
-			while (handle->len < filedef->flen) {
-				handle->len +=
-					send(handle->sock, filedef->fdata + handle->len,
-						 filedef->flen - handle->len, 0);
-			}
+
+			sendloop(handle->sock, handle->commdata, strlen(handle->commdata));
+			sendloop(handle->sock, filedef->fdata, filedef->flen);
 		}
 		pthread_mutex_unlock(&_sendlock);
 		handle->len = 0;
@@ -1083,7 +1105,7 @@ static void sendReply(chandle_t * handle) {
 				"Content-Length: %ld\015\012"
 				"Content-Disposition: attachment; filename=\"%s.mp3\""
 				"\015\012\015\012", sbuf.st_size, handle->title->display);
-		send(handle->sock, handle->commdata, strlen(handle->commdata), 0);
+		sendloop(handle->sock, handle->commdata, strlen(handle->commdata));
 		line[0] = 0;
 		filePost(handle->sock, fullpath(handle->title->path));
 		handle->title = NULL;
@@ -1111,20 +1133,7 @@ static void sendReply(chandle_t * handle) {
 	}
 
 	if (handle->len > 0) {
-		size_t sent = 0, msglen = 0;
-
-		while (sent < handle->len) {
-			msglen =
-				send(handle->sock, handle->commdata + sent, handle->len - sent,
-					 0);
-			if (msglen > 0) {
-				sent += msglen;
-			}
-			else {
-				sent = handle->len;
-				addMessage(MPV + 1, "send failed");
-			}
-		}
+		sendloop(handle->sock, handle->commdata, handle->len);
 		if (handle->fullstat & MPCOMM_RESULT) {
 			config->found->state = mpsearch_idle;
 			if (handle->clientid == 0) {

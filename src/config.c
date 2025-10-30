@@ -373,10 +373,14 @@ mpconfig_t *readConfig(void) {
 			if (strstr(line, "musicdir=") == line) {
 				/* make sure that musicdir ends with a '/' */
 				if (line[strlen(line) - 1] == '/') {
+					if (_cconfig->musicdir != NULL) {
+						free(_cconfig->musicdir);
+					}
 					_cconfig->musicdir = strdup(pos);
 				}
 				else {
-					_cconfig->musicdir = (char *) falloc(strlen(pos) + 2, 1);
+					_cconfig->musicdir =
+						(char *) frealloc(_cconfig->musicdir, strlen(pos) + 2);
 					strcpy(_cconfig->musicdir, pos);
 					_cconfig->musicdir[strlen(pos)] = '/';
 				}

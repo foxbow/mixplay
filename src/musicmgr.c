@@ -1758,7 +1758,7 @@ void plCheck(bool fill) {
  */
 mptitle_t *recurse(char *curdir, mptitle_t * files) {
 	char dirbuff[2 * MAXPATHLEN];
-	struct dirent **entry;
+	struct dirent **entry = NULL;
 	int32_t num, i;
 
 	/* this means the config is broken */
@@ -1801,7 +1801,7 @@ mptitle_t *recurse(char *curdir, mptitle_t * files) {
 		free(entry[i]);
 	}
 
-	free(entry);
+	free(entry);				// false coverity positive, getDirs allocates a new 'entry'
 
 	return files;
 }
