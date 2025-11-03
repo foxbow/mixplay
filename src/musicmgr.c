@@ -473,6 +473,41 @@ static uint32_t matchTitle(mptitle_t * title, const char *pat) {
 }
 
 /**
+ * add the given title's album to the list of albums
+ * this also tries to take care of samplers so the 
+ * album artist should not be the last artist but the
+ * predefined ARTIST_SAMPLER
+ * 
+ * This is used in normal sarch and when looking for 
+ * the last added titles.
+ */
+static void addAlbum(searchresults_t * res, mptitle_t * title) {
+	uint32_t i = 0;
+
+	while ((i < res->lnum)
+		   && !strieq(res->albums[i], title->album))
+		i++;
+	if (i == res->lnum) {
+		/* album not yet in list */
+		res->lnum++;
+		res->albums =
+			(char **) frealloc(res->albums, res->lnum * sizeof (char *));
+		res->albums[i] = title->album;
+		res->albart =
+			(char **) frealloc(res->albart, res->lnum * sizeof (char *));
+		res->albart[i] = title->artist;
+	}
+	/* fuzzy comparation to avoid collabs turning an album into a sampler */
+	else if (!strieq(res->albart[i], ARTIST_SAMPLER) &&
+			 !checkSim(res->albart[i], title->artist)) {
+		addMessage(1, "%s is considered a sampler (%s <> %s).",
+				   title->album, title->artist, res->albart[i]);
+		res->albart[i] = ARTIST_SAMPLER;
+	}
+
+}
+
+/**
  * fills the global searchresult structure with the results of the given search.
  * Returns the number of found titles.
  * pat - pattern to search for
@@ -500,6 +535,27 @@ int32_t search(const mpcmd_t range, const char *pat) {
 	}
 
 	if (pat == NULL) {
+		/* return at most last 10 titles or last 10 albums */
+		do {
+			runner = runner->prev;
+			/* two titles in a row with the same album? */
+			if (strieq(runner->album, runner->prev->album)) {
+				addAlbum(res, runner);
+				if (res->lnum > 9)
+					break;
+				else
+					continue;
+			}
+			/* last album title? */
+			if ((res->lnum == 0)
+				|| !strieq(runner->album, res->albums[res->lnum - 1])) {
+				res->titles = appendToPL(runner, res->titles, false);
+				res->tnum++;
+				if (res->tnum > 9)
+					break;
+			}
+		} while (runner->prev != root);
+#if 0
 		/* just return the last 10 titles in the database */
 		runner = runner->prev;
 		for (i = 0; i < 10; i++) {
@@ -510,6 +566,7 @@ int32_t search(const mpcmd_t range, const char *pat) {
 				break;
 			}
 		}
+#endif
 	}
 	else {
 		/* actual search */
@@ -585,28 +642,7 @@ int32_t search(const mpcmd_t range, const char *pat) {
 
 				if (MPC_ISALBUM(found)) {
 					/* check for new albums */
-					for (i = 0; (i < res->lnum)
-						 && !strieq(res->albums[i], runner->album); i++);
-					if (i == res->lnum) {
-						/* album not yet in list */
-						res->lnum++;
-						res->albums =
-							(char **) frealloc(res->albums,
-											   res->lnum * sizeof (char *));
-						res->albums[i] = runner->album;
-						res->albart =
-							(char **) frealloc(res->albart,
-											   res->lnum * sizeof (char *));
-						res->albart[i] = runner->artist;
-					}
-					/* fuzzy comparation to avoid collabs turning an album into a sampler */
-					else if (!strieq(res->albart[i], ARTIST_SAMPLER) &&
-							 !checkSim(res->albart[i], runner->artist)) {
-						addMessage(1, "%s is considered a sampler (%s <> %s).",
-								   runner->album, runner->artist,
-								   res->albart[i]);
-						res->albart[i] = ARTIST_SAMPLER;
-					}
+					addAlbum(res, runner);
 				}
 
 				if (MPC_ISTITLE(found) && (res->tnum++ < MAXSEARCH)) {
