@@ -631,6 +631,15 @@ static void parseRequest(chandle_t * handle) {
 			cmd = (mpcmd_t) handle->cmd;
 			addMessage(MPV + 1, "Got command 0x%04x - %s '%s'",
 					   cmd, mpcString(cmd), handle->arg ? handle->arg : "");
+			/* lock message stream for these commands */
+			if ((MPC_CMD(cmd) == mpc_dbclean) ||
+				(MPC_CMD(cmd) == mpc_doublets) ||
+				(MPC_CMD(cmd) == mpc_dbinfo)) {
+				if (setCurClient(handle->clientid) == -1) {
+					prepareReply(handle, rep_unavailable, true);
+				}
+				break;
+			}
 			/* search is synchronous
 			 * This is ugly! This code *should* go into the next
 			 * step, but we need the searchresults then already.
@@ -641,7 +650,6 @@ static void parseRequest(chandle_t * handle) {
 			if (MPC_CMD(cmd) == mpc_search) {
 				handle->state = req_update;
 				if (setCurClient(handle->clientid) == -1) {
-					addMessage(-1, "Server is blocked!");
 					prepareReply(handle, rep_unavailable, true);
 				}
 				else if (getConfig()->found->state == mpsearch_idle) {
@@ -723,7 +731,6 @@ static void parseRequest(chandle_t * handle) {
 		}
 
 		if (setCurClient(handle->clientid) == -1) {
-			addMessage(0, "Server is blocked!");
 			prepareReply(handle, rep_unavailable, true);
 			break;
 		}
@@ -1236,9 +1243,14 @@ static void *clientHandler(void *args) {
 
 	addMessage(MPV + 3, "Client handler exited");
 	if (isCurClient(handle.clientid)) {
-		unlockClient(handle.clientid);
-		addMessage(MPV + 1, "Unlocking client %i", handle.clientid);
-		config->found->state = mpsearch_idle;
+		/* only unlock on search, other cmds may still need the lock
+		 * to send only to the requester */
+		/* TODO: other cases? */
+		if (config->found->state != mpsearch_idle) {
+			addMessage(0, "Search client died!");
+			unlockClient(handle.clientid);
+			config->found->state = mpsearch_idle;
+		}
 	}
 	pthread_mutex_unlock(&_sendlock);
 	close(handle.sock);

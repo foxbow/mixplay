@@ -212,6 +212,7 @@ static void *plCheckDoublets(void *arg) {
 	else {
 		addMessage(0, "No doublets found");
 	}
+	setTnum();
 	unlockClient(-1);
 	pthread_mutex_unlock(lock);
 	return NULL;
@@ -259,6 +260,7 @@ static void *plDbClean(void *arg) {
 		}
 	}
 
+	setTnum();
 	unlockClient(-1);
 	pthread_mutex_unlock(lock);
 	return NULL;
@@ -269,6 +271,7 @@ static void *plDbFix(void *arg) {
 
 	addMessage(0, "Database smooth");
 	dumpInfo(1);
+	setTnum();
 	unlockClient(-1);
 	pthread_mutex_unlock(lock);
 	return NULL;
@@ -467,7 +470,6 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			break;
 		if (checkPasswd(arg)) {
 			asyncRun(plCheckDoublets);
-			setTnum();
 		}
 		break;
 
@@ -476,7 +478,6 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			break;
 		if (checkPasswd(arg)) {
 			asyncRun(plDbClean);
-			setTnum();
 		}
 		break;
 

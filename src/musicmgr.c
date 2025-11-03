@@ -555,18 +555,6 @@ int32_t search(const mpcmd_t range, const char *pat) {
 					break;
 			}
 		} while (runner->prev != root);
-#if 0
-		/* just return the last 10 titles in the database */
-		runner = runner->prev;
-		for (i = 0; i < 10; i++) {
-			res->titles = appendToPL(runner, res->titles, false);
-			res->tnum++;
-			runner = runner->prev;
-			if (runner == root) {
-				break;
-			}
-		}
-#endif
 	}
 	else {
 		/* actual search */
