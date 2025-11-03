@@ -466,16 +466,12 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		break;
 
 	case mpc_doublets:
-		if (config->mpmode & PM_STREAM)
-			break;
 		if (checkPasswd(arg)) {
 			asyncRun(plCheckDoublets);
 		}
 		break;
 
 	case mpc_dbclean:
-		if (config->mpmode & PM_STREAM)
-			break;
 		if (checkPasswd(arg)) {
 			asyncRun(plDbClean);
 		}
@@ -656,10 +652,6 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		break;
 
 	case mpc_dbinfo:
-		if (config->mpmode & PM_STREAM) {
-			asyncRun(plDbInfo);
-			break;
-		}
 		/* TODO: very unintuitive! */
 		if ((arg) && checkPasswd(arg)) {
 			asyncRun(plDbFix);
