@@ -1519,8 +1519,12 @@ function playerUpdate (data) {
       setElement('title', '..' + data.msg.substring(4) + '..')
       adaptUI(1)
     } else {
+      toval = 50
       addText(data.msg)
     }
+  }
+  else {
+    toval = 500
   }
 
   if (upload === true) {
