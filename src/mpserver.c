@@ -869,8 +869,8 @@ static void parseRequest(chandle_t * handle) {
 
 		/* pos is at raw data */
 		addMessage(MPV + 1, "data / pos: %p / %p = %zu - %zu",
-				   handle->commdata, pos, pos - handle->commdata,
-				   handle->commlen);
+				   (void *) handle->commdata, (void *) pos,
+				   pos - handle->commdata, handle->commlen);
 
 		/* can we find the end of the block? 8 = \r\n--(boundary)-- */
 		tline =
