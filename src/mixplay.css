@@ -398,6 +398,54 @@ p.nopopselect {
 	cursor: default;
 }
 
+/* popup line */
+p.popselectfav {
+	color: #bbffcc;
+	position: relative;
+	display: block;
+	cursor: copy;
+	margin-top: 0.2em;
+	margin-bottom: 0.2em;
+	border: none;
+	background: none;
+}
+
+/* popup line with no popup */
+p.nopopselectfav {
+	color: #bbffcc;
+	position: relative;
+	display: block;
+	margin-top: 0.2em;
+	margin-bottom: 0.2em;
+	border: none;
+	background: none;
+	cursor: default;
+}
+
+/* popup line */
+p.popselectdnp {
+	color: #ffbbcc;
+	position: relative;
+	display: block;
+	cursor: copy;
+	margin-top: 0.2em;
+	margin-bottom: 0.2em;
+	border: none;
+	background: none;
+}
+
+/* popup line with no popup */
+p.nopopselectdnp {
+	color: #ffbbcc;
+	position: relative;
+	display: block;
+	margin-top: 0.2em;
+	margin-bottom: 0.2em;
+	border: none;
+	background: none;
+	cursor: default;
+}
+
 /* popup line for the current title */
 p.ctitle {
 	position: relative;

@@ -933,7 +933,7 @@ function togglePopupDB (ident) {
 }
 
 /* returns a <div> with text that when clicked presents the choices */
-function popselect (choice, arg, text, drag, id) {
+function popselect (choice, arg, text, drag, id, ext=``) {
   var i
   var select
   var reply = document.createElement('p')
@@ -943,7 +943,7 @@ function popselect (choice, arg, text, drag, id) {
   const num = choice.length
   reply.innerHTML = text
   if (num > 0) {
-    reply.className = 'popselect'
+    reply.className = 'popselect' + ext
     reply.id = 'line' + id
     reply.onclick = function () { togglePopup(id) }
     var popspan = document.createElement('span')
@@ -963,7 +963,7 @@ function popselect (choice, arg, text, drag, id) {
     popspan.appendChild(select)
     reply.appendChild(popspan)
   } else {
-    reply.className = 'nopopselect'
+    reply.className = 'nopopselect' + ext
   }
 
   /* playlist ordering does not make sense in streams */
@@ -1212,23 +1212,31 @@ function searchUpdate (data) {
   var e = document.getElementById('search2')
   wipeElements(e)
   if (data.albums.length > 0) {
+    fdext=''
     enableElement('csearch2', 1)
     switchTabByRef('search', 2)
     for (i = 0; i < data.albums.length; i++) {
       choices = []
       choices.push(['&#x26b2;', 0x0413]) // search album
       if (!isstream) {
+        fdext = ''
         if (!data.albums[i].fav) {
           choices.push(['&#x2665;', 0x0409]) // fav
         }
+        else {
+          fdext='fav'
+        }
         if (!data.albums[i].dnp) {
           choices.push(['&#x2620;', 0x040a]) // dnp
+        }
+        else {
+          fdext='dnp'
         }
       }
 
       items[i] = popselect(choices,
         data.albums[i].name,
-        data.albart[i].name + ' - ' + data.albums[i].name, 0, lineid++)
+        data.albart[i].name + ' - ' + data.albums[i].name, 0, lineid++, fdext)
     }
   } else {
     enableElement('csearch2', 0)
@@ -1245,19 +1253,26 @@ function searchUpdate (data) {
     enableElement('csearch1', 1)
     switchTabByRef('search', 1)
     for (i = 0; i < data.artists.length; i++) {
+      fdext = ''
       choices = []
       choices.push(['&#x26b2;', 0x0213]) // search
       if (!isstream) {
         if (!data.artists[i].fav) {
           choices.push(['&#x2665;', 0x0209]) // fav
         }
+        else {
+          fdext='fav'
+        }
         if (!data.artists[i].dnp) {
           choices.push(['&#x2620;', 0x020a]) // dnp
+        }
+        else {
+          fdext='dnp'
         }
       }
       items[i] = popselect(choices,
         data.artists[i].name,
-        data.artists[i].name, 0, lineid++)
+        data.artists[i].name, 0, lineid++, fdext)
     }
   } else {
     enableElement('csearch1', 0)
@@ -1275,15 +1290,22 @@ function searchUpdate (data) {
     switchTabByRef('search', 0)
     choices = []
     if (!isstream) {
+      fdext = ''
       if (!favplay || !(data.titles.flags & 0x0001)) {
         choices.push(['&#x2665;', 0x1009]) // fav
+      }
+      else {
+        fdext='fav'
       }
       if (!(data.titles.flags & 0x0002)) {
         choices.push(['&#x2620;', 0x100a]) // dnp
       }
+      else {
+        fdext='dnp'
+      }
       choices.push(['&#x276f;', 0x100c]) // next
       choices.push(['&#x276f;&#x276f;', 0x1014]) // append
-      items[0] = popselect(choices, 0, 'All results', 0, lineid++)
+      items[0] = popselect(choices, 0, 'All results', 0, lineid++, fdext)
     }
     else {
       /* dummy entry to keep items array in line */
