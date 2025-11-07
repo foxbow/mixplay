@@ -501,17 +501,27 @@ static int32_t addRangePrefix(mpcmd_t cmd, char *line) {
 	return 0;
 }
 
-static void setFlags(searchentry_t entry, mpcmd_t type) {
+static void setFlags(searchentry_t *entry, mpcmd_t type) {
 	char line[MAXPATHLEN + 2];
 
+	if (isStreamActive()) {
+		/* never allow adding these */
+		entry->dnp = true;
+		entry->fav = true;
+		return;
+	}
+
+	entry->dnp = false;
+	entry->fav = false;
+
 	if (addRangePrefix(type, line) == 0) {
-		strltcat(line, entry.name, MAXPATHLEN + 2);
+		strltcat(line, entry->name, MAXPATHLEN + 2);
 		marklist_t *buff;
 
 		buff = getConfig()->favlist;
 		while (buff != NULL) {
 			if (strcmp(line, buff->dir) == 0) {
-				entry.fav = true;
+				entry->fav = true;
 				break;
 			}
 			buff = buff->next;
@@ -520,7 +530,7 @@ static void setFlags(searchentry_t entry, mpcmd_t type) {
 		buff = getConfig()->dnplist;
 		while (buff != NULL) {
 			if (strcmp(line, buff->dir) == 0) {
-				entry.dnp = true;
+				entry->dnp = true;
 				break;
 			}
 			buff = buff->next;
@@ -550,7 +560,7 @@ static void addAlbum(searchresults_t * res, mptitle_t * title) {
 			(searchentry_t *) frealloc(res->albums,
 									   res->lnum * sizeof (searchentry_t));
 		res->albums[i].name = title->album;
-		setFlags(res->albums[i], mpc_album);
+		setFlags(&res->albums[i], mpc_album);
 		res->albart =
 			(searchentry_t *) frealloc(res->albart,
 									   res->lnum * sizeof (searchentry_t));
@@ -665,7 +675,7 @@ int32_t search(const mpcmd_t range, const char *pat) {
 												   res->anum *
 												   sizeof (searchentry_t));
 					res->artists[i].name = runner->artist;
-					setFlags(res->artists[i], mpc_artist);
+					setFlags(&res->artists[i], mpc_artist);
 				}
 			}
 
