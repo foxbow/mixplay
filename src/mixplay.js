@@ -1290,25 +1290,15 @@ function searchUpdate (data) {
     switchTabByRef('search', 0)
     choices = []
     if (!isstream) {
-      fdext = ''
-      if (!(data.titles.flags & 0x0001)) {
+      if (!favplay || !(data.titles.flags & 0x0001)) {
         choices.push(['&#x2665;', 0x1009]) // fav
-        if (favplay) {
-          fdext = 'dnp'
-        }
-      }
-      else {
-        fdext='fav'
       }
       if (!(data.titles.flags & 0x0002)) {
         choices.push(['&#x2620;', 0x100a]) // dnp
       }
-      else {
-        fdext='dnp'
-      }
       choices.push(['&#x276f;', 0x100c]) // next
       choices.push(['&#x276f;&#x276f;', 0x1014]) // append
-      items[0] = popselect(choices, 0, 'All results', 0, lineid++, fdext)
+      items[0] = popselect(choices, 0, 'All results', 0, lineid++)
     }
     else {
       /* dummy entry to keep items array in line */
@@ -1318,12 +1308,19 @@ function searchUpdate (data) {
     }
     for (i = 0; i < data.titles.length; i++) {
       choices = []
+      fdext = ''
       if (!isstream) {
         if (!(data.titles[i].flags & 1)) {
           choices.push(['&#x2665;', 0x1009]) // fav
         }
+        else {
+          fdext = 'fav'
+        }
         if (!(data.titles[i].flags & 2)) {
           choices.push(['&#x2620;', 0x100a]) // dnp
+        }
+        else {
+          fdext = 'dnp'
         }
         choices.push(['&#x276f;', 0x100c]) // next
         choices.push(['&#x276f;&#x276f;', 0x1014]) // append
@@ -1331,7 +1328,7 @@ function searchUpdate (data) {
       choices.push(['&#x1f4be;', 'download'])
       items[i + 1] = popselect(choices,
         data.titles[i].key,
-        data.titles[i].artist + ' - ' + data.titles[i].title, 0, lineid++)
+        data.titles[i].artist + ' - ' + data.titles[i].title, 0, lineid++, fdext)
     }
   } else {
     enableElement('csearch0', 0)

@@ -453,9 +453,8 @@ static uint32_t matchTitle(mptitle_t * title, const char *pat) {
 				res = mpc_display;
 			break;
 
-		case 'p':
+		case 'p': /* still used in doublets */
 			if (isMatch(title->path, pat + 2, fuzzy)) {
-				addMessage(0, "Found deprecated PATH entry!");
 				res = mpc_title;
 			}
 			break;
