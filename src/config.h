@@ -122,10 +122,6 @@ extern const char *_mprccmdstrings[MPRC_NUM];
 /* shall it be fuzzy */
 #define MPC_ISFUZZY(x) (x & mpc_fuzzy )
 
-/* filter for DNP and FAV flags */
-// todo: usused?
-// #define MPC_DNPFAV(x) ((x & MPC_DNP) | (x & MPC_FAV))
-
 /* playmodes */
 #define PM_NONE     0x00
 #define PM_STREAM   0x01

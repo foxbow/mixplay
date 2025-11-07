@@ -1218,7 +1218,7 @@ function searchUpdate (data) {
       choices = []
       choices.push(['&#x26b2;', 0x0413]) // search album
       if (!isstream) {
-        if (!favplay || !data.albums[i].fav) {
+        if (!data.albums[i].fav) {
           choices.push(['&#x2665;', 0x0409]) // fav
         }
         if (!data.albums[i].dnp) {
@@ -1248,7 +1248,7 @@ function searchUpdate (data) {
       choices = []
       choices.push(['&#x26b2;', 0x0213]) // search
       if (!isstream) {
-        if (!favplay || !data.artists[i].fav) {
+        if (!data.artists[i].fav) {
           choices.push(['&#x2665;', 0x0209]) // fav
         }
         if (!data.artists[i].dnp) {
