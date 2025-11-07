@@ -59,13 +59,19 @@ typedef enum {
 } mpsearch_t;
 
 typedef struct {
+	char *name;
+	bool fav;
+	bool dnp;
+} searchentry_t;
+
+typedef struct {
 	uint32_t tnum;
 	uint32_t anum;
 	uint32_t lnum;
 	mpplaylist_t *titles;
-	char **artists;
-	char **albums;
-	char **albart;
+	searchentry_t *artists;
+	searchentry_t *albums;
+	searchentry_t *albart;
 	mpsearch_t state;
 } searchresults_t;
 

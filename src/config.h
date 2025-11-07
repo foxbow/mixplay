@@ -57,7 +57,7 @@ typedef enum {
 	mpc_newprof,
 	mpc_path,
 	mpc_remprof,
-	mpc_smode,
+	mpc_UNUSED,
 	mpc_deldnp,
 	mpc_delfav,
 	mpc_remove,
@@ -79,8 +79,6 @@ typedef enum {
 
 /* some filtermasks */
 #define MPC_DFRANGE  (mpc_genre|mpc_artist|mpc_album|mpc_title|mpc_display)
-#define MPC_DNPFAV   (mpc_dnp|mpc_fav)
-#define MPC_DFALL    (MPC_DFRANGE|MPC_DNPFAV)
 
 #include "musicmgr.h"
 
@@ -123,6 +121,10 @@ extern const char *_mprccmdstrings[MPRC_NUM];
 #define MPC_ISSUBSTR(x) (x & mpc_substr )
 /* shall it be fuzzy */
 #define MPC_ISFUZZY(x) (x & mpc_fuzzy )
+
+/* filter for DNP and FAV flags */
+// todo: usused?
+// #define MPC_DNPFAV(x) ((x & MPC_DNP) | (x & MPC_FAV))
 
 /* playmodes */
 #define PM_NONE     0x00
@@ -183,8 +185,6 @@ typedef struct {
 	uint32_t lineout;			/* enable line-out at fix volume */
 	int32_t linestream;			/* stream play volume modifier */
 	uint32_t fade;				/* controls fading between titles */
-	/* flags for mpmode */
-	bool searchDNP;
 	/* other flags */
 	bool isDaemon;
 	bool inUI;					/* flag to show if the UI is active */

@@ -236,25 +236,6 @@ function replaceChild (e, c) {
 }
 
 /*
- * switches search mode and removes previous results
- */
-function toggleSearch () {
-  sendCMD(0x0019)
-  var e = document.getElementById('search0')
-  var text = document.createElement('em')
-  text.innerHTML = 'No titles found!'
-  replaceChild(e, text)
-  e = document.getElementById('search1')
-  text = document.createElement('em')
-  text.innerHTML = 'No artists found!'
-  replaceChild(e, text)
-  e = document.getElementById('search2')
-  text = document.createElement('em')
-  text.innerHTML = 'No albums found!'
-  replaceChild(e, text)
-}
-
-/*
  * check if a long text needs to be eolled and then scroll into the
  * proper direction
  */
@@ -1237,17 +1218,17 @@ function searchUpdate (data) {
       choices = []
       choices.push(['&#x26b2;', 0x0413]) // search album
       if (!isstream) {
-        if (!favplay || data.searchDNP) {
+        if (!favplay || !data.albums[i].fav) {
           choices.push(['&#x2665;', 0x0409]) // fav
         }
-        if (!data.searchDNP) {
+        if (!data.albums[i].dnp) {
           choices.push(['&#x2620;', 0x040a]) // dnp
         }
       }
 
       items[i] = popselect(choices,
-        data.albums[i],
-        data.albart[i] + ' - ' + data.albums[i], 0, lineid++)
+        data.albums[i].name,
+        data.albart[i].name + ' - ' + data.albums[i].name, 0, lineid++)
     }
   } else {
     enableElement('csearch2', 0)
@@ -1267,16 +1248,16 @@ function searchUpdate (data) {
       choices = []
       choices.push(['&#x26b2;', 0x0213]) // search
       if (!isstream) {
-        if (!favplay || data.searchDNP) {
+        if (!favplay || !data.artists[i].fav) {
           choices.push(['&#x2665;', 0x0209]) // fav
         }
-        if (!data.searchDNP) {
+        if (!data.artists[i].dnp) {
           choices.push(['&#x2620;', 0x020a]) // dnp
         }
       }
       items[i] = popselect(choices,
-        data.artists[i],
-        data.artists[i], 0, lineid++)
+        data.artists[i].name,
+        data.artists[i].name, 0, lineid++)
     }
   } else {
     enableElement('csearch1', 0)
@@ -1294,10 +1275,10 @@ function searchUpdate (data) {
     switchTabByRef('search', 0)
     choices = []
     if (!isstream) {
-      if (!favplay || data.searchDNP) {
+      if (!favplay || !(data.titles.flags & 0x0001)) {
         choices.push(['&#x2665;', 0x1009]) // fav
       }
-      if (!data.searchDNP) {
+      if (!(data.titles.flags & 0x0002)) {
         choices.push(['&#x2620;', 0x100a]) // dnp
       }
       choices.push(['&#x276f;', 0x100c]) // next
@@ -1426,12 +1407,6 @@ function playerUpdate (data) {
       addText('Client ID from ' + clientid + ' to ' + data.clientid)
     }
     clientid = data.clientid
-  }
-
-  if (data.searchDNP) {
-    document.getElementById('searchmode').innerHTML = 'DNP'
-  } else {
-    document.getElementById('searchmode').innerHTML = 'Active'
   }
 
   favplay = data.mpfavplay

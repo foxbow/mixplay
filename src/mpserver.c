@@ -60,8 +60,9 @@ static const struct timespec ts = {
 };
 
 #define CL_STP 0				// client is dying, skip all following steps
-#define CL_RUN 1				// client is running
-#define CL_SRC 2				// active search
+#define CL_ONE 1				// one-shot, only do one receive-send flow
+#define CL_RUN 2				// client is running, loop receive-send flow
+#define CL_SRC 4				// active search marker
 
 #define ROUNDUP(a,b) (((a/b)+1)*b)
 
@@ -548,7 +549,7 @@ static void parseRequest(chandle_t * handle) {
 
 		/* a valid client came in */
 		if (handle->clientid > 0) {
-			handle->running |= CL_RUN;
+			handle->running = CL_RUN;
 			triggerClient(handle->clientid);
 		}
 
@@ -1118,7 +1119,7 @@ static void sendReply(chandle_t * handle) {
 		handle->title = NULL;
 		pthread_mutex_unlock(&_sendlock);
 		handle->len = 0;
-		handle->running &= ~CL_RUN;
+		handle->running = CL_STP;
 		break;
 
 	case req_current:			/* return "artist - title" line */
@@ -1179,7 +1180,7 @@ static void *clientHandler(void *args) {
 
 	chandle_t handle;
 
-	handle.running = CL_RUN;
+	handle.running = CL_ONE;
 	handle.state = req_none;
 	handle.title = NULL;
 	handle.fullstat = MPCOMM_STAT;

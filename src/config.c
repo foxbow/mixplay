@@ -78,7 +78,7 @@ static const char *mpccommand[] = {
 	"newprof",
 	"path",
 	"remprof",
-	"searchmode",
+	"UNUSED",
 	"deldnp",
 	"delfav",
 	"remove",
@@ -338,7 +338,6 @@ mpconfig_t *readConfig(void) {
 	_cconfig->port = MP_PORT;
 	_cconfig->bookmarklet = NULL;
 	_cconfig->isDaemon = false;
-	_cconfig->searchDNP = false;
 	_cconfig->streamURL = NULL;
 	_cconfig->rcdev = NULL;
 	_cconfig->mpmode = PM_NONE;

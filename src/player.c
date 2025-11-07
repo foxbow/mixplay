@@ -176,7 +176,6 @@ void *setProfile(void *arg) {
 	}
 
 	active = control->active;
-	control->searchDNP = false;
 
 	profile = getProfile(active);
 	if (profile == NULL) {

@@ -176,6 +176,23 @@ static jsonObject *jsonAddTitles(jsonObject * jo, const char *key,
 	return jo;
 }
 
+static jsonObject *jsonAddSres(jsonObject * jo, const char *key,
+							   const searchentry_t * entry, uint32_t num) {
+	jsonObject *val = NULL;
+
+	jo = jsonInitArr(jo, key);
+
+	for (uint32_t i = 0; i < num; i++) {
+		val = jsonAddStr(NULL, "name", entry[i].name);
+		jsonAddBool(val, "dnp", entry[i].dnp);
+		jsonAddBool(val, "fav", entry[i].fav);
+		val = jsonAddObj(NULL, "entry", val);
+		jsonAddArrElement(jo, val, json_object);
+	}
+
+	return jo;
+}
+
 static jsonObject *jsonAddList(jsonObject * jo, const char *key,
 							   marklist_t * list) {
 	jo = jsonInitArr(jo, key);
@@ -229,9 +246,9 @@ char *serializeStatus(int32_t clientid, int32_t type) {
 	}
 	if (type & MPCOMM_RESULT) {
 		jsonAddTitles(jo, "titles", data->found->titles, 1);
-		jsonAddStrs(jo, "artists", data->found->artists, data->found->anum);
-		jsonAddStrs(jo, "albums", data->found->albums, data->found->lnum);
-		jsonAddStrs(jo, "albart", data->found->albart, data->found->lnum);
+		jsonAddSres(jo, "artists", data->found->artists, data->found->anum);
+		jsonAddSres(jo, "albums", data->found->albums, data->found->lnum);
+		jsonAddSres(jo, "albart", data->found->albart, data->found->lnum);
 	}
 	if (type & MPCOMM_LISTS) {
 		jsonAddList(jo, "dnplist", data->dnplist);
@@ -259,7 +276,6 @@ char *serializeStatus(int32_t clientid, int32_t type) {
 	jsonAddInt(jo, "status", data->status);
 	jsonAddInt(jo, "mpmode", data->mpmode);
 	jsonAddBool(jo, "mpfavplay", getFavplay());
-	jsonAddBool(jo, "searchDNP", data->searchDNP);
 	jsonAddInt(jo, "clientid", clientid);
 	jsonAddInt(jo, "process", data->process);
 	/* broadcast */
