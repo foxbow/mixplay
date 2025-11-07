@@ -1291,8 +1291,11 @@ function searchUpdate (data) {
     choices = []
     if (!isstream) {
       fdext = ''
-      if (!favplay || !(data.titles.flags & 0x0001)) {
+      if (!(data.titles.flags & 0x0001)) {
         choices.push(['&#x2665;', 0x1009]) // fav
+        if (favplay) {
+          fdext = 'dnp'
+        }
       }
       else {
         fdext='fav'
