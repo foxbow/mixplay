@@ -197,7 +197,7 @@ int32_t main(int32_t argc, char **argv) {
 				   "Setting default configuration values and initializing...");
 		setProfile(NULL);
 		if (control->root == NULL) {
-			addMessage(-1, "No music found at %s!", control->musicdir);
+			addMessage(-1, "No music found at<br>%s", control->musicdir);
 			return -1;
 		}
 		addMessage(0, "Initialization successful!");

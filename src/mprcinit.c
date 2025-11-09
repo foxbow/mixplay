@@ -42,7 +42,7 @@ int32_t main() {
 	int32_t fd = -1;
 	int32_t i;
 	mpconfig_t *config = NULL;
-	struct dirent **devices;
+	struct dirent **devices = NULL;
 
 	numdev = scandir("/dev/input/by-id/", &devices, devsel, alphasort);
 	if (numdev < 1) {

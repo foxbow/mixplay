@@ -256,6 +256,10 @@ int32_t main(int32_t argc, char **argv) {
 				if (next == '}') {
 					code = 0;
 				}
+				if (next == '.') {
+					// no semicolon if the next line starts with a .
+					code = 0;
+				}
 				if (code == 1) {
 					current = ';';
 					code = 0;

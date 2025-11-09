@@ -837,15 +837,15 @@ jsonType jsonPeek(jsonObject * jo, const char *key) {
 	return jo->type;
 }
 
-uint32_t jsonGetBool(jsonObject * jo, const char *key) {
+bool jsonGetBool(jsonObject * jo, const char *key) {
 	jsonObject *pos = jo;
 
 	pos = jsonFollowPath(jo, key);
 	if ((pos != NULL) && (pos->type == json_boolean)) {
-		return (pos->val == (void *) -1);
+		return (pos->val != NULL);
 	}
 
-	return 0;
+	return false;
 }
 
 /*
@@ -967,10 +967,10 @@ static jsonObject *jsonAppend(jsonObject * jo, const char *key) {
 /**
  * creates a new JSON boolean object and appends it to the end of the given root object chain
  */
-jsonObject *jsonAddBool(jsonObject * jo, const char *key, const uint32_t val) {
+jsonObject *jsonAddBool(jsonObject * jo, const char *key, const bool val) {
 	jo = jsonAppend(jo, key);
 	if (val) {
-		jo->val = (void *) 1;
+		jo->val = (void *) -1;
 	}
 	else {
 		jo->val = NULL;
@@ -1133,7 +1133,7 @@ int32_t jsonAddArrElement(jsonObject * jo, void *val, jsonType type) {
 			jo->val = jsonAddStr(NULL, key, (char *) val);
 			break;
 		case json_boolean:
-			jo->val = jsonAddBool(NULL, key, (val == NULL) ? 0 : 1);
+			jo->val = jsonAddBool(NULL, key, (val != NULL));
 			break;
 		case json_null:
 			jo->val = jsonAddObj(NULL, key, NULL);
@@ -1162,7 +1162,7 @@ int32_t jsonAddArrElement(jsonObject * jo, void *val, jsonType type) {
 			jsonAddStr(jo, key, (char *) val);
 			break;
 		case json_boolean:
-			jsonAddBool(jo, key, (val == NULL) ? 0 : 1);
+			jsonAddBool(jo, key, (val != NULL));
 			break;
 		case json_null:
 			jsonAddObj(jo, key, NULL);

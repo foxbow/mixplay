@@ -78,7 +78,7 @@ static const char *mpccommand[] = {
 	"newprof",
 	"path",
 	"remprof",
-	"searchmode",
+	"UNUSED",
 	"deldnp",
 	"delfav",
 	"remove",
@@ -90,19 +90,19 @@ static const char *mpccommand[] = {
 	"idle"
 };
 
-inline void lockPlaylist(void) {
+void lockPlaylist(void) {
 	pthread_mutex_lock(&pllock);
 }
 
-inline void unlockPlaylist(void) {
+void unlockPlaylist(void) {
 	pthread_mutex_unlock(&pllock);
 }
 
-inline int32_t trylockPlaylist(void) {
+int32_t trylockPlaylist(void) {
 	return (pthread_mutex_trylock(&pllock) != EBUSY);
 }
 
-static void invokeHooks(_mpfunc * hooks) {
+void invokeHooks(_mpfunc * hooks) {
 	_mpfunc *pos = hooks;
 
 	pthread_mutex_lock(&_cblock);
@@ -338,12 +338,12 @@ mpconfig_t *readConfig(void) {
 	_cconfig->port = MP_PORT;
 	_cconfig->bookmarklet = NULL;
 	_cconfig->isDaemon = false;
-	_cconfig->searchDNP = false;
 	_cconfig->streamURL = NULL;
 	_cconfig->rcdev = NULL;
 	_cconfig->mpmode = PM_NONE;
 	_cconfig->lineout = 0;
 	_cconfig->linestream = VOLUME_STREAM;
+	_cconfig->process = 0;
 
 	snprintf(_cconfig->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", home);
 
@@ -372,10 +372,14 @@ mpconfig_t *readConfig(void) {
 			if (strstr(line, "musicdir=") == line) {
 				/* make sure that musicdir ends with a '/' */
 				if (line[strlen(line) - 1] == '/') {
+					if (_cconfig->musicdir != NULL) {
+						free(_cconfig->musicdir);
+					}
 					_cconfig->musicdir = strdup(pos);
 				}
 				else {
-					_cconfig->musicdir = (char *) falloc(strlen(pos) + 2, 1);
+					_cconfig->musicdir =
+						(char *) frealloc(_cconfig->musicdir, strlen(pos) + 2);
 					strcpy(_cconfig->musicdir, pos);
 					_cconfig->musicdir[strlen(pos)] = '/';
 				}
@@ -383,6 +387,10 @@ mpconfig_t *readConfig(void) {
 					printf("%s is no valid directory!\n", _cconfig->musicdir);
 					exit(ENOENT);
 				}
+				char updir[MAXPATHLEN];
+
+				snprintf(updir, MAXPATHLEN, "%supload", _cconfig->musicdir);
+				_cconfig->canUpload = isDir(updir);
 			}
 			if (strstr(line, "password=") == line) {
 				sfree((char **) &(_cconfig->password));
@@ -713,6 +721,24 @@ void wipePlaylist(mpconfig_t * control) {
 		_wipePlaylist(control->current, control->mpmode & PM_STREAM, false);
 }
 
+/** 
+ * set info for the process bar
+ * 0, >99 - hide process bar and show download
+ * 1-99   - hide download, show process bar and set percentage 
+ */
+void setProcess(uint32_t percent) {
+	if (percent > 99) {
+		_cconfig->process = 0;
+	}
+	else {
+		_cconfig->process = percent;
+	}
+}
+
+uint32_t getProcess() {
+	return _cconfig->process;
+}
+
 /**
  * recursive free() to clean up all of the configuration
  */
@@ -762,7 +788,7 @@ void addMessage(int32_t v, const char *msg, ...) {
 	}
 
 	if (v < 1) {
-		/* normal status messages */
+		/* abnormal status messages */
 		if (v == -1) {
 			memmove(line + 6, line, MP_MSGLEN - 6);
 			memcpy(line, "ALERT:", 6);

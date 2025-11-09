@@ -98,7 +98,6 @@ int32_t main() {
 		fail(F_FAIL, "Cannot access DPMS!");
 	}
 
-
 	/* todo parameters: timeout, host, port */
 	if (to < 0) {
 		jo = getStatus(MPCOMM_CONFIG);

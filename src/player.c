@@ -176,7 +176,6 @@ void *setProfile(void *arg) {
 	}
 
 	active = control->active;
-	control->searchDNP = false;
 
 	profile = getProfile(active);
 	if (profile == NULL) {
@@ -510,7 +509,7 @@ void *reader( __attribute__ ((unused))
 							}
 							else {
 								/*  *INDENT-OFF*  */
-								addMessage(-1, "BG: %s\n> Index: %i\n> Name: %s\n> Path: %s",
+								addMessage(-1, "BG: %s<br>&gt; Index: %i<br>&gt; Name: %s<br>&gt; Path: %s",
 										   line, control->current->title->key,
 										   control->current->title->display,
 										   fullpath(control->current->title->path));

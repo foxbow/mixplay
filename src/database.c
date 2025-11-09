@@ -202,7 +202,7 @@ static int32_t dbOpen(void) {
 	db = open(path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 
 	if (-1 == db) {
-		addMessage(-1, "Could not open database %s", path);
+		addMessage(-1, "Could not open database<br>%s", path);
 	}
 	else {
 		addMessage(2, "Opened database %s", path);
@@ -293,6 +293,8 @@ mptitle_t *dbGetMusic() {
 		if ((dbentry.path[0] == '/') &&
 			(strstr(dbentry.path, getConfig()->musicdir) != dbentry.path)) {
 			strtcpy(dbentry.path, fullpath(&(dbentry.path[1])), MAXPATHLEN);
+			/* Do not use dbMarkDirty() here as that may trigger a write
+			 * on the open database! */
 			getConfig()->dbDirty = 1;
 		}
 		dbroot = addDBTitle(&dbentry, dbroot, index);
@@ -310,7 +312,7 @@ mptitle_t *dbGetMusic() {
 		else {
 			/* Maybe make an UI scan possible or trigger it here explicitly */
 			addMessage(-1,
-					   "Database %s and backup are corrupt!\nRun 'mixplay -C' to rescan",
+					   "Database %s and backup are corrupt!<br>Run 'mixplay -C' to rescan",
 					   getConfig()->dbname);
 		}
 	}
@@ -377,6 +379,44 @@ static int32_t dbAddTitle(int32_t db, mptitle_t * title) {
 	return 0;
 }
 
+/**
+ * the name is misleading, it just is chosen to match addNewPath()
+ * where it is used
+ */
+void dbAddPath(mptitle_t * title) {
+	int db = dbOpen();
+
+	if (db == -1) {
+		fail(-1, "Database is not available!");
+		return;
+	}
+	dbAddTitle(db, title);
+	dbClose(db);
+}
+
+/**
+ * make up a playcount for new titles to be added to the database
+ * Right now it's the max playcount - 1 or 0
+ */
+uint32_t getNewPlaycount() {
+	uint32_t mean = 0;
+	mptitle_t *dbrunner = getConfig()->root;
+
+	if (dbrunner == NULL)
+		return 0;
+
+	do {
+		/* find mean playcount */
+		if (!(dbrunner->flags & (MP_DNP | MP_DBL))
+			&& (mean < dbrunner->playcount)) {
+			mean = dbrunner->playcount;
+		}
+		dbrunner = dbrunner->next;
+	}
+	while (dbrunner != getConfig()->root);
+
+	return mean > 0 ? mean - 1 : mean;
+}
 
 /**
  * adds new titles to the database
@@ -387,7 +427,7 @@ int32_t dbAddTitles(char *basedir) {
 	mptitle_t *fsnext;
 	mptitle_t *dbroot;
 	mptitle_t *dbrunner;
-	uint32_t count = 0, mean = 0;
+	uint32_t mean = 0;
 	uint32_t index = 0;
 	int32_t num = 0, db = 0;
 
@@ -397,30 +437,8 @@ int32_t dbAddTitles(char *basedir) {
 	}
 	else {
 		addMessage(0, "Adding new titles");
-		dbrunner = dbroot;
-
-		do {
-			/* find highest key */
-			if (index < dbrunner->key) {
-				index = dbrunner->key;
-			}
-			/* find mean playcount */
-			if (!(dbrunner->flags & (MP_DNP | MP_DBL))) {
-				count++;
-				mean += dbrunner->playcount;
-			}
-			dbrunner = dbrunner->next;
-		}
-		while (dbrunner != dbroot);
-
-		/* round down so new titles have a slightly better chance to be played
-		 * and to equalize favourites */
-		if (count > 0) {
-			mean = (mean / count);
-		}
-		else {
-			addMessage(-1, "No playable titles available!");
-		}
+		index = dbroot->prev->key;
+		mean = getNewPlaycount();
 	}
 
 	addMessage(0, "Using mean playcount %d", mean);
@@ -431,7 +449,7 @@ int32_t dbAddTitles(char *basedir) {
 	addMessage(0, "Scanning...");
 	fsroot = recurse(basedir, NULL);
 	if (fsroot == NULL) {
-		addMessage(-1, "No music found in %s!", basedir);
+		addMessage(-1, "No music found in<br>%s!", basedir);
 		return 0;
 	}
 
@@ -495,6 +513,12 @@ int32_t dbAddTitles(char *basedir) {
 	return num;
 }
 
+/**
+ * check if the 'range' part of the title is part of the path
+ * to the actual file. This is used to check if the title is
+ * part of a dedicated album or just floating in a mix dir
+ * or a sampler.
+ */
 static int32_t checkPath(mptitle_t * entry, int32_t range) {
 	char path[MAXPATHLEN];
 	char check[NAMELEN] = "";
@@ -544,7 +568,7 @@ int32_t dbNameCheck(void) {
 	snprintf(rmpath, MAXPATHLEN, "%s/.mixplay/rmlist.sh", getenv("HOME"));
 	fp = fopen(rmpath, "w");
 	if (NULL == fp) {
-		addMessage(-1, "Could not open %s for writing!", rmpath);
+		addMessage(-1, "Could not open<br>%s<br>for writing!", rmpath);
 		return -1;
 	}
 
@@ -562,6 +586,7 @@ int32_t dbNameCheck(void) {
 			runner = currentEntry->next;
 			do {
 				if (!(runner->flags & MP_MARK)) {
+					/* if the titles identify the same, check their paths */
 					if (strcmp(runner->display, currentEntry->display) == 0) {
 						match = 0;
 						if (checkPath(runner, mpc_artist)) {
@@ -583,6 +608,7 @@ int32_t dbNameCheck(void) {
 						case 3:	/* 0011 */
 						case 7:	/* 0111 */
 						case 11:	/* 1011 */
+							/* runner is in an album, currentEntry in a mix */
 							handleDBL(currentEntry);
 							addMessage(1, "Marked %s", currentEntry->path);
 							fprintf(fp, "## Original at %s\n", runner->path);
@@ -597,6 +623,7 @@ int32_t dbNameCheck(void) {
 						case 12:	/* 1100 */
 						case 13:	/* 1101 */
 						case 14:	/* 1110 */
+							/* currentEntry is in an album, runner in a mix */
 							handleDBL(runner);
 							addMessage(1, "Marked %s", runner->path);
 							fprintf(fp, "## Original at %s\n",
@@ -612,6 +639,7 @@ int32_t dbNameCheck(void) {
 						case 6:	/* 0110 */
 						case 9:	/* 1001 */
 						case 10:	/* 1010 */
+							/* both seem to be in a sampler/mix */
 							fprintf(fp, "## Uncertain match! Either:\n");
 							fprintf(fp, "#rm \"%s\"\n", currentEntry->path);
 							fprintf(fp,

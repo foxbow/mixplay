@@ -31,6 +31,10 @@ static int32_t _curclient = -1;
  * worth the effort!
  */
 int32_t setCurClient(int32_t client) {
+	if (client < 1) {
+		addMessage(0, "Can't lock one shot client!");
+		return -1;
+	}
 	if (pthread_mutex_trylock(&_clientlock) == EBUSY) {
 		if (_curclient == client) {
 			addMessage(MPV + 1, "Client %i is already locked!", client);
@@ -172,6 +176,23 @@ static jsonObject *jsonAddTitles(jsonObject * jo, const char *key,
 	return jo;
 }
 
+static jsonObject *jsonAddSres(jsonObject * jo, const char *key,
+							   const searchentry_t * entry, uint32_t num) {
+	jsonObject *val = NULL;
+
+	jo = jsonInitArr(jo, key);
+
+	for (uint32_t i = 0; i < num; i++) {
+		val = jsonAddStr(NULL, "name", entry[i].name);
+		jsonAddBool(val, "dnp", entry[i].dnp);
+		jsonAddBool(val, "fav", entry[i].fav);
+		val = jsonAddObj(NULL, "entry", val);
+		jsonAddArrElement(jo, val, json_object);
+	}
+
+	return jo;
+}
+
 static jsonObject *jsonAddList(jsonObject * jo, const char *key,
 							   marklist_t * list) {
 	jo = jsonInitArr(jo, key);
@@ -181,7 +202,7 @@ static jsonObject *jsonAddList(jsonObject * jo, const char *key,
 		/* cut off musicdir if it's given, list->dir starts with 'p=' */
 		if (startsWith(list->dir, "p=")) {
 			if (strlen(list->dir) < len) {
-				addMessage(-1, "%s is an illegal list entry!", list->dir);
+				addMessage(-1, "%s<br>is an illegal list entry!", list->dir);
 			}
 			else {
 				jsonAddArrElement(jo, list->dir + len, json_string);
@@ -225,9 +246,9 @@ char *serializeStatus(int32_t clientid, int32_t type) {
 	}
 	if (type & MPCOMM_RESULT) {
 		jsonAddTitles(jo, "titles", data->found->titles, 1);
-		jsonAddStrs(jo, "artists", data->found->artists, data->found->anum);
-		jsonAddStrs(jo, "albums", data->found->albums, data->found->lnum);
-		jsonAddStrs(jo, "albart", data->found->albart, data->found->lnum);
+		jsonAddSres(jo, "artists", data->found->artists, data->found->anum);
+		jsonAddSres(jo, "albums", data->found->albums, data->found->lnum);
+		jsonAddSres(jo, "albart", data->found->albart, data->found->lnum);
 	}
 	if (type & MPCOMM_LISTS) {
 		jsonAddList(jo, "dnplist", data->dnplist);
@@ -245,6 +266,7 @@ char *serializeStatus(int32_t clientid, int32_t type) {
 		jsonAddStr(jo, "bookmarklet",
 				   data->bookmarklet ? data->bookmarklet : "");
 		jsonAddInt(jo, "tnum", data->tnum);
+		jsonAddBool(jo, "upload", data->canUpload);
 	}
 	jsonAddInt(jo, "active", data->active);
 	jsonAddInt(jo, "playtime", data->playtime);
@@ -252,11 +274,10 @@ char *serializeStatus(int32_t clientid, int32_t type) {
 	jsonAddInt(jo, "percent", data->percent);
 	jsonAddInt(jo, "volume", data->volume);
 	jsonAddInt(jo, "status", data->status);
-	jsonAddStr(jo, "mpstatus", mpcString(data->status));
 	jsonAddInt(jo, "mpmode", data->mpmode);
 	jsonAddBool(jo, "mpfavplay", getFavplay());
-	jsonAddBool(jo, "searchDNP", data->searchDNP);
 	jsonAddInt(jo, "clientid", clientid);
+	jsonAddInt(jo, "process", data->process);
 	/* broadcast */
 
 	if (clientid > 0) {

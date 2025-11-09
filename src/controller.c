@@ -59,7 +59,7 @@ static int32_t playResults(mpcmd_t range, const char *arg, const bool insert) {
 			}
 
 			while (res != NULL) {
-				pos = addToPL(res->title, pos, 0);
+				pos = addToPL(res->title, pos, false);
 				if (config->current == NULL) {
 					config->current = pos;
 				}
@@ -82,7 +82,7 @@ static int32_t playResults(mpcmd_t range, const char *arg, const bool insert) {
 		 * won't come back! It's not been played before? Then play it now and
 		 * whenever it's time comes.
 		 */
-		pos = addToPL(title, pos, 0);
+		pos = addToPL(title, pos, false);
 		if (config->current == NULL) {
 			config->current = pos;
 		}
@@ -212,6 +212,7 @@ static void *plCheckDoublets(void *arg) {
 	else {
 		addMessage(0, "No doublets found");
 	}
+	setTnum();
 	unlockClient(-1);
 	pthread_mutex_unlock(lock);
 	return NULL;
@@ -259,6 +260,7 @@ static void *plDbClean(void *arg) {
 		}
 	}
 
+	setTnum();
 	unlockClient(-1);
 	pthread_mutex_unlock(lock);
 	return NULL;
@@ -269,6 +271,7 @@ static void *plDbFix(void *arg) {
 
 	addMessage(0, "Database smooth");
 	dumpInfo(1);
+	setTnum();
 	unlockClient(-1);
 	pthread_mutex_unlock(lock);
 	return NULL;
@@ -463,20 +466,14 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		break;
 
 	case mpc_doublets:
-		if (config->mpmode & PM_STREAM)
-			break;
 		if (checkPasswd(arg)) {
 			asyncRun(plCheckDoublets);
-			setTnum();
 		}
 		break;
 
 	case mpc_dbclean:
-		if (config->mpmode & PM_STREAM)
-			break;
 		if (checkPasswd(arg)) {
 			asyncRun(plDbClean);
-			setTnum();
 		}
 		break;
 
@@ -552,7 +549,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			addMessage(-1, "No name given!");
 		}
 		else if (strchr(arg, '/')) {
-			addMessage(-1, "Illegal profile name. Don't use '/'!");
+			addMessage(-1, "Illegal profile name.<br>Don't use '/'!");
 		}
 		else if ((config->current != NULL) && asyncTest()) {
 			addProfile(arg, config->streamURL, true);
@@ -655,10 +652,6 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		break;
 
 	case mpc_dbinfo:
-		if (config->mpmode & PM_STREAM) {
-			asyncRun(plDbInfo);
-			break;
-		}
 		/* TODO: very unintuitive! */
 		if ((arg) && checkPasswd(arg)) {
 			asyncRun(plDbFix);
@@ -681,7 +674,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			 * this duplicates the check in mpserver, so it should never happen */
 			assert(config->found->state == mpsearch_idle);
 
-			/* if the term is unset but the fuzzy is set, return the last ten
+			/* if the term is unset but the fuzzy bit is set, return the last ten
 			 * titles in the database */
 			if ((term == NULL) && !MPC_ISFUZZY(rcmd)) {
 				if (MPC_ISARTIST(rcmd)) {
@@ -718,12 +711,6 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		if (arg != NULL) {
 			setVolume(atoi(arg));
 		}
-		break;
-
-	case mpc_smode:
-		if (config->mpmode & PM_STREAM)
-			break;
-		config->searchDNP = !config->searchDNP;
 		break;
 
 	case mpc_deldnp:

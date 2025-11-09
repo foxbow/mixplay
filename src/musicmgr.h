@@ -45,7 +45,8 @@ struct mptitle_s {
 	mptitle_t *next;
 };
 
-typedef struct mpplaylist_s mpplaylist_t;
+/* A list of titles that keeps the title chain intact */
+typedef struct mpplaylist_s mpplaylist_t; // forward declaration
 struct mpplaylist_s {
 	mptitle_t *title;
 	mpplaylist_t *prev;
@@ -59,13 +60,19 @@ typedef enum {
 } mpsearch_t;
 
 typedef struct {
+	char *name;
+	bool fav;
+	bool dnp;
+} searchentry_t;
+
+typedef struct {
 	uint32_t tnum;
 	uint32_t anum;
 	uint32_t lnum;
 	mpplaylist_t *titles;
-	char **artists;
-	char **albums;
-	char **albart;
+	searchentry_t *artists;
+	searchentry_t *albums;
+	searchentry_t *albart;
 	mpsearch_t state;
 } searchresults_t;
 
@@ -80,8 +87,7 @@ struct marklist_s {
 /**
  * playlist functions
  */
-mpplaylist_t *addToPL(mptitle_t * title, mpplaylist_t * target,
-					  const int32_t mark);
+mpplaylist_t *addToPL(mptitle_t * title, mpplaylist_t * target, bool mark);
 mpplaylist_t *remFromPLByKey(const uint32_t key);
 mpplaylist_t *addPLDummy(mpplaylist_t * pl, const char *name);
 void plCheck(bool del);
@@ -92,6 +98,8 @@ mptitle_t *rewindTitles(mptitle_t * base);
 mptitle_t *loadPlaylist(const char *path);
 mptitle_t *insertTitle(mptitle_t * base, const char *path);
 int32_t search(const mpcmd_t range, const char *pat);
+mptitle_t *addNewPath(const char *path);
+bool mp3FileExists(const char *name);
 
 void moveTitleByIndex(uint32_t from, uint32_t before);
 

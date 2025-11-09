@@ -3,6 +3,7 @@
    MPCOMM_RESULT == 2 - searchresult
    MPCOMM_LISTS == 4 - dnp/fav lists
    MPCOMM_CONFIG == 8 - configuration
+   MPCOMM_ABORT == 16 - abort upload
    -1 - stopped */
 var doUpdate = 13
 var isstream = 0
@@ -11,8 +12,6 @@ var msgpos = 0
 var scrolls = []
 var numscrolls = 0
 var favplay = 0
-var cmdtosend = ''
-var argtosend = ''
 var smallUI = 0
 var active = 0
 var swipest = []
@@ -36,6 +35,8 @@ var lastsearch = ''
 var profiles = []
 var lineout = 0
 var allnum = 0
+let controller = null
+var portrait = false
 
 function debugLog (txt) {
   if (debug) {
@@ -161,8 +162,6 @@ function sendArg (cmd) {
  *  - <num>            : sendCMD(<num>) on okay
  *  - function() {...} : callback to invoke on okay
  * arg is an optional argument to be given if ok is a number
- * 
- * todo: is ok ever used as a function?
  */
 function showConfirm (msg, ok, arg="") {
   const cdiv = document.getElementById('confirm')
@@ -238,25 +237,6 @@ function replaceChild (e, c) {
 }
 
 /*
- * switches search mode and removes previous results
- */
-function toggleSearch () {
-  sendCMD(0x0019)
-  var e = document.getElementById('search0')
-  var text = document.createElement('em')
-  text.innerHTML = 'No titles found!'
-  replaceChild(e, text)
-  e = document.getElementById('search1')
-  text = document.createElement('em')
-  text.innerHTML = 'No artists found!'
-  replaceChild(e, text)
-  e = document.getElementById('search2')
-  text = document.createElement('em')
-  text.innerHTML = 'No albums found!'
-  replaceChild(e, text)
-}
-
-/*
  * check if a long text needs to be eolled and then scroll into the
  * proper direction
  */
@@ -306,7 +286,7 @@ function adaptUI (keep) {
   var i
   var fsize
   var bsize
-  const portrait = (h > window.innerWidth * 1.3)
+  portrait = (h > window.innerWidth * 1.3)
 
   /* cludge to keep stuff readable on non-aliasing displays */
   if (!portrait) {
@@ -523,6 +503,7 @@ function addText (text) {
   var line = ''
   var numlines = 10
   var b = document.getElementById('cextra2')
+  // TODO: is still still being used?
   if ((text.charAt(0) !== '+') && (b.className === 'inactive')) {
     b.className = 'alert'
   }
@@ -547,6 +528,18 @@ function addText (text) {
   e.innerHTML = line
 }
 
+function setText (text) {
+  var e = document.getElementById('messages')
+  var line = ''
+  msglines[0] = text
+  for (i = 0; i < msgpos; i++) {
+    if (msglines[i] !== '') {
+      line += msglines[i] + '<br>\n'
+    }
+  }
+  e.innerHTML = line
+}
+
 var moveline = ''
 /*
  * send a command with optional argument to the server
@@ -556,6 +549,7 @@ function sendCMDArg (cmd, arg) {
   var code
   var e
   var text
+  var idtosend = 0 // default one shot
 
   debugLog('send ' + cmd + ' - ' + arg)
 
@@ -637,64 +631,78 @@ function sendCMDArg (cmd, arg) {
     /* all these commands have a progress */
     case 0x13: /* mpc_search */
       lastsearch = arg
-      if (cmdtosend === '') {
-        switchView(3)
-        e = document.getElementById('search0')
-        text = document.createElement('em')
-        text.innerHTML = '.. searching ..'
-        replaceChild(e, text)
-        e = document.getElementById('search1')
-        text = document.createElement('em')
-        text.innerHTML = '.. searching ..'
-        replaceChild(e, text)
-        e = document.getElementById('search2')
-        text = document.createElement('em')
-        text.innerHTML = '.. searching ..'
-        replaceChild(e, text)
-      }
+      switchView(3)
+      e = document.getElementById('search0')
+      text = document.createElement('em')
+      text.innerHTML = '.. searching ..'
+      replaceChild(e, text)
+      e = document.getElementById('search1')
+      text = document.createElement('em')
+      text.innerHTML = '.. searching ..'
+      replaceChild(e, text)
+      e = document.getElementById('search2')
+      text = document.createElement('em')
+      text.innerHTML = '.. searching ..'
+      replaceChild(e, text)
     /* fallthrough */
     case 0x08: /* mpc_dbclean */
     case 0x0b: /* mpc_doublets */
     case 0x12: /* mpc_dbinfo */
-      if (cmdtosend === '') {
-        cmdtosend = cmd
-        argtosend = arg
-      } else {
-        showConfirm('Busy, sorry.')
-      }
-      return
+      idtosend = clientid
   }
 
   xmlhttp.onreadystatechange = function () {
-    if (xmlhttp.readyState === 4) {
-      switch (xmlhttp.status) {
-        case 0:
-          fail('CMD Error: connection lost!')
-          break
-        case 200:
-          showConfirm('One shot command returned unexpected data!<br>' + xmlhttp.responseText)
-          /* fallthrough */
-        case 204:
-          /* TODO: this is not correct! */
-          if (doUpdate < 0) {
-            document.location.reload()
-          }
-          break
-        case 503:
-          showConfirm('Sorry, we\'re busy!')
-          break
-        default:
-          fail('Received Error ' + xmlhttp.status + ' after sending 0x' + code)
-      }
-    }
+    checkReply(xmlhttp)
   }
 
-  /* one shots - fire and forget */
-  var json = JSON.stringify({ cmd: cmd, arg: arg, clientid: 0 })
-  debugLog('oreq: ' + json)
+  var json = JSON.stringify({ cmd: cmd, arg: arg, clientid: idtosend })
+  debugLog('creq: ' + json)
 
   xmlhttp.open('POST', '/mpctrl/cmd?' + json, true)
   xmlhttp.send()
+}
+
+function sendUpload(event) {
+  event.preventDefault();
+  if (document.getElementById('filename').files.length == 0) {
+    addText('No file selected!')
+  }
+  else {
+    uploadFiles()
+  }
+}
+
+function uploadFiles() {
+  const form = document.getElementById('upload')
+  const formData = new FormData(form)
+  controller = new AbortController()
+
+  const fetchOptions = {
+    method: 'post',
+    body: formData,
+    signal: controller.signal
+  }
+
+  json = JSON.stringify({ cmd: 0, clientid: clientid })
+  fetch('/upload?' + json, fetchOptions)
+  .then((response) => {
+    debugLog('fetch returned:' + response.ok + '/' + response.status)
+    if (!response.ok) {
+      switch (response.status) {
+        case 405: 
+          debugLog('Upload rejected!');
+          break
+        default:
+          // something we did not expect!
+          throw new Error(`HTTP error, status = ${response.status}`);
+      }
+      controller = null
+    }
+  })
+  .catch((error) => {
+    debugLog('Upload Error ' + error.message)
+    controller = null
+  })
 }
 
 /* send command without arguments */
@@ -926,7 +934,7 @@ function togglePopupDB (ident) {
 }
 
 /* returns a <div> with text that when clicked presents the choices */
-function popselect (choice, arg, text, drag, id) {
+function popselect (choice, arg, text, drag, id, ext=``) {
   var i
   var select
   var reply = document.createElement('p')
@@ -936,7 +944,7 @@ function popselect (choice, arg, text, drag, id) {
   const num = choice.length
   reply.innerHTML = text
   if (num > 0) {
-    reply.className = 'popselect'
+    reply.className = 'popselect' + ext
     reply.id = 'line' + id
     reply.onclick = function () { togglePopup(id) }
     var popspan = document.createElement('span')
@@ -956,7 +964,7 @@ function popselect (choice, arg, text, drag, id) {
     popspan.appendChild(select)
     reply.appendChild(popspan)
   } else {
-    reply.className = 'nopopselect'
+    reply.className = 'nopopselect' + ext
   }
 
   /* playlist ordering does not make sense in streams */
@@ -1205,23 +1213,30 @@ function searchUpdate (data) {
   var e = document.getElementById('search2')
   wipeElements(e)
   if (data.albums.length > 0) {
+    fdext=''
     enableElement('csearch2', 1)
     switchTabByRef('search', 2)
     for (i = 0; i < data.albums.length; i++) {
       choices = []
       choices.push(['&#x26b2;', 0x0413]) // search album
       if (!isstream) {
-        if (!favplay || data.searchDNP) {
+        fdext = ''
+        if (!data.albums[i].fav) {
           choices.push(['&#x2665;', 0x0409]) // fav
         }
-        if (!data.searchDNP) {
+        else {
+          fdext='fav'
+        }
+        if (!data.albums[i].dnp) {
           choices.push(['&#x2620;', 0x040a]) // dnp
         }
+        else {
+          fdext='dnp'
+        }
       }
-
       items[i] = popselect(choices,
-        data.albums[i],
-        data.albart[i] + ' - ' + data.albums[i], 0, lineid++)
+        data.albums[i].name,
+        data.albums[i].name + ' - ' + data.albart[i].name, 0, lineid++, fdext)
     }
   } else {
     enableElement('csearch2', 0)
@@ -1238,19 +1253,26 @@ function searchUpdate (data) {
     enableElement('csearch1', 1)
     switchTabByRef('search', 1)
     for (i = 0; i < data.artists.length; i++) {
+      fdext = ''
       choices = []
       choices.push(['&#x26b2;', 0x0213]) // search
       if (!isstream) {
-        if (!favplay || data.searchDNP) {
+        if (!data.artists[i].fav) {
           choices.push(['&#x2665;', 0x0209]) // fav
         }
-        if (!data.searchDNP) {
+        else {
+          fdext='fav'
+        }
+        if (!data.artists[i].dnp) {
           choices.push(['&#x2620;', 0x020a]) // dnp
+        }
+        else {
+          fdext='dnp'
         }
       }
       items[i] = popselect(choices,
-        data.artists[i],
-        data.artists[i], 0, lineid++)
+        data.artists[i].name,
+        data.artists[i].name, 0, lineid++, fdext)
     }
   } else {
     enableElement('csearch1', 0)
@@ -1268,10 +1290,10 @@ function searchUpdate (data) {
     switchTabByRef('search', 0)
     choices = []
     if (!isstream) {
-      if (!favplay || data.searchDNP) {
+      if (!favplay || !(data.titles.flags & 0x0001)) {
         choices.push(['&#x2665;', 0x1009]) // fav
       }
-      if (!data.searchDNP) {
+      if (!(data.titles.flags & 0x0002)) {
         choices.push(['&#x2620;', 0x100a]) // dnp
       }
       choices.push(['&#x276f;', 0x100c]) // next
@@ -1286,12 +1308,19 @@ function searchUpdate (data) {
     }
     for (i = 0; i < data.titles.length; i++) {
       choices = []
+      fdext = ''
       if (!isstream) {
         if (!(data.titles[i].flags & 1)) {
           choices.push(['&#x2665;', 0x1009]) // fav
         }
+        else {
+          fdext = 'fav'
+        }
         if (!(data.titles[i].flags & 2)) {
           choices.push(['&#x2620;', 0x100a]) // dnp
+        }
+        else {
+          fdext = 'dnp'
         }
         choices.push(['&#x276f;', 0x100c]) // next
         choices.push(['&#x276f;&#x276f;', 0x1014]) // append
@@ -1299,7 +1328,7 @@ function searchUpdate (data) {
       choices.push(['&#x1f4be;', 'download'])
       items[i + 1] = popselect(choices,
         data.titles[i].key,
-        data.titles[i].artist + ' - ' + data.titles[i].title, 0, lineid++)
+        data.titles[i].title + ' - ' + data.titles[i].artist, 0, lineid++, fdext)
     }
   } else {
     enableElement('csearch0', 0)
@@ -1402,12 +1431,6 @@ function playerUpdate (data) {
     clientid = data.clientid
   }
 
-  if (data.searchDNP) {
-    document.getElementById('searchmode').innerHTML = 'DNP'
-  } else {
-    document.getElementById('searchmode').innerHTML = 'Active'
-  }
-
   favplay = data.mpfavplay
   if (favplay) {
     document.getElementById('setfavplay').innerHTML = 'Disable Favplay'
@@ -1493,11 +1516,84 @@ function playerUpdate (data) {
       setElement('title', '..' + data.msg.substring(4) + '..')
       adaptUI(1)
     } else {
+      toval = 50
       addText(data.msg)
     }
   }
+  else {
+    toval = 500
+  }
 
-  setElement('status', data.mpstatus)
+  if (upload === true) {
+    if ((data.type & 16) && (controller !== null)) {
+      debugLog('Server abort')
+      controller.abort()
+    }
+    else if (data.process > 0) {
+      enableElement('process', 1)
+      enableElement('upload', 0)
+      document.getElementById('processbar').style.width = data.process + '%'    
+    }
+    else {
+      enableElement('process', 0)
+      enableElement('upload', 1)
+    }
+  }
+}
+
+function checkReply (xmlhttp) {
+  var data
+  if (xmlhttp.readyState === 4) {
+    switch (xmlhttp.status) {
+      case 0:
+        fail('CMD Error: connection lost!')
+        break
+      case 200:
+        /* there is payload beyond 'OK' so interpret it */
+        if (xmlhttp.responseText.length > 3) {
+          data = JSON.parse(xmlhttp.responseText)
+          /* elCheapo locking */
+          if (inUpdate++ > 1) {
+            debugLog('Active update!')
+            doUpdate |= data.type
+          } else {
+            /* standard update */
+            playerUpdate(data)
+            /* full update */
+            if (data.type & 1) {
+              fullUpdate(data)
+            }
+            /* search results */
+            if (data.type & 2) {
+              searchUpdate(data)
+            }
+            /* dnp/fav lists */
+            if (data.type & 4) {
+              dnpfavUpdate(data)
+            }
+            /* config */
+            if (data.type & 8) {
+              updateConfig(data)
+            }
+          }
+          inUpdate--
+        }
+        /* fallthrough */
+      case 204:
+        if (doUpdate < 0) {
+          document.location.reload()
+        }
+        break
+      case 503:
+        showConfirm('Sorry, we\'re busy!')
+        break
+      default:
+        fail('Received Error ' + xmlhttp.status)
+    }
+    if (doUpdate < 0) {
+      document.body.className = 'disconnect'
+    }
+  }
 }
 
 /*
@@ -1509,84 +1605,23 @@ function updateUI () {
   var json
 
   xmlhttp.onreadystatechange = function () {
-    var data
+    checkReply(xmlhttp)
     if (xmlhttp.readyState === 4) {
-      switch (xmlhttp.status) {
-        case 0:
-          fail('CMD Error: connection lost!')
-          break
-        case 200:
-          data = JSON.parse(xmlhttp.responseText)
-          if (data !== undefined) {
-            /* elCheapo locking */
-            if (inUpdate++ > 1) {
-              /* TODO turn this into debugLog */
-              addText('Active update!')
-              doUpdate |= data.type
-            } else {
-              /* standard update */
-              playerUpdate(data)
-              /* full update */
-              if (data.type & 1) {
-                fullUpdate(data)
-              }
-              /* search results */
-              if (data.type & 2) {
-                searchUpdate(data)
-              }
-              /* dnp/fav lists */
-              if (data.type & 4) {
-                dnpfavUpdate(data)
-              }
-              /* config */
-              if (data.type & 8) {
-                updateConfig(data)
-              }
-            }
-            inUpdate--
-          } else {
-            debugLog('JSON-less reply on status 200!')
-          }
-          /* fallthrough */
-        case 204:
-          if (doUpdate < 0) {
-            document.location.reload()
-          }
-          break
-        case 503:
-          showConfirm('Sorry, we\'re busy!')
-          break
-        default:
-          fail('Received Error ' + xmlhttp.status)
-      }
-      if (doUpdate < 0) {
-        document.body.className = 'disconnect'
-      }
-
       setTimeout(function () { updateUI() }, toval)
-    } /* replyState === 4 */
+    }
   } /* readyState callback */
 
-  if (cmdtosend !== '') {
-    /* 'synchronous' command - reply has info */
-    json = JSON.stringify({ cmd: cmdtosend, arg: argtosend, clientid: clientid })
-    debugLog('areq: ' + json)
-    xmlhttp.open('POST', '/mpctrl/cmd?' + json, true)
-    cmdtosend = ''
-    argtosend = ''
+  if (doUpdate >= 0) {
+    json = JSON.stringify({ cmd: doUpdate, clientid: clientid })
+    doUpdate = 0
+    // debugLog('ureq: ' + json)
   } else {
-    if (doUpdate >= 0) {
-      json = JSON.stringify({ cmd: doUpdate, clientid: clientid })
-      doUpdate = 0
-      debugLog('ureq: ' + json)
-    } else {
-      /* reconnect and fetch new clientID */
-      clientid = -1
-      json = JSON.stringify({ cmd: 0, clientid: clientid })
-      debugLog('rreq: ' + json)
-    }
-    xmlhttp.open('GET', '/mpctrl/status?' + json, true)
+    /* reconnect and fetch new clientID */
+    clientid = -1
+    json = JSON.stringify({ cmd: 0, clientid: clientid })
+    debugLog('rreq: ' + json)
   }
+  xmlhttp.open('GET', '/mpctrl/status?' + json, true)
   xmlhttp.send()
 }
 
@@ -1705,8 +1740,9 @@ function updateConfig (data) {
   /*  idlesleep = data.sleepto * 1000 */
 
   /* these should be elements.. */
-  lineout = data.lineout;
-  allnum = data.tnum;
+  lineout = data.lineout
+  allnum = data.tnum
+  upload = data.upload
 
   /* client debug is off but the server is in full debug mode */
   if ((debug === false) && (data.debug > 1)) {
@@ -2022,6 +2058,7 @@ function initializeUI () {
   document.body.addEventListener('keypress', handleKey)
   document.body.addEventListener('keyup', blockSpace)
   document.body.addEventListener('click', function () { tap() })
+  document.getElementById('upload').addEventListener('submit', sendUpload)
   /* set initial tab and sizes */
   adaptUI(0)
   /* initialize scrolltext */

@@ -130,7 +130,7 @@ static char *sendRequest(const char *path) {
 		return NULL;
 	}
 
-	if (strstr(reply, "HTTP/1.1 200") == reply) {
+	if (strstr(reply, "HTTP/1.0 200") == reply) {
 		pos = strstr(reply, "Content-Length:");
 		if (pos != NULL) {
 			pos += strlen("Content-Length:") + 1;

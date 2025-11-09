@@ -57,7 +57,7 @@ typedef enum {
 	mpc_newprof,
 	mpc_path,
 	mpc_remprof,
-	mpc_smode,
+	mpc_UNUSED,
 	mpc_deldnp,
 	mpc_delfav,
 	mpc_remove,
@@ -79,8 +79,6 @@ typedef enum {
 
 /* some filtermasks */
 #define MPC_DFRANGE  (mpc_genre|mpc_artist|mpc_album|mpc_title|mpc_display)
-#define MPC_DNPFAV   (mpc_dnp|mpc_fav)
-#define MPC_DFALL    (MPC_DFRANGE|MPC_DNPFAV)
 
 #include "musicmgr.h"
 
@@ -183,13 +181,13 @@ typedef struct {
 	uint32_t lineout;			/* enable line-out at fix volume */
 	int32_t linestream;			/* stream play volume modifier */
 	uint32_t fade;				/* controls fading between titles */
-	/* flags for mpmode */
-	bool searchDNP;
 	/* other flags */
 	bool isDaemon;
 	bool inUI;					/* flag to show if the UI is active */
 	bool playlist;				/* remote playlist */
 	uint32_t tnum;				/* number of titles in the current profile */
+	bool canUpload;
+	uint32_t process;
 } mpconfig_t;
 
 /* message request types */
@@ -203,6 +201,8 @@ typedef struct {
 #define MPCOMM_LISTS 4
 /* return immutable configuration */
 #define MPCOMM_CONFIG 8
+/* abort upload */
+#define MPCOMM_ABORT 16
 
 void writeConfig(const char *musicpath);
 mpconfig_t *readConfig(void);
@@ -220,6 +220,8 @@ profile_t *getProfile(uint32_t id);
 int32_t getProfileIndex(uint32_t id);
 int32_t getProfileVolume(uint32_t id);
 bool isStream(profile_t * profile);
+void setProcess(uint32_t percent);
+uint32_t getProcess(void);
 
 #define isStreamActive() isStream(getProfile(getConfig()->active))
 
