@@ -608,12 +608,15 @@ int32_t search(const mpcmd_t range, const char *pat) {
 			/* two titles in a row with the same album? */
 			if (strieq(runner->album, runner->prev->album)) {
 				addAlbum(res, runner);
-				if (res->lnum > 9)
+				if (res->lnum > 9) {
+					/* check if the last album is a sampler */
+					addAlbum(res, runner->prev);
 					break;
+				}
 				else
 					continue;
 			}
-			/* last album title? */
+			/* skip last album title or add single title */
 			if ((res->lnum == 0)
 				|| !strieq(runner->album, res->albums[res->lnum - 1].name)) {
 				res->titles = appendToPL(runner, res->titles, false);
