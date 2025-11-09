@@ -36,6 +36,7 @@ var profiles = []
 var lineout = 0
 var allnum = 0
 let controller = null
+var portrait = false
 
 function debugLog (txt) {
   if (debug) {
@@ -285,7 +286,7 @@ function adaptUI (keep) {
   var i
   var fsize
   var bsize
-  const portrait = (h > window.innerWidth * 1.3)
+  portrait = (h > window.innerWidth * 1.3)
 
   /* cludge to keep stuff readable on non-aliasing displays */
   if (!portrait) {
@@ -1233,10 +1234,9 @@ function searchUpdate (data) {
           fdext='dnp'
         }
       }
-
       items[i] = popselect(choices,
         data.albums[i].name,
-        data.albart[i].name + ' - ' + data.albums[i].name, 0, lineid++, fdext)
+        data.albums[i].name + ' - ' + data.albart[i].name, 0, lineid++, fdext)
     }
   } else {
     enableElement('csearch2', 0)
@@ -1328,7 +1328,7 @@ function searchUpdate (data) {
       choices.push(['&#x1f4be;', 'download'])
       items[i + 1] = popselect(choices,
         data.titles[i].key,
-        data.titles[i].artist + ' - ' + data.titles[i].title, 0, lineid++, fdext)
+        data.titles[i].title + ' - ' + data.titles[i].artist, 0, lineid++, fdext)
     }
   } else {
     enableElement('csearch0', 0)
