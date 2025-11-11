@@ -57,6 +57,17 @@ mpcmd_t hidCMD(int32_t c) {
 		hidPrintline("%s", "");
 	}
 
+	if (c == '?') {
+		hidPrintline("Commands:\n"
+					 "space - play/pause\n"
+					 " p - previous title\n"
+					 " n - next title\n"
+					 " f - mark as favourite\n"
+					 " d - mark as DNP\n"
+					 " - - mute\n"
+					 " Q - Quit\n"
+					 " . - increase volume\n" " , - decrease volume");
+	}
 	return cmd;
 }
 

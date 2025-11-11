@@ -1045,6 +1045,9 @@ jsonObject *jsonAddInt(jsonObject * jo, const char *key, const int32_t val) {
  * creates a new JSON object object and appends it to the end of the given root object chain
  */
 jsonObject *jsonAddObj(jsonObject * jo, const char *key, jsonObject * val) {
+	/* do not create loops! */
+	assert(jo != val);
+
 	jo = jsonAppend(jo, key);
 	jo->type = json_object;
 	if (val == NULL) {

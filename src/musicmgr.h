@@ -46,7 +46,7 @@ struct mptitle_s {
 };
 
 /* A list of titles that keeps the title chain intact */
-typedef struct mpplaylist_s mpplaylist_t; // forward declaration
+typedef struct mpplaylist_s mpplaylist_t;	// forward declaration
 struct mpplaylist_s {
 	mptitle_t *title;
 	mpplaylist_t *prev;
