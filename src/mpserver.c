@@ -1183,7 +1183,7 @@ static void sendReply(chandle_t * handle) {
  * 5*clientnum triggerClient() calls the old client will be marked as dead
  * again. It is not worth trying to clean up that id!
  */
-static void *clientHandler(void *args) {
+static void clientHandler(int arg) {
 	mpconfig_t *config;
 
 	chandle_t handle;
@@ -1195,7 +1195,7 @@ static void *clientHandler(void *args) {
 	handle.cmd = 0;
 	handle.arg = NULL;
 	handle.clientid = 0;
-	handle.sock = (int32_t) (long) args;
+	handle.sock = arg;
 	handle.filedef = f_none;
 	handle.filesz = 0;
 	handle.filerd = 0;
@@ -1264,21 +1264,71 @@ static void *clientHandler(void *args) {
 	pthread_mutex_unlock(&_sendlock);
 	close(handle.sock);
 	sfree(&(handle.commdata));
+}
 
+/**
+ * thread pool control structure
+ */
+typedef struct {
+	pthread_cond_t notify;
+	pthread_mutex_t mutex;
+	bool stop;					// shut down the pool then true
+	int fd;						// parameter space
+	int idle;					// housekeeping, how many threads are idle
+} poolControl_t;
+
+/**
+ * the thread pool worker thread
+ */
+static void *poolthread(void *arg) {
+	poolControl_t *pool = (poolControl_t *) arg;
+	int runarg;
+
+	for (;;) {
+		/* make sure we are exclusive owners of the pool */
+		pthread_mutex_lock(&(pool->mutex));
+		pool->idle++;
+		/* wait for a notification */
+		do {
+			pthread_cond_wait(&(pool->notify), &(pool->mutex));
+		} while ((pool->fd == -1) && !pool->stop);
+
+		/* Shutdown everything */
+		if (pool->stop) {
+			break;
+		}
+
+		/* save the argument and clear the pool marker */
+		runarg = pool->fd;
+		pool->fd = -1;
+		pool->idle--;
+
+		/* Let the next one check */
+		pthread_mutex_unlock(&(pool->mutex));
+
+		/* Handle client */
+		clientHandler(runarg);
+	}
+
+	pthread_mutex_unlock(&(pool->mutex));
+	pthread_exit(NULL);
 	return NULL;
 }
+
+#define NUM_THREADS 10
 
 /**
  * offers a HTTP connection to the player
  * must be called through startServer()
  */
 static void *mpserver(void *arg) {
-	struct pollfd pfd;
 	int32_t mainsocket = (int32_t) (long) arg;
-	int32_t client_sock;
-	socklen_t alen;
 	mpconfig_t *control = getConfig();
-	int32_t devnull = 0;
+	pthread_t *threadpool;		// the actual pool
+
+	poolControl_t pool;
+
+	memset(&pool, 0, sizeof (poolControl_t));
 
 	blockSigint();
 
@@ -1287,7 +1337,9 @@ static void *mpserver(void *arg) {
 
 	/* redirect stdin/out/err in demon mode */
 	if (control->isDaemon) {
-		if ((devnull = open("/dev/null", O_RDWR | O_NOCTTY)) == -1) {
+		int32_t devnull = open("/dev/null", O_RDWR | O_NOCTTY);
+
+		if (devnull == -1) {
 			fail(errno, "Could not open /dev/null!");
 		}
 		if (dup2(devnull, STDIN_FILENO) == -1 ||
@@ -1303,36 +1355,72 @@ static void *mpserver(void *arg) {
 	 * queued so the first client will see them. */
 	control->inUI = true;
 
+	/* initialize the threadpool */
+	threadpool = (pthread_t *) malloc(sizeof (pthread_t) * NUM_THREADS);
+	pthread_mutex_init(&(pool.mutex), NULL);
+	pthread_cond_init(&(pool.notify), NULL);
+	pool.stop = false;
+
+	/* start all the threads */
+	for (int i = 0; i < NUM_THREADS; i++) {
+		char tname[MAXPATHLEN];
+
+		if (pthread_create(&(threadpool[i]), NULL,
+						   poolthread, (void *) &pool) != 0) {
+			fail(F_FAIL, "Could not create client handler threadpool!");
+			return NULL;
+		}
+		else {
+			snprintf(tname, MAXPATHLEN - 1, "clienthandler #%i", i);
+			pthread_setname_np(threadpool[i], tname);
+		}
+	}
+
 	/* Start main loop */
+	struct pollfd pfd;
+
 	pfd.fd = mainsocket;
 	pfd.events = POLLIN;
 
 	while (control->status != mpc_quit) {
 		if (poll(&pfd, 1, 250) > 0) {
-			pthread_t pid;
+			socklen_t dummy = 0;
+			int32_t client_sock = accept(mainsocket, NULL, &dummy);
 
-			alen = 0;
-			client_sock = accept(mainsocket, NULL, &alen);
 			if (client_sock < 0) {
 				addMessage(0, "accept() failed!");
 				continue;
 			}
 			addMessage(MPV + 3, "Connection accepted");
 
-			/* todo collect pids?
-			 * or better use a threadpool */
-			if (pthread_create
-				(&pid, NULL, clientHandler, (void *) (long) client_sock) < 0) {
-				addMessage(0, "Could not create client handler thread!");
+			pthread_mutex_lock(&(pool.mutex));
+			if (pool.idle == 0) {
+				/* I wonder if this ever happens ... */
+				addMessage(0, "Ran out of client threads!");
 			}
-			else {
-				pthread_setname_np(pid, "clientHandler");
-			}
+			pool.fd = client_sock;
+			pthread_cond_signal(&(pool.notify));
+			pthread_mutex_unlock(&pool.mutex);
 		}
 	}
+
+	/* clean up thread pool */
+	pool.stop = true;
+	pthread_mutex_lock(&(pool.mutex));
+	pthread_cond_broadcast(&(pool.notify));
+	pthread_mutex_unlock(&(pool.mutex));
+
+	/* wait for everyone to return */
+	for (int i = 0; i < NUM_THREADS; i++) {
+		pthread_join(threadpool[i], NULL);
+	}
+
+	/* free threadpool resources */
+	sfree((char **) &threadpool);
+	pthread_mutex_destroy(&(pool.mutex));
+	pthread_cond_destroy(&(pool.notify));
+
 	addMessage(0, "Server stopped");
-	/* todo this may return before the threads are done cleaning up.. */
-	sleep(1);					// join()ing the threads would be cleaner!
 	close(mainsocket);
 
 	return NULL;
