@@ -453,7 +453,7 @@ static uint32_t matchTitle(mptitle_t * title, const char *pat) {
 				res = mpc_display;
 			break;
 
-		case 'p': /* still used in doublets */
+		case 'p':				/* still used in doublets */
 			if (isMatch(title->path, pat + 2, fuzzy)) {
 				res = mpc_title;
 			}
@@ -500,7 +500,7 @@ static int32_t addRangePrefix(mpcmd_t cmd, char *line) {
 	return 0;
 }
 
-static void setFlags(searchentry_t *entry, mpcmd_t type) {
+static void setFlags(searchentry_t * entry, mpcmd_t type) {
 	char line[MAXPATHLEN + 2];
 
 	if (isStreamActive()) {

@@ -389,9 +389,9 @@ static bool fetchRequest(chandle_t * handle) {
 			break;
 		default:
 			if (deathcount++ > 7) {
-				/* timeout, no one was calling for two seconds */
-				// addMessage(MPV + 2, "Reaping unused clienthandler");
-				addMessage(0, "Reaping unused clienthandler for %i",
+				/* timeout, no one was calling for two seconds 
+				 * commonly happens when a mobile client closes */
+				addMessage(MPV + 0, "Reaping unused clienthandler for %i",
 						   handle->clientid);
 				handle->running = CL_STP;
 				return false;
@@ -1023,7 +1023,9 @@ static void sendReply(chandle_t * handle) {
 
 		if (jsonLine != NULL) {
 			sprintf(handle->commdata,
-					"HTTP/1.0 200 OK\015\012Content-Type: application/json; charset=utf-8\015\012Content-Length: %i\015\012\015\012",
+					"HTTP/1.0 200 OK\015\012"
+					"Content-Type: application/json; charset=utf-8\015\012"
+					"Content-Length: %i\015\012\015\012",
 					(int32_t) strlen(jsonLine));
 			while ((ssize_t) (strlen(jsonLine) + strlen(handle->commdata) + 8)
 				   > handle->commsize) {
@@ -1069,7 +1071,9 @@ static void sendReply(chandle_t * handle) {
 			size_t flen = sbuf.st_size;
 
 			sprintf(handle->commdata,
-					"HTTP/1.0 200 OK\015\012Content-Type: %s;\015\012Content-Length: %zu\015\012\015\012",
+					"HTTP/1.0 200 OK\015\012"
+					"Content-Type: %s\015\012"
+					"Content-Length: %zu\015\012\015\012",
 					filedef->mtype, flen);
 			sendloop(handle->sock, handle->commdata, strlen(handle->commdata));
 			filePost(handle->sock, filedef->fname);
@@ -1077,7 +1081,9 @@ static void sendReply(chandle_t * handle) {
 		else {
 			handle->len = 0;
 			sprintf(handle->commdata,
-					"HTTP/1.0 200 OK\015\012Content-Type: %s;\015\012Content-Length: %zu\015\012\015\012",
+					"HTTP/1.0 200 OK\015\012"
+					"Content-Type: %s\015\012"
+					"Content-Length: %zu\015\012\015\012",
 					filedef->mtype, filedef->flen);
 
 			sendloop(handle->sock, handle->commdata, strlen(handle->commdata));
@@ -1085,8 +1091,6 @@ static void sendReply(chandle_t * handle) {
 		}
 		pthread_mutex_unlock(&_sendlock);
 		handle->len = 0;
-		/* Now it should work */
-		// handle->running &= ~CL_RUN;
 		break;
 
 	case req_config:			/* get config should be unreachable */
@@ -1096,7 +1100,9 @@ static void sendReply(chandle_t * handle) {
 
 	case req_version:			/* get current build version */
 		sprintf(handle->commdata,
-				"HTTP/1.0 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i\015\012\015\012%s",
+				"HTTP/1.0 200 OK\015\012"
+				"Content-Type: text/plain; charset=utf-8\015\012"
+				"Content-Length: %i\015\012\015\012%s",
 				(int32_t) strlen(VERSION), VERSION);
 		handle->len = strlen(handle->commdata);
 		break;
@@ -1109,7 +1115,7 @@ static void sendReply(chandle_t * handle) {
 		/* remove anything non-ascii7bit from the filename so asian
 		 * smartphones don't consider the filename to be hanzi */
 		sprintf(handle->commdata,
-				"HTTP/1.0 200 OK\015\012Content-Type: audio/mpeg;\015\012"
+				"HTTP/1.0 200 OK\015\012Content-Type: audio/mpeg\015\012"
 				"Content-Length: %ld\015\012"
 				"Content-Disposition: attachment; filename=\"%s.mp3\""
 				"\015\012\015\012", sbuf.st_size, handle->title->display);
@@ -1119,7 +1125,6 @@ static void sendReply(chandle_t * handle) {
 		handle->title = NULL;
 		pthread_mutex_unlock(&_sendlock);
 		handle->len = 0;
-		handle->running = CL_STP;
 		break;
 
 	case req_current:			/* return "artist - title" line */
@@ -1131,15 +1136,18 @@ static void sendReply(chandle_t * handle) {
 			snprintf(line, MAXPATHLEN, "<initializing>");
 		}
 		sprintf(handle->commdata,
-				"HTTP/1.0 200 OK\015\012Content-Type: text/plain; charset=utf-8;\015\012Content-Length: %i\015\012\015\012%s",
+				"HTTP/1.0 200 OK\015\012"
+				"Content-Type: text/plain; charset=utf-8\015\012"
+				"Content-Length: %i\015\012\015\012%s",
 				(int32_t) strlen(line), line);
 		handle->len = strlen(handle->commdata);
 		break;
 
 	default:
-		addMessage(MPV, "No req_ set len=%zu", handle->len);
+		addMessage(MPV, "No req_ set, len=%zu", handle->len);
 	}
 
+	/* send prepared reply (if any) */
 	if (handle->len > 0) {
 		sendloop(handle->sock, handle->commdata, handle->len);
 		if (handle->fullstat & MPCOMM_RESULT) {

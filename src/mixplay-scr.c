@@ -1,7 +1,7 @@
 /* Screen saver client.
-   Checks the player's state every second. If the player
-	 is idle for longer than the given timeout, the screen is
-	 powered off via DPMS */
+ * Checks the player's state every second. If the player
+ * is idle for longer than the given timeout, the screen is
+ * powered off via DPMS */
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
@@ -12,20 +12,31 @@
 #include "mpclient.h"
 #include "utils.h"
 
+#define DISPLAYID ":0.0"
+
+/* have a Display singleton to avoid opening and closing 
+ * all the time */
+static Display *getDisplay() {
+	static Display *dpy_static = NULL;
+
+	if (dpy_static == NULL) {
+		dpy_static = XOpenDisplay(DISPLAYID);
+		if (dpy_static == NULL) {
+			fail(errno, "Could not open Display!");
+		}
+	}
+	return dpy_static;
+}
+
 static int32_t displayPower(int32_t on) {
 	int32_t dummy;
 	int32_t rv = -1;
-	Display *dpy;
-	const char *disp = ":0";
 
-	dpy = XOpenDisplay(disp);	/*  Open display and check for success */
-	if (dpy == NULL) {
-		return -1;
-	}
+	Display *dpy = getDisplay();
 
 	if (DPMSQueryExtension(dpy, &dummy, &dummy)) {
 		DPMSEnable(dpy);
-		usleep(100000);			// DPMSEnable us asynchronous so wait a bit
+		usleep(100000);			// DPMSEnable is asynchronous so wait a bit
 		if (on) {
 			DPMSForceLevel(dpy, DPMSModeOn);
 			rv = 1;
@@ -38,7 +49,6 @@ static int32_t displayPower(int32_t on) {
 	else {
 		rv = -2;
 	}
-	XCloseDisplay(dpy);
 	return rv;
 }
 
@@ -48,13 +58,9 @@ static int32_t getDisplayState() {
 	BOOL dummy2;
 	int32_t rv = -1;
 	Display *dpy;
-	const char *disp = ":0";
 	CARD16 level;
 
-	dpy = XOpenDisplay(disp);
-	if (dpy == NULL) {
-		return -1;
-	}
+	dpy = getDisplay();
 
 	if (DPMSQueryExtension(dpy, &dummy, &dummy)) {
 		DPMSEnable(dpy);
@@ -69,7 +75,6 @@ static int32_t getDisplayState() {
 	else {
 		rv = -2;
 	}
-	XCloseDisplay(dpy);
 	return rv;
 }
 
@@ -164,6 +169,12 @@ int32_t main() {
 	}
 
 	syslog(LOG_INFO, "Exiting with state=mpc_%s)", mpcString(state));
+
 	/* always turn the screen on on exit */
-	displayPower(1);
+	Display *dpy = getDisplay();
+
+	if (dpy != NULL) {
+		displayPower(1);
+		XCloseDisplay(dpy);
+	}
 }
