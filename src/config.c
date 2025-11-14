@@ -344,6 +344,7 @@ mpconfig_t *readConfig(void) {
 	_cconfig->lineout = 0;
 	_cconfig->linestream = VOLUME_STREAM;
 	_cconfig->process = 0;
+	_cconfig->stop = false;
 
 	snprintf(_cconfig->dbname, MAXPATHLEN, "%s/.mixplay/mixplay.db", home);
 

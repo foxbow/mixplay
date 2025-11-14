@@ -188,6 +188,7 @@ typedef struct {
 	uint32_t tnum;				/* number of titles in the current profile */
 	bool canUpload;
 	uint32_t process;
+	bool stop;					/* don't play on start */
 } mpconfig_t;
 
 /* message request types */
