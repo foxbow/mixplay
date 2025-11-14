@@ -387,7 +387,14 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		else {
 			config->status = mpc_start;
 			plCheck(true);
-			sendplay();
+
+			if (config->stop) {
+				activity(0, "Welcome");
+				config->stop = false;
+			}
+			else {
+				sendplay();
+			}
 			notifyChange(MPCOMM_CONFIG);
 		}
 		break;

@@ -1382,6 +1382,8 @@ static void *mpserver(void *arg) {
 	pfd.fd = mainsocket;
 	pfd.events = POLLIN;
 
+	int lastidle = NUM_THREADS;
+
 	while (control->status != mpc_quit) {
 		if (poll(&pfd, 1, 250) > 0) {
 			socklen_t dummy = 0;
@@ -1399,14 +1401,18 @@ static void *mpserver(void *arg) {
 				addMessage(0, "Ran out of client threads!");
 			}
 			pool.fd = client_sock;
+			if (pool.idle < lastidle) {
+				addMessage(MPV + 0, "%2i threads idling", pool.idle);
+				lastidle = pool.idle;
+			}
 			pthread_cond_signal(&(pool.notify));
 			pthread_mutex_unlock(&pool.mutex);
 		}
 	}
 
 	/* clean up thread pool */
-	pool.stop = true;
 	pthread_mutex_lock(&(pool.mutex));
+	pool.stop = true;
 	pthread_cond_broadcast(&(pool.notify));
 	pthread_mutex_unlock(&(pool.mutex));
 

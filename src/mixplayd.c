@@ -123,11 +123,6 @@ static void *debugHID( __attribute__ ((unused))
 	mpconfig_t *config = getConfig();
 	mpcmd_t cmd;
 
-	/* wait for the initialization to be done */
-	while (config->status != mpc_play) {
-		sleep(1);				// poll every second
-	}
-
 	while (config->status != mpc_quit) {
 		c = getch(750);
 		cmd = hidCMD(c);

@@ -23,6 +23,7 @@ static void printUsage(char *name) {
 	printf(" -p <port> : set port [2347]\n");
 	printf(" -m : force mix on playlist\n");
 	printf(" -W': write changed config (used with -r,-l,-h,-p)\n");
+	printf(" -s : stop on start, do not autoplay\n");
 	printf(" resource: resource to play\n");
 	printf("		   URL, directory, mp3 file, playlist\n");
 }
@@ -69,7 +70,7 @@ int32_t getArgs(int32_t argc, char **argv) {
 	int32_t c, changed = 0;
 
 	/* parse command line options */
-	while ((c = getopt(argc, argv, "VfdF:hp:Wm")) != -1) {
+	while ((c = getopt(argc, argv, "VfdF:hp:Wms")) != -1) {
 		switch (c) {
 
 		case 'V':
@@ -103,6 +104,9 @@ int32_t getArgs(int32_t argc, char **argv) {
 
 		case 'W':
 			changed = 1;
+			break;
+		case 's':
+			config->stop = true;
 			break;
 
 		case '?':

@@ -17,8 +17,11 @@ startx /usr/bin/chromium-browser --disable-plugins --window-position=0,0 --windo
 * Add a runall.sh script
 ```
 #!/bin/bash
-mixplay/bin/mixplayd
+# -s to keep player from playing on start
+mixplay/bin/mixplayd -s
+# screensaver
 mixplay/bin/mixplay-scr
+# start x with a browser in kioosk mode
 startx /usr/bin/chromium-browser --disable-plugins --window-position=0,0 --window-size=800,480 --app=http://localhost:2347/ -- -nocursor -s 0
 # uncomment if you want an autoreboot after a crash..
 # sudo reboot
