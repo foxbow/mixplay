@@ -424,7 +424,6 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		/* initialize player after startup */
 		/* todo: what happens if the user sends a play during startup? */
 		else {
-			plCheck(true);
 			if (config->current != NULL) {
 				addMessage(MPV + 1, "Autoplay..");
 				sendplay();

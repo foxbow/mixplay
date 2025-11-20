@@ -1365,8 +1365,7 @@ void setTnum(void) {
 		}
 	}
 	else {
-		getConfig()->tnum =
-			countTitles(getFavplay()? MP_FAV : MP_ALL, MP_DNP | MP_DBL);
+		getConfig()->tnum = countTitles(MP_DEF, MP_DNP | MP_DBL);
 	}
 	if (tnum != getConfig()->tnum) {
 		/* the number of titles changes, notify clients */
@@ -1375,7 +1374,11 @@ void setTnum(void) {
 }
 
 /**
- * returns the lowest playcount of the current list
+ * returns the lowest playcount in the database
+ * this one only counts titles that would be played with the current
+ * profile
+ * 
+ * @param high  return the highest playcount instead
  */
 uint32_t getPlaycount(bool high) {
 	mptitle_t *base = getConfig()->root;
@@ -1467,12 +1470,17 @@ static char flagToChar(int32_t flag) {
 
 /**
  * skips steps titles that match playcount pcount.
+ * 
+ * @param guard the current title to start from
+ * @param steps number of steps to skip
+ * @param pcount skip all titles with a lower pcount than this
+ * @param maxcount the highest number of playcounts in the db
  */
 static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 							 uint32_t * pcount, uint64_t maxcount) {
 	mptitle_t *runner = guard;
 
-	/* zero steps is a bad idea but may happen, since we play with randum
+	/* zero steps is a bad idea but may happen, since we play with random
 	 * numbers */
 	if (steps == 0) {
 		steps = 1;
@@ -1514,6 +1522,7 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 				steps++;
 		}
 		else {
+			/* don't look at this title again */
 			runner->flags |= MP_PDARK;
 		}
 	}
@@ -1581,17 +1590,17 @@ void setArtistSpread() {
  * - does not play the same artist twice in the list
  * - prefers titles with lower playcount
  *
- * returns the head/current of the (new/current) playlist or NULL on error
+ * @returns true on success and false on error
  */
-static int32_t addNewTitle(void) {
+static bool addNewTitle(void) {
 	mptitle_t *runner = NULL;
 	mptitle_t *guard = NULL;
 	uint64_t num = 0;
 	char *lastpat = NULL;
 	uint32_t pcount = 0;
 	uint32_t maxpcount = 0;
-	uint32_t tnum = 0;
-	uint32_t maxnum = 0;
+	uint32_t tnum = 0;			/* number of titles (to play) in the playlist */
+	uint32_t maxnum = 0;		/* how many titles must not have the same artist */
 
 	mpplaylist_t *pl = getCurrent();
 	mptitle_t *root;
@@ -1615,12 +1624,12 @@ static int32_t addNewTitle(void) {
 	addMessage(2, "Playcount [%" PRIu32 ":%" PRIu32 "]", pcount, maxpcount);
 
 	/* are there playable titles at all? */
-	if (countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE) == 0) {
+	if (countTitles(MP_DEF, MP_HIDE) == 0) {
 		fail(F_FAIL, "No titles to be played!");
-		return 0;
+		return false;
 	}
 
-	num = countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE | MP_PDARK);
+	num = countTitles(MP_DEF, MP_HIDE | MP_PDARK);
 	while (num < 3) {
 		pcount++;
 		/* if this happens, something is really askew */
@@ -1628,8 +1637,9 @@ static int32_t addNewTitle(void) {
 		addMessage(2, "Less than 3 titles, bumping playcount to %" PRIu32,
 				   pcount);
 		unsetFlags(MP_PDARK);
-		num = countTitles(getFavplay()? MP_FAV : MP_ALL, MP_HIDE);
+		num = countTitles(MP_DEF, MP_HIDE);
 	}
+
 	maxnum = getConfig()->spread;
 	addMessage(2, "%" PRIu64 " titles available, avoiding %u repeats", num,
 			   maxnum);
@@ -1646,7 +1656,7 @@ static int32_t addNewTitle(void) {
 	if (lastpat == NULL) {
 		/* No titles in the playlist yet, we're done! */
 		getConfig()->current = appendToPL(runner, NULL, true);
-		return 1;
+		return true;
 	}
 
 	/* step through the playlist and check for repeats */
@@ -1671,11 +1681,9 @@ static int32_t addNewTitle(void) {
 					runner = guard;
 					if (maxnum > 1) {
 						maxnum--;
-						pcount = getPlaycount(false);
 						unsetFlags(MP_TDARK | MP_PDARK);
-						num =
-							countTitles(getFavplay()? MP_FAV : MP_ALL,
-										MP_HIDE);
+						pcount = getPlaycount(false);
+						num = countTitles(MP_DEF, MP_HIDE);
 						/* we do not want to see this and if we do, it may hint at
 						 * something strange going on - maybe even add some debug info */
 						addMessage(0,
@@ -1813,8 +1821,11 @@ void plCheck(bool fill) {
 		}
 	}
 
-	/* fill up the playlist with new titles */
-	if (fill) {
+	/* fill up the playlist with new titles if needed */
+	if (fill && (cnt < 10)) {
+		/* dirty trick as we need to add 11 titles on start! */
+		if (cnt == 0)
+			cnt = -1;
 		unsetFlags(MP_TDARK);
 		while (cnt < 10) {
 			activity(0, "Add title %i", cnt);
