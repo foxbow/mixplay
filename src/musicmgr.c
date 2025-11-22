@@ -166,13 +166,17 @@ static mpplaylist_t *remFromPL(mpplaylist_t * pltitle) {
 	/* standard added title, clean aligned tdarks*/
 	if (pltitle->title->flags & MP_INPL) {
 		mptitle_t *root = pltitle->title;
-		mptitle_t *runner = root;
-		while (runner != root) {
-			skipOverFlags(runner->next, 1, MP_PDARK);
+		mptitle_t *runner = root->next;
+		do {
+			while ((runner != root) && !(runner->flags & MP_TDARK)) {
+				runner = runner->next;
+			}
+			if (runner == root) break; 
 			if (checkSim(runner->artist, root->artist)) {
 				runner->flags &= ~MP_TDARK;
 			}
-		}
+			runner = runner->next;
+		} while(runner != root);
 	}
 
 	/* title is no longer in the playlist */
@@ -206,7 +210,7 @@ int32_t playCount(mptitle_t * title, int32_t skip) {
 
 	/* skipcount only happens on database play */
 	if (getConfig()->mpmode & PM_DATABASE) {
-		if (skip) {
+		if (skip && (getDebug() < 2)) {
 			title->skipcount++;
 			if (title->skipcount >= getConfig()->skipdnp) {
 				title->skipcount = getConfig()->skipdnp;
