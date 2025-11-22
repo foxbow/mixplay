@@ -32,7 +32,6 @@ mptitle_t *getTitleByIndex(uint32_t index);
 mptitle_t *getTitleForRange(const mpcmd_t range, const char *name);
 void dbMarkDirty(void);
 int32_t mp3Exists(const mptitle_t * title);
-uint32_t getNewPlaycount(void);
 void dbAddPath(mptitle_t * title);
 
 #endif /* DATABASE_H_ */

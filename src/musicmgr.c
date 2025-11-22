@@ -122,6 +122,34 @@ static mpplaylist_t *appendToPL(mptitle_t * title, mpplaylist_t * pl,
 	return pl;
 }
 
+static mptitle_t *skipOverFlags(mptitle_t * current, int32_t dir,
+								uint32_t flags) {
+	mptitle_t *marker = current;
+
+	if (marker == NULL) {
+		return NULL;
+	}
+
+	while ((marker->flags & (MP_DBL | MP_DNP)) ||
+		   (marker->flags & flags) ||
+		   (getFavplay() && !(marker->flags & MP_FAV))) {
+		if (dir > 0) {
+			marker = marker->next;
+		}
+		else {
+			marker = marker->prev;
+		}
+
+		if (marker == current) {
+			addMessage(3, "Ran out of titles!");
+			return NULL;
+		}
+	}
+
+	return marker;
+}
+
+
 /*
  * removes a title from the current playlist chain and returns the next title
  */
@@ -134,6 +162,19 @@ static mpplaylist_t *remFromPL(mpplaylist_t * pltitle) {
 	if (pltitle->next != NULL) {
 		pltitle->next->prev = pltitle->prev;
 	}
+
+	/* standard added title, clean aligned tdarks*/
+	if (pltitle->title->flags & MP_INPL) {
+		mptitle_t *root = pltitle->title;
+		mptitle_t *runner = root;
+		while (runner != root) {
+			skipOverFlags(runner->next, 1, MP_PDARK);
+			if (checkSim(runner->artist, root->artist)) {
+				runner->flags &= ~MP_TDARK;
+			}
+		}
+	}
+
 	/* title is no longer in the playlist */
 	pltitle->title->flags &= ~MP_INPL;
 
@@ -1256,7 +1297,7 @@ mptitle_t *addNewPath(const char *path) {
 	while (tail != getConfig()->root);
 
 	newt->key = tail->key + 1;
-	newt->playcount = getNewPlaycount();
+	newt->playcount = getPlaycount(count_mean);
 	strtcpy(newt->path, path, MAXPATHLEN);
 
 	newt->next = tail->next;
@@ -1378,67 +1419,64 @@ void setTnum(void) {
  * this one only counts titles that would be played with the current
  * profile
  * 
- * @param high  return the highest playcount instead
+ * @param range  switch between min, max and mean
  */
-uint32_t getPlaycount(bool high) {
+uint32_t getPlaycount(mpcount_t range) {
 	mptitle_t *base = getConfig()->root;
 	mptitle_t *runner = base;
-	uint32_t min = UINT_MAX;
-	uint32_t max = 0;
+	uint32_t min = UINT_MAX;	// min playcount of currently active titles
+	uint32_t max = 0;           // max playcount of currently active titles
+	uint64_t sum = 0;           // sum all playcounts 
+	uint32_t cnt = 0;           // number of counted titles
+
 	uint32_t playcount;
 
 	if (base == NULL) {
-		addMessage(0, "Trying to get lowest playcount from empty database!");
+		addMessage(0, "Trying to get playcount from empty database!");
 		return 0;
 	}
 
 	do {
-		if (getFavplay()) {
+		bool valid = false;
+		if (range == count_mean) {
+			valid = !(runner->flags & MP_DBL);
+			playcount = runner->playcount;
+		}
+		else if (getFavplay()) {
+			valid = (runner->flags & MP_FAV);
 			playcount = runner->favpcount;
 		}
 		else {
+			valid = !(runner->flags & (MP_DNP|MP_DBL));
 			playcount = runner->playcount;
 		}
-		if (!(runner->flags & (MP_HIDE))) {
+
+		if (valid) {
 			if (playcount < min) {
 				min = playcount;
 			}
-		}
-		if (playcount > max) {
-			max = playcount;
+			if (playcount > max) {
+				max = playcount;
+			}
+			sum += playcount;
+			cnt++;
 		}
 		runner = runner->next;
 	}
 	while (runner != base);
 
-	return high ? max : min;
-}
-
-static mptitle_t *skipOverFlags(mptitle_t * current, int32_t dir,
-								uint32_t flags) {
-	mptitle_t *marker = current;
-
-	if (marker == NULL) {
-		return NULL;
+	switch (range) {
+		case count_min:
+			return min;
+		case count_max:
+			return max;
+		case count_mean:
+			return sum/cnt;
+		default:
+			fail(F_FAIL, "Illegal count range");
 	}
 
-	while ((marker->flags & (MP_DBL | MP_DNP)) ||
-		   (marker->flags & flags) ||
-		   (getFavplay() && !(marker->flags & MP_FAV))) {
-		if (dir > 0) {
-			marker = marker->next;
-		}
-		else {
-			marker = marker->prev;
-		}
-
-		if (marker == current) {
-			addMessage(3, "Ran out of titles!");
-			return NULL;
-		}
-	}
-
-	return marker;
+	return (uint32_t)-1;
 }
 
 /**
@@ -1619,8 +1657,8 @@ static bool addNewTitle(void) {
 	runner = root;
 
 	/* remember playcount bounds */
-	pcount = getPlaycount(false);
-	maxpcount = getPlaycount(true);
+	pcount = getPlaycount(count_min);
+	maxpcount = getPlaycount(count_max);
 	addMessage(2, "Playcount [%" PRIu32 ":%" PRIu32 "]", pcount, maxpcount);
 
 	/* are there playable titles at all? */
@@ -1681,8 +1719,8 @@ static bool addNewTitle(void) {
 					runner = guard;
 					if (maxnum > 1) {
 						maxnum--;
-						unsetFlags(MP_TDARK | MP_PDARK);
-						pcount = getPlaycount(false);
+						unsetFlags(MP_PDARK);
+						pcount = getPlaycount(count_min);
 						num = countTitles(MP_DEF, MP_HIDE);
 						/* we do not want to see this and if we do, it may hint at
 						 * something strange going on - maybe even add some debug info */
@@ -1826,7 +1864,6 @@ void plCheck(bool fill) {
 		/* dirty trick as we need to add 11 titles on start! */
 		if (cnt == 0)
 			cnt = -1;
-		unsetFlags(MP_TDARK);
 		while (cnt < 10) {
 			activity(0, "Add title %i", cnt);
 			addNewTitle();

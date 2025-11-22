@@ -55,6 +55,12 @@ struct mpplaylist_s {
 };
 
 typedef enum {
+	count_max,
+	count_min,
+	count_mean
+} mpcount_t;
+
+typedef enum {
 	mpsearch_idle,
 	mpsearch_busy,
 	mpsearch_done
@@ -127,7 +133,7 @@ uint64_t countTitles(const uint32_t inc, const uint32_t exc);
 void setTnum(void);
 
 #define countflag(x) countTitles((x), MP_NONE)
-uint32_t getPlaycount(bool high);
+uint32_t getPlaycount(mpcount_t range);
 
 void dumpState(void);
 
