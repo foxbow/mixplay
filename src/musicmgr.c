@@ -643,13 +643,13 @@ int32_t search(const mpcmd_t range, const char *pat) {
 	}
 
 	if (pat == NULL) {
-		/* return at most last 10 titles or last 10 albums */
+		/* return at most last MPPLSIZE titles or last MPPLSIZE albums */
 		do {
 			runner = runner->prev;
 			/* two titles in a row with the same album? */
 			if (strieq(runner->album, runner->prev->album)) {
 				addAlbum(res, runner);
-				if (res->lnum > 9) {
+				if (res->lnum >= MPPLSIZE) {
 					/* check if the last album is a sampler */
 					addAlbum(res, runner->prev);
 					break;
@@ -662,7 +662,7 @@ int32_t search(const mpcmd_t range, const char *pat) {
 				|| !strieq(runner->album, res->albums[res->lnum - 1].name)) {
 				res->titles = appendToPL(runner, res->titles, false);
 				res->tnum++;
-				if (res->tnum > 9)
+				if (res->tnum >= MPPLSIZE)
 					break;
 			}
 		} while (runner->prev != root);
@@ -1603,8 +1603,8 @@ void setArtistSpread() {
 			checker = skipOverFlags(checker->next, 1, mask);
 		}
 		/* Check has been done
-		 * 30 is correct here since we use a rule of 2/3 later */
-		if (count++ == 30) {
+		 * 3 is correct here since we use a rule of 2/3 later */
+		if (count++ == 3*MPPLSIZE) {
 			break;
 		}
 		/* runner has been checked too */
@@ -1761,7 +1761,7 @@ static bool addNewTitle(void) {
 
 /**
  * checks the current playlist.
- * If there are more than 10 previous titles, those get pruned. Titles marked
+ * If there are more than MPPLSIZE previous titles, those get pruned. Titles marked
  * as DNP or Doublet will be removed as well.
  *
  * If fill is set, the playlist will be filled up to ten new titles.
@@ -1842,10 +1842,10 @@ void plCheck(bool fill) {
 		}
 
 		/* Done cleaning, now start pruning */
-		/* truncate playlist title history to 10 titles */
+		/* truncate playlist title history to MPPLSIZE titles */
 		cnt = 0;
 		pl = getCurrent();
-		while ((pl->prev != NULL) && (cnt < 10)) {
+		while ((pl->prev != NULL) && (cnt < MPPLSIZE)) {
 			pl = pl->prev;
 			cnt++;
 		}
@@ -1871,11 +1871,11 @@ void plCheck(bool fill) {
 	}
 
 	/* fill up the playlist with new titles if needed */
-	if (fill && (cnt < 10)) {
-		/* dirty trick as we need to add 11 titles on start! */
+	if (fill && (cnt < MPPLSIZE)) {
+		/* dirty trick as we need to add MPPLSZE+1 titles on start! */
 		if (cnt == 0)
 			cnt = -1;
-		while (cnt < 10) {
+		while (cnt < MPPLSIZE) {
 			activity(0, "Add title %i", cnt);
 			addNewTitle();
 			cnt++;

@@ -11,6 +11,9 @@
 /* do not return more than 100 titles */
 #define MAXSEARCH 100
 
+/* length of past and future titles, so a playlist has 2*MPPLSIZE+1 titles */
+#define MPPLSIZE 10
+
 /* flags - keep clear of range bits! */
 #define MP_NONE  0x0000
 #define MP_FAV   0x0001			/* Favourite */
