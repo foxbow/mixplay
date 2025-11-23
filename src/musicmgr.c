@@ -167,16 +167,12 @@ static mpplaylist_t *remFromPL(mpplaylist_t * pltitle) {
 	if (pltitle->title->flags & MP_INPL) {
 		mptitle_t *root = pltitle->title;
 		mptitle_t *runner = root->next;
-		do {
-			while ((runner != root) && !(runner->flags & MP_TDARK)) {
-				runner = runner->next;
-			}
-			if (runner == root) break; 
-			if (checkSim(runner->artist, root->artist)) {
+		while(runner != root) {
+			if ((runner->flags & MP_TDARK) && checkSim(runner->artist, root->artist)) {
 				runner->flags &= ~MP_TDARK;
 			}
 			runner = runner->next;
-		} while(runner != root);
+		}
 	}
 
 	/* title is no longer in the playlist */
