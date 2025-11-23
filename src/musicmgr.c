@@ -149,6 +149,17 @@ static mptitle_t *skipOverFlags(mptitle_t * current, int32_t dir,
 	return marker;
 }
 
+static void clearTDARK(mptitle_t *root) {
+	if (root->flags & MP_INPL) {
+		mptitle_t *runner = root->next;
+		while(runner != root) {
+			if ((runner->flags & MP_TDARK) && checkSim(runner->artist, root->artist)) {
+				runner->flags &= ~MP_TDARK;
+			}
+			runner = runner->next;
+		}
+	}
+}
 
 /*
  * removes a title from the current playlist chain and returns the next title
@@ -164,6 +175,7 @@ static mpplaylist_t *remFromPL(mpplaylist_t * pltitle) {
 	}
 
 	/* title is no longer in the playlist */
+	clearTDARK(pltitle->title);
 	pltitle->title->flags &= ~MP_INPL;
 
 	free(pltitle);
@@ -1814,8 +1826,19 @@ void plCheck(bool fill) {
 				pl = remFromPL(pl);
 			}
 			else {
+				if (pl->title->flags & MP_INPL) cnt++;
 				pl = pl->next;
 			}
+		}
+
+		/* unset MP_TDARK for the title that shifted out of the spreadcount */
+		if (cnt >= (int32_t)getConfig()->spread) {
+			cnt = getConfig()->spread;
+			while (cnt > 0) {
+				pl=pl->prev;
+				if (pl->title->flags & MP_INPL) cnt--;
+			}
+			clearTDARK(pl->title);
 		}
 
 		/* Done cleaning, now start pruning */
@@ -1846,26 +1869,6 @@ void plCheck(bool fill) {
 			cnt++;
 		}
 	}
-
-	/* unset MP_TDARK for the title that shifted out of the spreadcount */
-	uint32_t scnt = getConfig()->spread;
-	while ((pl->prev != 0) && scnt > 0) {
-		pl=pl->prev;
-		if (pl->title->flags & MP_INPL) scnt--;
-	}
-
-	/* standard added title, clean aligned tdarks*/
-	if (pl->title->flags & MP_INPL) {
-		mptitle_t *root = pl->title;
-		mptitle_t *runner = root->next;
-		while(runner != root) {
-			if ((runner->flags & MP_TDARK) && checkSim(runner->artist, root->artist)) {
-				runner->flags &= ~MP_TDARK;
-			}
-			runner = runner->next;
-		}
-	}
-
 
 	/* fill up the playlist with new titles if needed */
 	if (fill && (cnt < 10)) {
