@@ -163,18 +163,6 @@ static mpplaylist_t *remFromPL(mpplaylist_t * pltitle) {
 		pltitle->next->prev = pltitle->prev;
 	}
 
-	/* standard added title, clean aligned tdarks*/
-	if (pltitle->title->flags & MP_INPL) {
-		mptitle_t *root = pltitle->title;
-		mptitle_t *runner = root->next;
-		while(runner != root) {
-			if ((runner->flags & MP_TDARK) && checkSim(runner->artist, root->artist)) {
-				runner->flags &= ~MP_TDARK;
-			}
-			runner = runner->next;
-		}
-	}
-
 	/* title is no longer in the playlist */
 	pltitle->title->flags &= ~MP_INPL;
 
@@ -1858,6 +1846,26 @@ void plCheck(bool fill) {
 			cnt++;
 		}
 	}
+
+	/* unset MP_TDARK for the title that shifted out of the spreadcount */
+	uint32_t scnt = getConfig()->spread;
+	while ((pl->prev != 0) && scnt > 0) {
+		pl=pl->prev;
+		if (pl->title->flags & MP_INPL) scnt--;
+	}
+
+	/* standard added title, clean aligned tdarks*/
+	if (pl->title->flags & MP_INPL) {
+		mptitle_t *root = pl->title;
+		mptitle_t *runner = root->next;
+		while(runner != root) {
+			if ((runner->flags & MP_TDARK) && checkSim(runner->artist, root->artist)) {
+				runner->flags &= ~MP_TDARK;
+			}
+			runner = runner->next;
+		}
+	}
+
 
 	/* fill up the playlist with new titles if needed */
 	if (fill && (cnt < 10)) {
