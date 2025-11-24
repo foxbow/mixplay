@@ -240,14 +240,16 @@ int32_t playCount(mptitle_t * title, int32_t skip) {
 		}
 	}
 
-	if (getFavplay() ||
-		((title->flags & MP_FAV) && (title->favpcount < title->playcount))) {
+	/* favplay should only touch favpcount 
+	 * if the title is a favourite and has been played before, update favpcount */
+	if (getFavplay()
+		|| ((title->flags & MP_FAV) && (title->favpcount < title->playcount))) {
 		title->favpcount++;
 	}
 	else {
 		title->playcount++;
 		if (!(title->flags & MP_FAV)) {
-			title->favpcount++;
+			title->favpcount = title->playcount;
 		}
 		dbMarkDirty();
 	}
@@ -1550,9 +1552,11 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t cnt,
 			continue;
 		}
 
-		/* Does it fit the playcount? */
-		if ((!getFavplay() && (runner->playcount <= *pcount)) ||
-			((runner->flags & MP_FAV) && (runner->favpcount <= *pcount))) {
+		/* Does it fit the playcount? 
+		 * favpcount is always right. On favplay it's the only playcount
+		 * on standard titled, favpcount is always equal to pcount and
+		 * for favourites, favpcount follows playcount */
+		if (runner->favpcount <= *pcount) {
 			if (steps > 0)
 				steps--;
 			if (steps < 0)
@@ -2069,7 +2073,7 @@ void dumpInfo(int32_t smooth) {
 					if (dblcnt == 0)
 						addMessage(0, "%s %c %i dnp", line, DD, dcount);
 					else
-						addMessage(0, "%s %c %i dbl %c %i dnp", line, DD,
+						addMessage(0, "%s %c %i dnp %c %i dbl", line, DD,
 								   dcount, DD, dblcnt);
 				else if (dcount == 0)
 					addMessage(0, "%s / %i fav", line, favcnt);
@@ -2077,7 +2081,7 @@ void dumpInfo(int32_t smooth) {
 					addMessage(0, "%s %c %i dnp / %i fav", line, DD, dcount,
 							   favcnt);
 				else
-					addMessage(0, "%s %c %i dbl %c %i dnp / %i fav", line, DD,
+					addMessage(0, "%s %c %i dnp %c %i dbl / %i fav", line, DD,
 							   dcount, DD, dblcnt, favcnt);
 			else
 				addMessage(0, "%s", line);
