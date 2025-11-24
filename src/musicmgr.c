@@ -126,13 +126,13 @@ static mptitle_t *skipOverFlags(mptitle_t * current, int32_t dir,
 								uint32_t flags) {
 	mptitle_t *marker = current;
 
+	flags |= (MP_DBL | MP_DNP);
+
 	if (marker == NULL) {
 		return NULL;
 	}
 
-	while ((marker->flags & (MP_DBL | MP_DNP)) ||
-		   (marker->flags & flags) ||
-		   (getFavplay() && !(marker->flags & MP_FAV))) {
+	do {
 		if (dir > 0) {
 			marker = marker->next;
 		}
@@ -144,16 +144,19 @@ static mptitle_t *skipOverFlags(mptitle_t * current, int32_t dir,
 			addMessage(3, "Ran out of titles!");
 			return NULL;
 		}
-	}
+	} while ((marker->flags & flags) ||
+			 (getFavplay() && !(marker->flags & MP_FAV)));
 
 	return marker;
 }
 
-static void clearTDARK(mptitle_t *root) {
+static void clearTDARK(mptitle_t * root) {
 	if (root->flags & MP_INPL) {
 		mptitle_t *runner = root->next;
-		while(runner != root) {
-			if ((runner->flags & MP_TDARK) && checkSim(runner->artist, root->artist)) {
+
+		while (runner != root) {
+			if ((runner->flags & MP_TDARK)
+				&& checkSim(runner->artist, root->artist)) {
 				runner->flags &= ~MP_TDARK;
 			}
 			runner = runner->next;
@@ -1425,9 +1428,9 @@ uint32_t getPlaycount(mpcount_t range) {
 	mptitle_t *base = getConfig()->root;
 	mptitle_t *runner = base;
 	uint32_t min = UINT_MAX;	// min playcount of currently active titles
-	uint32_t max = 0;           // max playcount of currently active titles
-	uint64_t sum = 0;           // sum all playcounts 
-	uint32_t cnt = 0;           // number of counted titles
+	uint32_t max = 0;			// max playcount of currently active titles
+	uint64_t sum = 0;			// sum all playcounts 
+	uint32_t cnt = 0;			// number of counted titles
 
 	uint32_t playcount;
 
@@ -1438,6 +1441,7 @@ uint32_t getPlaycount(mpcount_t range) {
 
 	do {
 		bool valid = false;
+
 		if (range == count_mean) {
 			valid = !(runner->flags & MP_DBL);
 			playcount = runner->playcount;
@@ -1447,7 +1451,7 @@ uint32_t getPlaycount(mpcount_t range) {
 			playcount = runner->favpcount;
 		}
 		else {
-			valid = !(runner->flags & (MP_DNP|MP_DBL));
+			valid = !(runner->flags & (MP_DNP | MP_DBL));
 			playcount = runner->playcount;
 		}
 
@@ -1466,17 +1470,17 @@ uint32_t getPlaycount(mpcount_t range) {
 	while (runner != base);
 
 	switch (range) {
-		case count_min:
-			return min;
-		case count_max:
-			return max;
-		case count_mean:
-			return sum/cnt;
-		default:
-			fail(F_FAIL, "Illegal count range");
+	case count_min:
+		return min;
+	case count_max:
+		return max;
+	case count_mean:
+		return sum / cnt;
+	default:
+		fail(F_FAIL, "Illegal count range");
 	}
 
-	return (uint32_t)-1;
+	return (uint32_t) - 1;
 }
 
 /**
@@ -1514,24 +1518,21 @@ static char flagToChar(int32_t flag) {
  * @param pcount skip all titles with a lower pcount than this
  * @param maxcount the highest number of playcounts in the db
  */
-static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
+static mptitle_t *skipPcount(mptitle_t * guard, int32_t cnt,
 							 uint32_t * pcount, uint64_t maxcount) {
 	mptitle_t *runner = guard;
 
 	/* zero steps is a bad idea but may happen, since we play with random
 	 * numbers */
-	if (steps == 0) {
-		steps = 1;
+	if (cnt == 0) {
+		cnt = 1;
 	}
+	int32_t steps = cnt;
 
 	while (steps != 0) {
 		/* fetch the next */
-		if (steps > 0) {
-			runner = skipOver(runner->next, 1);
-		}
-		else {
-			runner = skipOver(runner->prev, -1);
-		}
+		runner = skipOver(runner, steps);
+
 		/* Nothing fits!? Then increase playcount and try again */
 		if (runner == NULL) {
 			(*pcount)++;
@@ -1544,11 +1545,9 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t steps,
 				addMessage(3, "No more titles available");
 				return NULL;
 			}
-			runner = skipOver(guard, steps);
-			if (runner == NULL) {
-				addMessage(2, "All titles are marked!");
-				return NULL;
-			}
+			runner = guard;
+			steps = cnt;
+			continue;
 		}
 
 		/* Does it fit the playcount? */
@@ -1592,7 +1591,7 @@ void setArtistSpread() {
 	activity(1, "Checking artist spread");
 	while (runner != NULL) {
 		/* find the next unmarked, playable title to compare to */
-		checker = skipOverFlags(runner->next, 1, mask);
+		checker = skipOverFlags(runner, 1, mask);
 		/* a comparison can be done */
 		while (checker && (checker != runner)) {
 			if (checkSim(runner->artist, checker->artist)) {
@@ -1600,11 +1599,11 @@ void setArtistSpread() {
 				checker->flags |= MP_MARK;
 			}
 			/* check for the next title */
-			checker = skipOverFlags(checker->next, 1, mask);
+			checker = skipOverFlags(checker, 1, mask);
 		}
 		/* Check has been done
 		 * 3 is correct here since we use a rule of 2/3 later */
-		if (count++ == 3*MPPLSIZE) {
+		if (count++ == 3 * MPPLSIZE) {
 			break;
 		}
 		/* runner has been checked too */
@@ -1826,17 +1825,19 @@ void plCheck(bool fill) {
 				pl = remFromPL(pl);
 			}
 			else {
-				if (pl->title->flags & MP_INPL) cnt++;
+				if (pl->title->flags & MP_INPL)
+					cnt++;
 				pl = pl->next;
 			}
 		}
 
 		/* unset MP_TDARK for the title that shifted out of the spreadcount */
-		if (cnt >= (int32_t)getConfig()->spread) {
+		if (cnt >= (int32_t) getConfig()->spread) {
 			cnt = getConfig()->spread;
 			while (cnt > 0) {
-				pl=pl->prev;
-				if (pl->title->flags & MP_INPL) cnt--;
+				pl = pl->prev;
+				if (pl->title->flags & MP_INPL)
+					cnt--;
 			}
 			clearTDARK(pl->title);
 		}

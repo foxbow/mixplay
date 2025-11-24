@@ -1276,7 +1276,7 @@ typedef struct {
 	pthread_mutex_t mutex;
 	bool stop;					// shut down the pool then true
 	int fdid;					// parameter index
-	int fds[NUM_THREADS];						// parameter space
+	int fds[NUM_THREADS];		// parameter space
 	int idle;					// housekeeping, how many threads are idle
 } poolControl_t;
 
