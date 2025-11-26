@@ -46,11 +46,6 @@ void setOrder(int32_t order) {
 void cleanTitles(bool flags) {
 	mpconfig_t *control = getConfig();
 	mptitle_t *runner = control->root;
-	uint32_t pc = getPlaycount(true);
-
-	if (pc > 0) {
-		pc--;
-	}
 
 	wipePlaylist(control);
 
@@ -60,7 +55,7 @@ void cleanTitles(bool flags) {
 		return;
 	}
 	do {
-		runner->favpcount = getFavplay()? 0 : MIN(runner->playcount, pc);
+		runner->favpcount = getFavplay()? 0 : runner->playcount;
 		runner = runner->next;
 		if (flags) {
 			/* just keep MP_DBL */
