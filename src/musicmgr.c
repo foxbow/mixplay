@@ -1617,7 +1617,8 @@ void setArtistSpread() {
 
 	/* two thirds to take number of titles per artist somewhat into account */
 	count = (count * 2) / 3;
-	getConfig()->spread = (count > 1) ? count : 2;
+	/* spreadcount needs to be at least length of the future playlist */
+	getConfig()->spread = (count < (MPPLSIZE+1)) ? (MPPLSIZE+1) : count;
 	addMessage(2, "At least %" PRIu32 " artists available.", count);
 }
 
