@@ -161,7 +161,7 @@ static void clearTADARK(mptitle_t * root) {
 			}
 			if ((runner->flags & MP_ADARK)
 				/* album is a perfect match, no need to guess */
-				&& (strcmp(runner->album, root->artist) == 0)) {
+				&& (strcmp(runner->album, root->album) == 0)) {
 				runner->flags &= ~MP_ADARK;
 			}
 			runner = runner->next;
