@@ -150,7 +150,7 @@ static mptitle_t *skipOverFlags(mptitle_t * current, int32_t dir,
 	return marker;
 }
 
-static void clearTDARK(mptitle_t * root) {
+static void clearTADARK(mptitle_t * root) {
 	if (root->flags & MP_INPL) {
 		mptitle_t *runner = root->next;
 
@@ -158,6 +158,11 @@ static void clearTDARK(mptitle_t * root) {
 			if ((runner->flags & MP_TDARK)
 				&& checkSim(runner->artist, root->artist)) {
 				runner->flags &= ~MP_TDARK;
+			}
+			if ((runner->flags & MP_ADARK)
+				/* album is a perfect match, no need to guess */
+				&& strcmp(runner->album, root->artist)) {
+				runner->flags &= ~MP_ADARK;
 			}
 			runner = runner->next;
 		}
@@ -178,7 +183,7 @@ static mpplaylist_t *remFromPL(mpplaylist_t * pltitle) {
 	}
 
 	/* title is no longer in the playlist */
-	clearTDARK(pltitle->title);
+	clearTADARK(pltitle->title);
 	pltitle->title->flags &= ~MP_INPL;
 
 	free(pltitle);
@@ -1491,7 +1496,7 @@ uint32_t getPlaycount(mpcount_t range) {
  * returns NULL if no title is available
  */
 static mptitle_t *skipOver(mptitle_t * current, int32_t dir) {
-	return skipOverFlags(current, dir, MP_INPL | MP_TDARK | MP_PDARK);
+	return skipOverFlags(current, dir, MP_INPL | MP_DARK);
 }
 
 static char flagToChar(int32_t flag) {
@@ -1639,6 +1644,7 @@ static bool addNewTitle(void) {
 	mptitle_t *guard = NULL;
 	uint64_t num = 0;
 	char *lastpat = NULL;
+	char *lastalb = NULL;
 	uint32_t pcount = 0;
 	uint32_t maxpcount = 0;
 	uint32_t tnum = 0;			/* number of titles (to play) in the playlist */
@@ -1706,39 +1712,46 @@ static bool addNewTitle(void) {
 		/* skip searched titles */
 		if (pl->title->flags & MP_INPL) {
 			lastpat = pl->title->artist;
+			lastalb = pl->title->album;
 			guard = runner;
 			/* does the title clash with the current one? */
-			while (checkSim(runner->artist, lastpat)) {
-				addMessage(3, "%s = %s", runner->artist, lastpat);
-				/* don't try this one again */
-				runner->flags |= MP_TDARK;
-				/* get another with a matching playcount
-				 * these are expensive, so we try to keep the steps
-				 * somewhat reasonable.. */
-				runner =
-					skipPcount(runner, (num / 2) - (random() % num),
-							   &pcount, maxpcount);
-				if (runner == NULL) {
-					/* back to square one for this round */
-					runner = guard;
-					if (maxnum > 1) {
-						maxnum--;
-						unsetFlags(MP_PDARK);
-						pcount = getPlaycount(count_min);
-						num = countTitles(MP_DEF, MP_HIDE);
-						/* we do not want to see this and if we do, it may hint at
-						 * something strange going on - maybe even add some debug info */
-						addMessage(0,
-								   "Reducing repeat to %" PRIu32 " with %"
-								   PRIu64 " titles", maxnum, num);
-					}
-					else {
-						/* This should rather change it to something sensible instead of
-						 * simply bailing out! */
-						fail(-1, "Cannot play this profile!");
+
+			do {
+				if (checkSim(runner->artist, lastpat)) {
+					runner->flags |= MP_TDARK;
+				}
+				if (strcmp(runner->album, lastalb)) {
+					runner->flags |= MP_ADARK;
+				}
+				if (runner->flags & MP_DARK) {
+					/* get another with a matching playcount
+					* these are expensive, so we try to keep the steps
+					* somewhat reasonable.. */
+					runner =
+						skipPcount(runner, (num / 2) - (random() % num),
+								&pcount, maxpcount);
+					if (runner == NULL) {
+						/* back to square one for this round */
+						runner = guard;
+						if (maxnum > 1) {
+							maxnum--;
+							unsetFlags(MP_PDARK);
+							pcount = getPlaycount(count_min);
+							num = countTitles(MP_DEF, MP_HIDE);
+							/* we do not want to see this and if we do, it may hint at
+							* something strange going on - maybe even add some debug info */
+							addMessage(0,
+									"Reducing repeat to %" PRIu32 " with %"
+									PRIu64 " titles", maxnum, num);
+						}
+						else {
+							/* This should rather change it to something sensible instead of
+							* simply bailing out! */
+							fail(-1, "Cannot play this profile!");
+						}
 					}
 				}
-			}
+			} while (runner->flags & MP_DARK);
 
 			if (guard != runner) {
 				/* title did not fit, start again from the beginning
@@ -1750,7 +1763,7 @@ static bool addNewTitle(void) {
 				continue;
 			}
 			tnum++;
-		}
+		} /* skip titles in playlist */
 		pl = pl->prev;
 	} while ((pl != NULL) && (tnum < maxnum));
 
@@ -1836,7 +1849,7 @@ void plCheck(bool fill) {
 			}
 		}
 
-		/* unset MP_TDARK for the title that shifted out of the spreadcount */
+		/* unset MP_TDARK/ADARK for the title that shifted out of the spreadcount */
 		if (cnt >= (int32_t) getConfig()->spread) {
 			cnt = getConfig()->spread;
 			while (cnt > 0) {
@@ -1844,7 +1857,7 @@ void plCheck(bool fill) {
 				if (pl->title->flags & MP_INPL)
 					cnt--;
 			}
-			clearTDARK(pl->title);
+			clearTADARK(pl->title);
 		}
 
 		/* Done cleaning, now start pruning */
@@ -2109,6 +2122,7 @@ void dumpState() {
 		addMessage(0, "%5" PRIu64 " titles are MP_INPL", countflag(MP_INPL));
 		addMessage(0, "%5" PRIu64 " titles are MP_PDARK", countflag(MP_PDARK));
 		addMessage(0, "%5" PRIu64 " titles are MP_TDARK", countflag(MP_TDARK));
+		addMessage(0, "%5" PRIu64 " titles are MP_ADARK", countflag(MP_ADARK));
 		addMessage(0, "%5" PRIu64 " titles are MP_HIDE", countflag(MP_HIDE));
 		dumpInfo(0);
 	}

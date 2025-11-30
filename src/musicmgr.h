@@ -21,15 +21,17 @@
 #define MP_DBL   0x0004			/* doublet */
 #define MP_INPL  0x0008			/* was added normally to the playlist */
 #define MP_PDARK 0x0010			/* does not fit the playcount */
-#define MP_TDARK 0x0020			/* does not fit the titles */
-#define MP_ALL   0x003f
-#define MP_MARK  0x0040
+#define MP_TDARK 0x0020			/* does not fit the titles (artists) */
+#define MP_ADARK 0x0040			/* does not fit the albums */
+#define MP_DARK  0x0070
+#define MP_ALL   0x007f
+#define MP_MARK  0x0080
 // mpc_genre     0x0100
 // mpc_artist    0x0200
 // mpc_album     0x0400
 // mpc_title     0x0800
 // mpc_display   0x1000
-#define MP_HIDE  (MP_DNP|MP_DBL|MP_INPL|MP_TDARK)
+#define MP_HIDE  (MP_DNP|MP_DBL|MP_INPL|MP_TDARK|MP_ADARK)
 #define MP_DEF   (getFavplay()? MP_FAV : MP_ALL)
 
 typedef struct mptitle_s mptitle_t;

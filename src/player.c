@@ -63,7 +63,7 @@ void cleanTitles(bool flags) {
 		}
 		else {
 			/* new list, nothing should be matching */
-			runner->flags &= ~MP_TDARK;
+			runner->flags &= ~(MP_DARK);
 		}
 	} while (runner != control->root);
 }
