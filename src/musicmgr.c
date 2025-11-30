@@ -161,7 +161,7 @@ static void clearTADARK(mptitle_t * root) {
 			}
 			if ((runner->flags & MP_ADARK)
 				/* album is a perfect match, no need to guess */
-				&& strcmp(runner->album, root->artist)) {
+				&& (strcmp(runner->album, root->artist) == 0)) {
 				runner->flags &= ~MP_ADARK;
 			}
 			runner = runner->next;
@@ -1720,7 +1720,7 @@ static bool addNewTitle(void) {
 				if (checkSim(runner->artist, lastpat)) {
 					runner->flags |= MP_TDARK;
 				}
-				if (strcmp(runner->album, lastalb)) {
+				if ((strcmp(runner->album, lastalb) == 0)) {
 					runner->flags |= MP_ADARK;
 				}
 				if (runner->flags & MP_DARK) {
