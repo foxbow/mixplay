@@ -166,7 +166,7 @@ typedef struct {
 	uint32_t skipdnp;			/* how many skips mean dnp? */
 	int32_t volume;				/* current volume [0..100] */
 	char *channel;				/* the name of the ALSA master channel */
-	int32_t debug;
+	uint32_t debug;
 	char *streamURL;			/* needed to load a new stream */
 	msgbuf_t *msg;				/* generic message buffer */
 	int32_t port;
@@ -227,7 +227,7 @@ uint32_t getProcess(void);
 #define isStreamActive() isStream(getProfile(getConfig()->active))
 
 void incDebug(void);
-int32_t getDebug(void);
+uint32_t getDebug(void);
 bool isDebug(void);
 void addMessage(int32_t v, const char *msg, ...)
 	__attribute__ ((__format__(__printf__, 2, 3)));
@@ -236,7 +236,7 @@ void addMessage(int32_t v, const char *msg, ...)
 
 char *getCurrentActivity(void);
 
-void activity(int32_t v, const char *msg, ...)
+void activity(uint32_t v, const char *msg, ...)
 	__attribute__ ((__format__(__printf__, 2, 3)));
 
 void updateUI(void);

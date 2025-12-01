@@ -1613,9 +1613,10 @@ void setArtistSpread() {
 			checker = skipOverFlags(checker, 1, mask);
 		}
 		/* Check has been done if we have more than the full playlist length,
-		 * then we're done */
+		 * then we're done unless we're debugging and interested in the total
+		 * value - but that may take quite some time... */
 		count++;
-		if ((getDebug() > 1) && (count > 2 * MPPLSIZE)) {
+		if ((getDebug() < 2) && (count > 2 * MPPLSIZE)) {
 			break;
 		}
 		/* runner has been checked too */
