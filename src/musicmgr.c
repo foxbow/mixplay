@@ -1614,7 +1614,8 @@ void setArtistSpread() {
 		}
 		/* Check has been done if we have more than the full playlist length,
 		 * then we're done */
-		if (++count > 2 * MPPLSIZE) {
+		count++;
+		if ((getDebug() > 1) && (count > 2 * MPPLSIZE)) {
 			break;
 		}
 		/* runner has been checked too */
