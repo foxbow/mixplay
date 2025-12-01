@@ -1590,10 +1590,8 @@ void setArtistSpread() {
 	mptitle_t *checker = NULL;
 	uint32_t count = 0;
 
-	/* which titles should be skipped
-	 * MP_PDARK is kind of questionable but may speed up adding titles and
-	 * avoid premature increase of playcount */
-	const uint32_t mask = MP_PDARK | MP_MARK;
+	/* which titles should be skipped */
+	const uint32_t mask = MP_MARK;
 
 	/* Use MP_MARK to check off tested titles */
 	unsetFlags(MP_MARK);
@@ -1607,27 +1605,30 @@ void setArtistSpread() {
 				/* the artist is similar enough, mark as gone */
 				checker->flags |= MP_MARK;
 			}
+			if (!strcmp(runner->album, checker->album)) {
+				/* count samplers as one artist */
+				checker->flags |= MP_MARK;
+			}
 			/* check for the next title */
 			checker = skipOverFlags(checker, 1, mask);
 		}
-		/* Check has been done
-		 * 3 is correct here since we use a rule of 2/3 later */
-		if (count++ == 3 * MPPLSIZE) {
+		/* Check has been done if we have more than the full playlist length,
+		 * then we're done */
+		if (++count > 2 * MPPLSIZE) {
 			break;
 		}
 		/* runner has been checked too */
 		runner->flags |= MP_MARK;
 		/* find the next title to check */
-		runner = skipOverFlags(runner->next, 1, mask);
+		runner = skipOverFlags(runner, 1, mask);
 	}
 	/* clean up */
 	unsetFlags(MP_MARK);
 
-	/* two thirds to take number of titles per artist somewhat into account */
-	count = (count * 2) / 3;
-	/* spreadcount needs to be at least length of the future playlist */
-	getConfig()->spread = (count < (MPPLSIZE+1)) ? (MPPLSIZE+1) : count;
-	addMessage(2, "At least %" PRIu32 " artists available.", count);
+	count = (count > 1) ? count : 2;
+	addMessage(1, "Moving spread from %" PRIu32 " to %" PRIu32,
+			   getConfig()->spread, count);
+	getConfig()->spread = count;
 }
 
 /**
@@ -1725,11 +1726,11 @@ static bool addNewTitle(void) {
 				}
 				if (runner->flags & MP_DARK) {
 					/* get another with a matching playcount
-					* these are expensive, so we try to keep the steps
-					* somewhat reasonable.. */
+					 * these are expensive, so we try to keep the steps
+					 * somewhat reasonable.. */
 					runner =
 						skipPcount(runner, (num / 2) - (random() % num),
-								&pcount, maxpcount);
+								   &pcount, maxpcount);
 					if (runner == NULL) {
 						/* back to square one for this round */
 						runner = guard;
@@ -1739,14 +1740,14 @@ static bool addNewTitle(void) {
 							pcount = getPlaycount(count_min);
 							num = countTitles(MP_DEF, MP_HIDE);
 							/* we do not want to see this and if we do, it may hint at
-							* something strange going on - maybe even add some debug info */
+							 * something strange going on - maybe even add some debug info */
 							addMessage(0,
-									"Reducing repeat to %" PRIu32 " with %"
-									PRIu64 " titles", maxnum, num);
+									   "Reducing repeat to %" PRIu32 " with %"
+									   PRIu64 " titles", maxnum, num);
 						}
 						else {
 							/* This should rather change it to something sensible instead of
-							* simply bailing out! */
+							 * simply bailing out! */
 							fail(-1, "Cannot play this profile!");
 						}
 					}
@@ -1763,7 +1764,7 @@ static bool addNewTitle(void) {
 				continue;
 			}
 			tnum++;
-		} /* skip titles in playlist */
+		}						/* skip titles in playlist */
 		pl = pl->prev;
 	} while ((pl != NULL) && (tnum < maxnum));
 
