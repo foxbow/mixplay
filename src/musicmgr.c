@@ -1450,14 +1450,17 @@ uint32_t getPlaycount(mpcount_t range) {
 		bool valid = false;
 
 		if (range == count_mean) {
+			/* always take all titles for the mean playcount */
 			valid = !(runner->flags & MP_DBL);
 			playcount = runner->playcount;
 		}
 		else if (getFavplay()) {
+			/* only look at favourites on favplay */
 			valid = (runner->flags & MP_FAV);
 			playcount = runner->favpcount;
 		}
 		else {
+			/* otherwise check if DNP and DBL are unset */
 			valid = !(runner->flags & (MP_DNP | MP_DBL));
 			playcount = runner->playcount;
 		}
@@ -1469,7 +1472,7 @@ uint32_t getPlaycount(mpcount_t range) {
 			if (playcount > max) {
 				max = playcount;
 			}
-			sum += playcount;
+			sum += (10 * playcount);
 			cnt++;
 		}
 		runner = runner->next;
@@ -1482,7 +1485,8 @@ uint32_t getPlaycount(mpcount_t range) {
 	case count_max:
 		return max;
 	case count_mean:
-		return sum / cnt;
+		/* we need to do some integer rounding */
+		return (sum + 5) / 20;
 	default:
 		fail(F_FAIL, "Illegal count range");
 	}
@@ -1549,7 +1553,7 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t cnt,
 					   *pcount);
 			if (*pcount > maxcount) {
 				/* We may need to decrease repeats */
-				addMessage(3, "No more titles available");
+				addMessage(-1, "No more titles available");
 				return NULL;
 			}
 			runner = guard;
@@ -1559,7 +1563,7 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t cnt,
 
 		/* Does it fit the playcount? 
 		 * favpcount is always right. On favplay it's the only playcount
-		 * on standard titled, favpcount is always equal to pcount and
+		 * on standard titles, favpcount is always equal to pcount and
 		 * for favourites, favpcount follows playcount */
 		if (runner->favpcount <= *pcount) {
 			if (steps > 0)

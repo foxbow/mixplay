@@ -803,7 +803,7 @@ void addMessage(int32_t v, const char *msg, ...) {
 		}
 	}
 
-	if (v < (int32_t)getDebug()) {
+	if (v < (int32_t) getDebug()) {
 		fprintf(stderr, "\r%s\n", line);
 	}
 
