@@ -1620,7 +1620,7 @@ void setArtistSpread() {
 		 * then we're done unless we're debugging and interested in the total
 		 * value - but that may take quite some time... */
 		count++;
-		if ((getDebug() < 2) && (count > (2 * MPPLSIZE)+1) {
+		if ((getDebug() < 2) && (count > (2 * MPPLSIZE)+1)) {
 			break;
 		}
 		/* runner has been checked too */
