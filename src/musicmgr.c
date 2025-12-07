@@ -1620,7 +1620,7 @@ void setArtistSpread() {
 		 * then we're done unless we're debugging and interested in the total
 		 * value - but that may take quite some time... */
 		count++;
-		if ((getDebug() < 2) && (count > 2 * MPPLSIZE)) {
+		if ((getDebug() < 2) && (count > (2 * MPPLSIZE)+1) {
 			break;
 		}
 		/* runner has been checked too */
@@ -1631,6 +1631,8 @@ void setArtistSpread() {
 	/* clean up */
 	unsetFlags(MP_MARK);
 
+	/* the rolling window needs to be smaller than the frame */
+	count --;
 	count = (count > 1) ? count : 2;
 	addMessage(1, "Moving spread from %" PRIu32 " to %" PRIu32,
 			   getConfig()->spread, count);
@@ -1687,7 +1689,9 @@ static bool addNewTitle(void) {
 	while (num < 3) {
 		pcount++;
 		/* if this happens, something is really askew */
-		assert(pcount <= maxpcount);
+		if (pcount > maxpcount) {
+			fail(F_FAIL, "playcount %" PRIu32 " got larger than %" PRIu32, pcount, maxpcount);
+		}
 		addMessage(2, "Less than 3 titles, bumping playcount to %" PRIu32,
 				   pcount);
 		unsetFlags(MP_PDARK);
