@@ -1655,8 +1655,7 @@ static bool addNewTitle(void) {
 	uint32_t pcount = 0;
 	uint32_t maxpcount = 0;
 	uint32_t tnum = 0;			/* number of titles (to play) in the playlist */
-	uint32_t maxnum = 0;		/* how many titles must not have the same artist */
-
+	
 	mpplaylist_t *pl = getCurrent();
 	mptitle_t *root;
 
@@ -1695,9 +1694,8 @@ static bool addNewTitle(void) {
 		num = countTitles(MP_DEF, MP_HIDE);
 	}
 
-	maxnum = getConfig()->spread;
 	addMessage(2, "%" PRIu64 " titles available, avoiding %u repeats", num,
-			   maxnum);
+			   getConfig()->spread);
 
 	/* start with some 'random' title */
 	runner =
@@ -1740,18 +1738,10 @@ static bool addNewTitle(void) {
 					if (runner == NULL) {
 						/* back to square one for this round */
 						runner = guard;
-						if (maxnum > 1) {
-							maxnum--;
-							unsetFlags(MP_PDARK);
-							pcount = getPlaycount(count_min);
-							num = countTitles(MP_DEF, MP_HIDE);
-							/* we do not want to see this and if we do, it may hint at
-							 * something strange going on - maybe even add some debug info */
-							addMessage(0,
-									   "Reducing repeat to %" PRIu32 " with %"
-									   PRIu64 " titles", maxnum, num);
-						}
-						else {
+						addMessage(0, "Changing spread from %" PRIu32 " to %" PRIu32, tnum, getConfig()->spread);
+						getConfig()->spread=tnum;
+
+						if (getConfig()->spread < 1) {
 							/* This should rather change it to something sensible instead of
 							 * simply bailing out! */
 							fail(-1, "Cannot play this profile!");
@@ -1772,7 +1762,7 @@ static bool addNewTitle(void) {
 			tnum++;
 		}						/* skip titles in playlist */
 		pl = pl->prev;
-	} while ((pl != NULL) && (tnum < maxnum));
+	} while ((pl != NULL) && (tnum < getConfig()->spread));
 
 	/*  *INDENT-OFF*  */
 	addMessage(2, "[+] (%i/%i/%c) %5" PRIu32 " %s",
