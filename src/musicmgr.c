@@ -1679,23 +1679,33 @@ static bool addNewTitle(void) {
 	maxpcount = getPlaycount(count_max);
 	addMessage(2, "Playcount [%" PRIu32 ":%" PRIu32 "]", pcount, maxpcount);
 
-	/* are there playable titles at all? */
-	if (countTitles(MP_DEF, MP_HIDE) == 0) {
-		fail(F_FAIL, "No titles to be played!");
-		return false;
+	num = countTitles(MP_DEF, MP_HIDE | MP_PDARK);
+
+	/* no more titles, but some are marked with PDARK, so pull those in */
+	if (num == 0 && (countflag(MP_PDARK) > 0)) {
+		unsetFlags(MP_PDARK);
+		pcount++;
+		if (pcount > maxpcount) {
+			addMessage(0, "playcount %" PRIu32 " got larger than %" PRIu32, pcount, maxpcount);
+			pcount = maxpcount;
+		}
+		num = countTitles(MP_DEF, MP_HIDE);
 	}
 
-	num = countTitles(MP_DEF, MP_HIDE | MP_PDARK);
-	while (num < 3) {
-		pcount++;
-		/* if this happens, something is really askew */
-		if (pcount > maxpcount) {
-			fail(F_FAIL, "playcount %" PRIu32 " got larger than %" PRIu32, pcount, maxpcount);
+	/* still no more titles, that's bad. Adjust spread innstead */
+	while (num == 0) {
+		uint32_t spread = getConfig()->spread;
+		setArtistSpread();
+		addMessage(1, "Moved Artistspread from %" PRIu32 " to %" PRIu32, spread, getConfig()->spread);
+		mpplaylist_t *freeme = getConfig()->current;
+		while (freeme->next != NULL) freeme = freeme->next;
+		for (;spread > 0; spread--) freeme = freeme->prev;
+		while (freeme != NULL) {
+			clearTADARK(freeme->title);
+			freeme = freeme->prev;
 		}
-		addMessage(2, "Less than 3 titles, bumping playcount to %" PRIu32,
-				   pcount);
-		unsetFlags(MP_PDARK);
 		num = countTitles(MP_DEF, MP_HIDE);
+		addMessage(1, "Freed %" PRIu64 " titles", num);
 	}
 
 	addMessage(2, "%" PRIu64 " titles available, avoiding %u repeats", num,

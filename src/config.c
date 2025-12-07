@@ -879,9 +879,6 @@ void activity(uint32_t v, const char *act, ...) {
 			printf("\r* %s\r", _curact);
 		}
 	}
-	else {
-		addMessage(1, "'%s' should probably have a throbber!", act);
-	}
 }
 
 static void addHook(void (*func)(void *), void *arg, _mpfunc ** list) {
