@@ -1445,14 +1445,17 @@ uint32_t getPlaycount(mpcount_t range) {
 		bool valid = false;
 
 		if (range == count_mean) {
+			/* always take all titles for the mean playcount */
 			valid = !(runner->flags & MP_DBL);
 			playcount = runner->playcount;
 		}
 		else if (getFavplay()) {
+			/* only look at favourites on favplay */
 			valid = (runner->flags & MP_FAV);
 			playcount = runner->favpcount;
 		}
 		else {
+			/* otherwise check if DNP and DBL are unset */
 			valid = !(runner->flags & (MP_DNP | MP_DBL));
 			playcount = runner->playcount;
 		}
@@ -1464,7 +1467,7 @@ uint32_t getPlaycount(mpcount_t range) {
 			if (playcount > max) {
 				max = playcount;
 			}
-			sum += playcount;
+			sum += (10 * playcount);
 			cnt++;
 		}
 		runner = runner->next;
@@ -1477,7 +1480,8 @@ uint32_t getPlaycount(mpcount_t range) {
 	case count_max:
 		return max;
 	case count_mean:
-		return sum / cnt;
+		/* we need to do some integer rounding */
+		return (sum + 5) / 20;
 	default:
 		fail(F_FAIL, "Illegal count range");
 	}
@@ -1554,7 +1558,7 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t cnt,
 
 		/* Does it fit the playcount? 
 		 * favpcount is always right. On favplay it's the only playcount
-		 * on standard titled, favpcount is always equal to pcount and
+		 * on standard titles, favpcount is always equal to pcount and
 		 * for favourites, favpcount follows playcount */
 		if (runner->favpcount <= *pcount) {
 			if (steps > 0)
@@ -1613,7 +1617,7 @@ void setArtistSpread() {
 		/* runner has been checked too */
 		runner->flags |= MP_MARK;
 		/* find the next title to check */
-		runner = skipOverFlags(runner->next, 1, mask);
+		runner = skipOverFlags(runner, 1, mask);
 	}
 	/* clean up */
 	unsetFlags(MP_MARK);
@@ -1642,8 +1646,7 @@ static bool addNewTitle(void) {
 	uint32_t pcount = 0;
 	uint32_t maxpcount = 0;
 	uint32_t tnum = 0;			/* number of titles (to play) in the playlist */
-	uint32_t maxnum = 0;		/* how many titles must not have the same artist */
-
+	
 	mpplaylist_t *pl = getCurrent();
 	mptitle_t *root;
 
@@ -1682,9 +1685,8 @@ static bool addNewTitle(void) {
 		num = countTitles(MP_DEF, MP_HIDE);
 	}
 
-	maxnum = getConfig()->spread;
 	addMessage(2, "%" PRIu64 " titles available, avoiding %u repeats", num,
-			   maxnum);
+			   getConfig()->spread);
 
 	/* start with some 'random' title */
 	runner =
@@ -1721,22 +1723,30 @@ static bool addNewTitle(void) {
 				if (runner == NULL) {
 					/* back to square one for this round */
 					runner = guard;
-					if (maxnum > 1) {
-						maxnum--;
-						unsetFlags(MP_PDARK);
-						pcount = getPlaycount(count_min);
-						num = countTitles(MP_DEF, MP_HIDE);
-						/* we do not want to see this and if we do, it may hint at
-						 * something strange going on - maybe even add some debug info */
-						addMessage(0,
-								   "Reducing repeat to %" PRIu32 " with %"
-								   PRIu64 " titles", maxnum, num);
+
+					uint32_t spread = getConfig()->spread;
+					setArtistSpread();
+					if (spread == getConfig()->spread) {
+						getConfig()->spread--;
+						if (getConfig()->spread < 1) {
+							addMessage(-1, "Profile is dead!");
+							return false;
+						}
 					}
-					else {
-						/* This should rather change it to something sensible instead of
-						 * simply bailing out! */
-						fail(-1, "Cannot play this profile!");
+					addMessage(1, "Moved Artistspread from %" PRIu32 " to %" PRIu32, spread, getConfig()->spread);
+					mpplaylist_t *freeme = getConfig()->current;
+					while (freeme->next != NULL) freeme = freeme->next;
+					spread = getConfig()->spread; 
+					while ((freeme->prev != NULL) && (spread > 0)) {
+						freeme = freeme->prev;
+						if (freeme->title->flags & MP_INPL) spread--;
 					}
+					while (freeme != NULL) {
+						if (freeme->title->flags & MP_INPL) clearTDARK(freeme->title);
+						freeme = freeme->prev;
+					}
+
+					num = countTitles(MP_DEF, MP_HIDE);
 				}
 			}
 
@@ -1750,9 +1760,9 @@ static bool addNewTitle(void) {
 				continue;
 			}
 			tnum++;
-		}
+		}						/* skip titles in playlist */
 		pl = pl->prev;
-	} while ((pl != NULL) && (tnum < maxnum));
+	} while ((pl != NULL) && (tnum < getConfig()->spread));
 
 	/*  *INDENT-OFF*  */
 	addMessage(2, "[+] (%i/%i/%c) %5" PRIu32 " %s",
@@ -1760,7 +1770,7 @@ static bool addNewTitle(void) {
 			   pcount, flagToChar(runner->flags), runner->key, runner->display);
 	/*  *INDENT-ON*  */
 	appendToPL(runner, getCurrent(), true);
-	return 1;
+	return true;
 }
 
 /**
