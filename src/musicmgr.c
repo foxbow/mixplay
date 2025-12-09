@@ -150,13 +150,17 @@ static mptitle_t *skipOverFlags(mptitle_t * current, int32_t dir,
 	return marker;
 }
 
+static bool checkTitles(mptitle_t *titlea, mptitle_t *titleb) {
+	return checkSim(titlea->artist, titleb->artist) || checkSim(titlea->title, titleb->title);
+}
+
 static void clearTDARK(mptitle_t * root) {
 	if (root->flags & MP_INPL) {
 		mptitle_t *runner = root->next;
 
 		while (runner != root) {
 			if ((runner->flags & MP_TDARK)
-				&& checkSim(runner->artist, root->artist)) {
+				&& checkTitles(runner, root)) {
 				runner->flags &= ~MP_TDARK;
 			}
 			runner = runner->next;
@@ -1544,7 +1548,7 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t cnt,
 			(*pcount)++;
 			/* remove MP_PDARK as the playcount changed */
 			unsetFlags(MP_PDARK);
-			addMessage(2, "Increasing maxplaycount to %" PRIi32 " (pcount)",
+			addMessage(1, "Increasing maxplaycount to %" PRIi32 " (pcount)",
 					   *pcount);
 			if (*pcount > maxcount) {
 				/* We may need to decrease repeats */
@@ -1602,7 +1606,7 @@ void setArtistSpread() {
 		checker = skipOverFlags(runner, 1, mask);
 		/* a comparison can be done */
 		while (checker && (checker != runner)) {
-			if (checkSim(runner->artist, checker->artist)) {
+			if (checkTitles(runner, checker)) {
 				/* the artist is similar enough, mark as gone */
 				checker->flags |= MP_MARK;
 			}
@@ -1624,9 +1628,8 @@ void setArtistSpread() {
 
 	/* two thirds to take number of titles per artist somewhat into account */
 	count = (count * 2) / 3;
-	/* spreadcount needs to be at least length of the future playlist */
-	getConfig()->spread = (count < (MPPLSIZE+1)) ? (MPPLSIZE+1) : count;
-	addMessage(2, "At least %" PRIu32 " artists available.", count);
+	getConfig()->spread = (count > 1) ? count : 2;
+	addMessage(1, "At least %" PRIu32 " artists available.", count);
 }
 
 /**
@@ -1642,7 +1645,7 @@ static bool addNewTitle(void) {
 	mptitle_t *runner = NULL;
 	mptitle_t *guard = NULL;
 	uint64_t num = 0;
-	char *lastpat = NULL;
+	mptitle_t *last = NULL;
 	uint32_t pcount = 0;
 	uint32_t maxpcount = 0;
 	uint32_t tnum = 0;			/* number of titles (to play) in the playlist */
@@ -1658,8 +1661,8 @@ static bool addNewTitle(void) {
 			pl = pl->next;
 		}
 		root = pl->title;
-		/* just to set lastpat != NULL */
-		lastpat = runner->artist;
+		/* just to set last != NULL */
+		last = runner;
 	}
 	runner = root;
 
@@ -1697,7 +1700,7 @@ static bool addNewTitle(void) {
 		runner = root;
 	}
 
-	if (lastpat == NULL) {
+	if (last == NULL) {
 		/* No titles in the playlist yet, we're done! */
 		getConfig()->current = appendToPL(runner, NULL, true);
 		return true;
@@ -1707,11 +1710,10 @@ static bool addNewTitle(void) {
 	do {
 		/* skip searched titles */
 		if (pl->title->flags & MP_INPL) {
-			lastpat = pl->title->artist;
+			last = pl->title;
 			guard = runner;
 			/* does the title clash with the current one? */
-			while (checkSim(runner->artist, lastpat)) {
-				addMessage(3, "%s = %s", runner->artist, lastpat);
+			while (checkTitles(runner, last)) {
 				/* don't try this one again */
 				runner->flags |= MP_TDARK;
 				/* get another with a matching playcount
