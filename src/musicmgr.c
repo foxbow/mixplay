@@ -151,7 +151,7 @@ static mptitle_t *skipOverFlags(mptitle_t * current, int32_t dir,
 }
 
 static bool checkTitles(mptitle_t *titlea, mptitle_t *titleb) {
-	return checkSim(titlea->artist, titleb->artist) || checkSim(titlea->title, titleb->title);
+	return (checkSim(titlea->artist, titleb->artist) || checkSim(titlea->title, titleb->title));
 }
 
 static void clearTDARK(mptitle_t * root) {
@@ -1662,7 +1662,7 @@ static bool addNewTitle(void) {
 		}
 		root = pl->title;
 		/* just to set last != NULL */
-		last = runner;
+		last = root;
 	}
 	runner = root;
 
