@@ -55,6 +55,7 @@ function sendKey (key) {
       break
     case 'C': // clear
       e.value = ''
+      e.focus()
       break
     case 'O': // Okay
       kbddiv.className = 'hide'

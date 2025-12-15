@@ -803,7 +803,7 @@ void addMessage(int32_t v, const char *msg, ...) {
 		}
 	}
 
-	if (v < getDebug()) {
+	if (v < (int32_t) getDebug()) {
 		fprintf(stderr, "\r%s\n", line);
 	}
 
@@ -820,7 +820,7 @@ void incDebug(void) {
  * returns the current debuglevel. If the configuration has not yet been
  * initialized, a debug level of 1 (HID-mode) is assumed.
  */
-int32_t getDebug(void) {
+uint32_t getDebug(void) {
 	if (_cconfig == NULL) {
 		return 1;
 	}
@@ -862,11 +862,10 @@ char *getCurrentActivity(void) {
  * set the current activity
  * the given string is shown as title for the client while the playlist
  * is either locked or not yet set.
- * Print message in debug interface when debuglevel is < n, so -1 means
- * the activity is not shown in debuginterface
+ * Print message in debug interface when debuglevel is > n
  */
-void activity(int32_t v, const char *act, ...) {
-	static char newact[76];
+void activity(uint32_t v, const char *act, ...) {
+	static char newact[MP_ACTLEN + 1];
 	va_list args;
 
 	va_start(args, act);
@@ -876,12 +875,9 @@ void activity(int32_t v, const char *act, ...) {
 	if (strcmp(newact, _curact)) {
 		strtcpy(_curact, newact, MP_ACTLEN);
 		notifyChange(MPCOMM_TITLES);
-		if (getDebug() >= v) {
+		if (getDebug() > v) {
 			printf("\r* %s\r", _curact);
 		}
-	}
-	else {
-		addMessage(1, "'%s' should probably have a throbber!", act);
 	}
 }
 

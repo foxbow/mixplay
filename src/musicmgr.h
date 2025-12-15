@@ -11,6 +11,9 @@
 /* do not return more than 100 titles */
 #define MAXSEARCH 100
 
+/* length of past and future titles, so a playlist has 2*MPPLSIZE+1 titles */
+#define MPPLSIZE 10
+
 /* flags - keep clear of range bits! */
 #define MP_NONE  0x0000
 #define MP_FAV   0x0001			/* Favourite */
@@ -27,6 +30,7 @@
 // mpc_title     0x0800
 // mpc_display   0x1000
 #define MP_HIDE  (MP_DNP|MP_DBL|MP_INPL|MP_TDARK)
+#define MP_DEF   (getFavplay()? MP_FAV : MP_ALL)
 
 typedef struct mptitle_s mptitle_t;
 struct mptitle_s {
@@ -52,6 +56,12 @@ struct mpplaylist_s {
 	mpplaylist_t *prev;
 	mpplaylist_t *next;
 };
+
+typedef enum {
+	count_max,
+	count_min,
+	count_mean
+} mpcount_t;
 
 typedef enum {
 	mpsearch_idle,
@@ -126,7 +136,7 @@ uint64_t countTitles(const uint32_t inc, const uint32_t exc);
 void setTnum(void);
 
 #define countflag(x) countTitles((x), MP_NONE)
-uint32_t getPlaycount(bool high);
+uint32_t getPlaycount(mpcount_t range);
 
 void dumpState(void);
 

@@ -1266,6 +1266,8 @@ static void clientHandler(int arg) {
 	sfree(&(handle.commdata));
 }
 
+#define NUM_THREADS 10
+
 /**
  * thread pool control structure
  */
@@ -1273,7 +1275,8 @@ typedef struct {
 	pthread_cond_t notify;
 	pthread_mutex_t mutex;
 	bool stop;					// shut down the pool then true
-	int fd;						// parameter space
+	int fdid;					// parameter index
+	int fds[NUM_THREADS];		// parameter space
 	int idle;					// housekeeping, how many threads are idle
 } poolControl_t;
 
@@ -1291,7 +1294,7 @@ static void *poolthread(void *arg) {
 		/* wait for a notification */
 		do {
 			pthread_cond_wait(&(pool->notify), &(pool->mutex));
-		} while ((pool->fd == -1) && !pool->stop);
+		} while ((pool->fdid == 0) && !pool->stop);
 
 		/* Shutdown everything */
 		if (pool->stop) {
@@ -1299,8 +1302,8 @@ static void *poolthread(void *arg) {
 		}
 
 		/* save the argument and clear the pool marker */
-		runarg = pool->fd;
-		pool->fd = -1;
+		pool->fdid--;
+		runarg = pool->fds[pool->fdid];
 		pool->idle--;
 
 		/* Let the next one check */
@@ -1314,8 +1317,6 @@ static void *poolthread(void *arg) {
 	pthread_exit(NULL);
 	return NULL;
 }
-
-#define NUM_THREADS 10
 
 /**
  * offers a HTTP connection to the player
@@ -1363,7 +1364,6 @@ static void *mpserver(void *arg) {
 
 	/* start all the threads */
 	for (int i = 0; i < NUM_THREADS; i++) {
-		char tname[MAXPATHLEN];
 
 		if (pthread_create(&(threadpool[i]), NULL,
 						   poolthread, (void *) &pool) != 0) {
@@ -1371,8 +1371,7 @@ static void *mpserver(void *arg) {
 			return NULL;
 		}
 		else {
-			snprintf(tname, MAXPATHLEN - 1, "clienthandler #%i", i);
-			pthread_setname_np(threadpool[i], tname);
+			pthread_setname_np(threadpool[i], "clientpool");
 		}
 	}
 
@@ -1400,7 +1399,10 @@ static void *mpserver(void *arg) {
 				/* I wonder if this ever happens ... */
 				addMessage(0, "Ran out of client threads!");
 			}
-			pool.fd = client_sock;
+
+			pool.fds[pool.fdid] = client_sock;
+			pool.fdid++;
+
 			if (pool.idle < lastidle) {
 				addMessage(MPV + 0, "%2i threads idling", pool.idle);
 				lastidle = pool.idle;
