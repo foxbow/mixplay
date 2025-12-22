@@ -1524,7 +1524,7 @@ static char flagToChar(int32_t flag) {
  * skips steps titles that match playcount pcount.
  * 
  * @param guard the current title to start from
- * @param steps number of steps to skip
+ * @param cnt number of steps to skip
  * @param pcount skip all titles with a lower pcount than this
  * @param maxcount the highest number of playcounts in the db
  */
@@ -1552,7 +1552,7 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t cnt,
 					   *pcount);
 			if (*pcount > maxcount) {
 				/* We may need to decrease repeats */
-				addMessage(3, "No more titles available");
+				addMessage(1, "No more titles available");
 				return NULL;
 			}
 			runner = guard;
@@ -1641,12 +1641,11 @@ void setArtistSpread() {
  *
  * @returns true on success and false on error
  */
-static bool addNewTitle(void) {
+static bool addNewTitle(uint32_t *pcount) {
 	mptitle_t *runner = NULL;
 	mptitle_t *guard = NULL;
 	uint64_t num = 0;
 	mptitle_t *last = NULL;
-	uint32_t pcount = 0;
 	uint32_t maxpcount = 0;
 	uint32_t tnum = 0;			/* number of titles (to play) in the playlist */
 	
@@ -1667,9 +1666,9 @@ static bool addNewTitle(void) {
 	runner = root;
 
 	/* remember playcount bounds */
-	pcount = getPlaycount(count_min);
+	// pcount = getPlaycount(count_min);
 	maxpcount = getPlaycount(count_max);
-	addMessage(2, "Playcount [%" PRIu32 ":%" PRIu32 "]", pcount, maxpcount);
+	addMessage(2, "Playcount [%" PRIu32 ":%" PRIu32 "]", *pcount, maxpcount);
 
 	/* are there playable titles at all? */
 	if (countTitles(MP_DEF, MP_HIDE) == 0) {
@@ -1679,11 +1678,11 @@ static bool addNewTitle(void) {
 
 	num = countTitles(MP_DEF, MP_HIDE | MP_PDARK);
 	while (num < 3) {
-		pcount++;
+		(*pcount)++;
 		/* if this happens, something is really askew */
-		assert(pcount <= maxpcount);
+		assert(*pcount <= maxpcount);
 		addMessage(2, "Less than 3 titles, bumping playcount to %" PRIu32,
-				   pcount);
+				   *pcount);
 		unsetFlags(MP_PDARK);
 		num = countTitles(MP_DEF, MP_HIDE);
 	}
@@ -1693,7 +1692,7 @@ static bool addNewTitle(void) {
 
 	/* start with some 'random' title */
 	runner =
-		skipPcount(runner, (int32_t) ((num / 2) - (random() % num)), &pcount,
+		skipPcount(runner, (int32_t) ((num / 2) - (random() % num)), pcount,
 				   maxpcount);
 	if (runner == NULL) {
 		addMessage(1, "Off to a bad start!");
@@ -1721,7 +1720,7 @@ static bool addNewTitle(void) {
 				 * somewhat reasonable.. */
 				runner =
 					skipPcount(runner, (num / 2) - (random() % num),
-							   &pcount, maxpcount);
+							   pcount, maxpcount);
 				if (runner == NULL) {
 					/* back to square one for this round */
 					runner = guard;
@@ -1769,7 +1768,7 @@ static bool addNewTitle(void) {
 	/*  *INDENT-OFF*  */
 	addMessage(2, "[+] (%i/%i/%c) %5" PRIu32 " %s",
 			   (runner->flags & MP_FAV) ? runner->favpcount : runner->playcount,
-			   pcount, flagToChar(runner->flags), runner->key, runner->display);
+			   *pcount, flagToChar(runner->flags), runner->key, runner->display);
 	/*  *INDENT-ON*  */
 	appendToPL(runner, getCurrent(), true);
 	return true;
@@ -1890,12 +1889,13 @@ void plCheck(bool fill) {
 
 	/* fill up the playlist with new titles if needed */
 	if (fill && (cnt < MPPLSIZE)) {
+		uint32_t pcount=getPlaycount(count_min);
 		/* dirty trick as we need to add MPPLSZE+1 titles on start! */
 		if (cnt == 0)
 			cnt = -1;
 		while (cnt < MPPLSIZE) {
-			activity(0, "Add title %i", cnt);
-			addNewTitle();
+			activity(0, "Add title %i/%"PRIu32, cnt, pcount);
+			addNewTitle(&pcount);
 			cnt++;
 		}
 	}
