@@ -102,6 +102,9 @@ mpplaylist_t *addPLDummy(mpplaylist_t * pl, const char *name) {
  * appends a title to the end of a playlist
  * if pl is NULL a new Playlist is created
  * this function either returns pl or the head of the new playlist
+ * @param title the title to add
+ * @param pl the playlist to add to, if NULL, create new playlist
+ * @param mark if true, set inpl on the entry and the title
  */
 static mpplaylist_t *appendToPL(mptitle_t * title, mpplaylist_t * pl,
 								bool mark) {
@@ -322,10 +325,10 @@ mpplaylist_t *remFromPLByKey(const uint32_t key) {
 /**
  * inserts a title into the playlist chain. Creates a new playlist
  * if no target is set.
- * This function returns a valid target
- * if mark is true, the title will be checked and marked for playing in
- * default mixplay, otherwise it is a searched title and will be
- * played out of order or added to a playlist result.
+ * @param title the title to add
+ * @param target the playlist to add to, if NULL create new playlist
+ * @param mark if true, set inpl on the entry and title
+ * @returns target or a pointer to the new playlist
  */
 mpplaylist_t *addToPL(mptitle_t * title, mpplaylist_t * target, bool mark) {
 	mpplaylist_t *buf = NULL;
@@ -338,6 +341,7 @@ mpplaylist_t *addToPL(mptitle_t * title, mpplaylist_t * target, bool mark) {
 	buf = (mpplaylist_t *) falloc(1, sizeof (mpplaylist_t));
 	memset(buf, 0, sizeof (mpplaylist_t));
 	buf->title = title;
+	if (mark) buf->title->flags |= MP_INPL;
 
 	if (target != NULL) {
 		if (target->next != NULL) {
@@ -349,9 +353,6 @@ mpplaylist_t *addToPL(mptitle_t * title, mpplaylist_t * target, bool mark) {
 	}
 	target = buf;
 
-	if (mark) {
-		title->flags |= MP_INPL;
-	}
 	/* do not notify here as the playlist may be a search result */
 	return target;
 }
@@ -1520,6 +1521,18 @@ static char flagToChar(int32_t flag) {
 	}
 }
 
+/* unsets PDARK for all titles with a lower or equal playcount to maxp */
+static void unsetPDARK(uint32_t maxp) {
+	mptitle_t *root = getConfig()->root;
+	mptitle_t *runner = root;
+
+	do {
+		if (runner->favpcount <= maxp) 
+			runner->flags &= ~MP_PDARK;
+		runner=runner->next;
+	} while(runner != root);
+}
+
 /**
  * skips steps titles that match playcount pcount.
  * 
@@ -1547,8 +1560,8 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t cnt,
 		if (runner == NULL) {
 			(*pcount)++;
 			/* remove MP_PDARK as the playcount changed */
-			unsetFlags(MP_PDARK);
-			addMessage(1, "Increasing maxplaycount to %" PRIi32 " (pcount)",
+			unsetPDARK(*pcount);
+			addMessage(2, "Increasing maxplaycount to %" PRIi32 " (pcount)",
 					   *pcount);
 			if (*pcount > maxcount) {
 				/* We may need to decrease repeats */
@@ -1683,7 +1696,7 @@ static bool addNewTitle(uint32_t *pcount) {
 		assert(*pcount <= maxpcount);
 		addMessage(2, "Less than 3 titles, bumping playcount to %" PRIu32,
 				   *pcount);
-		unsetFlags(MP_PDARK);
+		unsetPDARK(*pcount);
 		num = countTitles(MP_DEF, MP_HIDE);
 	}
 
@@ -1736,14 +1749,19 @@ static bool addNewTitle(uint32_t *pcount) {
 					}
 					addMessage(1, "Moved Artistspread from %" PRIu32 " to %" PRIu32, spread, getConfig()->spread);
 					mpplaylist_t *freeme = getConfig()->current;
+					/* move to the end of the playlist */
 					while (freeme->next != NULL) freeme = freeme->next;
-					spread = getConfig()->spread; 
+					spread = getConfig()->spread;
+					/* skip titles that are in the spread */
 					while ((freeme->prev != NULL) && (spread > 0)) {
 						freeme = freeme->prev;
+						/* only titles marked in the playlist count */
 						if (freeme->title->flags & MP_INPL) spread--;
 					}
+					/* clear flags for titles outside of the spread */
 					while (freeme != NULL) {
 						if (freeme->title->flags & MP_INPL) clearTDARK(freeme->title);
+						freeme->title->flags &= ~MP_INPL;
 						freeme = freeme->prev;
 					}
 
@@ -1964,7 +1982,7 @@ mptitle_t *recurse(char *curdir, mptitle_t * files) {
  * does a database scan and dumps information about playrate
  * favourites and DNPs
  */
-void dumpInfo(int32_t smooth) {
+void dumpInfo(bool smooth) {
 	mptitle_t *root = getConfig()->root;
 	mptitle_t *current = root;
 	uint32_t maxplayed = 0;
@@ -2011,8 +2029,9 @@ void dumpInfo(int32_t smooth) {
 		if (dbl)
 			addMessage(0, "%5i doublets", dbl);
 	}
-	if (marked)
+	if (marked > 0)
 		addMessage(0, "%5i in playlist", marked);
+
 	addMessage(0, "-- Playcount --");
 
 	while (pl <= maxplayed) {
@@ -2020,7 +2039,6 @@ void dumpInfo(int32_t smooth) {
 		uint32_t dcount = 0;
 		uint32_t dblcnt = 0;
 		uint32_t favcnt = 0;
-		uint32_t markcnt = 0;
 		char line[MAXPATHLEN];
 
 		do {
@@ -2035,9 +2053,6 @@ void dumpInfo(int32_t smooth) {
 				}
 				if (current->flags & MP_FAV) {
 					favcnt++;
-				}
-				if (current->flags & MP_INPL) {
-					markcnt++;
 				}
 			}
 			current = current->next;
@@ -2122,7 +2137,7 @@ void dumpState() {
 		addMessage(0, "%5" PRIu64 " titles are MP_PDARK", countflag(MP_PDARK));
 		addMessage(0, "%5" PRIu64 " titles are MP_TDARK", countflag(MP_TDARK));
 		addMessage(0, "%5" PRIu64 " titles are MP_HIDE", countflag(MP_HIDE));
-		dumpInfo(0);
+		dumpInfo(false);
 	}
 	else {
 		addMessage(0, "No title database");
