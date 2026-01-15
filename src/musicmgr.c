@@ -125,8 +125,7 @@ static mpplaylist_t *appendToPL(mptitle_t * title, mpplaylist_t * pl,
 	return pl;
 }
 
-static mptitle_t *skipOverFlags(mptitle_t * current, int32_t dir,
-								uint32_t flags) {
+static mptitle_t *skipOverFlags(mptitle_t * current, uint32_t flags) {
 	mptitle_t *marker = current;
 
 	flags |= (MP_DBL | MP_DNP);
@@ -136,12 +135,7 @@ static mptitle_t *skipOverFlags(mptitle_t * current, int32_t dir,
 	}
 
 	do {
-		if (dir > 0) {
-			marker = marker->next;
-		}
-		else {
-			marker = marker->prev;
-		}
+		marker = marker->next;
 
 		if (marker == current) {
 			addMessage(3, "Ran out of titles!");
@@ -1499,8 +1493,8 @@ uint32_t getPlaycount(mpcount_t range) {
  * is not in the current playlist and is not marked as DNP/DBL
  * returns NULL if no title is available
  */
-static mptitle_t *skipOver(mptitle_t * current, int32_t dir) {
-	return skipOverFlags(current, dir, MP_INPL | MP_TDARK | MP_PDARK);
+static mptitle_t *skipOver(mptitle_t * current) {
+	return skipOverFlags(current, MP_INPL | MP_TDARK | MP_PDARK);
 }
 
 static char flagToChar(int32_t flag) {
@@ -1548,7 +1542,7 @@ static void setPDARK(uint32_t maxp) {
  * @param pcount skip all titles with a lower pcount than this
  * @param maxcount the highest number of playcounts in the db
  */
-static mptitle_t *skipPcount(mptitle_t * guard, int32_t cnt,
+static mptitle_t *skipPcount(mptitle_t * guard, uint32_t cnt,
 							 uint32_t * pcount, uint64_t maxcount) {
 	mptitle_t *runner = guard;
 
@@ -1557,11 +1551,11 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t cnt,
 	if (cnt == 0) {
 		cnt = 1;
 	}
-	int32_t steps = cnt;
+	uint32_t steps = cnt;
 
 	while (steps != 0) {
 		/* fetch the next */
-		runner = skipOver(runner, steps);
+		runner = skipOver(runner);
 
 		/* Nothing fits!? Then increase playcount and try again */
 		if (runner == NULL) {
@@ -1580,11 +1574,7 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t cnt,
 			continue;
 		}
 
-		if (steps > 0)
-			steps--;
-		if (steps < 0)
-			steps++;
-
+		steps--;
 	}
 
 	return runner;
@@ -1600,7 +1590,7 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t cnt,
  * The value is set in the global config.
  */
 void setArtistSpread() {
-	mptitle_t *runner = skipOver(getConfig()->root, 1);
+	mptitle_t *runner = skipOver(getConfig()->root);
 	mptitle_t *checker = NULL;
 	uint32_t count = 0;
 
@@ -1614,7 +1604,7 @@ void setArtistSpread() {
 	activity(1, "Checking artist spread");
 	while (runner != NULL) {
 		/* find the next unmarked, playable title to compare to */
-		checker = skipOverFlags(runner, 1, mask);
+		checker = skipOverFlags(runner, mask);
 		/* a comparison can be done */
 		while (checker && (checker != runner)) {
 			if (checkTitles(runner, checker)) {
@@ -1622,7 +1612,7 @@ void setArtistSpread() {
 				checker->flags |= MP_MARK;
 			}
 			/* check for the next title */
-			checker = skipOverFlags(checker, 1, mask);
+			checker = skipOverFlags(checker, mask);
 		}
 		/* Check has been done
 		 * 3 is correct here since we use a rule of 2/3 later */
@@ -1632,7 +1622,7 @@ void setArtistSpread() {
 		/* runner has been checked too */
 		runner->flags |= MP_MARK;
 		/* find the next title to check */
-		runner = skipOverFlags(runner, 1, mask);
+		runner = skipOverFlags(runner, mask);
 	}
 	/* clean up */
 	unsetFlags(MP_MARK);
@@ -1703,7 +1693,7 @@ static bool addNewTitle(uint32_t *pcount) {
 
 	/* start with some 'random' title */
 	runner =
-		skipPcount(runner, (int32_t) ((num / 2) - (random() % num)), pcount,
+		skipPcount(runner, (uint32_t) (random() % num), pcount,
 				   maxpcount);
 	if (runner == NULL) {
 		addMessage(1, "Off to a bad start!");
