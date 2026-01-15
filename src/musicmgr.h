@@ -127,8 +127,7 @@ int32_t writeList(const mpcmd_t cmd);
 int32_t delTitleFromOtherList(mpcmd_t cmd, const mptitle_t * title);
 
 bool isMusic(const char *name);
-void dumpTitles(mptitle_t * root, const int32_t pl);
-void dumpInfo(int32_t smooth);
+void dumpInfo(bool smooth);
 void setArtistSpread();
 int32_t fillstick(mptitle_t * root, const char *target);
 int32_t getPlaylists(const char *cd, struct dirent ***pllist);
