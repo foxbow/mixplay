@@ -1495,7 +1495,7 @@ uint32_t getPlaycount(mpcount_t range) {
 }
 
 /**
- * skips the global list until a title is found that has not been hidden
+ * skips the global list until a title is found that has not DARK
  * is not in the current playlist and is not marked as DNP/DBL
  * returns NULL if no title is available
  */
@@ -1521,14 +1521,21 @@ static char flagToChar(int32_t flag) {
 	}
 }
 
-/* unsets PDARK for all titles with a lower or equal playcount to maxp */
-static void unsetPDARK(uint32_t maxp) {
+/** 
+ * unsets PDARK for all titles with a lower or equal playcount to maxp 
+ * and sets it for the rest 
+ *
+ * @param maxp max playcount to be taken into account
+ */
+static void setPDARK(uint32_t maxp) {
 	mptitle_t *root = getConfig()->root;
 	mptitle_t *runner = root;
 
 	do {
 		if (runner->favpcount <= maxp) 
 			runner->flags &= ~MP_PDARK;
+		else
+			runner->flags |= MP_PDARK;
 		runner=runner->next;
 	} while(runner != root);
 }
@@ -1559,8 +1566,6 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t cnt,
 		/* Nothing fits!? Then increase playcount and try again */
 		if (runner == NULL) {
 			(*pcount)++;
-			/* remove MP_PDARK as the playcount changed */
-			unsetPDARK(*pcount);
 			addMessage(2, "Increasing maxplaycount to %" PRIi32 " (pcount)",
 					   *pcount);
 			if (*pcount > maxcount) {
@@ -1568,25 +1573,18 @@ static mptitle_t *skipPcount(mptitle_t * guard, int32_t cnt,
 				addMessage(1, "No more titles available");
 				return NULL;
 			}
+			/* update MP_PDARK as the playcount changed */
+			setPDARK(*pcount);
 			runner = guard;
 			steps = cnt;
 			continue;
 		}
 
-		/* Does it fit the playcount? 
-		 * favpcount is always right. On favplay it's the only playcount
-		 * on standard titles, favpcount is always equal to pcount and
-		 * for favourites, favpcount follows playcount */
-		if (runner->favpcount <= *pcount) {
-			if (steps > 0)
-				steps--;
-			if (steps < 0)
-				steps++;
-		}
-		else {
-			/* don't look at this title again */
-			runner->flags |= MP_PDARK;
-		}
+		if (steps > 0)
+			steps--;
+		if (steps < 0)
+			steps++;
+
 	}
 
 	return runner;
@@ -1696,7 +1694,7 @@ static bool addNewTitle(uint32_t *pcount) {
 		assert(*pcount <= maxpcount);
 		addMessage(2, "Less than 3 titles, bumping playcount to %" PRIu32,
 				   *pcount);
-		unsetPDARK(*pcount);
+		setPDARK(*pcount);
 		num = countTitles(MP_DEF, MP_HIDE);
 	}
 
