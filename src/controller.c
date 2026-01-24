@@ -682,7 +682,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 
 			/* if the term is unset but the fuzzy bit is set, return the last ten
 			 * titles in the database */
-			if ((term == NULL) && !MPC_ISFUZZY(rcmd)) {
+			if ((term == NULL) && !MPC_ISRECENT(rcmd)) {
 				if (MPC_ISARTIST(rcmd)) {
 					term = ctitle->artist;
 				}

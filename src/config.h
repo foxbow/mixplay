@@ -74,7 +74,7 @@ typedef enum {
 	mpc_title = 1 << 11,		/* 0x0800 */
 	mpc_display = 1 << 12,		/* 0x1000 */
 	mpc_substr = 1 << 13,		/* 0x2000 */
-	mpc_fuzzy = 1 << 14,		/* 0x4000 - experimental newest with empty term */
+	mpc_recent = 1 << 14,		/* 0x4000 - experimental newest with empty term */
 } mpcmd_t;
 
 /* some filtermasks */
@@ -119,8 +119,8 @@ extern const char *_mprccmdstrings[MPRC_NUM];
 #define MPC_EQDISPLAY(x) (MPC_RANGE(x)==mpc_display)
 /* shall it be a substring */
 #define MPC_ISSUBSTR(x) (x & mpc_substr )
-/* shall it be fuzzy */
-#define MPC_ISFUZZY(x) (x & mpc_fuzzy )
+/* is this a real search */
+#define MPC_ISRECENT(x) (x & mpc_recent )
 
 /* playmodes */
 #define PM_NONE     0x00

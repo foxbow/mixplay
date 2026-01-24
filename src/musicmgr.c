@@ -148,7 +148,7 @@ static mptitle_t *skipOverFlags(mptitle_t * current, uint32_t flags) {
 }
 
 static bool checkTitles(mptitle_t *titlea, mptitle_t *titleb) {
-	return (checkSim(titlea->artist, titleb->artist) || checkSim(titlea->title, titleb->title));
+	return (patMatch(titlea->artist, titleb->artist) || patMatch(titlea->title, titleb->title));
 }
 
 static void clearTDARK(mptitle_t * root) {
@@ -434,72 +434,43 @@ static bool strieq(const char *t1, const char *t2) {
 }
 
 /*
- * matches term with pattern in search.
- */
-static bool isMatch(const char *term, const char *pat, const mpcmd_t range) {
-	char loterm[MAXPATHLEN];
-
-	if (MPC_ISFUZZY(range)) {
-		strltcpy(loterm, term, MAXPATHLEN);
-		return patMatch(loterm, pat);
-	}
-
-	/* mpc_substr is only sent from the UI */
-	if (MPC_ISSUBSTR(range)) {
-		strltcpy(loterm, term, MAXPATHLEN);
-		return (strstr(loterm, pat) != NULL);
-	}
-
-	return strieq(term, pat);
-}
-
-/*
  * checks if a title entry 'title' matches the search term 'pat'
  * the test is driven by the first two characters in the
  * search term. The first character gives the range (talgd(p))
- * the second character notes if the search should be
- * exact or fuzzy (=*)
- *
- * todo: consider adding a exact substring match or deprecate
- *       fuzzy matching for fav/dnp
  */
 static uint32_t matchTitle(mptitle_t * title, const char *pat) {
-	mpcmd_t fuzzy = mpc_unset;
 	int32_t res = 0;
 
+	/* TODO: '=' vs '*' has been deprecated */
 	if (('=' == pat[1]) || ('*' == pat[1])) {
-		if ('*' == pat[1]) {
-			fuzzy = mpc_fuzzy;
-		}
-
 		switch (pat[0]) {
 		case 't':
-			if (isMatch(title->title, pat + 2, fuzzy))
+			if (patMatch(title->title, pat + 2))
 				res = mpc_title;
 			break;
 
 		case 'a':
-			if (isMatch(title->artist, pat + 2, fuzzy))
+			if (patMatch(title->artist, pat + 2))
 				res = mpc_artist;
 			break;
 
 		case 'l':
-			if (isMatch(title->album, pat + 2, fuzzy))
+			if (patMatch(title->album, pat + 2))
 				res = mpc_album;
 			break;
 
 		case 'g':
-			if (isMatch(title->genre, pat + 2, fuzzy))
+			if (patMatch(title->genre, pat + 2))
 				res = mpc_genre;
 			break;
 
 		case 'd':
-			if (isMatch(title->display, pat + 2, fuzzy))
+			if (patMatch(title->display, pat + 2))
 				res = mpc_display;
 			break;
 
 		case 'p':				/* still used in doublets */
-			if (isMatch(title->path, pat + 2, fuzzy)) {
+			if (patMatch(title->path, pat + 2)) {
 				res = mpc_title;
 			}
 			break;
@@ -511,7 +482,7 @@ static uint32_t matchTitle(mptitle_t * title, const char *pat) {
 	}
 	else {
 		addMessage(0, "Pattern without range: %s", pat);
-		if (isMatch(title->display, pat, mpc_unset))
+		if (patMatch(title->display, pat))
 			res = mpc_display;
 	}
 
@@ -520,7 +491,7 @@ static uint32_t matchTitle(mptitle_t * title, const char *pat) {
 
 static int32_t addRangePrefix(mpcmd_t cmd, char *line) {
 	line[2] = 0;
-	line[1] = MPC_ISFUZZY(cmd) ? '*' : '=';
+	line[1] = '='; // deprecated
 	switch (MPC_RANGE(cmd)) {
 	case mpc_title:
 		line[0] = 't';
@@ -594,6 +565,10 @@ static void setFlags(searchentry_t * entry, mpcmd_t type) {
 static void addAlbum(searchresults_t * res, mptitle_t * title) {
 	uint32_t i = 0;
 
+	/* In the unlikely case that we found more than MAXSEARCH albums, just ignore */
+	if (res->lnum > MAXSEARCH)
+		return;
+
 	while ((i < res->lnum)
 		   && !strieq(res->albums[i].name, title->album))
 		i++;
@@ -612,7 +587,7 @@ static void addAlbum(searchresults_t * res, mptitle_t * title) {
 	}
 	/* fuzzy comparation to avoid collabs turning an album into a sampler */
 	else if (!strieq(res->albart[i].name, ARTIST_SAMPLER) &&
-			 !checkSim(res->albart[i].name, title->artist)) {
+			 !patMatch(res->albart[i].name, title->artist)) {
 		addMessage(1, "%s is considered a sampler (%s <> %s).",
 				   title->album, title->artist, res->albart[i].name);
 		res->albart[i].name = ARTIST_SAMPLER;
@@ -646,7 +621,7 @@ int32_t search(const mpcmd_t range, const char *pat) {
 		return 0;
 	}
 
-	if (pat == NULL) {
+	if (MPC_ISRECENT(range)) {
 		/* return at most last MPPLSIZE titles or last MPPLSIZE albums */
 		do {
 			runner = runner->prev;
@@ -673,25 +648,22 @@ int32_t search(const mpcmd_t range, const char *pat) {
 	}
 	else {
 		/* actual search */
-		/* whatever pattern we get, ignore case */
-		char *lopat = toLower(strdup(pat));
-
 		do {
 			int found = 0;
 
 			/* check for searchrange and patterns */
-			if (MPC_ISTITLE(range) && isMatch(runner->title, lopat, range)) {
+			if (MPC_ISTITLE(range) && patMatch(runner->title, pat)) {
 				found |= mpc_title;
 			}
 
 			/* from a result point of view display(, path) and title are the same */
 			if (MPC_ISDISPLAY(range)
-				&& isMatch(runner->display, lopat, range)) {
+				&& patMatch(runner->display, pat)) {
 				found |= mpc_title;
 			}
 
 			if (MPC_ISARTIST(range)
-				&& isMatch(runner->artist, lopat, range)) {
+				&& patMatch(runner->artist, pat)) {
 				found |= mpc_artist;
 
 				/* Add albums and titles if search was for artists only */
@@ -700,7 +672,7 @@ int32_t search(const mpcmd_t range, const char *pat) {
 				}
 			}
 
-			if (MPC_ISALBUM(range) && isMatch(runner->album, lopat, range)) {
+			if (MPC_ISALBUM(range) && patMatch(runner->album, pat)) {
 				found |= mpc_album;
 
 				/* Add titles if search was for albums only */
@@ -711,7 +683,7 @@ int32_t search(const mpcmd_t range, const char *pat) {
 
 			/* now interpret the value of 'found' */
 
-			if (MPC_ISARTIST(found)) {
+			if (MPC_ISARTIST(found) && (res->anum <= MAXSEARCH)) {
 				/* check for new artist */
 				for (i = 0; (i < res->anum)
 					 && !strieq(res->artists[i].name, runner->artist); i++);
@@ -731,22 +703,23 @@ int32_t search(const mpcmd_t range, const char *pat) {
 				addAlbum(res, runner);
 			}
 
-			if (MPC_ISTITLE(found) && (res->tnum++ < MAXSEARCH)) {
+			if (MPC_ISTITLE(found) && (res->tnum <= MAXSEARCH)) {
 				res->titles = appendToPL(runner, res->titles, false);
+				res->tnum++;
 			}
 
 			runner = runner->next;
-			/* we hit the limit, no sense in searching on */
-			if (res->tnum > MAXSEARCH)
-				break;
 		} while (runner != root);
-		free(lopat);
 	}
 
 	/* result can be sent out now */
 	res->state = mpsearch_done;
 
-	return ((res->tnum > MAXSEARCH) ? -1 : (int32_t) res->tnum);
+	uint32_t maxret = res->tnum;
+	if (res->anum > maxret) maxret = res->anum;
+	if (res->lnum > maxret) maxret = res->lnum;
+
+	return ((maxret > MAXSEARCH) ? -1 : (int32_t) maxret);
 }
 
 /**

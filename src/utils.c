@@ -51,7 +51,7 @@ static int patPrep(char *tgt, const char *src, int len) {
 	int tpos = 0;
 	bool sflag = false;
 
-	for (int pos = 0; pos < len; pos++) {
+	for (int pos = 0; (pos < len) && (src[pos] != '\0'); pos++) {
 		// reduce whitespaces
 		if (isspace(src[pos])) {
 			if (sflag)
@@ -73,45 +73,54 @@ static int patPrep(char *tgt, const char *src, int len) {
 }
 
 /*
- * checks if pat has a matching in text. If text is shorter than pat then
- * the test fails by definition.
+ * checks the similarity between two strings. If one string is at least twice the length
  */
-bool patMatch(const char *text, const char *pat) {
-	char *lotext;
+bool patMatch(const char *text1, const char *text2) {
 	char *lopat;
-	int32_t best = 0;
-	int32_t res;
-	int32_t plen = strlen(pat);
-	int32_t tlen = strlen(text);
-	int32_t i, j;
+	char *lotext;
+	size_t plen = 0;
+	size_t tlen = 0;
 
-	/* The pattern must not be longer than the text! */
-	if (tlen < plen) {
-		return false;
+	char lotext1[MAXPATHLEN+2];
+	char lotext2[MAXPATHLEN+2];
+
+	size_t t1len = patPrep(lotext1+1, text1, MAXPATHLEN);
+	size_t t2len = patPrep(lotext2+1, text2, MAXPATHLEN);
+
+	if (t1len < t2len) {
+		plen=t1len;
+		tlen=t2len;
+		lopat = lotext1;
+		lotext = lotext2+1;
+	}
+	else {
+		plen=t2len;
+		tlen=t1len;
+		lopat = lotext2;
+		lotext = lotext1+1;
 	}
 
-	/* A pattern must deliver at least some information */
-	if (strlen(pat) < 2) {
-		return false;
-	}
+	
+	if (tlen < plen) printf("\n HAHA!!! LOSER!!!\n\n");
 
 	/* prepare the pattern */
-	lopat = (char *) falloc(strlen(pat) + 3, 1);
-	patPrep(lopat + 1, pat, plen);
 	lopat[0] = 0;
 	lopat[plen + 1] = 0;
 
-	/* prepare the text */
-	lotext = (char *) falloc(tlen + 1, 1);
-	patPrep(lotext, text, tlen);
+	/* The pattern is too short, so do a real substring test */
+	if (plen < MATCHLEVEL) {
+		return (strstr(lopat+1, lotext) != NULL);
+	}
+
+	int32_t best = 0;
+	int32_t res;
 
 	/* check */
-	for (i = 0; i <= (tlen - plen); i++) {
+	for (size_t i = 0; i <= (tlen - plen); i++) {
 		res = 0;
-		for (j = i; j < plen + i; j++) {
+		for (size_t j = i; j < plen + i; j++) {
 			if ((lotext[j] == lopat[j - i]) ||
-				(lotext[j] == lopat[j - i + 1]) ||
-				(lotext[j] == lopat[j - i + 2])) {
+				 (lotext[j] == lopat[j - i + 1])) {
 				res++;
 			}
 			if (res > best) {
@@ -122,22 +131,9 @@ bool patMatch(const char *text, const char *pat) {
 
 	/* compute percentual match */
 	res = (100 * best) / plen;
-	sfree(&lotext);
-	sfree(&lopat);
-	return (res >= SIMGUARD);
-}
 
-/*
- * symmetric patMatch that checks if text is shorter than pattern
- * used for artist checking in addNewTitle
- */
-bool checkSim(const char *text, const char *pat) {
-	if (strlen(text) < strlen(pat)) {
-		return patMatch(pat, text);
-	}
-	else {
-		return patMatch(text, pat);
-	}
+	/* if at least SIMGUARD% of characters match, we're going to allow it */
+	return (res >= SIMGUARD);
 }
 
 /*
