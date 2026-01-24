@@ -118,7 +118,8 @@ void applyLists(int32_t clean);
 int32_t searchPlay(const char *pat, uint32_t num, const int32_t global);
 int32_t handleRangeCmd(mpcmd_t cmd, mptitle_t * title);
 int32_t handleDBL(mptitle_t * title);
-int32_t applyDNPlist(marklist_t * list, int32_t dbl);
+int32_t applyDNPlist(marklist_t * list);
+int32_t applyDBLlist(marklist_t * list);
 int32_t getListPath(mpcmd_t cmd, char path[MAXPATHLEN]);
 
 marklist_t *loadList(const mpcmd_t cmd);

@@ -142,6 +142,9 @@ static void startPlayer() {
 
 	if (control->status != mpc_idle) {
 		setCommand(mpc_stop, NULL);
+		/* the two setCommands in sequence may lead to an inversion 
+		   TODO: Implement proper command queueing! */
+		usleep(250000);
 	}
 	setCommand(mpc_start, NULL);
 }
@@ -206,6 +209,7 @@ void *setProfile(void *arg) {
 	if (isStream(profile)) {
 		setStream(profile->url, profile->name);
 	}
+
 	/* profile selected */
 	else {
 		addMessage(MPV + 1, "Playmode=%u", control->mpmode);
@@ -217,7 +221,7 @@ void *setProfile(void *arg) {
 		control->favlist = loadList(mpc_fav);
 		if (control->dbllist == NULL) {
 			control->dbllist = loadList(mpc_doublets);
-			applyDNPlist(control->dbllist, 1);
+			applyDBLlist(control->dbllist);
 		}
 		cleanTitles(true);
 		applyLists(1);

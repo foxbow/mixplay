@@ -727,19 +727,40 @@ int32_t search(const mpcmd_t range, const char *pat) {
 }
 
 /**
+ * remove all titles from the playlist where 'flag' is set
+ */
+static void cleanPLByFlag(uint32_t flag) {
+	mpplaylist_t *pl = getCurrent();
+	if (pl != NULL) {
+		while (pl->prev != NULL) {
+			pl = pl->prev;
+		}
+	}
+
+	while (pl != NULL) {
+		if (pl->title->flags & flag) {
+			if (pl == getCurrent()) {
+				getConfig()->current = pl->next;
+			}
+			pl = remFromPL(pl);
+		}
+		else {
+			pl = pl->next;
+		}
+	}
+}
+
+/**
  * applies the dnplist on a list of titles and marks matching titles
  * if the title is part of the playlist it will be removed from the playlist
  * too. This may lead to double played artists though...
  *
- * if dbl is true, then the title is marked as doublet as well
- *
  * returns the number of marked titles or -1 on error
  */
-int32_t applyDNPlist(marklist_t * list, int32_t dbl) {
+int32_t applyDNPlist(marklist_t * list) {
 	mptitle_t *base = getConfig()->root;
 	mptitle_t *pos = base;
 	marklist_t *ptr = list;
-	mpplaylist_t *pl = getCurrent();
 	int32_t cnt = 0;
 	uint32_t range = 0;
 
@@ -747,13 +768,10 @@ int32_t applyDNPlist(marklist_t * list, int32_t dbl) {
 		return 0;
 	}
 
-	if (dbl)
-		activity(0, "Applying DBL list");
-	else
-		activity(0, "Applying DNP list");
+	activity(0, "Applying DNP list");
 
 	do {
-		if (!(pos->flags & MP_DBL)) {
+		if (!(pos->flags & (MP_DBL | MP_DNP))) {
 			ptr = list;
 
 			while (ptr) {
@@ -761,8 +779,6 @@ int32_t applyDNPlist(marklist_t * list, int32_t dbl) {
 				if (range > MPC_RANGE(pos->flags)) {
 					addMessage(4, "[D] %s: %s", ptr->dir, pos->display);
 					pos->flags = (range | MP_DNP);
-					if (dbl)
-						pos->flags = (MPC_DFRANGE | MP_DBL);
 					cnt++;
 					break;
 				}
@@ -773,25 +789,52 @@ int32_t applyDNPlist(marklist_t * list, int32_t dbl) {
 	}
 	while (pos != base);
 
-	if (pl != NULL) {
-		while (pl->prev != NULL) {
-			pl = pl->prev;
-		}
-	}
-
-	while (pl != NULL) {
-		if (pl->title->flags & (MP_DNP | MP_DBL)) {
-			if (pl == getCurrent()) {
-				getConfig()->current = pl->next;
-			}
-			pl = remFromPL(pl);
-		}
-		else {
-			pl = pl->next;
-		}
-	}
+	cleanPLByFlag(MP_DNP);
 
 	addMessage(1, "Marked %i titles as DNP", cnt);
+
+	return cnt;
+}
+
+/**
+ * applies the dbllist on a list of titles and marks matching titles
+ * if the title is part of the playlist it will be removed from the playlist
+ * too. This may lead to double played artists though...
+ *
+ * returns the number of marked titles or -1 on error
+ */
+int32_t applyDBLlist(marklist_t * list) {
+	mptitle_t *base = getConfig()->root;
+	mptitle_t *pos = base;
+	marklist_t *ptr = list;
+	int32_t cnt = 0;
+
+	if (NULL == list) {
+		return 0;
+	}
+
+	activity(0, "Applying DBL list");
+	do {
+		if (!(pos->flags & MP_DBL)) {
+			ptr = list;
+
+			while (ptr) {
+				if (strcmp(ptr->dir, pos->path) == 0) {
+					addMessage(4, "[DB] %s: %s", ptr->dir, pos->display);
+					pos->flags = (MPC_DFRANGE | MP_DBL);
+					cnt++;
+					break;
+				}
+				ptr = ptr->next;
+			}
+		}
+		pos = pos->next;
+	}
+	while (pos != base);
+
+	cleanPLByFlag(MP_DBL);
+
+	addMessage(1, "Marked %i titles as DBL", cnt);
 
 	return cnt;
 }
@@ -865,7 +908,7 @@ void applyLists(int32_t clean) {
 		unsetFlags(MPC_DFRANGE | MP_FAV | MP_DNP);
 	}
 	applyFAVlist(control->favlist);
-	applyDNPlist(control->dnplist, 0);
+	applyDNPlist(control->dnplist);
 	unlockPlaylist();
 	setTnum();
 	notifyChange(MPCOMM_LISTS);
@@ -2201,7 +2244,7 @@ int32_t handleRangeCmd(mpcmd_t cmd, mptitle_t * title) {
 			cnt = applyFAVlist(buff);
 		}
 		else if (MPC_CMD(cmd) == mpc_dnp) {
-			cnt = applyDNPlist(buff, 0);
+			cnt = applyDNPlist(buff);
 		}
 	}
 
@@ -2260,5 +2303,5 @@ int32_t handleDBL(mptitle_t * title) {
 	}
 
 	addToList(buff->dir, mpc_doublets);
-	return applyDNPlist(buff, 1);
+	return applyDBLlist(buff);
 }
