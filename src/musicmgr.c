@@ -622,29 +622,33 @@ int32_t search(const mpcmd_t range, const char *pat) {
 	}
 
 	if (MPC_ISRECENT(range)) {
-		/* return at most last MPPLSIZE titles or last MPPLSIZE albums */
+		char *lastal = NULL;
+		/* return at last MPPLSIZE titles and last MPPLSIZE albums 
+		   TODO: This will add the first title of each album as a new title. Questionable! */
 		do {
 			runner = runner->prev;
 			/* two titles in a row with the same album? */
 			if (strieq(runner->album, runner->prev->album)) {
-				addAlbum(res, runner);
-				if (res->lnum >= MPPLSIZE) {
-					/* check if the last album is a sampler */
-					addAlbum(res, runner->prev);
-					break;
-				}
-				else
+				lastal = runner->album;
+				if (res->lnum < MPPLSIZE) {
+					addAlbum(res, runner);
+					if (res->lnum >= MPPLSIZE) {
+						/* check if the last album is a sampler */
+						addAlbum(res, runner->prev);
+					}
+					/* ignore this title */
 					continue;
+				}
 			}
+
 			/* skip last album title or add single title */
-			if ((res->lnum == 0)
-				|| !strieq(runner->album, res->albums[res->lnum - 1].name)) {
-				res->titles = appendToPL(runner, res->titles, false);
-				res->tnum++;
-				if (res->tnum >= MPPLSIZE)
-					break;
-			}
-		} while (runner->prev != root);
+			if (res->tnum < MPPLSIZE) {
+				if ((lastal == NULL) || !strieq(runner->album, lastal)) {
+					res->titles = appendToPL(runner, res->titles, false);
+					res->tnum++;
+				}
+			}			
+		} while ((runner->prev != root) && ((res->tnum < MPPLSIZE) || (res->tnum < MPPLSIZE)));
 	}
 	else {
 		/* actual search */
