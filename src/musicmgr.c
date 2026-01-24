@@ -446,32 +446,32 @@ static uint32_t matchTitle(mptitle_t * title, const char *pat) {
 	if (('=' == pat[1]) || ('*' == pat[1])) {
 		switch (pat[0]) {
 		case 't':
-			if (patMatch(title->title, pat + 2))
+			if (strieq(title->title, pat + 2))
 				res = mpc_title;
 			break;
 
 		case 'a':
-			if (patMatch(title->artist, pat + 2))
+			if (strieq(title->artist, pat + 2))
 				res = mpc_artist;
 			break;
 
 		case 'l':
-			if (patMatch(title->album, pat + 2))
+			if (strieq(title->album, pat + 2))
 				res = mpc_album;
 			break;
 
 		case 'g':
-			if (patMatch(title->genre, pat + 2))
+			if (strieq(title->genre, pat + 2))
 				res = mpc_genre;
 			break;
 
 		case 'd':
-			if (patMatch(title->display, pat + 2))
+			if (strieq(title->display, pat + 2))
 				res = mpc_display;
 			break;
 
 		case 'p':				/* still used in doublets */
-			if (patMatch(title->path, pat + 2)) {
+			if (strieq(title->path, pat + 2)) {
 				res = mpc_title;
 			}
 			break;

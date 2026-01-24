@@ -21,7 +21,7 @@
 #define MATCHLEVEL 5
 
 /* similarity index for patMatch */
-#define SIMGUARD 85
+#define SIMGUARD 90
 
 /*
  * string helper functions that avoid target buffer overflows
