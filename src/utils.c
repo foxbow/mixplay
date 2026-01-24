@@ -101,14 +101,12 @@ bool patMatch(const char *text1, const char *text2) {
 	}
 
 	
-	if (tlen < plen) printf("\n HAHA!!! LOSER!!!\n\n");
-
 	/* prepare the pattern */
 	lopat[0] = 0;
 	lopat[plen + 1] = 0;
 
 	/* The pattern is too short, so do a real substring test */
-	if (plen < MATCHLEVEL) {
+	if (plen < 3) {
 		return (strstr(lopat+1, lotext) != NULL);
 	}
 
@@ -119,8 +117,18 @@ bool patMatch(const char *text1, const char *text2) {
 	for (size_t i = 0; i <= (tlen - plen); i++) {
 		res = 0;
 		for (size_t j = i; j < plen + i; j++) {
-			if ((lotext[j] == lopat[j - i]) ||
-				 (lotext[j] == lopat[j - i + 1])) {
+			/* do simple delta tests when the pattern is long enough */
+			if ((plen > MATCHLEVEL) && lotext[j] == lopat[j - i]) {
+				res++;
+			}
+			else
+			/* normal test */
+			if ((lotext[j] == lopat[j - i + 1])) {
+				res++;
+			}
+			else
+			/* do delta test when the pattern is almost as long as the text */
+			if (((tlen - plen) < MATCHLEVEL) && (lotext[j] == lopat[j - i + 2])) {
 				res++;
 			}
 			if (res > best) {
