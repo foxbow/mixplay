@@ -989,14 +989,14 @@ char *fullpath(const char *file) {
 	return pbuff;
 }
 
-int32_t getFavplay() {
+bool getFavplay() {
 	if (_cconfig->active > 0) {
 		return getProfile(_cconfig->active)->favplay;
 	}
 	return 0;
 }
 
-int32_t toggleFavplay() {
+bool toggleFavplay() {
 	profile_t *profile;
 
 	if (_cconfig->active > 0) {

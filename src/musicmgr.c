@@ -127,6 +127,7 @@ static mpplaylist_t *appendToPL(mptitle_t * title, mpplaylist_t * pl,
 
 static mptitle_t *skipOverFlags(mptitle_t * current, uint32_t flags) {
 	mptitle_t *marker = current;
+	bool favplay = getFavplay();
 
 	flags |= (MP_DBL | MP_DNP);
 
@@ -142,7 +143,7 @@ static mptitle_t *skipOverFlags(mptitle_t * current, uint32_t flags) {
 			return NULL;
 		}
 	} while ((marker->flags & flags) ||
-			 (getFavplay() && !(marker->flags & MP_FAV)));
+			 (favplay && !(marker->flags & MP_FAV)));
 
 	return marker;
 }

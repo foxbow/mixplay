@@ -136,7 +136,7 @@ typedef struct {
 	char *name;					/* name to display */
 	char *url;					/* URL to load or NULL for mix */
 	int32_t volume;				/* last volume */
-	uint32_t favplay;			/* favplay flag for mixes */
+	bool favplay;				/* favplay flag for mixes */
 	uint32_t id;				/* unique id */
 } profile_t;
 
@@ -211,8 +211,8 @@ mpconfig_t *getConfig(void);
 mpconfig_t *createConfig(void);
 void freeConfig(void);
 void freeProfile(profile_t * profile);
-int32_t getFavplay();
-int32_t toggleFavplay();
+bool getFavplay();
+bool toggleFavplay();
 
 profile_t *addProfile(const char *name, const char *url, bool newid);
 uint32_t copyProfile(uint32_t id, const char *name);

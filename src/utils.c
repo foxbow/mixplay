@@ -118,26 +118,18 @@ bool patMatch(const char *text1, const char *text2) {
 		res = 0;
 		for (size_t j = i; j < plen + i; j++) {
 			/* do simple delta tests when the pattern is long enough */
-			if (plen > MATCHLEVEL) {
-				if (lotext[j] == lopat[j - i]) {
-					res++;
-				}
-				else {
-					/* do delta test when the pattern is almost as long as the text */
-					if (((tlen - plen) < MATCHLEVEL) && (lotext[j] == lopat[j - i + 2])) {
-						res++;
-					}
-				}
+			if ((plen > MATCHLEVEL) && (lotext[j] == lopat[j - i])) {
+				res++;
 			}
 			else
 			/* normal test */
 			if ((lotext[j] == lopat[j - i + 1])) {
 				res++;
 			}
+		}
 
-			if (res > best) {
-				best = res;
-			}
+		if (res > best) {
+			best = res;
 		}
 	}
 
