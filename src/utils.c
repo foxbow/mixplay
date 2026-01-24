@@ -73,7 +73,16 @@ static int patPrep(char *tgt, const char *src, int len) {
 }
 
 /*
- * checks the similarity between two strings. If one string is at least twice the length
+ * checks the similarity between two strings by turning the shorter into a pattern
+ * and tries to match it on the longer.
+ * 
+ * If the pattern is shorter than 3 characters, a literal substring match is done.
+ * If the pattern is smaller than MATCHLEVEL, a character match is done and and more
+ * than SIMGUARD percent of the characters should match. With MATCHLEVEL an additional 
+ * test for off by -1 characters is done and if the pattern is at least 2/3 of the 
+ * text an additional off by +1 characters is done.
+ * 
+ * This should address most of the cases regarding search, artist and title comparison.
  */
 bool patMatch(const char *text1, const char *text2) {
 	char *lopat;
@@ -106,7 +115,7 @@ bool patMatch(const char *text1, const char *text2) {
 	lopat[plen + 1] = 0;
 
 	/* The pattern is too short, so do a real substring test */
-	if (plen < MATCHLEVEL) {
+	if (plen < 3) {
 		return (strstr(lopat+1, lotext) != NULL);
 	}
 
@@ -117,14 +126,18 @@ bool patMatch(const char *text1, const char *text2) {
 	for (size_t i = 0; i <= (tlen - plen); i++) {
 		res = 0;
 		for (size_t j = i; j < plen + i; j++) {
-			/* do simple delta tests when the pattern is long enough */
-			if ((3*plen > 2*tlen) && (lotext[j] == lopat[j - i + 1])) {
-				res++;
-			}
-			else
 			/* normal test */
 			if ((lotext[j] == lopat[j - i + 1])) {
 				res++;
+			}
+			/* extended tests if applicable */
+			else if (plen > MATCHLEVEL) {
+				if (lotext[j] == lopat[j - i]) {
+					res++;
+				} 
+				else if ((3*plen > 2*tlen) && (lotext[j] == lopat[j - i + 1])) {
+					res++;
+				}
 			}
 		}
 
