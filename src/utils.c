@@ -118,7 +118,7 @@ bool patMatch(const char *text1, const char *text2) {
 		res = 0;
 		for (size_t j = i; j < plen + i; j++) {
 			/* do simple delta tests when the pattern is long enough */
-			if ((3*plen > 2*tlen) && (lotext[j] == lopat[j - i])) {
+			if ((3*plen > 2*tlen) && (lotext[j] == lopat[j - i + 1])) {
 				res++;
 			}
 			else

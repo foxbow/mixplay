@@ -1688,7 +1688,6 @@ static bool addNewTitle(uint32_t *pcount) {
 	runner = root;
 
 	/* remember playcount bounds */
-	// pcount = getPlaycount(count_min);
 	maxpcount = getPlaycount(count_max);
 	addMessage(2, "Playcount [%" PRIu32 ":%" PRIu32 "]", *pcount, maxpcount);
 
@@ -1741,7 +1740,7 @@ static bool addNewTitle(uint32_t *pcount) {
 				 * these are expensive, so we try to keep the steps
 				 * somewhat reasonable.. */
 				runner =
-					skipPcount(runner, (num / 2) - (random() % num),
+					skipPcount(runner, (random() % num),
 							   pcount, maxpcount);
 				if (runner == NULL) {
 					/* back to square one for this round */
