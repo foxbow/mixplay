@@ -510,7 +510,7 @@ function addText (text) {
   }
 
   var e = document.getElementById('messages')
-
+/*
   if (msgpos < numlines) {
     msglines.push(text)
     msgpos++
@@ -526,7 +526,8 @@ function addText (text) {
       line += msglines[i] + '<br>\n'
     }
   }
-  e.innerHTML = line
+*/
+  e.innerHTML += text + '<br>\n'
 }
 
 function setText (text) {

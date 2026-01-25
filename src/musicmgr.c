@@ -2002,6 +2002,8 @@ void dumpInfo(bool smooth) {
 	uint32_t numtitles = 0;
 	uint32_t fixed = 0;
 
+	dumpState();
+
 	do {
 		if (current->flags & MP_FAV) {
 			fav++;
@@ -2145,7 +2147,7 @@ void dumpState() {
 		addMessage(0, "%5" PRIu64 " titles are MP_PDARK", countflag(MP_PDARK));
 		addMessage(0, "%5" PRIu64 " titles are MP_TDARK", countflag(MP_TDARK));
 		addMessage(0, "%5" PRIu64 " titles are MP_HIDE", countflag(MP_HIDE));
-		dumpInfo(false);
+//		dumpInfo(false);
 	}
 	else {
 		addMessage(0, "No title database");
