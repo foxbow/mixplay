@@ -142,9 +142,6 @@ static void startPlayer() {
 
 	if (control->status != mpc_idle) {
 		setCommand(mpc_stop, NULL);
-		/* the two setCommands in sequence may lead to an inversion 
-		   TODO: Implement proper command queueing! */
-		usleep(250000);
 	}
 	setCommand(mpc_start, NULL);
 }
