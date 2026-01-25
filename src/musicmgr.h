@@ -8,8 +8,8 @@
 /* Directory access */
 
 #define NAMELEN 64
-/* do not return more than 100 titles */
-#define MAXSEARCH 100
+/* do not return more than 50 titles */
+#define MAXSEARCH 50
 
 /* length of past and future titles, so a playlist has 2*MPPLSIZE+1 titles */
 #define MPPLSIZE 10
@@ -118,7 +118,8 @@ void applyLists(int32_t clean);
 int32_t searchPlay(const char *pat, uint32_t num, const int32_t global);
 int32_t handleRangeCmd(mpcmd_t cmd, mptitle_t * title);
 int32_t handleDBL(mptitle_t * title);
-int32_t applyDNPlist(marklist_t * list, int32_t dbl);
+int32_t applyDNPlist(marklist_t * list);
+int32_t applyDBLlist(marklist_t * list);
 int32_t getListPath(mpcmd_t cmd, char path[MAXPATHLEN]);
 
 marklist_t *loadList(const mpcmd_t cmd);
@@ -127,8 +128,7 @@ int32_t writeList(const mpcmd_t cmd);
 int32_t delTitleFromOtherList(mpcmd_t cmd, const mptitle_t * title);
 
 bool isMusic(const char *name);
-void dumpTitles(mptitle_t * root, const int32_t pl);
-void dumpInfo(int32_t smooth);
+void dumpInfo(bool smooth);
 void setArtistSpread();
 int32_t fillstick(mptitle_t * root, const char *target);
 int32_t getPlaylists(const char *cd, struct dirent ***pllist);

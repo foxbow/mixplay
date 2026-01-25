@@ -345,7 +345,6 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 	}
 
 	if (pthread_mutex_trylock(&_pcmdlock) == EBUSY) {
-		/* Wait until someone unlocks */
 		addMessage(MPV + 1, "%s waiting to be set", mpcString(rcmd));
 		pthread_mutex_lock(&_pcmdlock);
 	}
@@ -682,7 +681,7 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 
 			/* if the term is unset but the fuzzy bit is set, return the last ten
 			 * titles in the database */
-			if ((term == NULL) && !MPC_ISFUZZY(rcmd)) {
+			if ((term == NULL) && !MPC_ISRECENT(rcmd)) {
 				if (MPC_ISARTIST(rcmd)) {
 					term = ctitle->artist;
 				}

@@ -659,9 +659,14 @@ static void freeConfigContents() {
  * deletes the current playlist
  * this is not in musicmanager.c to keep cross-dependecies in
  * config.c low
+ * @param pl the playlist to wipe
+ * @param recursive set if titles should be 
+ * @param locked set if the playlist should be locked
+ * @param unmark remove MP_INPL from titles
+ * @returns NULL
  */
 static mpplaylist_t *_wipePlaylist(mpplaylist_t * pl, bool recursive,
-								   bool locked) {
+								   bool locked, bool unmark) {
 	mpplaylist_t *next = NULL;
 
 	if (pl == NULL) {
@@ -677,7 +682,9 @@ static mpplaylist_t *_wipePlaylist(mpplaylist_t * pl, bool recursive,
 
 	while (pl != NULL) {
 		next = pl->next;
-		pl->title->flags &= ~MP_INPL;
+		if (unmark) {
+			pl->title->flags &= ~MP_INPL;
+		}
 		if (recursive) {
 			free(pl->title);
 			pl->title = NULL;
@@ -697,12 +704,12 @@ static mpplaylist_t *_wipePlaylist(mpplaylist_t * pl, bool recursive,
 static void wipePTlist(mpconfig_t * control) {
 	if (control->root != NULL) {
 		lockPlaylist();
-		control->current = _wipePlaylist(control->current, false, true);
+		control->current = _wipePlaylist(control->current, false, true, true);
 		control->root = wipeTitles(control->root);
 		unlockPlaylist();
 	}
 	else {
-		control->current = _wipePlaylist(control->current, true, false);
+		control->current = _wipePlaylist(control->current, true, false, true);
 	}
 }
 
@@ -711,7 +718,7 @@ static void wipePTlist(mpconfig_t * control) {
  */
 void wipeSearchList(mpconfig_t * control) {
 	control->found->titles =
-		_wipePlaylist(control->found->titles, false, true);
+		_wipePlaylist(control->found->titles, false, true, false);
 }
 
 /*
@@ -719,7 +726,7 @@ void wipeSearchList(mpconfig_t * control) {
  */
 void wipePlaylist(mpconfig_t * control) {
 	control->current =
-		_wipePlaylist(control->current, control->mpmode & PM_STREAM, false);
+		_wipePlaylist(control->current, control->mpmode & PM_STREAM, false, true);
 }
 
 /** 
@@ -982,14 +989,14 @@ char *fullpath(const char *file) {
 	return pbuff;
 }
 
-int32_t getFavplay() {
+bool getFavplay() {
 	if (_cconfig->active > 0) {
 		return getProfile(_cconfig->active)->favplay;
 	}
 	return 0;
 }
 
-int32_t toggleFavplay() {
+bool toggleFavplay() {
 	profile_t *profile;
 
 	if (_cconfig->active > 0) {

@@ -1256,7 +1256,7 @@ static void clientHandler(int arg) {
 		 * to send only to the requester */
 		/* TODO: other cases? */
 		if (config->found->state != mpsearch_idle) {
-			addMessage(0, "Search client died!");
+			addMessage(1, "Search client died!");
 			unlockClient(handle.clientid);
 			config->found->state = mpsearch_idle;
 		}
