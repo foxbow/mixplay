@@ -324,9 +324,6 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 	uint32_t profileid;
 	mpcmd_t cmd;
 
-	static unsigned curid = 0;
-	static unsigned entries = 1;
-
 	if ((rcmd == mpc_idle) ||
 		(config->status == mpc_quit) || (config->status == mpc_reset)) {
 		return;
@@ -347,26 +344,10 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		return;
 	}
 
-	unsigned myid = curid;
-	bool queued = false;
-	do {
-		if (pthread_mutex_trylock(&_pcmdlock) == EBUSY) {
-			if (!queued) {
-				queued = true;
-				entries = (entries+1) % 10;
-				myid = entries;
-				addMessage(0, "queued: curid = %u - myid = %u ", curid, myid);
-			}
-			else {
-				addMessage(0, "checking: curid = %u - myid = %u ", curid, myid);
-			}
-			/* Wait until someone unlocks */
-			addMessage(MPV + 1, "%s waiting to be set", mpcString(rcmd));
-			pthread_mutex_lock(&_pcmdlock);
-		}
-	} while (myid != curid);
-
-	curid = (curid+1) % 10;
+	if (pthread_mutex_trylock(&_pcmdlock) == EBUSY) {
+		addMessage(MPV + 1, "%s waiting to be set", mpcString(rcmd));
+		pthread_mutex_lock(&_pcmdlock);
+	}
 
 	/* a quit or reset came in while the mutex was blocked, so forget about
 	 * everything until we had a clean restart */
