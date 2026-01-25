@@ -1560,7 +1560,7 @@ static void setPDARK(uint32_t maxp) {
  * 
  * @param guard the current title to start from
  * @param cnt number of steps to skip
- * @param pcount skip all titles with a lower pcount than this
+ * @param pcount skip all titles with a higher pcount than this
  * @param maxcount the highest number of playcounts in the db
  */
 static mptitle_t *skipPcount(mptitle_t * guard, uint32_t cnt,
@@ -1572,9 +1572,8 @@ static mptitle_t *skipPcount(mptitle_t * guard, uint32_t cnt,
 	if (cnt == 0) {
 		cnt = 1;
 	}
-	uint32_t steps = cnt;
 
-	while (steps != 0) {
+	while (cnt != 0) {
 		/* fetch the next */
 		runner = skipOver(runner);
 
@@ -1591,11 +1590,10 @@ static mptitle_t *skipPcount(mptitle_t * guard, uint32_t cnt,
 			/* update MP_PDARK as the playcount changed */
 			setPDARK(*pcount);
 			runner = guard;
-			steps = cnt;
-			continue;
 		}
-
-		steps--;
+		else {
+			cnt--;
+		}
 	}
 
 	return runner;
@@ -1916,6 +1914,7 @@ void plCheck(bool fill) {
 	/* fill up the playlist with new titles if needed */
 	if (fill && (cnt < MPPLSIZE)) {
 		uint32_t pcount=getPlaycount(count_min);
+		setPDARK(pcount);
 		/* dirty trick as we need to add MPPLSZE+1 titles on start! */
 		if (cnt == 0)
 			cnt = -1;

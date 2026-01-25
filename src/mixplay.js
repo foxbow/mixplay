@@ -510,36 +510,33 @@ function addText (text) {
   }
 
   var e = document.getElementById('messages')
-/*
-  if (msgpos < numlines) {
-    msglines.push(text)
-    msgpos++
-  } else {
-    for (var i = 0; i < numlines - 1; i++) {
-      msglines[i] = msglines[i + 1]
-    }
-    msglines[numlines - 1] = text
-  }
 
-  for (i = 0; i < msgpos; i++) {
-    if (msglines[i] !== '') {
-      line += msglines[i] + '<br>\n'
+  if (!debug) {
+    if (msgpos < numlines) {
+      msglines.push(text)
+      msgpos++
+    } else {
+      for (var i = 0; i < numlines - 1; i++) {
+        msglines[i] = msglines[i + 1]
+      }
+      msglines[numlines - 1] = text
     }
+
+    for (i = 0; i < msgpos; i++) {
+      if (msglines[i] !== '') {
+        line += msglines[i] + '<br>\n'
+      }
+    }
+    e.innerHTML = line + '<br>\n'
   }
-*/
-  e.innerHTML += text + '<br>\n'
+  else {
+    e.innerHTML += text + '<br>\n'
+  }
 }
 
-function setText (text) {
+function clearText () {
   var e = document.getElementById('messages')
-  var line = ''
-  msglines[0] = text
-  for (i = 0; i < msgpos; i++) {
-    if (msglines[i] !== '') {
-      line += msglines[i] + '<br>\n'
-    }
-  }
-  e.innerHTML = line
+  e.innerHTML = ''
 }
 
 var moveline = ''
