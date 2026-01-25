@@ -45,7 +45,7 @@ int32_t main(int32_t argc, char **argv) {
 		return 0;
 	}
 
-	res = checkSim(argv[1], argv[2]);
+	res = patMatch(argv[1], argv[2]);
 	if (res) {
 		printf("%s and %s are similar\n", argv[1], argv[2]);
 	}

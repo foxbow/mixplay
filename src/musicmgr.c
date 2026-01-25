@@ -127,6 +127,7 @@ static mpplaylist_t *appendToPL(mptitle_t * title, mpplaylist_t * pl,
 
 static mptitle_t *skipOverFlags(mptitle_t * current, uint32_t flags) {
 	mptitle_t *marker = current;
+	bool favplay = getFavplay();
 
 	flags |= (MP_DBL | MP_DNP);
 
@@ -142,13 +143,13 @@ static mptitle_t *skipOverFlags(mptitle_t * current, uint32_t flags) {
 			return NULL;
 		}
 	} while ((marker->flags & flags) ||
-			 (getFavplay() && !(marker->flags & MP_FAV)));
+			 (favplay && !(marker->flags & MP_FAV)));
 
 	return marker;
 }
 
 static bool checkTitles(mptitle_t *titlea, mptitle_t *titleb) {
-	return (checkSim(titlea->artist, titleb->artist) || checkSim(titlea->title, titleb->title));
+	return (patMatch(titlea->artist, titleb->artist) || patMatch(titlea->title, titleb->title));
 }
 
 static void clearTDARK(mptitle_t * root) {
@@ -434,72 +435,43 @@ static bool strieq(const char *t1, const char *t2) {
 }
 
 /*
- * matches term with pattern in search.
- */
-static bool isMatch(const char *term, const char *pat, const mpcmd_t range) {
-	char loterm[MAXPATHLEN];
-
-	if (MPC_ISFUZZY(range)) {
-		strltcpy(loterm, term, MAXPATHLEN);
-		return patMatch(loterm, pat);
-	}
-
-	/* mpc_substr is only sent from the UI */
-	if (MPC_ISSUBSTR(range)) {
-		strltcpy(loterm, term, MAXPATHLEN);
-		return (strstr(loterm, pat) != NULL);
-	}
-
-	return strieq(term, pat);
-}
-
-/*
  * checks if a title entry 'title' matches the search term 'pat'
  * the test is driven by the first two characters in the
  * search term. The first character gives the range (talgd(p))
- * the second character notes if the search should be
- * exact or fuzzy (=*)
- *
- * todo: consider adding a exact substring match or deprecate
- *       fuzzy matching for fav/dnp
  */
 static uint32_t matchTitle(mptitle_t * title, const char *pat) {
-	mpcmd_t fuzzy = mpc_unset;
 	int32_t res = 0;
 
+	/* TODO: '=' vs '*' has been deprecated */
 	if (('=' == pat[1]) || ('*' == pat[1])) {
-		if ('*' == pat[1]) {
-			fuzzy = mpc_fuzzy;
-		}
-
 		switch (pat[0]) {
 		case 't':
-			if (isMatch(title->title, pat + 2, fuzzy))
+			if (strieq(title->title, pat + 2))
 				res = mpc_title;
 			break;
 
 		case 'a':
-			if (isMatch(title->artist, pat + 2, fuzzy))
+			if (strieq(title->artist, pat + 2))
 				res = mpc_artist;
 			break;
 
 		case 'l':
-			if (isMatch(title->album, pat + 2, fuzzy))
+			if (strieq(title->album, pat + 2))
 				res = mpc_album;
 			break;
 
 		case 'g':
-			if (isMatch(title->genre, pat + 2, fuzzy))
+			if (strieq(title->genre, pat + 2))
 				res = mpc_genre;
 			break;
 
 		case 'd':
-			if (isMatch(title->display, pat + 2, fuzzy))
+			if (strieq(title->display, pat + 2))
 				res = mpc_display;
 			break;
 
 		case 'p':				/* still used in doublets */
-			if (isMatch(title->path, pat + 2, fuzzy)) {
+			if (strieq(title->path, pat + 2)) {
 				res = mpc_title;
 			}
 			break;
@@ -511,7 +483,7 @@ static uint32_t matchTitle(mptitle_t * title, const char *pat) {
 	}
 	else {
 		addMessage(0, "Pattern without range: %s", pat);
-		if (isMatch(title->display, pat, mpc_unset))
+		if (patMatch(title->display, pat))
 			res = mpc_display;
 	}
 
@@ -520,7 +492,7 @@ static uint32_t matchTitle(mptitle_t * title, const char *pat) {
 
 static int32_t addRangePrefix(mpcmd_t cmd, char *line) {
 	line[2] = 0;
-	line[1] = MPC_ISFUZZY(cmd) ? '*' : '=';
+	line[1] = '='; // deprecated
 	switch (MPC_RANGE(cmd)) {
 	case mpc_title:
 		line[0] = 't';
@@ -594,6 +566,10 @@ static void setFlags(searchentry_t * entry, mpcmd_t type) {
 static void addAlbum(searchresults_t * res, mptitle_t * title) {
 	uint32_t i = 0;
 
+	/* In the unlikely case that we found more than MAXSEARCH albums, just ignore */
+	if (res->lnum > MAXSEARCH)
+		return;
+
 	while ((i < res->lnum)
 		   && !strieq(res->albums[i].name, title->album))
 		i++;
@@ -612,7 +588,7 @@ static void addAlbum(searchresults_t * res, mptitle_t * title) {
 	}
 	/* fuzzy comparation to avoid collabs turning an album into a sampler */
 	else if (!strieq(res->albart[i].name, ARTIST_SAMPLER) &&
-			 !checkSim(res->albart[i].name, title->artist)) {
+			 !patMatch(res->albart[i].name, title->artist)) {
 		addMessage(1, "%s is considered a sampler (%s <> %s).",
 				   title->album, title->artist, res->albart[i].name);
 		res->albart[i].name = ARTIST_SAMPLER;
@@ -646,52 +622,53 @@ int32_t search(const mpcmd_t range, const char *pat) {
 		return 0;
 	}
 
-	if (pat == NULL) {
-		/* return at most last MPPLSIZE titles or last MPPLSIZE albums */
+	if (MPC_ISRECENT(range)) {
+		char *lastal = NULL;
+		/* return at last MPPLSIZE titles and last MPPLSIZE albums 
+		   TODO: This will add the first title of each album as a new title. Questionable! */
 		do {
 			runner = runner->prev;
 			/* two titles in a row with the same album? */
 			if (strieq(runner->album, runner->prev->album)) {
-				addAlbum(res, runner);
-				if (res->lnum >= MPPLSIZE) {
-					/* check if the last album is a sampler */
-					addAlbum(res, runner->prev);
-					break;
-				}
-				else
+				lastal = runner->album;
+				if (res->lnum < MPPLSIZE) {
+					addAlbum(res, runner);
+					if (res->lnum >= MPPLSIZE) {
+						/* check if the last album is a sampler */
+						addAlbum(res, runner->prev);
+					}
+					/* ignore this title */
 					continue;
+				}
 			}
+
 			/* skip last album title or add single title */
-			if ((res->lnum == 0)
-				|| !strieq(runner->album, res->albums[res->lnum - 1].name)) {
-				res->titles = appendToPL(runner, res->titles, false);
-				res->tnum++;
-				if (res->tnum >= MPPLSIZE)
-					break;
-			}
-		} while (runner->prev != root);
+			if (res->tnum < MPPLSIZE) {
+				if ((lastal == NULL) || !strieq(runner->album, lastal)) {
+					res->titles = appendToPL(runner, res->titles, false);
+					res->tnum++;
+				}
+			}			
+		} while ((runner->prev != root) && ((res->tnum < MPPLSIZE) || (res->tnum < MPPLSIZE)));
 	}
 	else {
 		/* actual search */
-		/* whatever pattern we get, ignore case */
-		char *lopat = toLower(strdup(pat));
-
 		do {
 			int found = 0;
 
 			/* check for searchrange and patterns */
-			if (MPC_ISTITLE(range) && isMatch(runner->title, lopat, range)) {
+			if (MPC_ISTITLE(range) && patMatch(runner->title, pat)) {
 				found |= mpc_title;
 			}
 
 			/* from a result point of view display(, path) and title are the same */
 			if (MPC_ISDISPLAY(range)
-				&& isMatch(runner->display, lopat, range)) {
+				&& patMatch(runner->display, pat)) {
 				found |= mpc_title;
 			}
 
 			if (MPC_ISARTIST(range)
-				&& isMatch(runner->artist, lopat, range)) {
+				&& patMatch(runner->artist, pat)) {
 				found |= mpc_artist;
 
 				/* Add albums and titles if search was for artists only */
@@ -700,7 +677,7 @@ int32_t search(const mpcmd_t range, const char *pat) {
 				}
 			}
 
-			if (MPC_ISALBUM(range) && isMatch(runner->album, lopat, range)) {
+			if (MPC_ISALBUM(range) && patMatch(runner->album, pat)) {
 				found |= mpc_album;
 
 				/* Add titles if search was for albums only */
@@ -711,7 +688,7 @@ int32_t search(const mpcmd_t range, const char *pat) {
 
 			/* now interpret the value of 'found' */
 
-			if (MPC_ISARTIST(found)) {
+			if (MPC_ISARTIST(found) && (res->anum <= MAXSEARCH)) {
 				/* check for new artist */
 				for (i = 0; (i < res->anum)
 					 && !strieq(res->artists[i].name, runner->artist); i++);
@@ -731,22 +708,47 @@ int32_t search(const mpcmd_t range, const char *pat) {
 				addAlbum(res, runner);
 			}
 
-			if (MPC_ISTITLE(found) && (res->tnum++ < MAXSEARCH)) {
+			if (MPC_ISTITLE(found) && (res->tnum <= MAXSEARCH)) {
 				res->titles = appendToPL(runner, res->titles, false);
+				res->tnum++;
 			}
 
 			runner = runner->next;
-			/* we hit the limit, no sense in searching on */
-			if (res->tnum > MAXSEARCH)
-				break;
 		} while (runner != root);
-		free(lopat);
 	}
 
 	/* result can be sent out now */
 	res->state = mpsearch_done;
 
-	return ((res->tnum > MAXSEARCH) ? -1 : (int32_t) res->tnum);
+	uint32_t maxret = res->tnum;
+	if (res->anum > maxret) maxret = res->anum;
+	if (res->lnum > maxret) maxret = res->lnum;
+
+	return ((maxret > MAXSEARCH) ? -1 : (int32_t) maxret);
+}
+
+/**
+ * remove all titles from the playlist where 'flag' is set
+ */
+static void cleanPLByFlag(uint32_t flag) {
+	mpplaylist_t *pl = getCurrent();
+	if (pl != NULL) {
+		while (pl->prev != NULL) {
+			pl = pl->prev;
+		}
+	}
+
+	while (pl != NULL) {
+		if (pl->title->flags & flag) {
+			if (pl == getCurrent()) {
+				getConfig()->current = pl->next;
+			}
+			pl = remFromPL(pl);
+		}
+		else {
+			pl = pl->next;
+		}
+	}
 }
 
 /**
@@ -754,15 +756,12 @@ int32_t search(const mpcmd_t range, const char *pat) {
  * if the title is part of the playlist it will be removed from the playlist
  * too. This may lead to double played artists though...
  *
- * if dbl is true, then the title is marked as doublet as well
- *
  * returns the number of marked titles or -1 on error
  */
-int32_t applyDNPlist(marklist_t * list, int32_t dbl) {
+int32_t applyDNPlist(marklist_t * list) {
 	mptitle_t *base = getConfig()->root;
 	mptitle_t *pos = base;
 	marklist_t *ptr = list;
-	mpplaylist_t *pl = getCurrent();
 	int32_t cnt = 0;
 	uint32_t range = 0;
 
@@ -770,13 +769,10 @@ int32_t applyDNPlist(marklist_t * list, int32_t dbl) {
 		return 0;
 	}
 
-	if (dbl)
-		activity(0, "Applying DBL list");
-	else
-		activity(0, "Applying DNP list");
+	activity(0, "Applying DNP list");
 
 	do {
-		if (!(pos->flags & MP_DBL)) {
+		if (!(pos->flags & (MP_DBL | MP_DNP))) {
 			ptr = list;
 
 			while (ptr) {
@@ -784,8 +780,6 @@ int32_t applyDNPlist(marklist_t * list, int32_t dbl) {
 				if (range > MPC_RANGE(pos->flags)) {
 					addMessage(4, "[D] %s: %s", ptr->dir, pos->display);
 					pos->flags = (range | MP_DNP);
-					if (dbl)
-						pos->flags = (MPC_DFRANGE | MP_DBL);
 					cnt++;
 					break;
 				}
@@ -796,25 +790,52 @@ int32_t applyDNPlist(marklist_t * list, int32_t dbl) {
 	}
 	while (pos != base);
 
-	if (pl != NULL) {
-		while (pl->prev != NULL) {
-			pl = pl->prev;
-		}
-	}
-
-	while (pl != NULL) {
-		if (pl->title->flags & (MP_DNP | MP_DBL)) {
-			if (pl == getCurrent()) {
-				getConfig()->current = pl->next;
-			}
-			pl = remFromPL(pl);
-		}
-		else {
-			pl = pl->next;
-		}
-	}
+	cleanPLByFlag(MP_DNP);
 
 	addMessage(1, "Marked %i titles as DNP", cnt);
+
+	return cnt;
+}
+
+/**
+ * applies the dbllist on a list of titles and marks matching titles
+ * if the title is part of the playlist it will be removed from the playlist
+ * too. This may lead to double played artists though...
+ *
+ * returns the number of marked titles or -1 on error
+ */
+int32_t applyDBLlist(marklist_t * list) {
+	mptitle_t *base = getConfig()->root;
+	mptitle_t *pos = base;
+	marklist_t *ptr = list;
+	int32_t cnt = 0;
+
+	if (NULL == list) {
+		return 0;
+	}
+
+	activity(0, "Applying DBL list");
+	do {
+		if (!(pos->flags & MP_DBL)) {
+			ptr = list;
+
+			while (ptr) {
+				if (strcmp(ptr->dir, pos->path) == 0) {
+					addMessage(4, "[DB] %s: %s", ptr->dir, pos->display);
+					pos->flags = (MPC_DFRANGE | MP_DBL);
+					cnt++;
+					break;
+				}
+				ptr = ptr->next;
+			}
+		}
+		pos = pos->next;
+	}
+	while (pos != base);
+
+	cleanPLByFlag(MP_DBL);
+
+	addMessage(1, "Marked %i titles as DBL", cnt);
 
 	return cnt;
 }
@@ -888,7 +909,7 @@ void applyLists(int32_t clean) {
 		unsetFlags(MPC_DFRANGE | MP_FAV | MP_DNP);
 	}
 	applyFAVlist(control->favlist);
-	applyDNPlist(control->dnplist, 0);
+	applyDNPlist(control->dnplist);
 	unlockPlaylist();
 	setTnum();
 	notifyChange(MPCOMM_LISTS);
@@ -1667,7 +1688,6 @@ static bool addNewTitle(uint32_t *pcount) {
 	runner = root;
 
 	/* remember playcount bounds */
-	// pcount = getPlaycount(count_min);
 	maxpcount = getPlaycount(count_max);
 	addMessage(2, "Playcount [%" PRIu32 ":%" PRIu32 "]", *pcount, maxpcount);
 
@@ -1720,7 +1740,7 @@ static bool addNewTitle(uint32_t *pcount) {
 				 * these are expensive, so we try to keep the steps
 				 * somewhat reasonable.. */
 				runner =
-					skipPcount(runner, (num / 2) - (random() % num),
+					skipPcount(runner, (random() % num),
 							   pcount, maxpcount);
 				if (runner == NULL) {
 					/* back to square one for this round */
@@ -2224,7 +2244,7 @@ int32_t handleRangeCmd(mpcmd_t cmd, mptitle_t * title) {
 			cnt = applyFAVlist(buff);
 		}
 		else if (MPC_CMD(cmd) == mpc_dnp) {
-			cnt = applyDNPlist(buff, 0);
+			cnt = applyDNPlist(buff);
 		}
 	}
 
@@ -2283,5 +2303,5 @@ int32_t handleDBL(mptitle_t * title) {
 	}
 
 	addToList(buff->dir, mpc_doublets);
-	return applyDNPlist(buff, 1);
+	return applyDBLlist(buff);
 }

@@ -142,6 +142,9 @@ static void startPlayer() {
 
 	if (control->status != mpc_idle) {
 		setCommand(mpc_stop, NULL);
+		/* the two setCommands in sequence may lead to an inversion 
+		   TODO: Implement proper command queueing! */
+		usleep(250000);
 	}
 	setCommand(mpc_start, NULL);
 }
@@ -206,6 +209,7 @@ void *setProfile(void *arg) {
 	if (isStream(profile)) {
 		setStream(profile->url, profile->name);
 	}
+
 	/* profile selected */
 	else {
 		addMessage(MPV + 1, "Playmode=%u", control->mpmode);
@@ -217,7 +221,7 @@ void *setProfile(void *arg) {
 		control->favlist = loadList(mpc_fav);
 		if (control->dbllist == NULL) {
 			control->dbllist = loadList(mpc_doublets);
-			applyDNPlist(control->dbllist, 1);
+			applyDBLlist(control->dbllist);
 		}
 		cleanTitles(true);
 		applyLists(1);
@@ -610,7 +614,7 @@ void *reader( __attribute__ ((unused))
 							/* only do this if the title actually changed
 							 * some streams mix up title descriptions in weird ways, so we 
 							 * just check for similar enough to pass a fuzzy search */
-							if (!checkSim
+							if (!patMatch
 								(apos, control->current->title->display)) {
 
 								/* The album field contains the stream name. If it is not set
@@ -620,11 +624,11 @@ void *reader( __attribute__ ((unused))
 								 * shown but not put in the history */
 								if ((control->current->title->album[0] == '\0')
 									||
-									(!checkSim
+									(!patMatch
 									 (control->current->title->title,
 									  control->current->title->album) == 0)
 									||
-									(!checkSim
+									(!patMatch
 									 (control->current->title->artist,
 									  control->current->title->album) == 0)) {
 									strip(control->current->title->display,
