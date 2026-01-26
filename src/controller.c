@@ -270,7 +270,7 @@ static void *plDbFix(void *arg) {
 	pthread_mutex_t *lock = (pthread_mutex_t *) arg;
 
 	addMessage(0, "Database smooth");
-	dumpInfo(1);
+	dumpInfo(true);
 	setTnum();
 	unlockClient(-1);
 	pthread_mutex_unlock(lock);
@@ -281,7 +281,7 @@ static void *plDbInfo(void *arg) {
 	pthread_mutex_t *lock = (pthread_mutex_t *) arg;
 
 	addMessage(0, "Database Info");
-	dumpInfo(0);
+	dumpState();
 	unlockClient(-1);
 	pthread_mutex_unlock(lock);
 	return NULL;
