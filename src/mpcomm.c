@@ -231,7 +231,7 @@ char *serializeStatus(int32_t clientid, int32_t type) {
 	char *msgline = NULL;
 
 	jo = jsonAddInt(jo, "type", type);
-	jo = jsonAddInt(jo, "version", MP_PROTOVER);
+	jsonAddInt(jo, "version", MP_PROTOVER);
 
 	if (type & MPCOMM_TITLES) {
 		jsonAddTitle(jo, "current", current);
