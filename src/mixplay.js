@@ -1592,6 +1592,7 @@ function checkReply (xmlhttp) {
           }
           inUpdate--
         }
+        break
       case 503:
         showConfirm('Sorry, we\'re busy!')
         break
