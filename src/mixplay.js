@@ -1556,16 +1556,16 @@ function checkReply (xmlhttp) {
           break 
         }
 
-        if (version == -1) {
-          version = data.version
-        }
-        else if (version != data.version) {
-          document.location.reload()
-        }
-
         /* there is payload beyond 'OK' so interpret it */
         if (xmlhttp.responseText.length > 3) {
           data = JSON.parse(xmlhttp.responseText)
+          if (version === -1) {
+            version = data.version
+          }
+          else if (version != data.version) {
+            document.location.reload()
+          }
+
           /* elCheapo locking */
           if (inUpdate++ > 1) {
             debugLog('Active update!')
