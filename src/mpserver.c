@@ -45,7 +45,7 @@
 #endif
 
 /* message offset */
-#define MPV 10
+#define MPV 0
 
 /* lock for fname, flen, fdata and mtype */
 static pthread_mutex_t _sendlock = PTHREAD_MUTEX_INITIALIZER;

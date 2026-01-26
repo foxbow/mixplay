@@ -37,6 +37,7 @@ var lineout = 0
 var allnum = 0
 let controller = null
 var portrait = false
+var version = -1  /* protocol version */
 
 function debugLog (txt) {
   if (debug) {
@@ -1547,7 +1548,21 @@ function checkReply (xmlhttp) {
       case 0:
         fail('CMD Error: connection lost!')
         break
+      case 204:
+        /* fallthrough */
       case 200:
+        if (doUpdate < 0) {
+          doUpdate = 13;
+          break 
+        }
+
+        if (version == -1) {
+          version = data.version
+        }
+        else if (version != data.version) {
+          document.location.reload()
+        }
+
         /* there is payload beyond 'OK' so interpret it */
         if (xmlhttp.responseText.length > 3) {
           data = JSON.parse(xmlhttp.responseText)
@@ -1577,17 +1592,11 @@ function checkReply (xmlhttp) {
           }
           inUpdate--
         }
-        /* fallthrough */
-      case 204:
-        if (doUpdate < 0) {
-          document.location.reload()
-        }
-        break
       case 503:
         showConfirm('Sorry, we\'re busy!')
         break
       default:
-        fail('Received Error ' + xmlhttp.status)
+        showConfirm('Received Error ' + xmlhttp.status)
     }
     if (doUpdate < 0) {
       document.body.className = 'disconnect'
