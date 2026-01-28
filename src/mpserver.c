@@ -226,6 +226,8 @@ static void triggerClient(int32_t client) {
 }
 
 bool deadClient(uint32_t cid) {
+	/* one shots are always alive */
+	if (cid == 0) return false;
 	return (_heartbeat[cid - 1] == 0);
 }
 
@@ -995,8 +997,8 @@ static void sendReply(chandle_t * handle) {
 			handle->len = strlen(handle->commdata);
 			sfree(&jsonLine);
 			/* do we still need to send search results? */
-			if (deadClient(config->found->cid) ||
-				config->found->cid == -1) {
+			if ((config->found->cid == -1) ||
+				((config->found->cid > 0) && deadClient(config->found->cid))) {
 				config->found->cid = 0;
 				handle->fullstat &= ~MPCOMM_STAT;
 			}

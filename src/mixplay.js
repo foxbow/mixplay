@@ -431,9 +431,10 @@ function fail (msg) {
     doUpdate = -1
     setElement('prev', '')
     setElement('artist', '')
-    setElement('title', 'Connection lost!')
+    setElement('title', msg)
     setElement('album', '..retrying..')
     setElement('next', '')
+    addText(getClockTime() + ': ' + msg);
     adaptUI(-1)
   }
 }
@@ -1546,7 +1547,7 @@ function checkReply (xmlhttp) {
   if (xmlhttp.readyState === 4) {
     switch (xmlhttp.status) {
       case 0:
-        fail('CMD Error: connection lost!')
+        fail('connection lost')
         break
       case 204:
         /* fallthrough */
@@ -1990,7 +1991,7 @@ function tap () {
   power(1)
 }
 
-function clocktime () {
+function getClockTime () {
   const now = new Date()
   const min = now.getMinutes()
   const hrs = now.getHours()
@@ -1998,8 +1999,14 @@ function clocktime () {
   var line = hrs + ':'
   if (hrs < 10) line = '0' + line
   if (min < 10) line = line + '0'
-  setElement('time', '&nbsp;' + line + min + '&nbsp;')
-  setElement('idleclock', line + min)
+  line = line + min
+  return line
+}
+
+function clocktime () {
+  const line = getClockTime ()
+  setElement('time', '&nbsp;' + line + '&nbsp;')
+  setElement('idleclock', line)
 
   setElement('idledate', now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))
   setTimeout(function () { clocktime() }, 5000)
