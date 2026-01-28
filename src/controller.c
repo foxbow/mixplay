@@ -137,7 +137,7 @@ static void checkAfterRemove(mptitle_t * ctitle) {
  * client
  */
 static void *plCheckDoublets(void *cidin) {
-	int32_t cid = (int32_t)(int64_t)cidin;
+	int32_t cid = (int32_t)(long)cidin;
 	int32_t i;
 	mptitle_t *ctitle = getCurrentTitle();
 
@@ -161,7 +161,7 @@ static void *plCheckDoublets(void *cidin) {
 }
 
 static void *plDbClean(void *cidin) {
-	int32_t cid = (int32_t)(int64_t)cidin;
+	int32_t cid = (int32_t)(long)cidin;
 	mpconfig_t *control = getConfig();
 	mptitle_t *ctitle = getCurrentTitle();
 	int32_t i;
@@ -209,7 +209,7 @@ static void *plDbClean(void *cidin) {
 }
 
 static void *plDbFix(void *cidin) {
-	int32_t cid = (int32_t)(int64_t)cidin;
+	int32_t cid = (int32_t)(long)cidin;
 	lockClient(cid);
 	addMessage(0, "Database smooth");
 	dumpInfo(true);
@@ -219,7 +219,7 @@ static void *plDbFix(void *cidin) {
 }
 
 static void *plDbInfo(void *cidin) {
-	int32_t cid = (int32_t)(int64_t)cidin;
+	int32_t cid = (int32_t)(long)cidin;
 	lockClient(cid);
 	addMessage(0, "Database Info");
 	dumpState();
@@ -229,7 +229,7 @@ static void *plDbInfo(void *cidin) {
 
 /* simple wrapper to run setProfile as an own thread */
 static void *plSetProfile(void *cidin) {
-	int32_t cid = (int32_t)(int64_t)cidin;
+	int32_t cid = (int32_t)(long)cidin;
 	lockClient(cid);
 	setProfile(NULL);
 	unlockClient(cid);
@@ -243,7 +243,7 @@ static void *plSetProfile(void *cidin) {
 static void asyncRun(void *cmd(void *), int32_t cid) {
 	pthread_t pid;
 
-	if (pthread_create(&pid, NULL, cmd, (void *)(uint64_t)cid) < 0) {
+	if (pthread_create(&pid, NULL, cmd, (void *)(long)cid) < 0) {
 		addMessage(0, "Could not create async thread!");
 	}
 	else {
