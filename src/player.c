@@ -141,9 +141,9 @@ static void startPlayer() {
 	mpconfig_t *control = getConfig();
 
 	if (control->status != mpc_idle) {
-		setCommand(mpc_stop, NULL);
+		setCommand(mpc_stop, NULL, 0);
 	}
-	setCommand(mpc_start, NULL);
+	setCommand(mpc_start, NULL, 0);
 }
 
 /**
@@ -320,7 +320,6 @@ void *killPlayers(int32_t restart) {
 
 	addMessage(MPV + 1, "Players stopped!");
 	closeAudio();
-	unlockController();
 	activity(0, "All unlocked");
 	pthread_mutex_unlock(&_killlock);
 	return NULL;

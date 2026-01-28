@@ -1553,7 +1553,6 @@ function checkReply (xmlhttp) {
       case 200:
         if (doUpdate < 0) {
           doUpdate = 13;
-          break 
         }
 
         /* there is payload beyond 'OK' so interpret it */

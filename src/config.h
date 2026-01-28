@@ -15,6 +15,8 @@
 #include <stdbool.h>
 #include "msgbuf.h"
 
+#define MP_PROTOVER 2
+
 #define MP_HOSTLEN 256
 #define MP_MSGLEN 512
 #define MAXCLIENT 100
@@ -57,7 +59,7 @@ typedef enum {
 	mpc_newprof,
 	mpc_path,
 	mpc_remprof,
-	mpc_UNUSED,
+	mpc_spread,
 	mpc_deldnp,
 	mpc_delfav,
 	mpc_remove,

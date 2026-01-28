@@ -20,8 +20,6 @@
 static pthread_mutex_t _clientlock = PTHREAD_MUTEX_INITIALIZER;
 static int32_t _curclient = -1;
 
-#define MP_PROTOVER 1 /* change this whenever the format of the json sent to the client changes */
-
 #define MPV 10
 
 /*
@@ -32,25 +30,17 @@ static int32_t _curclient = -1;
  * Even if it may look tempting, queuing the calls is not
  * worth the effort!
  */
-int32_t setCurClient(int32_t client) {
-	if (client < 1) {
-		addMessage(0, "Can't lock one shot client!");
-		return -1;
-	}
-	if (pthread_mutex_trylock(&_clientlock) == EBUSY) {
-		if (_curclient == client) {
-			addMessage(MPV + 1, "Client %i is already locked!", client);
-			return client;
-		}
-		else {
-			addMessage(MPV + 1, "Client %i is blocked by %i!", client,
-					   _curclient);
-		}
-		return -1;
-	}
+void lockClient(int32_t client) {
+	pthread_mutex_lock(&_clientlock);
+
 	addMessage(MPV + 1, "Locking %i!", client);
 	_curclient = client;
-	return client;
+}
+
+void unlockClient(int32_t client) {
+	assert (_curclient == client);
+	_curclient = 0;
+	pthread_mutex_unlock(&_clientlock);
 }
 
 bool isCurClient(int32_t client) {
@@ -59,32 +49,6 @@ bool isCurClient(int32_t client) {
 
 int32_t getCurClient() {
 	return _curclient;
-}
-
-/*
- * sends all next messages to every client and allows other clients
- * to lock the messages
- * only unlock if we really are the current client. Otherwise this is just a clean-up
- * call to avoid a deadlock.
- */
-void unlockClient(int32_t client) {
-	/* a little nasty but needed to end progress when it's unknown which client
-	 * is the current one */
-	if (client == -1) {
-		client = _curclient;
-	}
-
-	if (client == _curclient) {
-		_curclient = -1;
-		addMessage(MPV + 1, "Unlocking %i", client);
-		pthread_mutex_unlock(&_clientlock);
-	}
-	else if (_curclient != -1) {
-		addMessage(0, "Client %i is not %i", client, _curclient);
-	}
-	else {
-		addMessage(MPV + 1, "Client %i was not locked!", client);
-	}
 }
 
 static jsonObject *jsonAddProfile(jsonObject * jo, const char *key,
@@ -230,6 +194,11 @@ char *serializeStatus(int32_t clientid, int32_t type) {
 	const clmessage *msg = NULL;
 	char *msgline = NULL;
 
+	/* unset MPCOMM_RESULT if clients do not match */
+	if ((type & MPCOMM_RESULT) && (clientid != data->found->cid)) {
+		type &= ~MPCOMM_RESULT;
+	}
+
 	jo = jsonAddInt(jo, "type", type);
 	jsonAddInt(jo, "version", MP_PROTOVER);
 
@@ -252,6 +221,8 @@ char *serializeStatus(int32_t clientid, int32_t type) {
 		jsonAddSres(jo, "artists", data->found->artists, data->found->anum);
 		jsonAddSres(jo, "albums", data->found->albums, data->found->lnum);
 		jsonAddSres(jo, "albart", data->found->albart, data->found->lnum);
+		/* Mark results as delivered */
+		data->found->cid = -1;
 	}
 	if (type & MPCOMM_LISTS) {
 		jsonAddList(jo, "dnplist", data->dnplist);
