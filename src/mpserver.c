@@ -62,7 +62,6 @@ static const struct timespec ts = {
 #define CL_STP 0				// client is dying, skip all following steps
 #define CL_ONE 1				// one-shot, only do one receive-send flow
 #define CL_RUN 2				// client is running, loop receive-send flow
-#define CL_SRC 4				// active search marker
 
 #define ROUNDUP(a,b) (((a/b)+1)*b)
 
@@ -213,7 +212,10 @@ static void triggerClient(int32_t client) {
 						_numclients = 1;
 					}
 					/* make sure that the server won't get blocked on a dead client */
-					unlockClient(run + 1);
+					if ((run + 1) == getCurClient()) {
+						addMessage(0, "Client %i died while being locked. What kept it waiting for so long?!", getCurClient());
+						assert(false);
+					}
 					addMessage(MPV + 2,
 							   "client %i disconnected, %i clients connected",
 							   run + 1, _numclients);
@@ -221,6 +223,12 @@ static void triggerClient(int32_t client) {
 			}
 		}
 	}
+}
+
+bool deadClient(uint32_t cid) {
+	/* one shots are always alive */
+	if (cid == 0) return false;
+	return (_heartbeat[cid - 1] == 0);
 }
 
 /**
@@ -587,8 +595,6 @@ static void parseRequest(chandle_t * handle) {
 	case met_get:				/* GET mpcmd */
 		if (strcmp(pos, "/status") == 0) {
 			handle->state = req_update;
-			/* make sure no one asks for searchresults */
-			handle->fullstat |= (handle->cmd & ~MPCOMM_RESULT);
 			addMessage(MPV + 2, "Statusrequest: 0x%x", handle->fullstat);
 		}
 		else if (strstr(pos, "/title/") == pos) {
@@ -633,41 +639,6 @@ static void parseRequest(chandle_t * handle) {
 			cmd = (mpcmd_t) handle->cmd;
 			addMessage(MPV + 1, "Got command 0x%04x - %s '%s'",
 					   cmd, mpcString(cmd), handle->arg ? handle->arg : "");
-			/* lock message stream for these commands */
-			if ((MPC_CMD(cmd) == mpc_dbclean) ||
-				(MPC_CMD(cmd) == mpc_doublets) ||
-				(MPC_CMD(cmd) == mpc_dbinfo)) {
-				if (setCurClient(handle->clientid) == -1) {
-					addMessage(MPV + 0, "Can't lock info client");
-					prepareReply(handle, rep_unavailable, true);
-				}
-				break;
-			}
-			/* search is synchronous
-			 * This is ugly! This code *should* go into the next
-			 * step, but we need the searchresults then already.
-			 * Changing (cleaning) this would mean a complete
-			 * redesign of the server - which may not be the worst
-			 * plan anyways...
-			 */
-			if (MPC_CMD(cmd) == mpc_search) {
-				handle->state = req_update;
-				if (setCurClient(handle->clientid) == -1) {
-					addMessage(MPV + 0, "Can't lock search client");
-					prepareReply(handle, rep_unavailable, true);
-				}
-				else if (getConfig()->found->state == mpsearch_idle) {
-					setCommand(cmd, handle->arg);
-					sfree(&(handle->arg));
-					handle->running |= CL_SRC;
-				}
-				/* this case should not be possible at all! */
-				else {
-					addMessage(-1, "Already searching!");
-					unlockClient(handle->clientid);
-					prepareReply(handle, rep_unavailable, true);
-				}
-			}
 		}
 		else {					/* unresolvable POST request */
 			addMessage(MPV + 0, "Bad POST %s!", pos);
@@ -731,12 +702,6 @@ static void parseRequest(chandle_t * handle) {
 			/* uploads must not be one-shots! */
 			addMessage(0, "No clientID!");
 			prepareReply(handle, rep_bad_request, true);
-			break;
-		}
-
-		if (setCurClient(handle->clientid) == -1) {
-			addMessage(MPV + 0, "Can't lock upload client");
-			prepareReply(handle, rep_unavailable, true);
 			break;
 		}
 
@@ -941,7 +906,6 @@ static void parseRequest(chandle_t * handle) {
 			handle->fname[0] = '\0';
 			handle->boundary[0] = '\0';
 
-			unlockClient(handle->clientid);
 			prepareReply(handle, rep_created, false);
 		}
 		break;
@@ -1010,15 +974,6 @@ static void sendReply(chandle_t * handle) {
 		break;
 
 	case req_update:			/* get update */
-		/* only look at the search state if this is the searcher */
-		if ((handle->running & CL_SRC)
-			&& (config->found->state != mpsearch_idle)) {
-			handle->fullstat |= MPCOMM_RESULT;
-			/* poll until the search is done */
-			while (config->found->state == mpsearch_busy) {
-				nanosleep(&ts, NULL);
-			}
-		}
 		/* add flags that have been set outside */
 		handle->fullstat |= getNotify(handle->clientid);
 		clearNotify(handle->clientid);
@@ -1041,8 +996,12 @@ static void sendReply(chandle_t * handle) {
 			strcat(handle->commdata, "\015\012");
 			handle->len = strlen(handle->commdata);
 			sfree(&jsonLine);
-			/* do not clear result flag! */
-			handle->fullstat &= MPCOMM_RESULT;
+			/* do we still need to send search results? */
+			if ((config->found->cid == -1) ||
+				((config->found->cid > 0) && deadClient(config->found->cid))) {
+				config->found->cid = 0;
+				handle->fullstat &= ~MPCOMM_STAT;
+			}
 		}
 		else {
 			addMessage(MPV, "Could not turn status into JSON");
@@ -1053,7 +1012,7 @@ static void sendReply(chandle_t * handle) {
 	case req_command:			/* set command */
 		cmd = MPC_CMD(handle->cmd);
 		if (cmd < mpc_idle) {
-			setCommand(handle->cmd, handle->arg);
+			setCommand(handle->cmd, handle->arg, handle->clientid);
 			sfree(&(handle->arg));
 			prepareReply(handle, rep_ok, false);
 		}
@@ -1147,17 +1106,6 @@ static void sendReply(chandle_t * handle) {
 	/* send prepared reply (if any) */
 	if (handle->len > 0) {
 		sendloop(handle->sock, handle->commdata, handle->len);
-		if (handle->fullstat & MPCOMM_RESULT) {
-			config->found->state = mpsearch_idle;
-			if (handle->clientid == 0) {
-				addMessage(0, "Search reply goes to one-shot!");
-			}
-			unlockClient(handle->clientid);
-			/* clear result flag */
-			handle->fullstat &= ~MPCOMM_RESULT;
-			/* done searching */
-			handle->running &= ~CL_SRC;
-		}
 	}
 	handle->state = req_none;
 }
@@ -1240,25 +1188,14 @@ static void clientHandler(int arg) {
 	if (handle.filefd > 0) {
 		addMessage(0, "Handler for %s just exited", handle.fname);
 		addMessage(0, "We probably ended up with a broken upload!");
-		/* probably redundant */
-		unlockClient(handle.clientid);
 		close(handle.filefd);
 		handle.filefd = -1;
 		setProcess(0);
 	}
 
 	addMessage(MPV + 3, "Client handler exited");
-	if (isCurClient(handle.clientid)) {
-		/* only unlock on search, other cmds may still need the lock
-		 * to send only to the requester */
-		/* TODO: other cases? */
-		if (config->found->state != mpsearch_idle) {
-			addMessage(1, "Search client died!");
-			unlockClient(handle.clientid);
-			config->found->state = mpsearch_idle;
-		}
-	}
-	pthread_mutex_unlock(&_sendlock);
+
+	pthread_mutex_unlock(&_sendlock); // TODO: really?
 	close(handle.sock);
 	sfree(&(handle.commdata));
 }

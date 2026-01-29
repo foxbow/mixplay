@@ -601,15 +601,15 @@ static void addAlbum(searchresults_t * res, mptitle_t * title) {
  * pat - pattern to search for
  * range - search range
  */
-int32_t search(const mpcmd_t range, const char *pat) {
+int32_t search(const mpcmd_t range, const char *pat, int32_t cid) {
 	mpconfig_t *control = getConfig();
 	mptitle_t *root = control->root;
 	mptitle_t *runner = root;
 	searchresults_t *res = control->found;
 	uint32_t i = 0;
 
-	/* enter while the last result has not been sent yet! */
-	assert(res->state != mpsearch_done);
+	/* lock result to the proper client */
+	res->cid=cid;
 
 	/* free buffer playlist, the arrays will not get lost due to the realloc later */
 	wipeSearchList(control);
@@ -716,9 +716,6 @@ int32_t search(const mpcmd_t range, const char *pat) {
 			runner = runner->next;
 		} while (runner != root);
 	}
-
-	/* result can be sent out now */
-	res->state = mpsearch_done;
 
 	uint32_t maxret = res->tnum;
 	if (res->anum > maxret) maxret = res->anum;

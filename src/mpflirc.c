@@ -41,7 +41,7 @@ static void *_mpFLIRC(void *arg) {
 
 		if (cmd != mpc_idle) {
 			addMessage(2, "HID: %s", mpcString(cmd));
-			setCommand(cmd, NULL);
+			setCommand(cmd, NULL, 0);
 			cmd = mpc_idle;
 		}
 	}

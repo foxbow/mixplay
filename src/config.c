@@ -78,7 +78,7 @@ static const char *mpccommand[] = {
 	"newprof",
 	"path",
 	"remprof",
-	"UNUSED",
+	"spread",
 	"deldnp",
 	"delfav",
 	"remove",
@@ -310,7 +310,7 @@ mpconfig_t *readConfig(void) {
 		_cconfig->msg = msgBuffInit();
 		_cconfig->found =
 			(searchresults_t *) falloc(1, sizeof (searchresults_t));
-		_cconfig->found->state = mpsearch_idle;
+		_cconfig->found->cid = 0;
 	}
 	else {
 		/* Happens on the first run! */

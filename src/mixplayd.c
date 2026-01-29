@@ -128,10 +128,10 @@ static void *debugHID( __attribute__ ((unused))
 		cmd = hidCMD(c);
 		if (cmd == mpc_quit) {
 			hidPrintline("[QUIT]");
-			setCommand(mpc_quit, getConfig()->password);
+			setCommand(mpc_quit, getConfig()->password, 0);
 		}
 		else if (cmd != mpc_idle) {
-			setCommand(cmd, NULL);
+			setCommand(cmd, NULL, 0);
 		}
 	}
 	return NULL;

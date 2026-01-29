@@ -21,8 +21,8 @@
 
 #define MPV 10
 
+/* make sure only one thread at a time sets a command */
 static pthread_mutex_t _pcmdlock = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t _asynclock = PTHREAD_MUTEX_INITIALIZER;
 
 /**
  * adds searchresults to the playlist
@@ -95,73 +95,11 @@ static int32_t playResults(mpcmd_t range, const char *arg, const bool insert) {
 	return 0;
 }
 
-/*
- * reset controller on restart
- */
-void unlockController(void) {
-	int32_t cnt = 0;
-
-	/* this must only be called when stopping or restarting the player! */
-	assert((getConfig()->status == mpc_quit) ||
-		   (getConfig()->status == mpc_reset));
-
-	/* setCommand cleans up itself, no need to retry */
-	if (pthread_mutex_trylock(&_pcmdlock) == EBUSY) {
-		addMessage(0, "Unlocking commands");
-	}
-	pthread_mutex_unlock(&_pcmdlock);
-
-	/* This is bad but unfortunately this may exactly be the reason for the
-	 * restart =/ It may make sense to remember the tid of the current async
-	 * operation and terminate that explicitly. */
-	while ((pthread_mutex_trylock(&_asynclock) == EBUSY) && (cnt++ < 5)) {
-		activity(0, "async blocked! retrying %i", cnt);
-		sleep(1);				// poll every second (give up after 5s)
-	}
-	pthread_mutex_unlock(&_asynclock);
-}
-
-/**
- * returns TRUE when no asynchronous operation is running but does not
- * block on async operations.
- */
-static bool asyncTest() {
-	int32_t status = getConfig()->status;
-
-	/* don't even try when we are about to stop the player */
-	if ((status == mpc_quit) || (status == mpc_reset)) {
-		addMessage(0, "Player is %s",
-				   (status == mpc_quit) ? "shutting down" : "resetting");
-		return false;
-	}
-#if 1
-	/* Just block here? */
-	pthread_mutex_lock(&_asynclock);
-	return true;
-#else
-	if (pthread_mutex_trylock(&_asynclock) != EBUSY) {
-		addMessage(MPV + 1, "Locking for %s", mpcString(getConfig()->status));
-		return true;
-	}
-
-	addMessage(MPV + 0, "Player is already locked!");
+static bool checkPasswd(char *pass) {
+	if (!pass) return false;
+	if (!strcmp(getConfig()->password, pass)) return true;
+	addMessage(-1, "Wrong password!");
 	return false;
-#endif
-}
-
-static int32_t checkPasswd(char *pass) {
-	if (asyncTest()) {
-		if (pass && !strcmp(getConfig()->password, pass)) {
-			return 1;
-		}
-		addMessage(MPV + 1, "Unlocking player after wrong password");
-		/* unlock mutex locked in asyncTest() */
-		pthread_mutex_unlock(&_asynclock);
-		/* TODO this may be potentially dangerous! */
-		unlockClient(-1);
-		addMessage(-1, "Wrong password!");
-	}
-	return 0;
 }
 
 /*
@@ -198,11 +136,12 @@ static void checkAfterRemove(mptitle_t * ctitle) {
  * asnchronous functions to run in the background and allow updates being sent to the
  * client
  */
-static void *plCheckDoublets(void *arg) {
-	pthread_mutex_t *lock = (pthread_mutex_t *) arg;
+static void *plCheckDoublets(void *cidin) {
+	int32_t cid = (int32_t)(long)cidin;
 	int32_t i;
 	mptitle_t *ctitle = getCurrentTitle();
 
+	lockClient(cid);
 	addMessage(0, "Checking for doublets..");
 	/* update database with current playcount etc */
 	dbWrite(0);
@@ -217,18 +156,18 @@ static void *plCheckDoublets(void *arg) {
 		addMessage(0, "No doublets found");
 	}
 	setTnum();
-	unlockClient(-1);
-	pthread_mutex_unlock(lock);
+	unlockClient(cid);
 	return NULL;
 }
 
-static void *plDbClean(void *arg) {
+static void *plDbClean(void *cidin) {
+	int32_t cid = (int32_t)(long)cidin;
 	mpconfig_t *control = getConfig();
 	mptitle_t *ctitle = getCurrentTitle();
-	pthread_mutex_t *lock = (pthread_mutex_t *) arg;
 	int32_t i;
 	int32_t changed = 0;
 
+	lockClient(cid);
 	addMessage(0, "Database Cleanup");
 
 	/* update database with current playcount etc */
@@ -265,38 +204,35 @@ static void *plDbClean(void *arg) {
 	}
 
 	setTnum();
-	unlockClient(-1);
-	pthread_mutex_unlock(lock);
+	unlockClient(cid);
 	return NULL;
 }
 
-static void *plDbFix(void *arg) {
-	pthread_mutex_t *lock = (pthread_mutex_t *) arg;
-
+static void *plDbFix(void *cidin) {
+	int32_t cid = (int32_t)(long)cidin;
+	lockClient(cid);
 	addMessage(0, "Database smooth");
 	dumpInfo(true);
 	setTnum();
-	unlockClient(-1);
-	pthread_mutex_unlock(lock);
+	unlockClient(cid);
 	return NULL;
 }
 
-static void *plDbInfo(void *arg) {
-	pthread_mutex_t *lock = (pthread_mutex_t *) arg;
-
+static void *plDbInfo(void *cidin) {
+	int32_t cid = (int32_t)(long)cidin;
+	lockClient(cid);
 	addMessage(0, "Database Info");
 	dumpState();
-	unlockClient(-1);
-	pthread_mutex_unlock(lock);
+	unlockClient(cid);
 	return NULL;
 }
 
 /* simple wrapper to run setProfile as an own thread */
-static void *plSetProfile(void *arg) {
-	pthread_mutex_t *lock = (pthread_mutex_t *) arg;
-
+static void *plSetProfile(void *cidin) {
+	int32_t cid = (int32_t)(long)cidin;
+	lockClient(cid);
 	setProfile(NULL);
-	pthread_mutex_unlock(lock);
+	unlockClient(cid);
 	return NULL;
 }
 
@@ -304,10 +240,10 @@ static void *plSetProfile(void *arg) {
  * run the given command asynchronously to allow updates during execution
  * if channel is != -1 then playing the song will be paused during execution
  */
-static void asyncRun(void *cmd(void *)) {
+static void asyncRun(void *cmd(void *), int32_t cid) {
 	pthread_t pid;
 
-	if (pthread_create(&pid, NULL, cmd, &_asynclock) < 0) {
+	if (pthread_create(&pid, NULL, cmd, (void *)(long)cid) < 0) {
 		addMessage(0, "Could not create async thread!");
 	}
 	else {
@@ -317,9 +253,10 @@ static void asyncRun(void *cmd(void *)) {
 
 /**
  * sends a command to the player
- * also makes sure that commands are not overwritten
+ * 
+ * this has a staggered lock. 
  */
-void setCommand(mpcmd_t rcmd, char *arg) {
+void setCommand(mpcmd_t rcmd, char *arg, int32_t cid) {
 	mptitle_t *ctitle = getCurrentTitle();	/* the title commands should use */
 	mpconfig_t *config = getConfig();
 	char *tpos;
@@ -348,10 +285,8 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		return;
 	}
 
-	if (pthread_mutex_trylock(&_pcmdlock) == EBUSY) {
-		addMessage(MPV + 1, "%s waiting to be set", mpcString(rcmd));
-		pthread_mutex_lock(&_pcmdlock);
-	}
+	/* lock the command handling */
+	pthread_mutex_lock(&_pcmdlock);
 
 	/* a quit or reset came in while the mutex was blocked, so forget about
 	 * everything until we had a clean restart */
@@ -444,14 +379,16 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			config->percent = 0;
 			config->playtime = 0;
 		}
-		else if (asyncTest()) {
+		else {
+			/* make sure we do not interrupt actions on the playlist */
+			lockClient(cid); 
 			order = -1;
 			if (arg != NULL) {
 				order = -atoi(arg);
 			}
 			setOrder(order);
 			toPlayer(0, "STOP\n");
-			pthread_mutex_unlock(&_asynclock);
+			unlockClient(cid);
 		}
 		break;
 
@@ -460,7 +397,9 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		 * previous or next title */
 		if (config->mpmode & PM_STREAM)
 			break;
-		if ((config->current != NULL) && asyncTest()) {
+		if (config->current != NULL) {
+			/* make sure we do not interrupt actions on the playlist */
+			lockClient(cid); 
 			order = 1;
 			if (arg != NULL) {
 				order = atoi(arg);
@@ -470,19 +409,19 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			}
 			setOrder(order);
 			toPlayer(0, "STOP\n");
-			pthread_mutex_unlock(&_asynclock);
+			unlockClient(cid);
 		}
 		break;
 
 	case mpc_doublets:
 		if (checkPasswd(arg)) {
-			asyncRun(plCheckDoublets);
+			asyncRun(plCheckDoublets, cid);
 		}
 		break;
 
 	case mpc_dbclean:
 		if (checkPasswd(arg)) {
-			asyncRun(plDbClean);
+			asyncRun(plDbClean, cid);
 		}
 		break;
 
@@ -495,26 +434,25 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 	case mpc_fav:
 		if (config->mpmode & PM_STREAM)
 			break;
-		if (asyncTest()) {
-			/* remember the current title so checkAfterRemove() can find out if
-			 * it has changed */
-			mptitle_t *check = getCurrentTitle();
+		lockClient(cid);
+		/* remember the current title so checkAfterRemove() can find out if
+			* it has changed */
+		mptitle_t *check = getCurrentTitle();
 
-			/* The selected title may already be explicitly marked as DNP or FAV so
-			 * check if it needs to be removed from the other list. The last choice
-			 * shall have highest priority */
-			delTitleFromOtherList(rcmd, ctitle);
-			handleRangeCmd(rcmd, ctitle);
-			if (cmd == mpc_dnp) {
-				checkAfterRemove(check);
-			}
-			notifyChange(MPCOMM_TITLES);
-			pthread_mutex_unlock(&_asynclock);
-			if (getFavplay()) {
-				setArtistSpread();
-			}
-			setTnum();
+		/* The selected title may already be explicitly marked as DNP or FAV so
+			* check if it needs to be removed from the other list. The last choice
+			* shall have highest priority */
+		delTitleFromOtherList(rcmd, ctitle);
+		handleRangeCmd(rcmd, ctitle);
+		if (cmd == mpc_dnp) {
+			checkAfterRemove(check);
 		}
+		notifyChange(MPCOMM_TITLES);
+		if (getFavplay()) {
+			setArtistSpread();
+		}
+		setTnum();
+		unlockClient(cid);
 		break;
 
 	case mpc_repl:
@@ -529,9 +467,10 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		if (arg == NULL) {
 			addMessage(-1, "No profile given!");
 		}
-		else if (asyncTest()) {
+		else {
 			profileid = atoi(arg);
 			if ((profileid != 0) && (profileid != config->active)) {
+				/* TODO: should this be locked too? */
 				if (!(config->mpmode & (PM_STREAM | PM_DATABASE))) {
 					wipeTitles(config->root);
 				}
@@ -544,11 +483,10 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 					getProfile(config->active)->volume = config->volume;
 				}
 				config->active = profileid;
-				asyncRun(plSetProfile);
+				asyncRun(plSetProfile, cid);
 			}
 			else {
 				addMessage(0, "Invalid profile %i", profileid);
-				pthread_mutex_unlock(&_asynclock);
 			}
 		}
 		break;
@@ -560,10 +498,11 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		else if (strchr(arg, '/')) {
 			addMessage(-1, "Illegal profile name.<br>Don't use '/'!");
 		}
-		else if ((config->current != NULL) && asyncTest()) {
+		else if (config->current != NULL) {
+			lockClient(cid);
 			addProfile(arg, config->streamURL, true);
 			writeConfig(NULL);
-			pthread_mutex_unlock(&_asynclock);
+			unlockClient(cid);
 			notifyChange(MPCOMM_CONFIG);
 		}
 		break;
@@ -572,9 +511,10 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		if (arg == NULL) {
 			addMessage(-1, "No profile given!");
 		}
-		else if ((config->current != NULL) && asyncTest()) {
+		else if ((config->current != NULL)) {
 			/* only clone profiles */
 			if (!isStreamActive()) {
+				lockClient(cid);
 				if (copyProfile(config->active, arg) > 0) {
 					writeList(mpc_fav);
 					writeList(mpc_dnp);
@@ -582,8 +522,8 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 					writeConfig(NULL);
 					notifyChange(MPCOMM_CONFIG);
 				}
+				unlockClient(cid);
 			}
-			pthread_mutex_unlock(&_asynclock);
 		}
 		break;
 
@@ -592,36 +532,35 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			addMessage(-1, "No profile given!");
 		}
 		else {
-			if (asyncTest()) {
-				profileid = atoi(arg);
-				int profileidx = getProfileIndex(profileid);
+			profileid = atoi(arg);
+			int profileidx = getProfileIndex(profileid);
 
-				if (profileidx != -1) {
-					if (profileid == 1) {
-						addMessage(-1, "mixplay cannot be removed.");
-					}
-					else if (profileid == config->active) {
-						addMessage(-1, "Cannot remove active profile!");
-					}
-					else {
-						freeProfile(config->profile[profileidx]);
-						for (uint32_t i = profileidx + 1; i < config->profiles;
-							 i++) {
-							config->profile[i - 1] = config->profile[i];
-						}
-						config->profiles--;
-						config->profile =
-							(profile_t **) frealloc(config->profile,
-													config->profiles *
-													sizeof (profile_t *));
-						writeConfig(NULL);
-						notifyChange(MPCOMM_CONFIG);
-					}
+			if (profileidx != -1) {
+				if (profileid == 1) {
+					addMessage(-1, "mixplay cannot be removed.");
+				}
+				else if (profileid == config->active) {
+					addMessage(-1, "Cannot remove active profile!");
 				}
 				else {
-					addMessage(-1, "Profile #%i does not exist!", profileid);
+					lockClient(cid);
+					freeProfile(config->profile[profileidx]);
+					for (uint32_t i = profileidx + 1; i < config->profiles;
+							i++) {
+						config->profile[i - 1] = config->profile[i];
+					}
+					config->profiles--;
+					config->profile =
+						(profile_t **) frealloc(config->profile,
+												config->profiles *
+												sizeof (profile_t *));
+					writeConfig(NULL);
+					unlockClient(cid);
+					notifyChange(MPCOMM_CONFIG);
 				}
-				pthread_mutex_unlock(&_asynclock);
+			}
+			else {
+				addMessage(-1, "Profile #%i does not exist!", profileid);
 			}
 		}
 		break;
@@ -630,13 +569,14 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		if (arg == NULL) {
 			addMessage(-1, "No path given!");
 		}
-		else if ((config->current != NULL) && asyncTest()) {
+		else if (config->current != NULL) {
+			lockClient(cid);
 			if (setArgument(arg)) {
 				config->active = 0;
 				stopPlay();
 				sendplay();
 			}
-			pthread_mutex_unlock(&_asynclock);
+			unlockClient(cid);
 		}
 		break;
 
@@ -661,12 +601,12 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		break;
 
 	case mpc_dbinfo:
-		/* TODO: very unintuitive! */
+		asyncRun(plDbInfo, cid);
+		break;
+
+	case mpc_spread:
 		if ((arg) && checkPasswd(arg)) {
-			asyncRun(plDbFix);
-		}
-		else if (asyncTest()) {
-			asyncRun(plDbInfo);
+			asyncRun(plDbFix, cid);
 		}
 		break;
 
@@ -679,10 +619,6 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 		{
 			char *term = arg;
 
-			/* if we mix two searches we're in trouble!
-			 * this duplicates the check in mpserver, so it should never happen */
-			assert(config->found->state == mpsearch_idle);
-
 			/* if the term is unset but the fuzzy bit is set, return the last ten
 			 * titles in the database */
 			if ((term == NULL) && !MPC_ISRECENT(rcmd)) {
@@ -694,8 +630,16 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 				}
 			}
 
-			if (search(MPC_MODE(rcmd), term) == -1) {
-				addMessage(0, "Too many titles found!");
+			if (config->found->cid > 0) {
+				addMessage(-1, "Search still active!");
+			}
+			else {
+				lockClient(cid);
+				if (search(MPC_MODE(rcmd), term, cid) == -1) {
+					addMessage(0, "Too many entries found!");
+				}
+				unlockClient(cid);
+				notifyChange(MPCOMM_RESULT);
 			}
 		}
 
@@ -747,12 +691,12 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 	case mpc_favplay:
 		if (config->mpmode & PM_STREAM)
 			break;
-		if (asyncTest()) {
-			if (countflag(MP_FAV) < 21) {
-				addMessage(-1,
-						   "Need at least 21 Favourites to enable Favplay.");
-				break;
-			}
+		if (countflag(MP_FAV) < 21) {
+			addMessage(-1,
+						"Need at least 21 Favourites to enable Favplay.");
+		}
+		else {
+			lockClient(cid);
 			if (toggleFavplay()) {
 				addMessage(MPV + 1, "Enabling Favplay");
 			}
@@ -764,8 +708,9 @@ void setCommand(mpcmd_t rcmd, char *arg) {
 			setArtistSpread();
 			plCheck(true);
 			sendplay();
-			pthread_mutex_unlock(&_asynclock);
+			unlockClient(cid);
 		}
+
 		break;
 
 	case mpc_move:

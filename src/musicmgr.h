@@ -63,12 +63,6 @@ typedef enum {
 	count_mean
 } mpcount_t;
 
-typedef enum {
-	mpsearch_idle,
-	mpsearch_busy,
-	mpsearch_done
-} mpsearch_t;
-
 typedef struct {
 	char *name;
 	bool fav;
@@ -83,7 +77,7 @@ typedef struct {
 	searchentry_t *artists;
 	searchentry_t *albums;
 	searchentry_t *albart;
-	mpsearch_t state;
+	int32_t cid;
 } searchresults_t;
 
 typedef struct marklist_s marklist_t;
@@ -107,7 +101,7 @@ mptitle_t *recurse(char *curdir, mptitle_t * files);
 mptitle_t *rewindTitles(mptitle_t * base);
 mptitle_t *loadPlaylist(const char *path);
 mptitle_t *insertTitle(mptitle_t * base, const char *path);
-int32_t search(const mpcmd_t range, const char *pat);
+int32_t search(const mpcmd_t range, const char *pat, int32_t cid);
 mptitle_t *addNewPath(const char *path);
 bool mp3FileExists(const char *name);
 
