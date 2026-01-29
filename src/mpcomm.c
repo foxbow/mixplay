@@ -20,6 +20,8 @@
 static pthread_mutex_t _clientlock = PTHREAD_MUTEX_INITIALIZER;
 static int32_t _curclient = -1;
 
+#define MP_PROTOVER 1 /* change this whenever the format of the json sent to the client changes */
+
 #define MPV 10
 
 /*
@@ -229,6 +231,7 @@ char *serializeStatus(int32_t clientid, int32_t type) {
 	char *msgline = NULL;
 
 	jo = jsonAddInt(jo, "type", type);
+	jsonAddInt(jo, "version", MP_PROTOVER);
 
 	if (type & MPCOMM_TITLES) {
 		jsonAddTitle(jo, "current", current);

@@ -540,6 +540,7 @@ static void parseRequest(chandle_t * handle) {
 			handle->clientid = getFreeClient();
 			if (handle->clientid == -1) {
 				/* no free clientid - no service */
+				addMessage(MPV + 0, "No free clientID");
 				prepareReply(handle, rep_unavailable, true);
 				return;
 			}
@@ -637,6 +638,7 @@ static void parseRequest(chandle_t * handle) {
 				(MPC_CMD(cmd) == mpc_doublets) ||
 				(MPC_CMD(cmd) == mpc_dbinfo)) {
 				if (setCurClient(handle->clientid) == -1) {
+					addMessage(MPV + 0, "Can't lock info client");
 					prepareReply(handle, rep_unavailable, true);
 				}
 				break;
@@ -651,6 +653,7 @@ static void parseRequest(chandle_t * handle) {
 			if (MPC_CMD(cmd) == mpc_search) {
 				handle->state = req_update;
 				if (setCurClient(handle->clientid) == -1) {
+					addMessage(MPV + 0, "Can't lock search client");
 					prepareReply(handle, rep_unavailable, true);
 				}
 				else if (getConfig()->found->state == mpsearch_idle) {
@@ -732,6 +735,7 @@ static void parseRequest(chandle_t * handle) {
 		}
 
 		if (setCurClient(handle->clientid) == -1) {
+			addMessage(MPV + 0, "Can't lock upload client");
 			prepareReply(handle, rep_unavailable, true);
 			break;
 		}
@@ -1034,6 +1038,7 @@ static void sendReply(chandle_t * handle) {
 					(char *) frealloc(handle->commdata, handle->commsize);
 			}
 			strcat(handle->commdata, jsonLine);
+			strcat(handle->commdata, "\015\012");
 			handle->len = strlen(handle->commdata);
 			sfree(&jsonLine);
 			/* do not clear result flag! */
@@ -1048,14 +1053,6 @@ static void sendReply(chandle_t * handle) {
 	case req_command:			/* set command */
 		cmd = MPC_CMD(handle->cmd);
 		if (cmd < mpc_idle) {
-			/* check commands that lock the reply channel */
-			if (handle->clientid > 0) {
-				if (setCurClient(handle->clientid) == -1) {
-					addMessage(MPV + 1, "%s was blocked!", mpcString(cmd));
-					prepareReply(handle, rep_unavailable, false);	/* add error */
-					break;
-				}
-			}
 			setCommand(handle->cmd, handle->arg);
 			sfree(&(handle->arg));
 			prepareReply(handle, rep_ok, false);

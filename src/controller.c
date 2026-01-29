@@ -125,24 +125,28 @@ void unlockController(void) {
  * returns TRUE when no asynchronous operation is running but does not
  * block on async operations.
  */
-static int32_t asyncTest() {
-	int32_t ret = 0;
+static bool asyncTest() {
 	int32_t status = getConfig()->status;
 
 	/* don't even try when we are about to stop the player */
 	if ((status == mpc_quit) || (status == mpc_reset)) {
 		addMessage(0, "Player is %s",
 				   (status == mpc_quit) ? "shutting down" : "resetting");
-		return 0;
+		return false;
 	}
+#if 1
+	/* Just block here? */
+	pthread_mutex_lock(&_asynclock);
+	return true;
+#else
 	if (pthread_mutex_trylock(&_asynclock) != EBUSY) {
 		addMessage(MPV + 1, "Locking for %s", mpcString(getConfig()->status));
-		ret = 1;
+		return true;
 	}
-	else {
-		addMessage(0, "Player is already locked!");
-	}
-	return ret;
+
+	addMessage(MPV + 0, "Player is already locked!");
+	return false;
+#endif
 }
 
 static int32_t checkPasswd(char *pass) {
@@ -270,7 +274,7 @@ static void *plDbFix(void *arg) {
 	pthread_mutex_t *lock = (pthread_mutex_t *) arg;
 
 	addMessage(0, "Database smooth");
-	dumpInfo(1);
+	dumpInfo(true);
 	setTnum();
 	unlockClient(-1);
 	pthread_mutex_unlock(lock);
@@ -281,7 +285,7 @@ static void *plDbInfo(void *arg) {
 	pthread_mutex_t *lock = (pthread_mutex_t *) arg;
 
 	addMessage(0, "Database Info");
-	dumpInfo(0);
+	dumpState();
 	unlockClient(-1);
 	pthread_mutex_unlock(lock);
 	return NULL;

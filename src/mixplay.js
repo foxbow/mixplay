@@ -37,6 +37,7 @@ var lineout = 0
 var allnum = 0
 let controller = null
 var portrait = false
+var version = -1  /* protocol version */
 
 function debugLog (txt) {
   if (debug) {
@@ -511,34 +512,32 @@ function addText (text) {
 
   var e = document.getElementById('messages')
 
-  if (msgpos < numlines) {
-    msglines.push(text)
-    msgpos++
-  } else {
-    for (var i = 0; i < numlines - 1; i++) {
-      msglines[i] = msglines[i + 1]
+  if (!debug) {
+    if (msgpos < numlines) {
+      msglines.push(text)
+      msgpos++
+    } else {
+      for (var i = 0; i < numlines - 1; i++) {
+        msglines[i] = msglines[i + 1]
+      }
+      msglines[numlines - 1] = text
     }
-    msglines[numlines - 1] = text
-  }
 
-  for (i = 0; i < msgpos; i++) {
-    if (msglines[i] !== '') {
-      line += msglines[i] + '<br>\n'
+    for (i = 0; i < msgpos; i++) {
+      if (msglines[i] !== '') {
+        line += msglines[i] + '<br>\n'
+      }
     }
+    e.innerHTML = line + '<br>\n'
   }
-  e.innerHTML = line
+  else {
+    e.innerHTML += text + '<br>\n'
+  }
 }
 
-function setText (text) {
+function clearText () {
   var e = document.getElementById('messages')
-  var line = ''
-  msglines[0] = text
-  for (i = 0; i < msgpos; i++) {
-    if (msglines[i] !== '') {
-      line += msglines[i] + '<br>\n'
-    }
-  }
-  e.innerHTML = line
+  e.innerHTML = ''
 }
 
 var moveline = ''
@@ -1549,10 +1548,24 @@ function checkReply (xmlhttp) {
       case 0:
         fail('CMD Error: connection lost!')
         break
+      case 204:
+        /* fallthrough */
       case 200:
+        if (doUpdate < 0) {
+          doUpdate = 13;
+          break 
+        }
+
         /* there is payload beyond 'OK' so interpret it */
         if (xmlhttp.responseText.length > 3) {
           data = JSON.parse(xmlhttp.responseText)
+          if (version === -1) {
+            version = data.version
+          }
+          else if (version != data.version) {
+            document.location.reload()
+          }
+
           /* elCheapo locking */
           if (inUpdate++ > 1) {
             debugLog('Active update!')
@@ -1579,17 +1592,12 @@ function checkReply (xmlhttp) {
           }
           inUpdate--
         }
-        /* fallthrough */
-      case 204:
-        if (doUpdate < 0) {
-          document.location.reload()
-        }
         break
       case 503:
         showConfirm('Sorry, we\'re busy!')
         break
       default:
-        fail('Received Error ' + xmlhttp.status)
+        showConfirm('Received Error ' + xmlhttp.status)
     }
     if (doUpdate < 0) {
       document.body.className = 'disconnect'

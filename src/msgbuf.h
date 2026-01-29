@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define MSGNUM 20
+#define MSGNUM 256
 
 typedef struct {
 	char *msg;
