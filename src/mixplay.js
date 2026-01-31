@@ -1991,8 +1991,7 @@ function tap () {
   power(1)
 }
 
-function getClockTime () {
-  const now = new Date()
+function getClockTime (now) {
   const min = now.getMinutes()
   const hrs = now.getHours()
 
@@ -2004,7 +2003,8 @@ function getClockTime () {
 }
 
 function clocktime () {
-  const line = getClockTime ()
+  const now = new Date()
+  const line = getClockTime (now)
   setElement('time', '&nbsp;' + line + '&nbsp;')
   setElement('idleclock', line)
 

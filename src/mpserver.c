@@ -595,6 +595,7 @@ static void parseRequest(chandle_t * handle) {
 	case met_get:				/* GET mpcmd */
 		if (strcmp(pos, "/status") == 0) {
 			handle->state = req_update;
+			handle->fullstat |= handle->cmd;
 			addMessage(MPV + 2, "Statusrequest: 0x%x", handle->fullstat);
 		}
 		else if (strstr(pos, "/title/") == pos) {
