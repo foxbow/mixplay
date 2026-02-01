@@ -26,12 +26,18 @@
 #include "musicmgr.h"
 #include "mpcomm.h"
 
+/* playlist lock, on some operations tha playlist must not change */
 static pthread_mutex_t pllock = PTHREAD_MUTEX_INITIALIZER;
+/* synchronize configuration access */
 static pthread_mutex_t conflock = PTHREAD_MUTEX_INITIALIZER;
+/* notification when the configuration is available */
 static pthread_cond_t confinit = PTHREAD_COND_INITIALIZER;
 
+/* synchronize messages, this should probably move to msBuf handling */
 static pthread_mutex_t _addmsglock = PTHREAD_MUTEX_INITIALIZER;
+/* callback lock */
 static pthread_mutex_t _cblock = PTHREAD_MUTEX_INITIALIZER;
+
 static mpconfig_t *_cconfig = NULL;
 
 #define MPV 10
@@ -314,7 +320,7 @@ mpconfig_t *readConfig(void) {
 	}
 	else {
 		/* Happens on the first run! */
-		addMessage(-1, "Config being read twice!");
+		addAlert(0, "Config being read twice!");
 	}
 
 	/* Set some default values */
@@ -773,19 +779,39 @@ void freeConfig() {
 }
 
 /**
+ * adds an alert for a specific client without needing to lock the 
+ * client
+ */
+void addAlert(int32_t cid, const char *msg, ...) {
+	va_list args;
+	char line[MP_MSGLEN +1];
+	pthread_mutex_lock(&_addmsglock);
+	sprintf(line, "ALERT:");
+	va_start(args, msg);
+	vsnprintf(line+6, MP_MSGLEN, msg, args);
+	va_end(args);
+	msgBuffAddCid(_cconfig->msg, line, cid);
+	if (_cconfig->inUI) {
+		msgBuffAdd(_cconfig->msg, line);
+	}
+	if (_cconfig->isDaemon) {
+		syslog(LOG_NOTICE, "%s", line);
+	}
+	pthread_mutex_unlock(&_addmsglock);
+}
+
+/**
  * adds a message
  *
  * v controls the verbosity
- * -1 - message is an alert, treat as 0 furtheron
  *  0 - add to message buffer, write to syslog if daemonized
  *  n - if debuglevel is > n print on screen
  */
 void addMessage(int32_t v, const char *msg, ...) {
 	va_list args;
-	char *line;
+	char line[MP_MSGLEN + 1];
 
 	pthread_mutex_lock(&_addmsglock);
-	line = (char *) falloc(MP_MSGLEN + 1, 1);
 	va_start(args, msg);
 	vsnprintf(line, MP_MSGLEN, msg, args);
 	va_end(args);
@@ -795,13 +821,8 @@ void addMessage(int32_t v, const char *msg, ...) {
 		line[strlen(line)] = 0;
 	}
 
-	if (v < 1) {
-		/* abnormal status messages */
-		if (v == -1) {
-			memmove(line + 6, line, MP_MSGLEN - 6);
-			memcpy(line, "ALERT:", 6);
-			line[MP_MSGLEN] = 0;
-		}
+	if ((v == 0) || (v < (int32_t) getDebug())) {
+		fprintf(stderr, "\r%s\n", line);
 		if (_cconfig->inUI) {
 			msgBuffAdd(_cconfig->msg, line);
 		}
@@ -809,12 +830,6 @@ void addMessage(int32_t v, const char *msg, ...) {
 			syslog(LOG_NOTICE, "%s", line);
 		}
 	}
-
-	if (v < (int32_t) getDebug()) {
-		fprintf(stderr, "\r%s\n", line);
-	}
-
-	free(line);
 	pthread_mutex_unlock(&_addmsglock);
 }
 

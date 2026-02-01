@@ -15,7 +15,7 @@
 #include <stdbool.h>
 #include "msgbuf.h"
 
-#define MP_PROTOVER 2
+#define MP_PROTOVER 3
 
 #define MP_HOSTLEN 256
 #define MP_MSGLEN 512
@@ -231,6 +231,10 @@ uint32_t getProcess(void);
 void incDebug(void);
 uint32_t getDebug(void);
 bool isDebug(void);
+
+void addAlert(int32_t cid, const char *msg, ...)
+	__attribute__ ((__format__(__printf__, 2, 3)));
+
 void addMessage(int32_t v, const char *msg, ...)
 	__attribute__ ((__format__(__printf__, 2, 3)));
 

@@ -29,6 +29,7 @@ typedef struct {
  */
 msgbuf_t *msgBuffInit();
 uint64_t msgBuffAdd(msgbuf_t * msgbuf, char *line);
+uint64_t msgBuffAddCid(msgbuf_t * msgbuf, char *line, uint32_t cid);
 const clmessage *msgBuffPeek(msgbuf_t * msgbuf, uint64_t msgno);
 char *msgBuffAll(msgbuf_t * msgbuf);
 void msgBuffDiscard(msgbuf_t * msgbuf);

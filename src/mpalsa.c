@@ -188,8 +188,10 @@ long toggleMute() {
 	}
 	if (_elem == NULL) {
 		/* make this one a pop-up, so the user has a clue why nothing 
-		 * happened when he clicked the mute button */
-		addMessage(-1, "Volume control is not fully initialized!");
+		 * happened when he clicked the mute button. May not be a good
+		 * idea to broadcast this, but whe it happens there shouldn't
+		 * be a lot of clients attached already */
+		addAlert(0, "Volume control is not fully initialized!");
 		return config->volume;
 	}
 

@@ -202,7 +202,7 @@ static int32_t dbOpen(void) {
 	db = open(path, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 
 	if (-1 == db) {
-		addMessage(-1, "Could not open database<br>%s", path);
+		addAlert(0, "Could not open database<br>%s", path);
 	}
 	else {
 		addMessage(2, "Opened database %s", path);
@@ -311,7 +311,7 @@ mptitle_t *dbGetMusic() {
 		}
 		else {
 			/* Maybe make an UI scan possible or trigger it here explicitly */
-			addMessage(-1,
+			addAlert(0,
 					   "Database %s and backup are corrupt!<br>Run 'mixplay -C' to rescan",
 					   getConfig()->dbname);
 		}
@@ -333,7 +333,7 @@ int32_t dbCheckExist(void) {
 
 	root = getConfig()->root;
 	if (root == NULL) {
-		addMessage(-1, "No music in database!");
+		addAlert(0, "No music in database!");
 		return -1;
 	}
 	runner = root;
@@ -425,7 +425,7 @@ int32_t dbAddTitles(char *basedir) {
 	addMessage(0, "Scanning...");
 	fsroot = recurse(basedir, NULL);
 	if (fsroot == NULL) {
-		addMessage(-1, "No music found in<br>%s!", basedir);
+		addAlert(0, "No music found in<br>%s!", basedir);
 		return 0;
 	}
 
@@ -537,14 +537,14 @@ int32_t dbNameCheck(void) {
 	/* TODO: this is no longer true, check! */
 	root = dbGetMusic();
 	if (root == NULL) {
-		addMessage(-1, "No music in database!");
+		addAlert(0, "No music in database!");
 		return -1;
 	}
 
 	snprintf(rmpath, MAXPATHLEN, "%s/.mixplay/rmlist.sh", getenv("HOME"));
 	fp = fopen(rmpath, "w");
 	if (NULL == fp) {
-		addMessage(-1, "Could not open<br>%s<br>for writing!", rmpath);
+		addAlert(0, "Could not open<br>%s<br>for writing!", rmpath);
 		return -1;
 	}
 

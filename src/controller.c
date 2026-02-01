@@ -95,10 +95,10 @@ static int32_t playResults(mpcmd_t range, const char *arg, const bool insert) {
 	return 0;
 }
 
-static bool checkPasswd(char *pass) {
+static bool checkPasswd(char *pass, uint32_t cid) {
 	if (!pass) return false;
 	if (!strcmp(getConfig()->password, pass)) return true;
-	addMessage(-1, "Wrong password!");
+	addAlert(cid, "Wrong password!");
 	return false;
 }
 
@@ -414,13 +414,13 @@ void setCommand(mpcmd_t rcmd, char *arg, int32_t cid) {
 		break;
 
 	case mpc_doublets:
-		if (checkPasswd(arg)) {
+		if (checkPasswd(arg, cid)) {
 			asyncRun(plCheckDoublets, cid);
 		}
 		break;
 
 	case mpc_dbclean:
-		if (checkPasswd(arg)) {
+		if (checkPasswd(arg, cid)) {
 			asyncRun(plDbClean, cid);
 		}
 		break;
@@ -465,7 +465,7 @@ void setCommand(mpcmd_t rcmd, char *arg, int32_t cid) {
 
 	case mpc_profile:
 		if (arg == NULL) {
-			addMessage(-1, "No profile given!");
+			addAlert(cid, "No profile to change to!");
 		}
 		else {
 			profileid = atoi(arg);
@@ -493,10 +493,10 @@ void setCommand(mpcmd_t rcmd, char *arg, int32_t cid) {
 
 	case mpc_newprof:
 		if (arg == NULL) {
-			addMessage(-1, "No name given!");
+			addAlert(cid, "No name given!");
 		}
 		else if (strchr(arg, '/')) {
-			addMessage(-1, "Illegal profile name.<br>Don't use '/'!");
+			addAlert(cid, "Illegal profile name.<br>Don't use '/'!");
 		}
 		else if (config->current != NULL) {
 			lockClient(cid);
@@ -509,7 +509,7 @@ void setCommand(mpcmd_t rcmd, char *arg, int32_t cid) {
 
 	case mpc_clone:
 		if (arg == NULL) {
-			addMessage(-1, "No profile given!");
+			addAlert(cid, "No profile to clone!");
 		}
 		else if ((config->current != NULL)) {
 			/* only clone profiles */
@@ -529,7 +529,7 @@ void setCommand(mpcmd_t rcmd, char *arg, int32_t cid) {
 
 	case mpc_remprof:
 		if (arg == NULL) {
-			addMessage(-1, "No profile given!");
+			addAlert(cid, "No profile to remove!");
 		}
 		else {
 			profileid = atoi(arg);
@@ -537,10 +537,10 @@ void setCommand(mpcmd_t rcmd, char *arg, int32_t cid) {
 
 			if (profileidx != -1) {
 				if (profileid == 1) {
-					addMessage(-1, "mixplay cannot be removed.");
+					addAlert(cid, "mixplay cannot be removed.");
 				}
 				else if (profileid == config->active) {
-					addMessage(-1, "Cannot remove active profile!");
+					addAlert(cid, "Cannot remove active profile!");
 				}
 				else {
 					lockClient(cid);
@@ -560,14 +560,14 @@ void setCommand(mpcmd_t rcmd, char *arg, int32_t cid) {
 				}
 			}
 			else {
-				addMessage(-1, "Profile #%i does not exist!", profileid);
+				addAlert(cid, "Profile #%i does not exist!", profileid);
 			}
 		}
 		break;
 
 	case mpc_path:
 		if (arg == NULL) {
-			addMessage(-1, "No path given!");
+			addAlert(cid, "No path given!");
 		}
 		else if (config->current != NULL) {
 			lockClient(cid);
@@ -605,7 +605,7 @@ void setCommand(mpcmd_t rcmd, char *arg, int32_t cid) {
 		break;
 
 	case mpc_spread:
-		if ((arg) && checkPasswd(arg)) {
+		if ((arg) && checkPasswd(arg, cid)) {
 			asyncRun(plDbFix, cid);
 		}
 		break;
@@ -631,7 +631,7 @@ void setCommand(mpcmd_t rcmd, char *arg, int32_t cid) {
 			}
 
 			if (config->found->cid > 0) {
-				addMessage(-1, "Search still active!");
+				addAlert(cid, "Search still active!");
 			}
 			else {
 				lockClient(cid);
@@ -692,8 +692,7 @@ void setCommand(mpcmd_t rcmd, char *arg, int32_t cid) {
 		if (config->mpmode & PM_STREAM)
 			break;
 		if (countflag(MP_FAV) < 21) {
-			addMessage(-1,
-						"Need at least 21 Favourites to enable Favplay.");
+			addAlert(cid, "Need at least 21 Favourites to enable Favplay.");
 		}
 		else {
 			lockClient(cid);
