@@ -168,7 +168,8 @@ static jsonObject *jsonAddList(jsonObject * jo, const char *key,
 		/* cut off musicdir if it's given, list->dir starts with 'p=' */
 		if (startsWith(list->dir, "p=")) {
 			if (strlen(list->dir) < len) {
-				addMessage(-1, "%s<br>is an illegal list entry!", list->dir);
+				/* if this happens, it's worth spaming everyone with it */
+				addAlert(0, "%s<br>is an illegal list entry!", list->dir);
 			}
 			else {
 				jsonAddArrElement(jo, list->dir + len, json_string);
@@ -259,7 +260,7 @@ char *serializeStatus(int32_t clientid, int32_t type) {
 			msg = msgBuffPeek(data->msg, getMsgCnt(clientid));
 			if (msg != NULL) {
 				incMsgCnt(clientid);
-				if ((msg->cid == clientid) || (msg->cid == -1)) {
+				if ((msg->cid == clientid) || (msg->cid == 0)) {
 					msgline = msg->msg;
 				}
 			}
@@ -270,7 +271,7 @@ char *serializeStatus(int32_t clientid, int32_t type) {
 
 	err = jsonGetError(jo);
 	if (err != NULL) {
-		addMessage(-1, "%s", err);
+		addAlert(0, "%s", err);
 		sfree(&err);
 		jsonDiscard(jo);
 		return NULL;
@@ -279,7 +280,7 @@ char *serializeStatus(int32_t clientid, int32_t type) {
 	rv = jsonToString(jo);
 	err = jsonGetError(jo);
 	if (err != NULL) {
-		addMessage(-1, "%s", err);
+		addAlert(0, "%s", err);
 		sfree(&rv);
 		sfree(&err);
 		jsonDiscard(jo);

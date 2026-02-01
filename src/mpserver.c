@@ -208,7 +208,7 @@ static void triggerClient(int32_t client) {
 					 * invoked this function! If we see this, we probably
 					 * need to mutex lock the client functions... */
 					if (_numclients < 1) {
-						addMessage(-1, "Client count out of sync!");
+						addAlert(0, "Client count out of sync!");
 						_numclients = 1;
 					}
 					/* make sure that the server won't get blocked on a dead client */
@@ -774,7 +774,7 @@ static void parseRequest(chandle_t * handle) {
 			if ((strlen(handle->fname) == 0)
 				|| (!endsWith(handle->fname, ".mp3"))) {
 				/* just a simple message as this may be a misclick */
-				addMessage(0, "Invalid / no name");
+				addAlert(handle->clientid, "Invalid / no name");
 				prepareReply(handle, rep_bad_request, true);
 				break;
 			}
@@ -782,7 +782,7 @@ static void parseRequest(chandle_t * handle) {
 		}
 
 		if (tline == NULL) {
-			addMessage(-1, "No data found!");
+			addAlert(handle->clientid, "No data found!");
 			addMessage(MPV + 0, "%s", handle->commdata);
 			prepareReply(handle, rep_bad_request, true);	/* add error */
 			break;
@@ -803,15 +803,15 @@ static void parseRequest(chandle_t * handle) {
 			 handle->fname) == MAXPATHLEN) {
 			/* Unlikely but not impossible if anyone tries to trigger
 			 * an overflow */
-			addMessage(-1, "Path too long!");
+			addAlert(handle->clientid, "Path too long!");
 			prepareReply(handle, rep_bad_request, true);
 		}
 		if (access(handle->fpath, F_OK) == 0) {
-			addMessage(-1, "%s<br> was already uploaded", handle->fname);
+			addAlert(handle->clientid, "%s<br> was already uploaded", handle->fname);
 			prepareReply(handle, rep_bad_request, false);	/* add error */
 		}
 		else if (mp3FileExists(handle->fname)) {
-			addMessage(-1, "%s<br>is already in the collection!",
+			addAlert(handle->clientid, "%s<br>is already in the collection!",
 					   handle->fname);
 			/* allow upload for debugging */
 			if (getDebug() == 0) {
@@ -823,7 +823,7 @@ static void parseRequest(chandle_t * handle) {
 		if (handle->len == 0) {
 			handle->filefd = open(handle->fpath, O_CREAT | O_WRONLY, 00644);
 			if (handle->filefd == -1) {
-				addMessage(-1, "Could not write<br>%s<br>%s", handle->fpath,
+				addAlert(handle->clientid, "Could not write<br>%s<br>%s", handle->fpath,
 						   strerror(errno));
 				prepareReply(handle, rep_bad_request, true);	/* add error */
 			}
@@ -865,7 +865,7 @@ static void parseRequest(chandle_t * handle) {
 					write(handle->filefd, (unsigned char *) (pos + sent),
 						  len - sent);
 				if (sent == -1) {
-					addMessage(-1, "Write error on %i<br>%s", handle->filefd,
+					addAlert(handle->clientid, "Write error on %i<br>%s", handle->filefd,
 							   strerror(errno));
 					prepareReply(handle, rep_bad_request, true);
 					break;
@@ -883,16 +883,15 @@ static void parseRequest(chandle_t * handle) {
 			addMessage(MPV + 0, "Dummy read");
 		}
 
-
 		if (handle->filerd > handle->filesz) {
 			/* Truncate and hope for the best */
-			addMessage(-1, "Data is bigger than size!");
+			addAlert(handle->clientid, "Data is bigger than size!");
 			handle->filerd = handle->filesz;
 		}
 		else if (handle->filesz == handle->filerd) {
 			/* all done, cleaning up */
 			if (handle->filefd > 0) {
-				addMessage(0, "Done");
+				addMessage(MPV+0, "Done");
 				close(handle->filefd);
 				handle->filefd = -1;
 				mptitle_t *newt = addNewPath(handle->fpath);
@@ -1051,7 +1050,7 @@ static void sendReply(chandle_t * handle) {
 		break;
 
 	case req_config:			/* get config should be unreachable */
-		addMessage(-1, "Get config is deprecated!");
+		addMessage(handle->clientid, "Get config is deprecated!");
 		prepareReply(handle, rep_unavailable, true);
 		break;
 

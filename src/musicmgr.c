@@ -59,7 +59,7 @@ static int32_t addToList(const char *line, mpcmd_t cmd) {
 
 	fp = fopen(path, "a");
 	if (NULL == fp) {
-		addMessage(-1, "Could not open<br>%s", path);
+		addAlert(0, "Could not open<br>%s", path);
 		return -1;
 	}
 
@@ -112,7 +112,7 @@ static mpplaylist_t *appendToPL(mptitle_t * title, mpplaylist_t * pl,
 
 	if (runner != NULL) {
 		if (runner->title == NULL) {
-			addMessage(-1, "Found an empty entry!");
+			addAlert(0, "Found an empty entry!");
 		}
 		while (runner->next != NULL) {
 			runner = runner->next;
@@ -618,7 +618,7 @@ int32_t search(const mpcmd_t range, const char *pat, int32_t cid) {
 	res->lnum = 0;
 
 	if (root == NULL) {
-		addMessage(-1, "No database loaded.");
+		addAlert(0, "No database loaded.");
 		return 0;
 	}
 
@@ -1746,7 +1746,7 @@ static bool addNewTitle(uint32_t *pcount) {
 					if (spread == getConfig()->spread) {
 						getConfig()->spread--;
 						if (getConfig()->spread < 1) {
-							addMessage(-1, "Profile is dead!");
+							addAlert(0, "Profile is dead!");
 							return false;
 						}
 					}

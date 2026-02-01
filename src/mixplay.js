@@ -550,7 +550,6 @@ function sendCMDArg (cmd, arg) {
   var code
   var e
   var text
-  var idtosend = 0 // default one shot
 
   debugLog('send ' + cmd + ' - ' + arg)
 
@@ -645,18 +644,13 @@ function sendCMDArg (cmd, arg) {
       text = document.createElement('em')
       text.innerHTML = '.. searching ..'
       replaceChild(e, text)
-    /* fallthrough */
-    case 0x08: /* mpc_dbclean */
-    case 0x0b: /* mpc_doublets */
-    case 0x12: /* mpc_dbinfo */
-      idtosend = clientid
   }
 
   xmlhttp.onreadystatechange = function () {
     checkReply(xmlhttp)
   }
 
-  var json = JSON.stringify({ cmd: cmd, arg: arg, clientid: idtosend })
+  var json = JSON.stringify({ cmd: cmd, arg: arg, clientid: clientid })
   debugLog('creq: ' + json)
 
   xmlhttp.open('POST', '/mpctrl/cmd?' + json, true)
@@ -1991,7 +1985,8 @@ function tap () {
   power(1)
 }
 
-function getClockTime (now) {
+function getClockTime () {
+  const now = new Date()
   const min = now.getMinutes()
   const hrs = now.getHours()
 
@@ -2004,7 +1999,7 @@ function getClockTime (now) {
 
 function clocktime () {
   const now = new Date()
-  const line = getClockTime (now)
+  const line = getClockTime ()
   setElement('time', '&nbsp;' + line + '&nbsp;')
   setElement('idleclock', line)
 

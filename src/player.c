@@ -51,7 +51,7 @@ void cleanTitles(bool flags) {
 
 	/* this should even be assert() worthy */
 	if (runner == NULL) {
-		addMessage(-1, "Switching Favplay without active database!");
+		addAlert(0, "Switching Favplay without active database!");
 		return;
 	}
 	do {
@@ -118,7 +118,7 @@ void sendplay(void) {
 
 	if (control->mpmode & PM_STREAM) {
 		if (control->status == mpc_play) {
-			addMessage(-1, "Not loading stream on active player!");
+			addAlert(0, "Not loading stream on active player!");
 			return;
 		}
 		if (control->playlist) {
@@ -260,7 +260,7 @@ void *killPlayers(int32_t restart) {
 	if (restart) {
 		activity(0, "Restarting players");
 		if (control->current == NULL) {
-			addMessage(-1, "Restarting on empty player!");
+			addAlert(0, "Restarting on empty player!");
 		}
 
 		/* if this is already a retry, fall back to something better */
@@ -279,7 +279,7 @@ void *killPlayers(int32_t restart) {
 
 		/* starting on an error? Not good.. */
 		if ((control->status == mpc_start) && (control->mpmode & PM_DATABASE)) {
-			addMessage(-1, "Music database failure!");
+			addAlert(0, "Music database failure!");
 			control->status = mpc_quit;
 		}
 		else {
@@ -312,7 +312,7 @@ void *killPlayers(int32_t restart) {
 				sleep(1);		// Let the SIGKILL soak
 				/* This is bad... */
 				if (waitpid(p_pid[i], NULL, WNOHANG | WCONTINUED) != p_pid[i]) {
-					addMessage(-1, "Could not get rid of %i!", p_pid[i]);
+					addAlert(0, "Could not get rid of %i!", p_pid[i]);
 				}
 			}
 		}
@@ -504,7 +504,7 @@ void *reader( __attribute__ ((unused))
 							}
 							else {
 								/*  *INDENT-OFF*  */
-								addMessage(-1, "BG: %s<br>&gt; Index: %i<br>&gt; Name: %s<br>&gt; Path: %s",
+								addAlert(0, "BG: %s<br>&gt; Index: %i<br>&gt; Name: %s<br>&gt; Path: %s",
 										   line, control->current->title->key,
 										   control->current->title->display,
 										   fullpath(control->current->title->path));
@@ -532,7 +532,7 @@ void *reader( __attribute__ ((unused))
 			if (pfd[fdset ? 1 : 3].revents & POLLIN) {
 				key = readline(line, MAXPATHLEN, p_error[fdset ? 0 : 1][0]);
 				if (key > 1) {
-					addMessage(-1, "BE: %s", line);
+					addAlert(0, "BE: %s", line);
 				}
 			}
 		}
