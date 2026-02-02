@@ -1310,7 +1310,7 @@ mptitle_t *addNewPath(const char *path) {
 	do {
 		if (strcmp(path, tail->path) == 0) {
 			/* should only happen during development */
-			addMessage(0, "Title alrady exists in database. Weird!");
+			addMessage(0, "Title already exists in database. Weird!");
 			free(newt);
 			return tail;
 		}
@@ -1446,7 +1446,7 @@ void setTnum(void) {
 uint32_t getPlaycount(mpcount_t range) {
 	mptitle_t *base = getConfig()->root;
 	mptitle_t *runner = base;
-	uint32_t min = UINT_MAX;	// min playcount of currently active titles
+	uint32_t min = UINT32_MAX;	// min playcount of currently active titles
 	uint32_t max = 0;			// max playcount of currently active titles
 	uint64_t sum = 0;			// sum all playcounts 
 	uint32_t cnt = 0;			// number of counted titles
@@ -2026,6 +2026,36 @@ void dumpInfo(bool smooth) {
 		numtitles++;
 		current = current->next;
 	} while (current != root);
+
+	/* TODO: this should be removed by mid 2026 */
+	if (maxplayed > 1000) {
+		addAlert(0, "Found broken playcount, fixing now...");
+		uint32_t meanpc = 0;
+		uint32_t num = 0;
+		maxplayed = 0;
+		lockPlaylist();
+		addMessage(0, "Getting new meancount");
+		do {
+			if (current->playcount < 1000) {
+				meanpc += current->playcount;
+				if (current->playcount > maxplayed) maxplayed = current->playcount;
+			}
+			current = current->next;
+		} while(current != root);
+		meanpc = meanpc / numtitles;
+		addMessage(0, "New  max playcount: %i", maxplayed);
+		addMessage(0, "New mean playcount: %i", meanpc);
+		do {
+			if (current->playcount >= 1000) {
+				current->playcount=meanpc;
+				num++;
+			}
+			current = current->next;
+		} while(current != root);
+		addMessage(0, "Fixed %i titles", num);
+		unlockPlaylist();
+		dbMarkDirty();
+	}
 
 	addMessage(0, "%5i titles in Database", numtitles);
 	if (fav > 0)
