@@ -1907,6 +1907,7 @@ void plCheck(bool fill) {
 			cnt++;
 		}
 	}
+	unlockPlaylist();
 
 	/* fill up the playlist with new titles if needed */
 	if (fill && (cnt < MPPLSIZE)) {
@@ -1917,12 +1918,13 @@ void plCheck(bool fill) {
 			cnt = -1;
 		while (cnt < MPPLSIZE) {
 			activity(0, "Add title %i/%"PRIu32, cnt, pcount);
+			lockPlaylist();
 			addNewTitle(&pcount);
+			unlockPlaylist();
 			cnt++;
 		}
 	}
 
-	unlockPlaylist();
 	notifyChange(MPCOMM_TITLES);
 }
 
@@ -2026,9 +2028,9 @@ void dumpInfo(bool smooth) {
 	} while (current != root);
 
 	addMessage(0, "%5i titles in Database", numtitles);
-	if (fav)
+	if (fav > 0)
 		addMessage(0, "%5i favourites", fav);
-	if (dnp) {
+	if (dnp > 0) {
 		addMessage(0, "%5i do not plays", dnp);
 		if (dbl)
 			addMessage(0, "%5i doublets", dbl);
@@ -2037,6 +2039,7 @@ void dumpInfo(bool smooth) {
 		addMessage(0, "%5i in playlist", marked);
 
 	addMessage(0, "-- Playcount --");
+	addMessage(0, "Max playcount: %i", maxplayed);
 
 	while (pl <= maxplayed) {
 		uint32_t pcount = 0;
@@ -2063,8 +2066,9 @@ void dumpInfo(bool smooth) {
 		} while (current != root);
 
 		/* just a few titles (< 0.5%) with playcount == pl ? Try to close the gap */
-		if (smooth && !getFavplay() && (pcount < numtitles / 200)) {
+		if (smooth && !getFavplay() && (pcount < (numtitles / 200))) {
 			fixed = 1;
+			mptitle_t *pmark = current;
 			do {
 				if (current->playcount > pl) {
 					current->playcount--;
@@ -2073,12 +2077,12 @@ void dumpInfo(bool smooth) {
 					}
 				}
 				current = current->next;
-			} while (current != root);
-			maxplayed--;
+			} while (current != pmark);
+			if (maxplayed > 0) maxplayed--;
+			else addAlert(0, "maxplayed is wrapping!");
 		}
 
-		if (!isDebug())
-			pcount = pcount - (dcount + dblcnt);
+		pcount = pcount - (dcount + dblcnt);
 
 		/* normal output and forward to next count */
 		if (pcount > 0) {
@@ -2095,7 +2099,6 @@ void dumpInfo(bool smooth) {
 			default:
 				sprintf(line, "%3i times %5i", pl, pcount);
 			}
-#define DD (isDebug()?'/':'+')
 			if (favcnt || dcount)
 				if (favcnt == pcount)
 					addMessage(0, "%s - allfav", line);
@@ -2103,21 +2106,20 @@ void dumpInfo(bool smooth) {
 					addMessage(0, "%s - alldnp", line);
 				else if (favcnt == 0)
 					if (dblcnt == 0)
-						addMessage(0, "%s %c %i dnp", line, DD, dcount);
+						addMessage(0, "%s + %i dnp", line, dcount);
 					else
-						addMessage(0, "%s %c %i dnp %c %i dbl", line, DD,
-								   dcount, DD, dblcnt);
+						addMessage(0, "%s + %i dnp + %i dbl", line,
+								   dcount, dblcnt);
 				else if (dcount == 0)
 					addMessage(0, "%s / %i fav", line, favcnt);
 				else if (dblcnt == 0)
-					addMessage(0, "%s %c %i dnp / %i fav", line, DD, dcount,
+					addMessage(0, "%s + %i dnp / %i fav", line, dcount,
 							   favcnt);
 				else
-					addMessage(0, "%s %c %i dnp %c %i dbl / %i fav", line, DD,
-							   dcount, DD, dblcnt, favcnt);
+					addMessage(0, "%s + %i dnp + %i dbl / %i fav", line,
+							   dcount, dblcnt, favcnt);
 			else
 				addMessage(0, "%s", line);
-#undef DD
 		}
 		pl++;
 	}							/* while pl < maxplay */

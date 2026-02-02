@@ -17,10 +17,10 @@
 #include "mpcomm.h"
 #include "utils.h"
 
+#define MPV 10
+
 static pthread_mutex_t _clientlock = PTHREAD_MUTEX_INITIALIZER;
 static int32_t _curclient = -1;
-
-#define MPV 10
 
 /*
  * all of the next messages will only be sent to this client
