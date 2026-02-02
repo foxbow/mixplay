@@ -1669,6 +1669,7 @@ static bool addNewTitle(uint32_t *pcount) {
 	mpplaylist_t *pl = getCurrent();
 	mptitle_t *root;
 
+	lockPlaylist();
 	if (pl == NULL) {
 		root = getConfig()->root;
 	}
@@ -1689,6 +1690,7 @@ static bool addNewTitle(uint32_t *pcount) {
 	/* are there playable titles at all? */
 	if (countTitles(MP_DEF, MP_HIDE) == 0) {
 		fail(F_FAIL, "No titles to be played!");
+		unlockPlaylist();
 		return false;
 	}
 
@@ -1747,6 +1749,7 @@ static bool addNewTitle(uint32_t *pcount) {
 						getConfig()->spread--;
 						if (getConfig()->spread < 1) {
 							addMessage(-1, "Profile is dead!");
+							unlockPlaylist();
 							return false;
 						}
 					}
@@ -1785,6 +1788,7 @@ static bool addNewTitle(uint32_t *pcount) {
 		}						/* skip titles in playlist */
 		pl = pl->prev;
 	} while ((pl != NULL) && (tnum < getConfig()->spread));
+	unlockPlaylist();
 
 	/*  *INDENT-OFF*  */
 	addMessage(2, "[+] (%i/%i/%c) %5" PRIu32 " %s",
@@ -1908,6 +1912,8 @@ void plCheck(bool fill) {
 		}
 	}
 
+	unlockPlaylist();
+
 	/* fill up the playlist with new titles if needed */
 	if (fill && (cnt < MPPLSIZE)) {
 		uint32_t pcount=getPlaycount(count_min);
@@ -1922,7 +1928,6 @@ void plCheck(bool fill) {
 		}
 	}
 
-	unlockPlaylist();
 	notifyChange(MPCOMM_TITLES);
 }
 
@@ -2037,6 +2042,7 @@ void dumpInfo(bool smooth) {
 		addMessage(0, "%5i in playlist", marked);
 
 	addMessage(0, "-- Playcount --");
+	addMessage(0, "Max playcount: %i", maxplayed);
 
 	while (pl <= maxplayed) {
 		uint32_t pcount = 0;
@@ -2074,7 +2080,8 @@ void dumpInfo(bool smooth) {
 				}
 				current = current->next;
 			} while (current != root);
-			maxplayed--;
+			if (maxplayed > 0) maxplayed--;
+			else addAlert(0, "maxplayed is wrapping!");
 		}
 
 		if (!isDebug())
