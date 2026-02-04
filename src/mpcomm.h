@@ -15,5 +15,6 @@ char *serializeStatus(int32_t clientid, int32_t fullstat);
 void lockClient(int32_t client);
 bool isCurClient(int32_t client);
 void unlockClient(int32_t client);
+void debugClient();
 int32_t getCurClient();
 #endif /* MPCOMM_H_ */

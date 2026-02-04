@@ -54,6 +54,30 @@ int32_t getCurClient() {
 	return _curclient;
 }
 
+/**
+ * sometimes the player crashes when a client disconnects and still having
+ * an active lock. Check this case and see if this heals itself or if 
+ * a command just won't finish
+ */
+void debugClient() {
+	int32_t oclient = _curclient;
+	/* a client disconnected with an active lock
+	 * wait for 30s, this should be enough time for any locked
+	 * operation to finish. Try to lock again. If it succeeds or fails due
+	 * to another client, all is good, otherwise we're in the deep! */
+	sleep(30);
+	if (pthread_mutex_trylock(&_clientlock) == EBUSY) {
+		if (oclient == _curclient) {
+			addAlert(0, "Deadlock of client %i<br>thread %i", oclient, _clientlock.__data.__owner);
+			sleep(3);
+			assert(false);
+		}
+	}
+	else {
+		pthread_mutex_unlock(&_clientlock);
+	}
+}
+
 static jsonObject *jsonAddProfile(jsonObject * jo, const char *key,
 								  const profile_t * profile) {
 	jsonObject *val = NULL;
