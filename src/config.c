@@ -781,6 +781,9 @@ void freeConfig() {
 /**
  * adds an alert for a specific client without needing to lock the 
  * client
+ * 
+ * @param cid the recepient, either a fixed cid, 0 use the 
+ *            currently locked client or -1 to broadcast.
  */
 void addAlert(int32_t cid, const char *msg, ...) {
 	va_list args;
@@ -790,6 +793,9 @@ void addAlert(int32_t cid, const char *msg, ...) {
 	va_start(args, msg);
 	vsnprintf(line+6, MP_MSGLEN, msg, args);
 	va_end(args);
+	if (cid == 0) cid = getCurClient();
+	if (cid == -1) cid = 0;
+
 	msgBuffAddCid(_cconfig->msg, line, cid);
 	if (_cconfig->inUI) {
 		msgBuffAdd(_cconfig->msg, line);

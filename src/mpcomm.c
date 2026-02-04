@@ -40,7 +40,10 @@ void lockClient(int32_t client) {
 void unlockClient(int32_t client) {
 	assert (_curclient == client);
 	_curclient = 0;
-	pthread_mutex_unlock(&_clientlock);
+	int rc = pthread_mutex_unlock(&_clientlock);
+	if (rc != 0) {
+		addAlert(0, "Deadlock, consider restarting player!");
+	}
 }
 
 bool isCurClient(int32_t client) {
