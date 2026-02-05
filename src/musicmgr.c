@@ -1693,6 +1693,13 @@ static bool addNewTitle(uint32_t *pcount) {
 	}
 
 	num = countTitles(MP_DEF, MP_HIDE | MP_PDARK);
+	
+	while(num == 0) {
+		addMessage(2, "No titles with playcount %"PRIu32" increasing", *pcount);
+		(*pcount)++;
+		setPDARK(*pcount);
+		num = countTitles(MP_DEF, MP_HIDE | MP_PDARK);
+	}
 
 	addMessage(2, "%" PRIu64 " titles available, avoiding %u repeats", num,
 			   getConfig()->spread);
