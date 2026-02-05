@@ -2068,8 +2068,9 @@ void dumpInfo(bool smooth) {
 	if (marked > 0)
 		addMessage(0, "%5i in playlist", marked);
 
+	addMessage(0, "Title spread: %u", getConfig()->spread);
+
 	addMessage(0, "-- Playcount --");
-	addMessage(0, "Max playcount: %i", maxplayed);
 
 	while (pl <= maxplayed) {
 		uint32_t pcount = 0;
