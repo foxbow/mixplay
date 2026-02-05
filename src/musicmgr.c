@@ -1606,14 +1606,14 @@ static mptitle_t *skipPcount(mptitle_t * guard, uint32_t cnt,
  * The value is set in the global config.
  */
 void setArtistSpread() {
-	mptitle_t *runner = skipOver(getConfig()->root);
+	mptitle_t *runner = skipOverFlags(getConfig()->root, MP_NONE);
 	mptitle_t *checker = NULL;
 	uint32_t count = 0;
 
 	/* which titles should be skipped
 	 * MP_PDARK is kind of questionable but may speed up adding titles and
 	 * avoid premature increase of playcount */
-	const uint32_t mask = MP_PDARK | MP_MARK;
+	const uint32_t mask = MP_MARK;
 
 	/* Use MP_MARK to check off tested titles */
 	unsetFlags(MP_MARK);
