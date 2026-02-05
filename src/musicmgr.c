@@ -1738,7 +1738,7 @@ static bool addNewTitle(uint32_t *pcount) {
 					skipPcount(runner, (random() % num),
 							   pcount, maxpcount);
 				if (runner == NULL) {
-					/* back to square one for this round */
+					/* back to square one for this round - this is kind of the worst case! */
 					runner = guard;
 
 					uint32_t spread = getConfig()->spread;
@@ -1750,7 +1750,10 @@ static bool addNewTitle(uint32_t *pcount) {
 							return false;
 						}
 					}
-					addMessage(1, "Moved Artistspread from %" PRIu32 " to %" PRIu32, spread, getConfig()->spread);
+					if (spread != getConfig()->spread) {
+						addMessage(0, "Moved Artistspread from %" PRIu32 " to %" PRIu32, spread, getConfig()->spread);
+					}
+
 					mpplaylist_t *freeme = getConfig()->current;
 					/* move to the end of the playlist */
 					while (freeme->next != NULL) freeme = freeme->next;
