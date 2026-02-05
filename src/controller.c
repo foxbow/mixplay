@@ -127,7 +127,6 @@ static void checkAfterRemove(mptitle_t * ctitle) {
 		setOrder(0);
 		toPlayer(0, "STOP\n");
 	}
-	setArtistSpread();
 	/* fill up the playlist */
 	plCheck(true);
 }
@@ -197,7 +196,6 @@ static void *plDbClean(void *cidin) {
 
 	if (changed) {
 		dbWrite(1);
-		setArtistSpread();
 		if (changed & 1) {
 			checkAfterRemove(ctitle);
 		}
@@ -448,9 +446,6 @@ void setCommand(mpcmd_t rcmd, char *arg, int32_t cid) {
 			checkAfterRemove(check);
 		}
 		notifyChange(MPCOMM_TITLES);
-		if (getFavplay()) {
-			setArtistSpread();
-		}
 		setTnum();
 		unlockClient(cid);
 		break;

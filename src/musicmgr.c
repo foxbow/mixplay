@@ -1741,6 +1741,11 @@ static bool addNewTitle(uint32_t *pcount) {
 					/* back to square one for this round - this is kind of the worst case! */
 					runner = guard;
 
+					uint64_t pdark = countflag(MP_PDARK);
+					if (pdark > 0) {
+						addAlert(0, "Dabbling spread while pdark is %"PRIu64, pdark);
+					}
+
 					uint32_t spread = getConfig()->spread;
 					setArtistSpread();
 					if (spread == getConfig()->spread) {
