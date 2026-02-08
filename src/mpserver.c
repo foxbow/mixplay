@@ -214,7 +214,7 @@ static void triggerClient(int32_t client) {
 					/* make sure that the server won't get blocked on a dead client */
 					if ((run + 1) == getCurClient()) {
 						addMessage(0, "Client %i died while being locked. What kept it waiting for so long?!", getCurClient());
-						assert(false);
+						debugClient();
 					}
 					addMessage(MPV + 2,
 							   "client %i disconnected, %i clients connected",

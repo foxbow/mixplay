@@ -1310,7 +1310,7 @@ mptitle_t *addNewPath(const char *path) {
 	do {
 		if (strcmp(path, tail->path) == 0) {
 			/* should only happen during development */
-			addMessage(0, "Title alrady exists in database. Weird!");
+			addMessage(0, "Title already exists in database. Weird!");
 			free(newt);
 			return tail;
 		}
@@ -1446,7 +1446,7 @@ void setTnum(void) {
 uint32_t getPlaycount(mpcount_t range) {
 	mptitle_t *base = getConfig()->root;
 	mptitle_t *runner = base;
-	uint32_t min = UINT_MAX;	// min playcount of currently active titles
+	uint32_t min = UINT32_MAX;	// min playcount of currently active titles
 	uint32_t max = 0;			// max playcount of currently active titles
 	uint64_t sum = 0;			// sum all playcounts 
 	uint32_t cnt = 0;			// number of counted titles
@@ -1469,6 +1469,12 @@ uint32_t getPlaycount(mpcount_t range) {
 		else if (getFavplay()) {
 			/* only look at favourites on favplay */
 			valid = (runner->flags & MP_FAV);
+			playcount = runner->favpcount;
+		}
+		else if (range == count_min) {
+			/* only take playable titles for the min playcount */
+			valid = !(runner->flags & (MP_DBL | MP_DNP | MP_PDARK | MP_TDARK));
+			/* favpcount as that is the one that counts in this case */
 			playcount = runner->favpcount;
 		}
 		else {
@@ -1606,14 +1612,12 @@ static mptitle_t *skipPcount(mptitle_t * guard, uint32_t cnt,
  * The value is set in the global config.
  */
 void setArtistSpread() {
-	mptitle_t *runner = skipOver(getConfig()->root);
+	mptitle_t *runner = skipOverFlags(getConfig()->root, MP_NONE);
 	mptitle_t *checker = NULL;
 	uint32_t count = 0;
 
-	/* which titles should be skipped
-	 * MP_PDARK is kind of questionable but may speed up adding titles and
-	 * avoid premature increase of playcount */
-	const uint32_t mask = MP_PDARK | MP_MARK;
+	/* which titles should be skipped (DBL and DNP are skipped by default) */
+	const uint32_t mask = MP_MARK;
 
 	/* Use MP_MARK to check off tested titles */
 	unsetFlags(MP_MARK);
@@ -1663,7 +1667,7 @@ static bool addNewTitle(uint32_t *pcount) {
 	mptitle_t *guard = NULL;
 	uint64_t num = 0;
 	mptitle_t *last = NULL;
-	uint32_t maxpcount = 0;
+	uint32_t maxpcount = getPlaycount(count_max);
 	uint32_t tnum = 0;			/* number of titles (to play) in the playlist */
 	
 	mpplaylist_t *pl = getCurrent();
@@ -1683,24 +1687,24 @@ static bool addNewTitle(uint32_t *pcount) {
 	runner = root;
 
 	/* remember playcount bounds */
-	maxpcount = getPlaycount(count_max);
 	addMessage(2, "Playcount [%" PRIu32 ":%" PRIu32 "]", *pcount, maxpcount);
 
-	/* are there playable titles at all? */
+	/* are there playable titles at all? 
+	 * This is a sanity check, if it triggers, something is really broken */
 	if (countTitles(MP_DEF, MP_HIDE) == 0) {
 		fail(F_FAIL, "No titles to be played!");
 		return false;
 	}
 
 	num = countTitles(MP_DEF, MP_HIDE | MP_PDARK);
-	while (num < 3) {
+	
+	/* Another sanity check. If this message appears it means that 
+	 * getPlaycount(count_min) is broken */
+	while(num == 0) {
+		addMessage(0, "No titles with playcount %"PRIu32" increasing", *pcount);
 		(*pcount)++;
-		/* if this happens, something is really askew */
-		assert(*pcount <= maxpcount);
-		addMessage(2, "Less than 3 titles, bumping playcount to %" PRIu32,
-				   *pcount);
 		setPDARK(*pcount);
-		num = countTitles(MP_DEF, MP_HIDE);
+		num = countTitles(MP_DEF, MP_HIDE | MP_PDARK);
 	}
 
 	addMessage(2, "%" PRIu64 " titles available, avoiding %u repeats", num,
@@ -1738,8 +1742,15 @@ static bool addNewTitle(uint32_t *pcount) {
 					skipPcount(runner, (random() % num),
 							   pcount, maxpcount);
 				if (runner == NULL) {
-					/* back to square one for this round */
+					/* back to square one for this round - this is kind of the worst case!
+					 * But may happen occasionally on favplay */
 					runner = guard;
+
+					/* Sanity check. No title should be set MP_PDARK when considering to decrease spreadcount */
+					uint64_t pdark = countflag(MP_PDARK);
+					if (pdark > 0) {
+						addAlert(0, "Changing spread while pdark is %"PRIu64"<br> cnt: [%"PRIu32" - %"PRIu32"]", pdark, *pcount, maxpcount);
+					}
 
 					uint32_t spread = getConfig()->spread;
 					setArtistSpread();
@@ -1750,7 +1761,11 @@ static bool addNewTitle(uint32_t *pcount) {
 							return false;
 						}
 					}
-					addMessage(1, "Moved Artistspread from %" PRIu32 " to %" PRIu32, spread, getConfig()->spread);
+					if (spread != getConfig()->spread) {
+						/* TODO: increase debug level if it spams on favplay */
+						addMessage(0, "Moved Artistspread from %" PRIu32 " to %" PRIu32, spread, getConfig()->spread);
+					}
+
 					mpplaylist_t *freeme = getConfig()->current;
 					/* move to the end of the playlist */
 					while (freeme->next != NULL) freeme = freeme->next;
@@ -1907,6 +1922,7 @@ void plCheck(bool fill) {
 			cnt++;
 		}
 	}
+	unlockPlaylist();
 
 	/* fill up the playlist with new titles if needed */
 	if (fill && (cnt < MPPLSIZE)) {
@@ -1917,12 +1933,13 @@ void plCheck(bool fill) {
 			cnt = -1;
 		while (cnt < MPPLSIZE) {
 			activity(0, "Add title %i/%"PRIu32, cnt, pcount);
+			lockPlaylist();
 			addNewTitle(&pcount);
+			unlockPlaylist();
 			cnt++;
 		}
 	}
 
-	unlockPlaylist();
 	notifyChange(MPCOMM_TITLES);
 }
 
@@ -2025,16 +2042,48 @@ void dumpInfo(bool smooth) {
 		current = current->next;
 	} while (current != root);
 
+	/* TODO: this should be removed by mid 2026 */
+	if (maxplayed > 1000) {
+		addAlert(0, "Found broken playcount, fixing now...");
+		uint32_t meanpc = 0;
+		uint32_t num = 0;
+		maxplayed = 0;
+		lockPlaylist();
+		addMessage(0, "Getting new meancount");
+		do {
+			if (current->playcount < 1000) {
+				meanpc += current->playcount;
+				if (current->playcount > maxplayed) maxplayed = current->playcount;
+			}
+			current = current->next;
+		} while(current != root);
+		meanpc = meanpc / numtitles;
+		addMessage(0, "New  max playcount: %i", maxplayed);
+		addMessage(0, "New mean playcount: %i", meanpc);
+		do {
+			if (current->playcount >= 1000) {
+				current->playcount=meanpc;
+				num++;
+			}
+			current = current->next;
+		} while(current != root);
+		addMessage(0, "Fixed %i titles", num);
+		unlockPlaylist();
+		dbMarkDirty();
+	}
+
 	addMessage(0, "%5i titles in Database", numtitles);
-	if (fav)
+	if (fav > 0)
 		addMessage(0, "%5i favourites", fav);
-	if (dnp) {
+	if (dnp > 0) {
 		addMessage(0, "%5i do not plays", dnp);
 		if (dbl)
 			addMessage(0, "%5i doublets", dbl);
 	}
 	if (marked > 0)
 		addMessage(0, "%5i in playlist", marked);
+
+	addMessage(0, "Title spread: %u", getConfig()->spread);
 
 	addMessage(0, "-- Playcount --");
 
@@ -2063,8 +2112,9 @@ void dumpInfo(bool smooth) {
 		} while (current != root);
 
 		/* just a few titles (< 0.5%) with playcount == pl ? Try to close the gap */
-		if (smooth && !getFavplay() && (pcount < numtitles / 200)) {
+		if (smooth && !getFavplay() && (pcount < (numtitles / 200))) {
 			fixed = 1;
+			mptitle_t *pmark = current;
 			do {
 				if (current->playcount > pl) {
 					current->playcount--;
@@ -2073,12 +2123,12 @@ void dumpInfo(bool smooth) {
 					}
 				}
 				current = current->next;
-			} while (current != root);
-			maxplayed--;
+			} while (current != pmark);
+			if (maxplayed > 0) maxplayed--;
+			else addAlert(0, "maxplayed is wrapping!");
 		}
 
-		if (!isDebug())
-			pcount = pcount - (dcount + dblcnt);
+		pcount = pcount - (dcount + dblcnt);
 
 		/* normal output and forward to next count */
 		if (pcount > 0) {
@@ -2095,7 +2145,6 @@ void dumpInfo(bool smooth) {
 			default:
 				sprintf(line, "%3i times %5i", pl, pcount);
 			}
-#define DD (isDebug()?'/':'+')
 			if (favcnt || dcount)
 				if (favcnt == pcount)
 					addMessage(0, "%s - allfav", line);
@@ -2103,21 +2152,20 @@ void dumpInfo(bool smooth) {
 					addMessage(0, "%s - alldnp", line);
 				else if (favcnt == 0)
 					if (dblcnt == 0)
-						addMessage(0, "%s %c %i dnp", line, DD, dcount);
+						addMessage(0, "%s + %i dnp", line, dcount);
 					else
-						addMessage(0, "%s %c %i dnp %c %i dbl", line, DD,
-								   dcount, DD, dblcnt);
+						addMessage(0, "%s + %i dnp + %i dbl", line,
+								   dcount, dblcnt);
 				else if (dcount == 0)
 					addMessage(0, "%s / %i fav", line, favcnt);
 				else if (dblcnt == 0)
-					addMessage(0, "%s %c %i dnp / %i fav", line, DD, dcount,
+					addMessage(0, "%s + %i dnp / %i fav", line, dcount,
 							   favcnt);
 				else
-					addMessage(0, "%s %c %i dnp %c %i dbl / %i fav", line, DD,
-							   dcount, DD, dblcnt, favcnt);
+					addMessage(0, "%s + %i dnp + %i dbl / %i fav", line,
+							   dcount, dblcnt, favcnt);
 			else
 				addMessage(0, "%s", line);
-#undef DD
 		}
 		pl++;
 	}							/* while pl < maxplay */
