@@ -1471,6 +1471,12 @@ uint32_t getPlaycount(mpcount_t range) {
 			valid = (runner->flags & MP_FAV);
 			playcount = runner->favpcount;
 		}
+		else if (range == count_min) {
+			/* only take playable titles for the min playcount */
+			valid = !(runner->flags & (MP_DBL | MP_DNP | MP_PDARK | MP_TDARK));
+			/* favpcount as that is the one that counts in this case */
+			playcount = runner->favpcount;
+		}
 		else {
 			/* otherwise check if DNP and DBL are unset */
 			valid = !(runner->flags & (MP_DNP | MP_DBL));
@@ -1610,9 +1616,7 @@ void setArtistSpread() {
 	mptitle_t *checker = NULL;
 	uint32_t count = 0;
 
-	/* which titles should be skipped
-	 * MP_PDARK is kind of questionable but may speed up adding titles and
-	 * avoid premature increase of playcount */
+	/* which titles should be skipped (DBL and DNP are skipped by default) */
 	const uint32_t mask = MP_MARK;
 
 	/* Use MP_MARK to check off tested titles */
@@ -1663,7 +1667,7 @@ static bool addNewTitle(uint32_t *pcount) {
 	mptitle_t *guard = NULL;
 	uint64_t num = 0;
 	mptitle_t *last = NULL;
-	uint32_t maxpcount = 0;
+	uint32_t maxpcount = getPlaycount(count_max);
 	uint32_t tnum = 0;			/* number of titles (to play) in the playlist */
 	
 	mpplaylist_t *pl = getCurrent();
@@ -1683,10 +1687,10 @@ static bool addNewTitle(uint32_t *pcount) {
 	runner = root;
 
 	/* remember playcount bounds */
-	maxpcount = getPlaycount(count_max);
 	addMessage(2, "Playcount [%" PRIu32 ":%" PRIu32 "]", *pcount, maxpcount);
 
-	/* are there playable titles at all? */
+	/* are there playable titles at all? 
+	 * This is a sanity check, if it triggers, something is really broken */
 	if (countTitles(MP_DEF, MP_HIDE) == 0) {
 		fail(F_FAIL, "No titles to be played!");
 		return false;
@@ -1694,8 +1698,10 @@ static bool addNewTitle(uint32_t *pcount) {
 
 	num = countTitles(MP_DEF, MP_HIDE | MP_PDARK);
 	
+	/* Another sanity check. If this message appears it means that 
+	 * getPlaycount(count_min) is broken */
 	while(num == 0) {
-		addMessage(2, "No titles with playcount %"PRIu32" increasing", *pcount);
+		addMessage(0, "No titles with playcount %"PRIu32" increasing", *pcount);
 		(*pcount)++;
 		setPDARK(*pcount);
 		num = countTitles(MP_DEF, MP_HIDE | MP_PDARK);
@@ -1736,12 +1742,14 @@ static bool addNewTitle(uint32_t *pcount) {
 					skipPcount(runner, (random() % num),
 							   pcount, maxpcount);
 				if (runner == NULL) {
-					/* back to square one for this round - this is kind of the worst case! */
+					/* back to square one for this round - this is kind of the worst case!
+					 * But may happen occasionally on favplay */
 					runner = guard;
 
+					/* Sanity check. No title should be set MP_PDARK when considering to decrease spreadcount */
 					uint64_t pdark = countflag(MP_PDARK);
 					if (pdark > 0) {
-						addAlert(0, "Dabbling spread while pdark is %"PRIu64, pdark);
+						addAlert(0, "Changing spread while pdark is %"PRIu64"<br> cnt: [%"PRIu32" - %"PRIu32"]", pdark, *pcount, maxpcount);
 					}
 
 					uint32_t spread = getConfig()->spread;
@@ -1754,6 +1762,7 @@ static bool addNewTitle(uint32_t *pcount) {
 						}
 					}
 					if (spread != getConfig()->spread) {
+						/* TODO: increase debug level if it spams on favplay */
 						addMessage(0, "Moved Artistspread from %" PRIu32 " to %" PRIu32, spread, getConfig()->spread);
 					}
 
