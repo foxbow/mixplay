@@ -1504,7 +1504,7 @@ uint32_t getPlaycount(mpcount_t range) {
 		return max;
 	case count_mean:
 		/* we need to do some integer rounding */
-		return (sum + 5) / 20;
+		return (sum + 5) / (10*cnt);
 	default:
 		fail(F_FAIL, "Illegal count range");
 	}
@@ -1698,10 +1698,10 @@ static bool addNewTitle(uint32_t *pcount) {
 
 	num = countTitles(MP_DEF, MP_HIDE);
 	
-	/* Another sanity check. If this message appears it means that 
-	 * getPlaycount(count_min) is broken */
+	/* We may have just added the last available title before, so
+	 * make sure the playcount is updated. */
 	while(num == 0) {
-		addMessage(0, "No titles with playcount %"PRIu32" increasing", *pcount);
+		addMessage(1, "No titles with playcount %"PRIu32" increasing", *pcount);
 		(*pcount)++;
 		setPDARK(*pcount);
 		num = countTitles(MP_DEF, MP_HIDE);
@@ -1826,6 +1826,7 @@ void plCheck(bool fill) {
 	lockPlaylist();
 
 	pl = getCurrent();
+
 	/* there is a playlist, so clean up */
 	if (pl != NULL) {
 		/* It's a stream, so truncate stream title history to 20 titles */
@@ -1847,9 +1848,6 @@ void plCheck(bool fill) {
 			unlockPlaylist();
 			return;
 		}
-
-		/* No stream but standard mixplaylist */
-		cnt = 0;
 
 		/* rewind to the start of the list */
 		while (pl->prev != NULL) {
@@ -2041,6 +2039,11 @@ void dumpInfo(bool smooth) {
 		numtitles++;
 		current = current->next;
 	} while (current != root);
+
+	addMessage(0, "-- internal playcount limits --");
+	addMessage(0, "Min  placount: %u", getPlaycount(count_min));
+	addMessage(0, "Max  placount: %u", getPlaycount(count_max));
+	addMessage(0, "Mean placount: %u", getPlaycount(count_mean));
 
 	/* TODO: this should be removed by mid 2026 */
 	if (maxplayed > 1000) {
