@@ -2041,9 +2041,9 @@ void dumpInfo(bool smooth) {
 	} while (current != root);
 
 	addMessage(0, "-- internal playcount limits --");
-	addMessage(0, "Min  placount: %u", getPlaycount(count_min));
-	addMessage(0, "Max  placount: %u", getPlaycount(count_max));
-	addMessage(0, "Mean placount: %u", getPlaycount(count_mean));
+	addMessage(0, "Min  playcount: %u", getPlaycount(count_min));
+	addMessage(0, "Max  playcount: %u", getPlaycount(count_max));
+	addMessage(0, "Mean playcount: %u", getPlaycount(count_mean));
 
 	/* TODO: this should be removed by mid 2026 */
 	if (maxplayed > 1000) {
