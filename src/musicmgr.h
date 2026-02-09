@@ -29,7 +29,7 @@
 // mpc_album     0x0400
 // mpc_title     0x0800
 // mpc_display   0x1000
-#define MP_HIDE  (MP_DNP|MP_DBL|MP_INPL|MP_TDARK)
+#define MP_HIDE  (MP_DNP|MP_DBL|MP_INPL|MP_TDARK|MP_PDARK)
 #define MP_DEF   (getFavplay()? MP_FAV : MP_ALL)
 
 typedef struct mptitle_s mptitle_t;

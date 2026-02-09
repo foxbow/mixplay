@@ -1473,7 +1473,7 @@ uint32_t getPlaycount(mpcount_t range) {
 		}
 		else if (range == count_min) {
 			/* only take playable titles for the min playcount */
-			valid = !(runner->flags & (MP_DBL | MP_DNP | MP_PDARK | MP_TDARK));
+			valid = !(runner->flags & (MP_HIDE));
 			/* favpcount as that is the one that counts in this case */
 			playcount = runner->favpcount;
 		}
@@ -1691,12 +1691,12 @@ static bool addNewTitle(uint32_t *pcount) {
 
 	/* are there playable titles at all? 
 	 * This is a sanity check, if it triggers, something is really broken */
-	if (countTitles(MP_DEF, MP_HIDE) == 0) {
+	if (countTitles(MP_DEF, MP_DNP | MP_DBL) == 0) {
 		fail(F_FAIL, "No titles to be played!");
 		return false;
 	}
 
-	num = countTitles(MP_DEF, MP_HIDE | MP_PDARK);
+	num = countTitles(MP_DEF, MP_HIDE);
 	
 	/* Another sanity check. If this message appears it means that 
 	 * getPlaycount(count_min) is broken */
@@ -1704,7 +1704,7 @@ static bool addNewTitle(uint32_t *pcount) {
 		addMessage(0, "No titles with playcount %"PRIu32" increasing", *pcount);
 		(*pcount)++;
 		setPDARK(*pcount);
-		num = countTitles(MP_DEF, MP_HIDE | MP_PDARK);
+		num = countTitles(MP_DEF, MP_HIDE);
 	}
 
 	addMessage(2, "%" PRIu64 " titles available, avoiding %u repeats", num,
