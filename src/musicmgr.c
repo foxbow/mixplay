@@ -1503,10 +1503,7 @@ uint32_t getPlaycount(mpcount_t range) {
 		return max;
 	case count_mean:
 		/* we need to do some integer rounding */
-		min = (sum + 5) / (10*cnt);
-		/* sanity check to avoid broken playcount on new titles again */
-		assert(min <= max);
-		return min;
+		return (sum + 5) / (10*cnt);
 	default:
 		fail(F_FAIL, "Illegal count range");
 	}
