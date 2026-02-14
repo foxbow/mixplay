@@ -1461,26 +1461,25 @@ uint32_t getPlaycount(mpcount_t range) {
 	do {
 		bool valid = false;
 
+		/* favpcount is the one used to make decisions */
+		playcount = runner->favpcount;
+
 		if (range == count_mean) {
-			/* always take all titles for the mean playcount */
+			/* always take all titles and database info for the mean playcount */
 			valid = !(runner->flags & MP_DBL);
 			playcount = runner->playcount;
 		}
 		else if (getFavplay()) {
 			/* only look at favourites on favplay */
 			valid = (runner->flags & MP_FAV);
-			playcount = runner->favpcount;
 		}
 		else if (range == count_min) {
 			/* only take playable titles for the min playcount */
 			valid = !(runner->flags & (MP_HIDE));
-			/* favpcount as that is the one that counts in this case */
-			playcount = runner->favpcount;
 		}
 		else {
-			/* otherwise check if DNP and DBL are unset */
+			/* otherwise check that DNP and DBL are unset */
 			valid = !(runner->flags & (MP_DNP | MP_DBL));
-			playcount = runner->playcount;
 		}
 
 		if (valid) {
@@ -1504,7 +1503,10 @@ uint32_t getPlaycount(mpcount_t range) {
 		return max;
 	case count_mean:
 		/* we need to do some integer rounding */
-		return (sum + 5) / (10*cnt);
+		min = (sum + 5) / (10*cnt);
+		/* sanity check to avoid broken playcount on new titles again */
+		assert(min <= max);
+		return min;
 	default:
 		fail(F_FAIL, "Illegal count range");
 	}
@@ -1881,7 +1883,7 @@ void plCheck(bool fill) {
 			}
 		}
 
-		/* unset MP_TDARK for the title that shifted out of the spreadcount */
+		/* unset MP_TDARK for titles that shift out of the spreadcount */
 		if (cnt >= (int32_t) getConfig()->spread) {
 			cnt = getConfig()->spread;
 			while (cnt > 0) {
@@ -2043,7 +2045,7 @@ void dumpInfo(bool smooth) {
 	addMessage(0, "-- internal playcount limits --");
 	addMessage(0, "Min  playcount: %u", getPlaycount(count_min));
 	addMessage(0, "Max  playcount: %u", getPlaycount(count_max));
-	addMessage(0, "Mean playcount: %u", getPlaycount(count_mean));
+	addMessage(0, "Mean playcount: %u%s", getPlaycount(count_mean), getFavplay()?"(global)":"");
 
 	/* TODO: this should be removed by mid 2026 */
 	if (maxplayed > 1000) {
