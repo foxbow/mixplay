@@ -30,9 +30,6 @@ static void printUsage(char *name) {
 
 /**
  * parse arguments given to the application
- * also handles playing of a single file, a directory, a playlist or an URL
- * this is also called after initialization, so the PM_SWITCH flag does
- * actually make sense here.
  */
 int32_t setArgument(const char *arg) {
 	char line[MAXPATHLEN + 1];

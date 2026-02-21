@@ -791,7 +791,7 @@ void addAlert(int32_t cid, const char *msg, ...) {
 	pthread_mutex_lock(&_addmsglock);
 	sprintf(line, "ALERT:");
 	va_start(args, msg);
-	vsnprintf(line+6, MP_MSGLEN, msg, args);
+	vsnprintf(line+6, MP_MSGLEN-6, msg, args);
 	va_end(args);
 	if (cid == 0) cid = getCurClient();
 	if (cid == -1) cid = 0;
@@ -1166,17 +1166,41 @@ int32_t getProfileIndex(uint32_t id) {
 	return -1;
 }
 
-/* we need to have special handling for URL play */
+/** 
+ * @brief get the volume for the given profile
+ * 
+ * This needs to check if the player is in line mode. If so it will
+ * return the default volume and midify it for the stream if needed.
+ * Otherwise it will take the current volume, adapt that if there is
+ * an active stream being played and then adapted if the new profile
+ * is a stream.
+ * 
+ * @param [in] id the id of the profile to check
+ * @returns the volume to set for the profile
+ **/
 int32_t getProfileVolume(uint32_t id) {
-	if (id == 0) {
-		return getConfig()->volume + getConfig()->lineout;
-	}
 	profile_t *profile = getProfile(id);
 
-	if (profile != NULL) {
-		return profile->volume;
+	int32_t rv = getConfig()->lineout;
+
+	if (rv == 0) {
+		if (profile != NULL) {
+			rv = profile->volume;
+		}
+		else {
+			rv = getConfig()->volume;
+			if (isStreamActive()) {
+				rv = rv - getConfig()->linestream;
+			}
+
+		}
 	}
-	return getConfig()->volume;
+		
+	if ((profile == NULL) || (profile->url != NULL)) {
+		rv = rv + getConfig()->linestream;
+	}
+
+	return rv;
 }
 
 bool isStream(profile_t * profile) {
