@@ -152,7 +152,7 @@ static mptitle_t *removeTitle(mptitle_t * entry) {
 		entry->prev->next = entry->next;
 	}
 
-	remFromPLByKey(entry->key);
+	getConfig()->current = remFromPLByKey(entry->key);
 
 	free(entry);
 	return next;
@@ -336,15 +336,18 @@ int32_t dbCheckExist(void) {
 		addAlert(0, "No music in database!");
 		return -1;
 	}
+
 	runner = root;
 	addMessage(0, "Cleaning database");
 	do {
 		if (!mp3Exists(runner)) {
-			if (root == runner) {
-				root = runner->prev;
-			}
-
 			runner = removeTitle(runner);
+			if (runner->next == runner) {
+				/* only one title left, do extra check */
+				if (!mp3Exists(runner)) {
+					runner = removeTitle(runner);
+				}
+			}
 			num++;
 		}
 		else {

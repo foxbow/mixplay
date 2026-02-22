@@ -265,9 +265,6 @@ int32_t playCount(mptitle_t * title, int32_t skip) {
  * removed
  */
 mpplaylist_t *remFromPLByKey(const uint32_t key) {
-	mpplaylist_t *root;
-	mpplaylist_t *pl;
-
 	if (getCurrent() == NULL) {
 		addMessage(0, "Cannot remove titles from an empty playlist");
 		return NULL;
@@ -278,41 +275,51 @@ mpplaylist_t *remFromPLByKey(const uint32_t key) {
 	}
 
 	lockPlaylist();
-	root = getCurrent();
-	pl = root;
 
+	mpplaylist_t *root = getCurrent();
+	mpplaylist_t *pl = root;
+
+	/* got to the start of the playlist */
 	while (pl->prev != NULL) {
 		pl = pl->prev;
 	}
 
-	while ((pl != NULL) && (pl->title->key != key)) {
+	/* look for a matching titles */
+	while (pl != NULL) {
+		if (pl->title->key == key) {
+			mpplaylist_t *torem = pl;
+			pl = torem->next;
+
+			if (torem->prev != NULL) {
+				torem->prev->next = torem->next;
+			}
+
+			if (torem->next != NULL) {
+				torem->next->prev = torem->prev;
+			}
+
+			if (torem == getCurrent()) {
+				if (torem->next == NULL) {
+					if (torem->prev == NULL) {
+						addMessage(0, "No more playlist!");
+						getConfig()->current = NULL;
+					}
+					else {
+						getConfig()->current = torem->prev;
+					}
+				}
+				else {
+					getConfig()->current = torem->next;
+				}
+				root = getCurrent();
+			}
+
+			free(torem);
+			continue;
+		}
 		pl = pl->next;
 	}
 
-	if (pl != NULL) {
-		if (pl->prev != NULL) {
-			pl->prev->next = pl->next;
-		}
-		if (pl->next != NULL) {
-			pl->next->prev = pl->prev;
-		}
-		if (pl == root) {
-			if (pl->next != NULL) {
-				root = pl->next;
-			}
-			else if (pl->prev != NULL) {
-				root = pl->prev;
-			}
-			else {
-				root = NULL;
-			}
-		}
-		free(pl);
-		pl = NULL;
-	}
-	else {
-		addMessage(0, "No title with key %i in playlist!", key);
-	}
 	unlockPlaylist();
 	return root;
 }

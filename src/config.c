@@ -804,6 +804,9 @@ void addAlert(int32_t cid, const char *msg, ...) {
 		syslog(LOG_NOTICE, "%s", line);
 	}
 	pthread_mutex_unlock(&_addmsglock);
+	if (getDebug()) {
+		printf("(%i) %s\n", cid, line);
+	}
 }
 
 /**

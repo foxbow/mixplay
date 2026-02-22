@@ -884,11 +884,13 @@ static void parseRequest(chandle_t * handle) {
 		}
 
 		if (handle->filerd > handle->filesz) {
-			/* Truncate and hope for the best */
-			addAlert(handle->clientid, "Data is bigger than size!");
+			/* Truncate and hope for the best - 471 
+			 * Looks like Chrome and Firefox read the specs differently */
+			addMessage(0, "Data doen't match size! (%zi)", handle->filerd-handle->filesz);
 			handle->filerd = handle->filesz;
 		}
-		else if (handle->filesz == handle->filerd) {
+
+		if (handle->filesz == handle->filerd) {
 			/* all done, cleaning up */
 			if (handle->filefd > 0) {
 				addMessage(MPV+0, "Done");

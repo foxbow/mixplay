@@ -117,8 +117,15 @@ static mptitle_t *getCurrentTitle() {
  * to be called after removing titles, marking them DNP or as DBL.
  **/
 static void checkAfterRemove(mptitle_t * ctitle) {
-	/* clean up the playlist without adding new titles */
-	plCheck(false);
+	if (getCurrent() != NULL) {
+		/* clean up the playlist without adding new titles */
+		plCheck(false);
+	}
+
+	setArtistSpread();
+	/* fill up the playlist */
+	plCheck(true);
+
 	/* has the current title changed? Then send a replay to play the new
 	 * current title. This may lead to a replay if the title changed during
 	 * plcheck() but the effort to avoid this is larger than the expected
@@ -127,9 +134,6 @@ static void checkAfterRemove(mptitle_t * ctitle) {
 		setOrder(0);
 		toPlayer(0, "STOP\n");
 	}
-	setArtistSpread();
-	/* fill up the playlist */
-	plCheck(true);
 }
 
 /**
