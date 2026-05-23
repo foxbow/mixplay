@@ -116,10 +116,6 @@ void sendplay(void) {
 
 	assert(control->current != NULL);
 
-	if (control->mpmode & PM_SWITCH) {
-		setVolume(getProfileVolume(control->active));
-	}
-
 	if (control->mpmode & PM_STREAM) {
 		if (control->status == mpc_play) {
 			addAlert(0, "Not loading stream on active player!");

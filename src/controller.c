@@ -335,6 +335,7 @@ void setCommand(mpcmd_t rcmd, char *arg, int32_t cid) {
 				config->stop = false;
 			}
 			else {
+				setVolume(getProfileVolume(config->active));
 				sendplay();
 			}
 			notifyChange(MPCOMM_CONFIG);

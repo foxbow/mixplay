@@ -378,7 +378,7 @@ mpconfig_t *readConfig(void) {
 
 			if (strstr(line, "musicdir=") == line) {
 				/* make sure that musicdir ends with a '/' */
-				if (line[strlen(line) - 1] == '/') {
+				if (endsWith(line, "/")) {
 					if (_cconfig->musicdir != NULL) {
 						free(_cconfig->musicdir);
 					}
@@ -387,8 +387,7 @@ mpconfig_t *readConfig(void) {
 				else {
 					_cconfig->musicdir =
 						(char *) frealloc(_cconfig->musicdir, strlen(pos) + 2);
-					strcpy(_cconfig->musicdir, pos);
-					_cconfig->musicdir[strlen(pos)] = '/';
+					sprintf(_cconfig->musicdir, "%s/", pos);
 				}
 				if (!isDir(_cconfig->musicdir)) {
 					printf("%s is no valid directory!\n", _cconfig->musicdir);
