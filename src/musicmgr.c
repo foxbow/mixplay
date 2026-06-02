@@ -1455,7 +1455,9 @@ uint32_t getPlaycount(mpcount_t range) {
 	mptitle_t *runner = base;
 	uint32_t min = UINT32_MAX;	// min playcount of currently active titles
 	uint32_t max = 0;			// max playcount of currently active titles
-	uint64_t sum = 0;			// sum all playcounts 
+	uint32_t max2 = 0;			// second largest playcount
+	uint32_t mpc = 0;			// number of titles with maxplaycount
+	uint32_t mpc2 = 0;			// number of titles with second playcount
 	uint32_t cnt = 0;			// number of counted titles
 
 	uint32_t playcount;
@@ -1494,9 +1496,17 @@ uint32_t getPlaycount(mpcount_t range) {
 				min = playcount;
 			}
 			if (playcount > max) {
+				max2 = max;
+				mpc2 = mpc;
 				max = playcount;
+				mpc = 0;
 			}
-			sum += (10 * playcount);
+			if (playcount == max) {
+				mpc++;
+			}
+			if (playcount == max2) {
+				mpc2++;
+			}
 			cnt++;
 		}
 		runner = runner->next;
@@ -1509,8 +1519,26 @@ uint32_t getPlaycount(mpcount_t range) {
 	case count_max:
 		return max;
 	case count_mean:
-		/* we need to do some integer rounding */
-		return (sum + 5) / (10*cnt);
+		/* give the new title(s) a chance to be played in reachable time 
+		   but don't flood the queue either */
+		if (mpc == 0) {
+			/* not much better than the division by zero but at least mor informative*/
+			fail(ERANGE, "No titles with maxplaycount found!");
+		}
+		
+		if ((mpc2 / mpc) > 50) {
+			/* we just started playing the highest playcount, so ignore that and look at the next two instead */
+			if ((cnt/(mpc+mpc2)) > 2) {
+				/* half of all titles has already been played, so go even one step lower but don't get negative! */
+				if (max2 > 0) max2--;
+				return max2;
+			}
+			return max2;
+		}
+		if (mpc > mpc2) {
+			return max2;
+		}
+		return max;
 	default:
 		fail(F_FAIL, "Illegal count range");
 	}
