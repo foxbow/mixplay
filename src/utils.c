@@ -90,33 +90,33 @@ bool patMatch(const char *text1, const char *text2) {
 	size_t plen = 0;
 	size_t tlen = 0;
 
-	char lotext1[MAXPATHLEN+2];
-	char lotext2[MAXPATHLEN+2];
+	char lotext1[MAXPATHLEN + 2];
+	char lotext2[MAXPATHLEN + 2];
 
-	size_t t1len = patPrep(lotext1+1, text1, MAXPATHLEN);
-	size_t t2len = patPrep(lotext2+1, text2, MAXPATHLEN);
+	size_t t1len = patPrep(lotext1 + 1, text1, MAXPATHLEN);
+	size_t t2len = patPrep(lotext2 + 1, text2, MAXPATHLEN);
 
 	if (t1len < t2len) {
-		plen=t1len;
-		tlen=t2len;
+		plen = t1len;
+		tlen = t2len;
 		lopat = lotext1;
-		lotext = lotext2+1;
+		lotext = lotext2 + 1;
 	}
 	else {
-		plen=t2len;
-		tlen=t1len;
+		plen = t2len;
+		tlen = t1len;
 		lopat = lotext2;
-		lotext = lotext1+1;
+		lotext = lotext1 + 1;
 	}
 
-	
+
 	/* prepare the pattern */
 	lopat[0] = 0;
 	lopat[plen + 1] = 0;
 
 	/* The pattern is too short, so do a real substring test */
 	if (plen < 3) {
-		return (strstr(lopat+1, lotext) != NULL);
+		return (strstr(lopat + 1, lotext) != NULL);
 	}
 
 	int32_t best = 0;
@@ -134,8 +134,9 @@ bool patMatch(const char *text1, const char *text2) {
 			else if (plen > MATCHLEVEL) {
 				if (lotext[j] == lopat[j - i]) {
 					res++;
-				} 
-				else if ((3*plen > 2*tlen) && (lotext[j] == lopat[j - i + 1])) {
+				}
+				else if ((3 * plen > 2 * tlen)
+						 && (lotext[j] == lopat[j - i + 1])) {
 					res++;
 				}
 			}

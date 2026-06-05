@@ -213,7 +213,9 @@ static void triggerClient(int32_t client) {
 					}
 					/* make sure that the server won't get blocked on a dead client */
 					if ((run + 1) == getCurClient()) {
-						addMessage(0, "Client %i died while being locked. What kept it waiting for so long?!", getCurClient());
+						addMessage(0,
+								   "Client %i died while being locked. What kept it waiting for so long?!",
+								   getCurClient());
 						debugClient();
 					}
 					addMessage(MPV + 2,
@@ -227,7 +229,8 @@ static void triggerClient(int32_t client) {
 
 bool deadClient(uint32_t cid) {
 	/* one shots are always alive */
-	if (cid == 0) return false;
+	if (cid == 0)
+		return false;
 	return (_heartbeat[cid - 1] == 0);
 }
 
@@ -807,12 +810,13 @@ static void parseRequest(chandle_t * handle) {
 			prepareReply(handle, rep_bad_request, true);
 		}
 		if (access(handle->fpath, F_OK) == 0) {
-			addAlert(handle->clientid, "%s<br> was already uploaded", handle->fname);
+			addAlert(handle->clientid, "%s<br> was already uploaded",
+					 handle->fname);
 			prepareReply(handle, rep_bad_request, false);	/* add error */
 		}
 		else if (mp3FileExists(handle->fname)) {
 			addAlert(handle->clientid, "%s<br>is already in the collection!",
-					   handle->fname);
+					 handle->fname);
 			/* allow upload for debugging */
 			if (getDebug() == 0) {
 				prepareReply(handle, rep_bad_request, false);	/* add error */
@@ -823,8 +827,8 @@ static void parseRequest(chandle_t * handle) {
 		if (handle->len == 0) {
 			handle->filefd = open(handle->fpath, O_CREAT | O_WRONLY, 00644);
 			if (handle->filefd == -1) {
-				addAlert(handle->clientid, "Could not write<br>%s<br>%s", handle->fpath,
-						   strerror(errno));
+				addAlert(handle->clientid, "Could not write<br>%s<br>%s",
+						 handle->fpath, strerror(errno));
 				prepareReply(handle, rep_bad_request, true);	/* add error */
 			}
 			else {
@@ -865,8 +869,8 @@ static void parseRequest(chandle_t * handle) {
 					write(handle->filefd, (unsigned char *) (pos + sent),
 						  len - sent);
 				if (sent == -1) {
-					addAlert(handle->clientid, "Write error on %i<br>%s", handle->filefd,
-							   strerror(errno));
+					addAlert(handle->clientid, "Write error on %i<br>%s",
+							 handle->filefd, strerror(errno));
 					prepareReply(handle, rep_bad_request, true);
 					break;
 				}
@@ -886,14 +890,15 @@ static void parseRequest(chandle_t * handle) {
 		if (handle->filerd > handle->filesz) {
 			/* Truncate and hope for the best - 471 
 			 * Looks like Chrome and Firefox read the specs differently */
-			addMessage(0, "Data doen't match size! (%zi)", handle->filerd-handle->filesz);
+			addMessage(0, "Data doen't match size! (%zi)",
+					   handle->filerd - handle->filesz);
 			handle->filerd = handle->filesz;
 		}
 
 		if (handle->filesz == handle->filerd) {
 			/* all done, cleaning up */
 			if (handle->filefd > 0) {
-				addMessage(MPV+0, "Done");
+				addMessage(MPV + 0, "Done");
 				close(handle->filefd);
 				handle->filefd = -1;
 				mptitle_t *newt = addNewPath(handle->fpath);
@@ -1197,7 +1202,7 @@ static void clientHandler(int arg) {
 
 	addMessage(MPV + 3, "Client handler exited");
 
-	pthread_mutex_unlock(&_sendlock); // TODO: really?
+	pthread_mutex_unlock(&_sendlock);	// TODO: really?
 	close(handle.sock);
 	sfree(&(handle.commdata));
 }

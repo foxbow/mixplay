@@ -148,8 +148,9 @@ static mptitle_t *skipOverFlags(mptitle_t * current, uint32_t flags) {
 	return marker;
 }
 
-static bool checkTitles(mptitle_t *titlea, mptitle_t *titleb) {
-	return (patMatch(titlea->artist, titleb->artist) || patMatch(titlea->title, titleb->title));
+static bool checkTitles(mptitle_t * titlea, mptitle_t * titleb) {
+	return (patMatch(titlea->artist, titleb->artist)
+			|| patMatch(titlea->title, titleb->title));
 }
 
 static void clearTDARK(mptitle_t * root) {
@@ -288,6 +289,7 @@ mpplaylist_t *remFromPLByKey(const uint32_t key) {
 	while (pl != NULL) {
 		if (pl->title->key == key) {
 			mpplaylist_t *torem = pl;
+
 			pl = torem->next;
 
 			if (torem->prev != NULL) {
@@ -343,7 +345,8 @@ mpplaylist_t *addToPL(mptitle_t * title, mpplaylist_t * target, bool mark) {
 	buf = (mpplaylist_t *) falloc(1, sizeof (mpplaylist_t));
 	memset(buf, 0, sizeof (mpplaylist_t));
 	buf->title = title;
-	if (mark) buf->title->flags |= MP_INPL;
+	if (mark)
+		buf->title->flags |= MP_INPL;
 
 	if (target != NULL) {
 		if (target->next != NULL) {
@@ -499,7 +502,7 @@ static uint32_t matchTitle(mptitle_t * title, const char *pat) {
 
 static int32_t addRangePrefix(mpcmd_t cmd, char *line) {
 	line[2] = 0;
-	line[1] = '='; // deprecated
+	line[1] = '=';				// deprecated
 	switch (MPC_RANGE(cmd)) {
 	case mpc_title:
 		line[0] = 't';
@@ -616,7 +619,7 @@ int32_t search(const mpcmd_t range, const char *pat, int32_t cid) {
 	uint32_t i = 0;
 
 	/* lock result to the proper client */
-	res->cid=cid;
+	res->cid = cid;
 
 	/* free buffer playlist, the arrays will not get lost due to the realloc later */
 	wipeSearchList(control);
@@ -631,8 +634,9 @@ int32_t search(const mpcmd_t range, const char *pat, int32_t cid) {
 
 	if (MPC_ISRECENT(range)) {
 		char *lastal = NULL;
+
 		/* return at last MPPLSIZE titles and last MPPLSIZE albums 
-		   TODO: This will add the first title of each album as a new title. Questionable! */
+		 * TODO: This will add the first title of each album as a new title. Questionable! */
 		do {
 			runner = runner->prev;
 			/* two titles in a row with the same album? */
@@ -655,8 +659,9 @@ int32_t search(const mpcmd_t range, const char *pat, int32_t cid) {
 					res->titles = appendToPL(runner, res->titles, false);
 					res->tnum++;
 				}
-			}			
-		} while ((runner->prev != root) && ((res->tnum < MPPLSIZE) || (res->tnum < MPPLSIZE)));
+			}
+		} while ((runner->prev != root)
+				 && ((res->tnum < MPPLSIZE) || (res->tnum < MPPLSIZE)));
 	}
 	else {
 		/* actual search */
@@ -725,8 +730,11 @@ int32_t search(const mpcmd_t range, const char *pat, int32_t cid) {
 	}
 
 	uint32_t maxret = res->tnum;
-	if (res->anum > maxret) maxret = res->anum;
-	if (res->lnum > maxret) maxret = res->lnum;
+
+	if (res->anum > maxret)
+		maxret = res->anum;
+	if (res->lnum > maxret)
+		maxret = res->lnum;
 
 	return ((maxret > MAXSEARCH) ? -1 : (int32_t) maxret);
 }
@@ -736,6 +744,7 @@ int32_t search(const mpcmd_t range, const char *pat, int32_t cid) {
  */
 static void cleanPLByFlag(uint32_t flag) {
 	mpplaylist_t *pl = getCurrent();
+
 	if (pl != NULL) {
 		while (pl->prev != NULL) {
 			pl = pl->prev;
@@ -1326,7 +1335,7 @@ mptitle_t *addNewPath(const char *path) {
 	while (tail != getConfig()->root);
 
 	newt->key = tail->key + 1;
-	newt->playcount = getPlaycount(count_mean);
+	newt->playcount = getNewPlaycount();
 	strtcpy(newt->path, path, MAXPATHLEN);
 
 	newt->next = tail->next;
@@ -1443,10 +1452,70 @@ void setTnum(void) {
 	}
 }
 
+#define PERCENT(x,y) ((100 * x)/(y))
+
 /**
- * returns the lowest playcount in the database
- * this one only counts titles that would be played with the current
- * profile
+ * @brief returns the playcount to be used on newly added titles
+ */
+uint32_t getNewPlaycount() {
+	struct {
+		uint32_t pc;
+		uint32_t cnt;
+	} info[3];
+
+	memset(&info, 3, sizeof (info));
+
+	uint32_t cnt = 0;
+
+	mptitle_t *base = getConfig()->root;
+	mptitle_t *runner = base;
+
+	/* find the three highest playcounts and their number of titles */
+	do {
+		if (!(runner->flags & MP_DBL)) {
+			cnt++;
+			if (runner->playcount > info[0].pc) {
+				if (runner->playcount > info[1].pc) {
+					if (runner->playcount > info[2].pc) {
+						info[0] = info[1];
+						info[1] = info[2];
+						info[2].pc = runner->playcount;
+						info[2].cnt = 0;
+					}
+					if (runner->playcount == info[2].pc)
+						info[2].cnt++;
+					else {
+						info[0] = info[1];
+						info[1].pc = runner->playcount;
+						info[1].cnt = 0;
+					}
+				}
+				if (runner->playcount == info[1].pc)
+					info[1].cnt++;
+				else {
+					info[0].pc = runner->playcount;
+					info[0].cnt = 0;
+				}
+			}
+			if (runner->playcount == info[0].pc)
+				info[0].cnt++;
+		}
+		runner = runner->next;
+	}
+	while (runner != base);
+
+	/* Most of the titles have been played already, add to the pile */
+	if (PERCENT(info[3].cnt, cnt) > 90)
+		return info[3].pc;
+	/* still more titles waiting to be played than the upper two? */
+	if (info[0].cnt > (info[1].cnt + info[2].cnt))
+		return info[0].pc;
+	/* The kind of expected result. */
+	return info[1].pc;
+}
+
+/**
+ * @brief returns the requested playcount in the database
  * 
  * @param range  switch between min, max and mean
  */
@@ -1455,10 +1524,6 @@ uint32_t getPlaycount(mpcount_t range) {
 	mptitle_t *runner = base;
 	uint32_t min = UINT32_MAX;	// min playcount of currently active titles
 	uint32_t max = 0;			// max playcount of currently active titles
-	uint32_t max2 = 0;			// second largest playcount
-	uint32_t mpc = 0;			// number of titles with maxplaycount
-	uint32_t mpc2 = 0;			// number of titles with second playcount
-	uint32_t cnt = 0;			// number of counted titles
 
 	uint32_t playcount;
 
@@ -1473,12 +1538,7 @@ uint32_t getPlaycount(mpcount_t range) {
 		/* favpcount is the one used to make decisions */
 		playcount = runner->favpcount;
 
-		if (range == count_mean) {
-			/* always take all titles and database info for the mean playcount */
-			valid = !(runner->flags & MP_DBL);
-			playcount = runner->playcount;
-		}
-		else if (getFavplay()) {
+		if (getFavplay()) {
 			/* only look at favourites on favplay */
 			valid = (runner->flags & MP_FAV);
 		}
@@ -1496,18 +1556,8 @@ uint32_t getPlaycount(mpcount_t range) {
 				min = playcount;
 			}
 			if (playcount > max) {
-				max2 = max;
-				mpc2 = mpc;
 				max = playcount;
-				mpc = 0;
 			}
-			if (playcount == max) {
-				mpc++;
-			}
-			if (playcount == max2) {
-				mpc2++;
-			}
-			cnt++;
 		}
 		runner = runner->next;
 	}
@@ -1517,27 +1567,6 @@ uint32_t getPlaycount(mpcount_t range) {
 	case count_min:
 		return min;
 	case count_max:
-		return max;
-	case count_mean:
-		/* give the new title(s) a chance to be played in reachable time 
-		   but don't flood the queue either */
-		if (mpc == 0) {
-			/* not much better than the division by zero but at least mor informative*/
-			fail(ERANGE, "No titles with maxplaycount found!");
-		}
-		
-		if ((mpc2 / mpc) > 50) {
-			/* we just started playing the highest playcount, so ignore that and look at the next two instead */
-			if ((cnt/(mpc+mpc2)) > 2) {
-				/* half of all titles has already been played, so go even one step lower but don't get negative! */
-				if (max2 > 0) max2--;
-				return max2;
-			}
-			return max2;
-		}
-		if (mpc > mpc2) {
-			return max2;
-		}
 		return max;
 	default:
 		fail(F_FAIL, "Illegal count range");
@@ -1584,12 +1613,12 @@ static void setPDARK(uint32_t maxp) {
 	mptitle_t *runner = root;
 
 	do {
-		if (runner->favpcount <= maxp) 
+		if (runner->favpcount <= maxp)
 			runner->flags &= ~MP_PDARK;
 		else
 			runner->flags |= MP_PDARK;
-		runner=runner->next;
-	} while(runner != root);
+		runner = runner->next;
+	} while (runner != root);
 }
 
 /**
@@ -1696,14 +1725,14 @@ void setArtistSpread() {
  *
  * @returns true on success and false on error
  */
-static bool addNewTitle(uint32_t *pcount) {
+static bool addNewTitle(uint32_t * pcount) {
 	mptitle_t *runner = NULL;
 	mptitle_t *guard = NULL;
 	uint64_t num = 0;
 	mptitle_t *last = NULL;
 	uint32_t maxpcount = getPlaycount(count_max);
 	uint32_t tnum = 0;			/* number of titles (to play) in the playlist */
-	
+
 	mpplaylist_t *pl = getCurrent();
 	mptitle_t *root;
 
@@ -1731,11 +1760,12 @@ static bool addNewTitle(uint32_t *pcount) {
 	}
 
 	num = countTitles(MP_DEF, MP_HIDE);
-	
+
 	/* We may have just added the last available title before, so
 	 * make sure the playcount is updated. */
-	while(num == 0) {
-		addMessage(1, "No titles with playcount %"PRIu32" increasing", *pcount);
+	while (num == 0) {
+		addMessage(1, "No titles with playcount %" PRIu32 " increasing",
+				   *pcount);
 		(*pcount)++;
 		setPDARK(*pcount);
 		num = countTitles(MP_DEF, MP_HIDE);
@@ -1746,8 +1776,7 @@ static bool addNewTitle(uint32_t *pcount) {
 
 	/* start with some 'random' title */
 	runner =
-		skipPcount(runner, (uint32_t) (random() % num), pcount,
-				   maxpcount);
+		skipPcount(runner, (uint32_t) (random() % num), pcount, maxpcount);
 	if (runner == NULL) {
 		addMessage(1, "Off to a bad start!");
 		runner = root;
@@ -1773,8 +1802,7 @@ static bool addNewTitle(uint32_t *pcount) {
 				 * these are expensive, so we try to keep the steps
 				 * somewhat reasonable.. */
 				runner =
-					skipPcount(runner, (random() % num),
-							   pcount, maxpcount);
+					skipPcount(runner, (random() % num), pcount, maxpcount);
 				if (runner == NULL) {
 					/* back to square one for this round - this is kind of the worst case!
 					 * But may happen occasionally on favplay */
@@ -1782,11 +1810,16 @@ static bool addNewTitle(uint32_t *pcount) {
 
 					/* Sanity check. No title should be set MP_PDARK when considering to decrease spreadcount */
 					uint64_t pdark = countflag(MP_PDARK);
+
 					if (pdark > 0) {
-						addAlert(0, "Changing spread while pdark is %"PRIu64"<br> cnt: [%"PRIu32" - %"PRIu32"]", pdark, *pcount, maxpcount);
+						addAlert(0,
+								 "Changing spread while pdark is %" PRIu64
+								 "<br> cnt: [%" PRIu32 " - %" PRIu32 "]",
+								 pdark, *pcount, maxpcount);
 					}
 
 					uint32_t spread = getConfig()->spread;
+
 					setArtistSpread();
 					if (spread == getConfig()->spread) {
 						getConfig()->spread--;
@@ -1797,22 +1830,28 @@ static bool addNewTitle(uint32_t *pcount) {
 					}
 					if (spread != getConfig()->spread) {
 						/* TODO: increase debug level if it spams on favplay */
-						addMessage(0, "Moved Artistspread from %" PRIu32 " to %" PRIu32, spread, getConfig()->spread);
+						addMessage(0,
+								   "Moved Artistspread from %" PRIu32 " to %"
+								   PRIu32, spread, getConfig()->spread);
 					}
 
 					mpplaylist_t *freeme = getConfig()->current;
+
 					/* move to the end of the playlist */
-					while (freeme->next != NULL) freeme = freeme->next;
+					while (freeme->next != NULL)
+						freeme = freeme->next;
 					spread = getConfig()->spread;
 					/* skip titles that are in the spread */
 					while ((freeme->prev != NULL) && (spread > 0)) {
 						freeme = freeme->prev;
 						/* only titles marked in the playlist count */
-						if (freeme->title->flags & MP_INPL) spread--;
+						if (freeme->title->flags & MP_INPL)
+							spread--;
 					}
 					/* clear flags for titles outside of the spread */
 					while (freeme != NULL) {
-						if (freeme->title->flags & MP_INPL) clearTDARK(freeme->title);
+						if (freeme->title->flags & MP_INPL)
+							clearTDARK(freeme->title);
 						freeme->title->flags &= ~MP_INPL;
 						freeme = freeme->prev;
 					}
@@ -1958,13 +1997,14 @@ void plCheck(bool fill) {
 
 	/* fill up the playlist with new titles if needed */
 	if (fill && (cnt < MPPLSIZE)) {
-		uint32_t pcount=getPlaycount(count_min);
+		uint32_t pcount = getPlaycount(count_min);
+
 		setPDARK(pcount);
 		/* dirty trick as we need to add MPPLSZE+1 titles on start! */
 		if (cnt == 0)
 			cnt = -1;
 		while (cnt < MPPLSIZE) {
-			activity(0, "Add title %i/%"PRIu32, cnt, pcount);
+			activity(0, "Add title %i/%" PRIu32, cnt, pcount);
 			lockPlaylist();
 			addNewTitle(&pcount);
 			unlockPlaylist();
@@ -2075,35 +2115,37 @@ void dumpInfo(bool smooth) {
 	} while (current != root);
 
 	addMessage(0, "-- internal playcount limits --");
-	addMessage(0, "Min  playcount: %u", getPlaycount(count_min));
-	addMessage(0, "Max  playcount: %u", getPlaycount(count_max));
-	addMessage(0, "Mean playcount: %u%s", getPlaycount(count_mean), getFavplay()?"(global)":"");
+	addMessage(0, "Min playcount: %u", getPlaycount(count_min));
+	addMessage(0, "Max playcount: %u", getPlaycount(count_max));
+	addMessage(0, "New playcount: %u", getNewPlaycount());
 
 	/* TODO: this should be removed by mid 2026 */
 	if (maxplayed > 1000) {
 		addAlert(0, "Found broken playcount, fixing now...");
 		uint32_t meanpc = 0;
 		uint32_t num = 0;
+
 		maxplayed = 0;
 		lockPlaylist();
 		addMessage(0, "Getting new meancount");
 		do {
 			if (current->playcount < 1000) {
 				meanpc += current->playcount;
-				if (current->playcount > maxplayed) maxplayed = current->playcount;
+				if (current->playcount > maxplayed)
+					maxplayed = current->playcount;
 			}
 			current = current->next;
-		} while(current != root);
+		} while (current != root);
 		meanpc = meanpc / numtitles;
 		addMessage(0, "New  max playcount: %i", maxplayed);
 		addMessage(0, "New mean playcount: %i", meanpc);
 		do {
 			if (current->playcount >= 1000) {
-				current->playcount=meanpc;
+				current->playcount = meanpc;
 				num++;
 			}
 			current = current->next;
-		} while(current != root);
+		} while (current != root);
 		addMessage(0, "Fixed %i titles", num);
 		unlockPlaylist();
 		dbMarkDirty();
@@ -2152,6 +2194,7 @@ void dumpInfo(bool smooth) {
 		if (smooth && !getFavplay() && (pcount < (numtitles / 200))) {
 			fixed = 1;
 			mptitle_t *pmark = current;
+
 			do {
 				if (current->playcount > pl) {
 					current->playcount--;
@@ -2161,8 +2204,10 @@ void dumpInfo(bool smooth) {
 				}
 				current = current->next;
 			} while (current != pmark);
-			if (maxplayed > 0) maxplayed--;
-			else addAlert(0, "maxplayed is wrapping!");
+			if (maxplayed > 0)
+				maxplayed--;
+			else
+				addAlert(0, "maxplayed is wrapping!");
 		}
 
 		pcount = pcount - (dcount + dblcnt);

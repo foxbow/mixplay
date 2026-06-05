@@ -312,8 +312,8 @@ mptitle_t *dbGetMusic() {
 		else {
 			/* Maybe make an UI scan possible or trigger it here explicitly */
 			addAlert(0,
-					   "Database %s and backup are corrupt!<br>Run 'mixplay -C' to rescan",
-					   getConfig()->dbname);
+					 "Database %s and backup are corrupt!<br>Run 'mixplay -C' to rescan",
+					 getConfig()->dbname);
 		}
 	}
 
@@ -417,7 +417,7 @@ int32_t dbAddTitles(char *basedir) {
 	else {
 		addMessage(0, "Adding new titles");
 		index = dbroot->prev->key;
-		mean = getPlaycount(count_mean);
+		mean = getNewPlaycount();
 	}
 
 	addMessage(0, "Using mean playcount %d", mean);

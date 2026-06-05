@@ -38,9 +38,10 @@ void lockClient(int32_t client) {
 }
 
 void unlockClient(int32_t client) {
-	assert (_curclient == client);
+	assert(_curclient == client);
 	_curclient = 0;
 	int rc = pthread_mutex_unlock(&_clientlock);
+
 	if (rc != 0) {
 		addAlert(0, "Deadlock, consider restarting player!");
 	}
@@ -61,6 +62,7 @@ int32_t getCurClient() {
  */
 void debugClient() {
 	int32_t oclient = _curclient;
+
 	/* a client disconnected with an active lock
 	 * wait for 30s, this should be enough time for any locked
 	 * operation to finish. Try to lock again. If it succeeds or fails due
@@ -68,7 +70,8 @@ void debugClient() {
 	sleep(30);
 	if (pthread_mutex_trylock(&_clientlock) == EBUSY) {
 		if (oclient == _curclient) {
-			addAlert(0, "Deadlock of client %i<br>thread %i", oclient, _clientlock.__data.__owner);
+			addAlert(0, "Deadlock of client %i<br>thread %i", oclient,
+					 _clientlock.__data.__owner);
 			sleep(3);
 			assert(false);
 		}

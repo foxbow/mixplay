@@ -28,13 +28,16 @@
 
 /* playlist lock, on some operations tha playlist must not change */
 static pthread_mutex_t pllock = PTHREAD_MUTEX_INITIALIZER;
+
 /* synchronize configuration access */
 static pthread_mutex_t conflock = PTHREAD_MUTEX_INITIALIZER;
+
 /* notification when the configuration is available */
 static pthread_cond_t confinit = PTHREAD_COND_INITIALIZER;
 
 /* synchronize messages, this should probably move to msBuf handling */
 static pthread_mutex_t _addmsglock = PTHREAD_MUTEX_INITIALIZER;
+
 /* callback lock */
 static pthread_mutex_t _cblock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -731,7 +734,8 @@ void wipeSearchList(mpconfig_t * control) {
  */
 void wipePlaylist(mpconfig_t * control) {
 	control->current =
-		_wipePlaylist(control->current, control->mpmode & PM_STREAM, false, true);
+		_wipePlaylist(control->current, control->mpmode & PM_STREAM, false,
+					  true);
 }
 
 /** 
@@ -786,14 +790,17 @@ void freeConfig() {
  */
 void addAlert(int32_t cid, const char *msg, ...) {
 	va_list args;
-	char line[MP_MSGLEN +1];
+	char line[MP_MSGLEN + 1];
+
 	pthread_mutex_lock(&_addmsglock);
 	sprintf(line, "ALERT:");
 	va_start(args, msg);
-	vsnprintf(line+6, MP_MSGLEN-6, msg, args);
+	vsnprintf(line + 6, MP_MSGLEN - 6, msg, args);
 	va_end(args);
-	if (cid == 0) cid = getCurClient();
-	if (cid == -1) cid = 0;
+	if (cid == 0)
+		cid = getCurClient();
+	if (cid == -1)
+		cid = 0;
 
 	msgBuffAddCid(_cconfig->msg, line, cid);
 	if (_cconfig->inUI) {
@@ -1197,7 +1204,7 @@ int32_t getProfileVolume(uint32_t id) {
 
 		}
 	}
-		
+
 	if ((profile == NULL) || (profile->url != NULL)) {
 		rv = rv + getConfig()->linestream;
 	}
