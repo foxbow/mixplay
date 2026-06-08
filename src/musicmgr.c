@@ -1458,12 +1458,13 @@ void setTnum(void) {
  * @brief returns the playcount to be used on newly added titles
  */
 uint32_t getNewPlaycount() {
-	struct {
+	/* playcount low [0] to high [2] */
+	struct info_s {
 		uint32_t pc;
 		uint32_t cnt;
 	} info[3];
 
-	memset(&info, 0, 3 * sizeof (info));
+	memset(info, 0, 3 * sizeof (struct info_s));
 
 	uint32_t cnt = 0;
 
@@ -1474,31 +1475,30 @@ uint32_t getNewPlaycount() {
 	do {
 		if (!(runner->flags & MP_DBL)) {
 			cnt++;
-			if (runner->playcount > info[0].pc) {
-				if (runner->playcount > info[1].pc) {
-					if (runner->playcount > info[2].pc) {
-						info[0] = info[1];
-						info[1] = info[2];
-						info[2].pc = runner->playcount;
-						info[2].cnt = 0;
-					}
-					if (runner->playcount == info[2].pc)
-						info[2].cnt++;
-					else {
-						info[0] = info[1];
-						info[1].pc = runner->playcount;
-						info[1].cnt = 0;
-					}
-				}
-				if (runner->playcount == info[1].pc)
-					info[1].cnt++;
-				else {
-					info[0].pc = runner->playcount;
-					info[0].cnt = 0;
-				}
+			if (runner->playcount > info[2].pc) {
+				info[0] = info[1];
+				info[1] = info[2];
+				info[2].pc = runner->playcount;
+				info[2].cnt = 1;
 			}
-			if (runner->playcount == info[0].pc)
+			else if (runner->playcount == info[2].pc) {
+				info[2].cnt++;
+			}
+			else if (runner->playcount > info[1].pc) {
+				info[0] = info[1];
+				info[1].pc = runner->playcount;
+				info[1].cnt = 1;
+			}
+			else if (runner->playcount == info[1].pc) {
+				info[1].cnt++;
+			}
+			else if (runner->playcount > info[0].pc) {
+				info[0].pc = runner->playcount;
+				info[0].cnt = 1;
+			}
+			else if (runner->playcount == info[0].pc) {
 				info[0].cnt++;
+			}
 		}
 		runner = runner->next;
 	}
