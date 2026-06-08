@@ -1463,7 +1463,7 @@ uint32_t getNewPlaycount() {
 		uint32_t cnt;
 	} info[3];
 
-	memset(&info, 3, sizeof (info));
+	memset(&info, 0, 3 * sizeof (info));
 
 	uint32_t cnt = 0;
 
@@ -1505,8 +1505,8 @@ uint32_t getNewPlaycount() {
 	while (runner != base);
 
 	/* Most of the titles have been played already, add to the pile */
-	if (PERCENT(info[3].cnt, cnt) > 90)
-		return info[3].pc;
+	if (PERCENT(info[2].cnt, cnt) > 90)
+		return info[2].pc;
 	/* still more titles waiting to be played than the upper two? */
 	if (info[0].cnt > (info[1].cnt + info[2].cnt))
 		return info[0].pc;
