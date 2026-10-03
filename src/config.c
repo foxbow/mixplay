@@ -792,24 +792,24 @@ void addAlert(int32_t cid, const char *msg, ...) {
 	va_list args;
 	char line[MP_MSGLEN + 1];
 
-	pthread_mutex_lock(&_addmsglock);
 	sprintf(line, "ALERT:");
 	va_start(args, msg);
 	vsnprintf(line + 6, MP_MSGLEN - 6, msg, args);
 	va_end(args);
+
+	/* msgBuffAdd() may block, so update syslog first! */
+	if (_cconfig->isDaemon) {
+		syslog(LOG_NOTICE, "%s", line);
+	}
+
 	if (cid == 0)
 		cid = getCurClient();
 	if (cid == -1)
 		cid = 0;
 
-	msgBuffAddCid(_cconfig->msg, line, cid);
 	if (_cconfig->inUI) {
-		msgBuffAdd(_cconfig->msg, line);
+		msgBuffAddCid(_cconfig->msg, line, cid);
 	}
-	if (_cconfig->isDaemon) {
-		syslog(LOG_NOTICE, "%s", line);
-	}
-	pthread_mutex_unlock(&_addmsglock);
 	if (getDebug()) {
 		printf("(%i) %s\n", cid, line);
 	}
@@ -826,7 +826,6 @@ void addMessage(int32_t v, const char *msg, ...) {
 	va_list args;
 	char line[MP_MSGLEN + 1];
 
-	pthread_mutex_lock(&_addmsglock);
 	va_start(args, msg);
 	vsnprintf(line, MP_MSGLEN, msg, args);
 	va_end(args);
@@ -837,6 +836,9 @@ void addMessage(int32_t v, const char *msg, ...) {
 	}
 
 	if ((v == 0) || (v < (int32_t) getDebug())) {
+		/* probably overkill since both msgBuffAdd and syslog are thread safe
+		 * so we effectively just keep stderr in sync as it seems */
+		pthread_mutex_lock(&_addmsglock);
 		fprintf(stderr, "\r%s\n", line);
 		if (_cconfig->inUI) {
 			msgBuffAdd(_cconfig->msg, line);
@@ -844,8 +846,8 @@ void addMessage(int32_t v, const char *msg, ...) {
 		if (_cconfig->isDaemon) {
 			syslog(LOG_NOTICE, "%s", line);
 		}
+		pthread_mutex_unlock(&_addmsglock);
 	}
-	pthread_mutex_unlock(&_addmsglock);
 }
 
 void incDebug(void) {

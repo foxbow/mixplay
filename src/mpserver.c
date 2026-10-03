@@ -196,7 +196,7 @@ static void triggerClient(int32_t client) {
 				_numclients++;
 			}
 			/* all other clients have done at least two updates + 10 to drown out
-			 * volume requests */
+			 * volume requests - deas this even make sense? */
 			_heartbeat[run] = (2 * _numclients) + 10;
 		}
 		else {
@@ -216,6 +216,7 @@ static void triggerClient(int32_t client) {
 						addMessage(0,
 								   "Client %i died while being locked. What kept it waiting for so long?!",
 								   getCurClient());
+						/* call debugClient to have access to the actual lock info */
 						debugClient();
 					}
 					addMessage(MPV + 2,
