@@ -28,13 +28,16 @@
 
 /* playlist lock, on some operations tha playlist must not change */
 static pthread_mutex_t pllock = PTHREAD_MUTEX_INITIALIZER;
+
 /* synchronize configuration access */
 static pthread_mutex_t conflock = PTHREAD_MUTEX_INITIALIZER;
+
 /* notification when the configuration is available */
 static pthread_cond_t confinit = PTHREAD_COND_INITIALIZER;
 
 /* synchronize messages, this should probably move to msBuf handling */
 static pthread_mutex_t _addmsglock = PTHREAD_MUTEX_INITIALIZER;
+
 /* callback lock */
 static pthread_mutex_t _cblock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -378,7 +381,7 @@ mpconfig_t *readConfig(void) {
 
 			if (strstr(line, "musicdir=") == line) {
 				/* make sure that musicdir ends with a '/' */
-				if (line[strlen(line) - 1] == '/') {
+				if (endsWith(line, "/")) {
 					if (_cconfig->musicdir != NULL) {
 						free(_cconfig->musicdir);
 					}
@@ -387,8 +390,7 @@ mpconfig_t *readConfig(void) {
 				else {
 					_cconfig->musicdir =
 						(char *) frealloc(_cconfig->musicdir, strlen(pos) + 2);
-					strcpy(_cconfig->musicdir, pos);
-					_cconfig->musicdir[strlen(pos)] = '/';
+					sprintf(_cconfig->musicdir, "%s/", pos);
 				}
 				if (!isDir(_cconfig->musicdir)) {
 					printf("%s is no valid directory!\n", _cconfig->musicdir);
@@ -732,7 +734,8 @@ void wipeSearchList(mpconfig_t * control) {
  */
 void wipePlaylist(mpconfig_t * control) {
 	control->current =
-		_wipePlaylist(control->current, control->mpmode & PM_STREAM, false, true);
+		_wipePlaylist(control->current, control->mpmode & PM_STREAM, false,
+					  true);
 }
 
 /** 
@@ -787,23 +790,29 @@ void freeConfig() {
  */
 void addAlert(int32_t cid, const char *msg, ...) {
 	va_list args;
-	char line[MP_MSGLEN +1];
-	pthread_mutex_lock(&_addmsglock);
+	char line[MP_MSGLEN + 1];
+
 	sprintf(line, "ALERT:");
 	va_start(args, msg);
-	vsnprintf(line+6, MP_MSGLEN, msg, args);
+	vsnprintf(line + 6, MP_MSGLEN - 6, msg, args);
 	va_end(args);
-	if (cid == 0) cid = getCurClient();
-	if (cid == -1) cid = 0;
 
-	msgBuffAddCid(_cconfig->msg, line, cid);
-	if (_cconfig->inUI) {
-		msgBuffAdd(_cconfig->msg, line);
-	}
+	/* msgBuffAdd() may block, so update syslog first! */
 	if (_cconfig->isDaemon) {
 		syslog(LOG_NOTICE, "%s", line);
 	}
-	pthread_mutex_unlock(&_addmsglock);
+
+	if (cid == 0)
+		cid = getCurClient();
+	if (cid == -1)
+		cid = 0;
+
+	if (_cconfig->inUI) {
+		msgBuffAddCid(_cconfig->msg, line, cid);
+	}
+	if (getDebug()) {
+		printf("(%i) %s\n", cid, line);
+	}
 }
 
 /**
@@ -817,7 +826,6 @@ void addMessage(int32_t v, const char *msg, ...) {
 	va_list args;
 	char line[MP_MSGLEN + 1];
 
-	pthread_mutex_lock(&_addmsglock);
 	va_start(args, msg);
 	vsnprintf(line, MP_MSGLEN, msg, args);
 	va_end(args);
@@ -828,6 +836,9 @@ void addMessage(int32_t v, const char *msg, ...) {
 	}
 
 	if ((v == 0) || (v < (int32_t) getDebug())) {
+		/* probably overkill since both msgBuffAdd and syslog are thread safe
+		 * so we effectively just keep stderr in sync as it seems */
+		pthread_mutex_lock(&_addmsglock);
 		fprintf(stderr, "\r%s\n", line);
 		if (_cconfig->inUI) {
 			msgBuffAdd(_cconfig->msg, line);
@@ -835,8 +846,8 @@ void addMessage(int32_t v, const char *msg, ...) {
 		if (_cconfig->isDaemon) {
 			syslog(LOG_NOTICE, "%s", line);
 		}
+		pthread_mutex_unlock(&_addmsglock);
 	}
-	pthread_mutex_unlock(&_addmsglock);
 }
 
 void incDebug(void) {
@@ -1166,17 +1177,41 @@ int32_t getProfileIndex(uint32_t id) {
 	return -1;
 }
 
-/* we need to have special handling for URL play */
+/** 
+ * @brief get the volume for the given profile
+ * 
+ * This needs to check if the player is in line mode. If so it will
+ * return the default volume and midify it for the stream if needed.
+ * Otherwise it will take the current volume, adapt that if there is
+ * an active stream being played and then adapted if the new profile
+ * is a stream.
+ * 
+ * @param [in] id the id of the profile to check
+ * @returns the volume to set for the profile
+ **/
 int32_t getProfileVolume(uint32_t id) {
-	if (id == 0) {
-		return getConfig()->volume + getConfig()->lineout;
-	}
 	profile_t *profile = getProfile(id);
 
-	if (profile != NULL) {
-		return profile->volume;
+	int32_t rv = getConfig()->lineout;
+
+	if (rv == 0) {
+		if (profile != NULL) {
+			rv = profile->volume;
+		}
+		else {
+			rv = getConfig()->volume;
+			if (isStreamActive()) {
+				rv = rv - getConfig()->linestream;
+			}
+
+		}
 	}
-	return getConfig()->volume;
+
+	if ((profile == NULL) || (profile->url != NULL)) {
+		rv = rv + getConfig()->linestream;
+	}
+
+	return rv;
 }
 
 bool isStream(profile_t * profile) {

@@ -152,7 +152,7 @@ static mptitle_t *removeTitle(mptitle_t * entry) {
 		entry->prev->next = entry->next;
 	}
 
-	remFromPLByKey(entry->key);
+	getConfig()->current = remFromPLByKey(entry->key);
 
 	free(entry);
 	return next;
@@ -312,8 +312,8 @@ mptitle_t *dbGetMusic() {
 		else {
 			/* Maybe make an UI scan possible or trigger it here explicitly */
 			addAlert(0,
-					   "Database %s and backup are corrupt!<br>Run 'mixplay -C' to rescan",
-					   getConfig()->dbname);
+					 "Database %s and backup are corrupt!<br>Run 'mixplay -C' to rescan",
+					 getConfig()->dbname);
 		}
 	}
 
@@ -336,15 +336,18 @@ int32_t dbCheckExist(void) {
 		addAlert(0, "No music in database!");
 		return -1;
 	}
+
 	runner = root;
 	addMessage(0, "Cleaning database");
 	do {
 		if (!mp3Exists(runner)) {
-			if (root == runner) {
-				root = runner->prev;
-			}
-
 			runner = removeTitle(runner);
+			if (runner->next == runner) {
+				/* only one title left, do extra check */
+				if (!mp3Exists(runner)) {
+					runner = removeTitle(runner);
+				}
+			}
 			num++;
 		}
 		else {
@@ -414,7 +417,7 @@ int32_t dbAddTitles(char *basedir) {
 	else {
 		addMessage(0, "Adding new titles");
 		index = dbroot->prev->key;
-		mean = getPlaycount(count_mean);
+		mean = getNewPlaycount();
 	}
 
 	addMessage(0, "Using mean playcount %d", mean);

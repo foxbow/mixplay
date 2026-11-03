@@ -59,8 +59,7 @@ struct mpplaylist_s {
 
 typedef enum {
 	count_max,
-	count_min,
-	count_mean
+	count_min
 } mpcount_t;
 
 typedef struct {
@@ -131,6 +130,7 @@ void setTnum(void);
 
 #define countflag(x) countTitles((x), MP_NONE)
 uint32_t getPlaycount(mpcount_t range);
+uint32_t getNewPlaycount(void);
 
 void dumpState(void);
 

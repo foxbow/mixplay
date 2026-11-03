@@ -2062,6 +2062,7 @@ function initializeUI () {
   }
   addVolWheel('viewtabs')
   addVolWheel('extra0')
+  addVolWheel('black')
   document.getElementById('progress').addEventListener('wheel', progWheel, { passive: false })
   document.getElementById('volume').addEventListener('click', ctrlVol, false)
   document.getElementById('progress').addEventListener('click', ctrlFF, false)

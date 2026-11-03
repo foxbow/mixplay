@@ -96,8 +96,10 @@ static int32_t playResults(mpcmd_t range, const char *arg, const bool insert) {
 }
 
 static bool checkPasswd(char *pass, uint32_t cid) {
-	if (!pass) return false;
-	if (!strcmp(getConfig()->password, pass)) return true;
+	if (!pass)
+		return false;
+	if (!strcmp(getConfig()->password, pass))
+		return true;
 	addAlert(cid, "Wrong password!");
 	return false;
 }
@@ -117,8 +119,15 @@ static mptitle_t *getCurrentTitle() {
  * to be called after removing titles, marking them DNP or as DBL.
  **/
 static void checkAfterRemove(mptitle_t * ctitle) {
-	/* clean up the playlist without adding new titles */
-	plCheck(false);
+	if (getCurrent() != NULL) {
+		/* clean up the playlist without adding new titles */
+		plCheck(false);
+	}
+
+	setArtistSpread();
+	/* fill up the playlist */
+	plCheck(true);
+
 	/* has the current title changed? Then send a replay to play the new
 	 * current title. This may lead to a replay if the title changed during
 	 * plcheck() but the effort to avoid this is larger than the expected
@@ -127,9 +136,6 @@ static void checkAfterRemove(mptitle_t * ctitle) {
 		setOrder(0);
 		toPlayer(0, "STOP\n");
 	}
-	setArtistSpread();
-	/* fill up the playlist */
-	plCheck(true);
 }
 
 /**
@@ -137,7 +143,7 @@ static void checkAfterRemove(mptitle_t * ctitle) {
  * client
  */
 static void *plCheckDoublets(void *cidin) {
-	int32_t cid = (int32_t)(long)cidin;
+	int32_t cid = (int32_t) (long) cidin;
 	int32_t i;
 	mptitle_t *ctitle = getCurrentTitle();
 
@@ -161,7 +167,7 @@ static void *plCheckDoublets(void *cidin) {
 }
 
 static void *plDbClean(void *cidin) {
-	int32_t cid = (int32_t)(long)cidin;
+	int32_t cid = (int32_t) (long) cidin;
 	mpconfig_t *control = getConfig();
 	mptitle_t *ctitle = getCurrentTitle();
 	int32_t i;
@@ -209,7 +215,8 @@ static void *plDbClean(void *cidin) {
 }
 
 static void *plDbFix(void *cidin) {
-	int32_t cid = (int32_t)(long)cidin;
+	int32_t cid = (int32_t) (long) cidin;
+
 	lockClient(cid);
 	addMessage(0, "Database smooth");
 	dumpInfo(true);
@@ -219,7 +226,8 @@ static void *plDbFix(void *cidin) {
 }
 
 static void *plDbInfo(void *cidin) {
-	int32_t cid = (int32_t)(long)cidin;
+	int32_t cid = (int32_t) (long) cidin;
+
 	lockClient(cid);
 	addMessage(0, "Database Info");
 	dumpState();
@@ -229,7 +237,8 @@ static void *plDbInfo(void *cidin) {
 
 /* simple wrapper to run setProfile as an own thread */
 static void *plSetProfile(void *cidin) {
-	int32_t cid = (int32_t)(long)cidin;
+	int32_t cid = (int32_t) (long) cidin;
+
 	lockClient(cid);
 	setProfile(NULL);
 	unlockClient(cid);
@@ -243,7 +252,7 @@ static void *plSetProfile(void *cidin) {
 static void asyncRun(void *cmd(void *), int32_t cid) {
 	pthread_t pid;
 
-	if (pthread_create(&pid, NULL, cmd, (void *)(long)cid) < 0) {
+	if (pthread_create(&pid, NULL, cmd, (void *) (long) cid) < 0) {
 		addMessage(0, "Could not create async thread!");
 	}
 	else {
@@ -331,6 +340,7 @@ void setCommand(mpcmd_t rcmd, char *arg, int32_t cid) {
 				config->stop = false;
 			}
 			else {
+				setVolume(getProfileVolume(config->active));
 				sendplay();
 			}
 			notifyChange(MPCOMM_CONFIG);
@@ -381,7 +391,7 @@ void setCommand(mpcmd_t rcmd, char *arg, int32_t cid) {
 		}
 		else {
 			/* make sure we do not interrupt actions on the playlist */
-			lockClient(cid); 
+			lockClient(cid);
 			order = -1;
 			if (arg != NULL) {
 				order = -atoi(arg);
@@ -399,7 +409,7 @@ void setCommand(mpcmd_t rcmd, char *arg, int32_t cid) {
 			break;
 		if (config->current != NULL) {
 			/* make sure we do not interrupt actions on the playlist */
-			lockClient(cid); 
+			lockClient(cid);
 			order = 1;
 			if (arg != NULL) {
 				order = atoi(arg);
@@ -436,12 +446,12 @@ void setCommand(mpcmd_t rcmd, char *arg, int32_t cid) {
 			break;
 		lockClient(cid);
 		/* remember the current title so checkAfterRemove() can find out if
-			* it has changed */
+		 * it has changed */
 		mptitle_t *check = getCurrentTitle();
 
 		/* The selected title may already be explicitly marked as DNP or FAV so
-			* check if it needs to be removed from the other list. The last choice
-			* shall have highest priority */
+		 * check if it needs to be removed from the other list. The last choice
+		 * shall have highest priority */
 		delTitleFromOtherList(rcmd, ctitle);
 		handleRangeCmd(rcmd, ctitle);
 		if (cmd == mpc_dnp) {
@@ -546,7 +556,7 @@ void setCommand(mpcmd_t rcmd, char *arg, int32_t cid) {
 					lockClient(cid);
 					freeProfile(config->profile[profileidx]);
 					for (uint32_t i = profileidx + 1; i < config->profiles;
-							i++) {
+						 i++) {
 						config->profile[i - 1] = config->profile[i];
 					}
 					config->profiles--;

@@ -873,7 +873,6 @@ void *reader( __attribute__ ((unused))
 								writeConfig(NULL);
 								oactive = control->active;
 							}
-							setVolume(getProfileVolume(control->active));
 						}
 						control->status = mpc_play;
 						notifyChange(MPCOMM_CONFIG);
