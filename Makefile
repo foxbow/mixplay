@@ -24,12 +24,11 @@ endif
 
 OBJS=$(addprefix $(OBJDIR)/,mpserver.o utils.o musicmgr.o database.o \
   config.o mpcomm.o json.o msgbuf.o mpinit.o mphid.o mpgutils.o player.o \
-	mpflirc.o mpalsa.o controller.o)
+  mpalsa.o controller.o)
 
-CLOBJS=$(addprefix $(OBJDIR)/,utils.o msgbuf.o config.o json.o mpclient.o \
-  mpcomm.o )
+CLOBJS=$(OBJS) $(addprefix $(OBJDIR)/, mpclient.o)
 
-HCOBJS=$(CLOBJS) $(addprefix $(OBJDIR)/,mphid.o)
+PACKFILES=bin/mixplay-* bin/mixplayd bin/mpstop bin/mpflirc.sh bin/mpgainer.sh bin/mprcinit
 
 LIBS+=-lpthread -lm
 REFS=alsa libmpg123
@@ -66,6 +65,9 @@ server: $(OBJDIR)/dep.d bin/mixplayd bin/mprcinit
 
 clients: $(OBJDIR)/dep.d $(CLIENTS)
 
+package: all
+	tar -czf mixplay_bin.tgz $(PACKFILES)
+
 clean:
 	rm -f $(OBJDIR)/[!R]*
 	rm -f bin/mixplayd
@@ -97,7 +99,7 @@ bin/mixplayd: $(OBJDIR)/mixplayd.o $(OBJS)
 bin/test: $(OBJDIR)/test.o $(OBJS)
 	$(CC) $^ -o $@ $(LIBS)
 
-bin/mixplay-hid: $(OBJDIR)/mixplay-hid.o $(HCOBJS)
+bin/mixplay-hid: $(OBJDIR)/mixplay-hid.o $(CLOBJS)
 	$(CC) $^ -o $@ $(LIBS)
 
 bin/mixplay-scr: $(OBJDIR)/mixplay-scr.o $(CLOBJS)

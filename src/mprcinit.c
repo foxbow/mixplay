@@ -5,7 +5,6 @@
 #include "config.h"
 #include "mphid.h"
 #include "utils.h"
-#include "mpflirc.h"
 
 /**
  * helperfunction for scandir()
@@ -81,7 +80,7 @@ int32_t main() {
 	printf("\rOkay, trying to init %s\n", devices[c]->d_name);
 
 	getConfig()->rcdev = strdup(devices[c]->d_name);
-	fd = initFLIRC();
+	fd = initHID();
 	if (fd == -1) {
 		printf("Failed to use %s!\n", devices[c]->d_name);
 		return -1;
