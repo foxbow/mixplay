@@ -843,15 +843,13 @@ function clickable (text, cmd, arg, id) {
       const dcmd = this.getAttribute('data-cmd')
       sendCMDArg(dcmd, this.getAttribute('data-arg'))
       // Hide the line on  if we do not expect an auto-update to wipe the UI
-      if (dcmd > 0) {
-        if ((dcmd === 0x001a) || (dcmd === 0x001b) || // remove from FAV/DNP list
-            (dcmd === 0x100a)) { // DNP
-          const line = document.getElementById('line' + id)
-          /* line may be gone as sendcmd() already cleaned up search view */
-          if (line) {
-            line.className = 'hide'
-            wipeElements(line)
-          }
+      if ((dcmd === 0x001a) || (dcmd === 0x001b) || // remove from FAV/DNP list
+          (dcmd === 0x100a)) { // DNP
+        const line = document.getElementById('line' + id)
+        /* line may be gone as sendcmd() already cleaned up search view */
+        if (line) {
+          line.className = 'hide'
+          wipeElements(line)
         }
       }
       currentPop = ''
