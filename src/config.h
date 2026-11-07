@@ -57,7 +57,7 @@ typedef enum {
 	mpc_append,					/* 20 */
 	mpc_setvol,
 	mpc_newprof,
-	mpc_path,
+	mpc_url,
 	mpc_remprof,
 	mpc_spread,
 	mpc_deldnp,

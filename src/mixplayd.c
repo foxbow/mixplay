@@ -169,8 +169,8 @@ int32_t main(int32_t argc, char **argv) {
 
 	control = readConfig();
 	if (control == NULL) {
-		fprintf(stderr, "Cannot find configuration!\n");
-		fprintf(stderr, "Run 'mprcinit' first\n");
+		if (HIDinit() < 0)
+			fprintf(stderr, "Cannot create configuration!\n");
 		return 1;
 	}
 
