@@ -22,7 +22,6 @@
 #include "player.h"
 #include "mpinit.h"
 #include "mphid.h"
-#include "mpflirc.h"
 #include "mpserver.h"
 #include "database.h"
 #include "mpalsa.h"				/* for getVolume */
@@ -240,10 +239,10 @@ int32_t main(int32_t argc, char **argv) {
 	}
 
 	if (!startServer() && !initAll()) {
-		/* flirc handler */
-		hidfd = initFLIRC();
+		/* HID handler, like flirc */
+		hidfd = initHID();
 		if (hidfd != -1) {
-			startFLIRC(hidfd);
+			startHID(hidfd);
 		}
 
 		if (getDebug()) {
