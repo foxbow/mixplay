@@ -310,7 +310,7 @@ void setCommand(mpcmd_t rcmd, char *arg, int32_t cid) {
 	/* get the target title for fav and dnp commands */
 	if ((cmd == mpc_fav) || (cmd == mpc_dnp)) {
 		if (arg != NULL) {
-			if (MPC_EQDISPLAY(rcmd)) {
+			if (MPC_ISDISPLAY(rcmd)) {
 				ctitle = getTitleByIndex(atoi(arg));
 			}
 			else {
@@ -651,7 +651,7 @@ void setCommand(mpcmd_t rcmd, char *arg, int32_t cid) {
 		{
 			char *term = arg;
 
-			/* if the term is unset but the fuzzy bit is set, return the last ten
+			/* if the term is unset but the recent it is set, return the last ten
 			 * titles in the database */
 			if ((term == NULL) && !MPC_ISRECENT(rcmd)) {
 				if (MPC_ISARTIST(rcmd)) {

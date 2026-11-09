@@ -84,7 +84,7 @@ distclean: clean
 	rm -f $(SRCDIR)/mixplay_*.h
 	rm -f $(SRCDIR)/mpplayer_*.h
 	rm -rf cov-int
-	rm -f *cov.tgz
+	rm -f *.tgz
 	rm -f core
 
 new: clean all

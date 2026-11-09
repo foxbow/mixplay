@@ -77,5 +77,5 @@ static/bookmarklet.js
 # Coredumps
 core*
 
-# coverity archives
-*cov.tgz
+# archives
+*.tgz
