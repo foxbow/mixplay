@@ -39,7 +39,7 @@ cmd = 0MSR RRRR 000C CCCC
 * 0x14 - append searchresults to playlist
 * 0x15 - set volume +arg <0..100>
 * 0x16 - create new profile +arg <string>
-* 0x17 - play path/url <string>
+* 0x17 - play url <string>
 * 0x18 - delete profile/channel <string>
 * 0x19 - toggle edit mode
 * 0x1a - remove <entry> from dnplist

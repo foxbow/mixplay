@@ -29,6 +29,13 @@ static int32_t _curclient = -1;
  *
  * Even if it may look tempting, queuing the calls is not
  * worth the effort!
+ * 
+ * The pthread_mutex_lock() may be overkill as it may end up
+ * in an undefined state if a client dies while holding the
+ * lock. Hard to reproduce but it has been seen. If it happens
+ * again, implement a kind of soft-lock that unlocks after
+ * a timeout - which still may mean a client thread is in
+ * limbo. But better than crashing...
  */
 void lockClient(int32_t client) {
 	pthread_mutex_lock(&_clientlock);

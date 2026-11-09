@@ -28,7 +28,7 @@ OBJS=$(addprefix $(OBJDIR)/,mpserver.o utils.o musicmgr.o database.o \
 
 CLOBJS=$(OBJS) $(addprefix $(OBJDIR)/, mpclient.o)
 
-PACKFILES=bin/mixplay-* bin/mixplayd bin/mpstop bin/mpflirc.sh bin/mpgainer.sh bin/mprcinit
+PACKFILES=bin/mixplay-* bin/mixplayd bin/mpstop bin/mpflirc.sh bin/mpgainer.sh
 
 LIBS+=-lpthread -lm
 REFS=alsa libmpg123
@@ -61,7 +61,7 @@ ifeq ($(shell pkg-config --exists libmpg123 && echo 1),)
 	$(error libmpg123 is not installed. Consider running 'make prepare' )
 endif
 
-server: $(OBJDIR)/dep.d bin/mixplayd bin/mprcinit
+server: $(OBJDIR)/dep.d bin/mixplayd
 
 clients: $(OBJDIR)/dep.d $(CLIENTS)
 
@@ -72,7 +72,6 @@ clean:
 	rm -f $(OBJDIR)/[!R]*
 	rm -f bin/mixplayd
 	rm -f bin/mixplay-*
-	rm -f bin/mprcinit
 	rm -f bin/minify
 	rm -f bin/test
 	rm -f static/mixplay.html
@@ -85,7 +84,7 @@ distclean: clean
 	rm -f $(SRCDIR)/mixplay_*.h
 	rm -f $(SRCDIR)/mpplayer_*.h
 	rm -rf cov-int
-	rm -f *cov.tgz
+	rm -f *.tgz
 	rm -f core
 
 new: clean all
@@ -105,9 +104,6 @@ bin/mixplay-hid: $(OBJDIR)/mixplay-hid.o $(CLOBJS)
 bin/mixplay-scr: $(OBJDIR)/mixplay-scr.o $(CLOBJS)
 	$(CC) $^ -o $@ -lpthread -lX11 -lXext $(LIBS)
 
-bin/mprcinit: $(OBJDIR)/mprcinit.o $(OBJS)
-	$(CC) $^ -o $@ $(LIBS)
-
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	$(CC) $(CCFLAGS) -c -o $@ $<
 
@@ -115,13 +111,11 @@ install: all
 	install -d $(BINDIR)
 	install -s -m 0755 bin/mixplayd $(BINDIR)
 	install -s -m 0755 bin/mpstop $(BINDIR)
-	install -s -m 0755 bin/mprcinit $(BINDIR)
 	install -s -m 0755 bin/mixplay-hid $(BINDIR)
 	install -s -m 0755 bin/mixplay-scr $(BINDIR)
 	install -s -m 0755 bin/mpflirc.sh $(BINDIR)
 	install -s -m 0755 bin/mpstream.sh $(BINDIR)
 	install -s -m 0755 bin/mpgainer.sh $(BINDIR)
-	install -s -m 0755 bin/mixplay-hid $(BINDIR)
 
 $(OBJDIR)/%_html.h: $(SRCDIR)/%.html bin/minify
 	cat $< | bin/minify > static/$(notdir $<)

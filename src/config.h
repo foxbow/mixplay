@@ -57,7 +57,7 @@ typedef enum {
 	mpc_append,					/* 20 */
 	mpc_setvol,
 	mpc_newprof,
-	mpc_path,
+	mpc_url,
 	mpc_remprof,
 	mpc_spread,
 	mpc_deldnp,
@@ -75,8 +75,8 @@ typedef enum {
 	mpc_album = 1 << 10,		/* 0x0400 */
 	mpc_title = 1 << 11,		/* 0x0800 */
 	mpc_display = 1 << 12,		/* 0x1000 */
-	mpc_substr = 1 << 13,		/* 0x2000 */
-	mpc_recent = 1 << 14,		/* 0x4000 - experimental newest with empty term */
+	mpc_unused = 1 << 13,		/* 0x2000 */
+	mpc_recent = 1 << 14,		/* 0x4000 */
 } mpcmd_t;
 
 /* some filtermasks */
@@ -108,21 +108,19 @@ extern const char *_mprccmdstrings[MPRC_NUM];
 #define MPC_RANGE(x) (mpcmd_t)((int32_t)x&MPC_DFRANGE)
 #define MPC_MODE(x)  (mpcmd_t)((int32_t)x&0xff00)
 /* check for set range */
-#define MPC_ISTITLE(x) ((x) & mpc_title)
-#define MPC_ISARTIST(x) ((x) & mpc_artist)
-#define MPC_ISALBUM(x) ((x) & mpc_album)
-#define MPC_ISGENRE(x) ((x) & mpc_genre)
-#define MPC_ISDISPLAY(x) ((x) & mpc_display)
+#define MPC_HASTITLE(x)   ((x) & mpc_title)
+#define MPC_HASARTIST(x)  ((x) & mpc_artist)
+#define MPC_HASALBUM(x)   ((x) & mpc_album)
+#define MPC_HASGENRE(x)   ((x) & mpc_genre)
+#define MPC_HASDISPLAY(x) ((x) & mpc_display)
 /* check for exact range */
-#define MPC_EQTITLE(x) (MPC_RANGE(x)==mpc_title)
-#define MPC_EQARTIST(x) (MPC_RANGE(x)==mpc_artist)
-#define MPC_EQALBUM(x) (MPC_RANGE(x)==mpc_album)
-#define MPC_EQGENRE(x) (MPC_RANGE(x)==mpc_genre)
-#define MPC_EQDISPLAY(x) (MPC_RANGE(x)==mpc_display)
-/* shall it be a substring */
-#define MPC_ISSUBSTR(x) (x & mpc_substr )
-/* is this a real search */
-#define MPC_ISRECENT(x) (x & mpc_recent )
+#define MPC_ISTITLE(x)   (MPC_RANGE(x)==mpc_title)
+#define MPC_ISARTIST(x)  (MPC_RANGE(x)==mpc_artist)
+#define MPC_ISALBUM(x)   (MPC_RANGE(x)==mpc_album)
+#define MPC_ISGENRE(x)   (MPC_RANGE(x)==mpc_genre)
+#define MPC_ISDISPLAY(x) (MPC_RANGE(x)==mpc_display)
+/* is this not a real search */
+#define MPC_ISRECENT(x)  ((x) & mpc_recent )
 
 /* playmodes */
 #define PM_NONE     0x00

@@ -310,7 +310,7 @@ void setCommand(mpcmd_t rcmd, char *arg, int32_t cid) {
 	/* get the target title for fav and dnp commands */
 	if ((cmd == mpc_fav) || (cmd == mpc_dnp)) {
 		if (arg != NULL) {
-			if (MPC_EQDISPLAY(rcmd)) {
+			if (MPC_ISDISPLAY(rcmd)) {
 				ctitle = getTitleByIndex(atoi(arg));
 			}
 			else {
@@ -575,18 +575,40 @@ void setCommand(mpcmd_t rcmd, char *arg, int32_t cid) {
 		}
 		break;
 
-	case mpc_path:
+	case mpc_url:
 		if (arg == NULL) {
-			addAlert(cid, "No path given!");
+			addAlert(cid, "No URL given!");
 		}
 		else if (config->current != NULL) {
-			lockClient(cid);
-			if (setArgument(arg)) {
+			if (isURL(arg)) {
+				char line[MAXPATHLEN + 1];
+
 				config->active = 0;
+				config->mpmode = PM_NONE;
+
+				activity(0, "Loading URL");
+				addMessage(1, "URL: %s", arg);
+				line[0] = 0;
+
+				if (strstr(arg, "https") == arg) {
+					addMessage(0, "No HTTPS support, trying plain HTTP.");
+					strtcat(line, "http", MAXPATHLEN);
+					strtcat(line, arg + 5, MAXPATHLEN);
+				}
+				else {
+					strtcpy(line, arg, MAXPATHLEN);
+				}
+
 				stopPlay();
+				setStream(line, "<connecting>");
 				sendplay();
 			}
-			unlockClient(cid);
+			else {
+				addAlert(cid, "No URL!<br>'%s'", arg);
+			}
+		}
+		else {
+			addAlert(cid, "Player not initialized!");
 		}
 		break;
 
@@ -629,7 +651,7 @@ void setCommand(mpcmd_t rcmd, char *arg, int32_t cid) {
 		{
 			char *term = arg;
 
-			/* if the term is unset but the fuzzy bit is set, return the last ten
+			/* if the term is unset but the recent it is set, return the last ten
 			 * titles in the database */
 			if ((term == NULL) && !MPC_ISRECENT(rcmd)) {
 				if (MPC_ISARTIST(rcmd)) {

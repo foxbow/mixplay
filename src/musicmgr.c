@@ -628,7 +628,7 @@ int32_t search(const mpcmd_t range, const char *pat, int32_t cid) {
 	res->lnum = 0;
 
 	if (root == NULL) {
-		addAlert(0, "No database loaded.");
+		addAlert(cid, "No database loaded.");
 		return 0;
 	}
 
@@ -669,38 +669,40 @@ int32_t search(const mpcmd_t range, const char *pat, int32_t cid) {
 			int found = 0;
 
 			/* check for searchrange and patterns */
-			if (MPC_ISTITLE(range) && patMatch(runner->title, pat)) {
+			if (MPC_HASTITLE(range) && patMatch(runner->title, pat)) {
 				found |= mpc_title;
 			}
 
 			/* from a result point of view display(, path) and title are the same */
-			if (MPC_ISDISPLAY(range)
+			if (MPC_HASDISPLAY(range)
 				&& patMatch(runner->display, pat)) {
 				found |= mpc_title;
 			}
 
-			if (MPC_ISARTIST(range)
-				&& patMatch(runner->artist, pat)) {
-				found |= mpc_artist;
-
-				/* Add albums and titles if search was for artists only */
-				if (MPC_EQARTIST(range)) {
+			// Explicit artist search shall be an exact match
+			if (MPC_ISARTIST(range)) {
+				if (strcasecmp(runner->artist, pat) == 0) {
+					/* Add albums and titles if search was for artists only */
 					found |= mpc_title | mpc_album;
 				}
 			}
+			else if (MPC_HASARTIST(range) && patMatch(runner->artist, pat)) {
+				found |= mpc_artist;
+			}
 
-			if (MPC_ISALBUM(range) && patMatch(runner->album, pat)) {
-				found |= mpc_album;
-
-				/* Add titles if search was for albums only */
-				if (MPC_EQALBUM(range)) {
+			// Just add titles if the search was an album
+			if (MPC_ISALBUM(range)) {
+				if (strcasecmp(runner->album, pat) == 0) {
 					found |= mpc_title;
 				}
+			}
+			else if (MPC_HASALBUM(range) && patMatch(runner->album, pat)) {
+				found |= mpc_album;
 			}
 
 			/* now interpret the value of 'found' */
 
-			if (MPC_ISARTIST(found) && (res->anum <= MAXSEARCH)) {
+			if (MPC_HASARTIST(found) && (res->anum <= MAXSEARCH)) {
 				/* check for new artist */
 				for (i = 0; (i < res->anum)
 					 && !strieq(res->artists[i].name, runner->artist); i++);
@@ -715,12 +717,12 @@ int32_t search(const mpcmd_t range, const char *pat, int32_t cid) {
 				}
 			}
 
-			if (MPC_ISALBUM(found)) {
+			if (MPC_HASALBUM(found)) {
 				/* check for new albums */
 				addAlbum(res, runner);
 			}
 
-			if (MPC_ISTITLE(found) && (res->tnum <= MAXSEARCH)) {
+			if (MPC_HASTITLE(found) && (res->tnum <= MAXSEARCH)) {
 				res->titles = appendToPL(runner, res->titles, false);
 				res->tnum++;
 			}
@@ -1250,73 +1252,6 @@ void moveTitleByIndex(uint32_t from, uint32_t before) {
 	}
 
 	moveTitle(frompos, topos);
-}
-
-/**
- * load a standard m3u playlist into a list of titles that the tools can handle
- */
-mptitle_t *loadPlaylist(const char *path) {
-	FILE *fp;
-	int32_t cnt = 0;
-	mptitle_t *current = NULL;
-	char *buff;
-	char titlePath[MAXPATHLEN];
-	char mdir[MAXPATHLEN + 1] = "";
-	int32_t i = 0;
-
-	/* get path to the playlist, if any */
-	if (NULL != strrchr(path, '/')) {
-		i = MIN(strlen(path), MAXPATHLEN);
-
-		while (path[i] != '/') {
-			i--;
-		}
-		strtcpy(mdir, path, i + 1);
-	}
-
-
-	fp = fopen(path, "r");
-	if (!fp) {
-		/* try standard playlist directory */
-		/* getenv("HOME") was valid before already.. */
-		snprintf(titlePath, MAXPATHLEN - 1, "%s/.mixplay/playlists/%s",
-				 getenv("HOME"), path);
-		fp = fopen(titlePath, "r");
-		if (!fp) {
-			addMessage(0, "Could not open playlist %s", path);
-			return NULL;
-		}
-		else {
-			addMessage(1, "Using %s", titlePath);
-			strtcpy(mdir, getConfig()->musicdir, MAXPATHLEN);
-		}
-	}
-
-	buff = (char *) falloc(MAXPATHLEN, 1);
-	activity(0, "Loading playlist");
-	while (!feof(fp)) {
-		if ((fgets(buff, MAXPATHLEN, fp) != NULL) &&
-			(strlen(buff) > 1) && (buff[0] != '#')) {
-			/* turn relative paths into absolute ones */
-			if (buff[0] != '/') {
-				strtcpy(titlePath, mdir, MAXPATHLEN - 1);
-				strtcat(titlePath, buff, MAXPATHLEN - 1);
-				strtcpy(buff, titlePath, MAXPATHLEN - 1);
-			}
-			/* remove control chars like CR/LF */
-			strip(titlePath, buff, MAXPATHLEN - 1);
-			current = insertTitle(current, titlePath);
-			cnt++;
-			/* turn list into playlist too */
-		}
-	}
-	free(buff);
-
-	fclose(fp);
-
-	addMessage(2, "Playlist %s with %i entries.", path, cnt);
-
-	return (current == NULL) ? NULL : current->next;
 }
 
 mptitle_t *addNewPath(const char *path) {
