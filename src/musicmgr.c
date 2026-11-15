@@ -71,6 +71,16 @@ static int32_t addToList(const char *line, mpcmd_t cmd) {
 	return 1;
 }
 
+/**
+ * adds a dummy title to the given playlist
+ * 
+ * if pl in NULL, a new playlist will be created, otherwise a
+ * previous title will be added and returned, so the original
+ * entry will be next.
+ * 
+ * this should not be used on playlists as the dummy title will
+ * not be cleaned up on wipe!
+ */
 mpplaylist_t *addPLDummy(mpplaylist_t * pl, const char *name) {
 	mpplaylist_t *buf;
 	mptitle_t *title = (mptitle_t *) falloc(1, sizeof (mptitle_t));
