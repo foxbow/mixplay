@@ -630,7 +630,7 @@ static void parseRequest(chandle_t * handle) {
 		/* HACK to support bookmarklet without HTTPS
 		 * todo: remove as soon as HTTPS is supported... */
 		else if ((strstr(pos, "/cmd") == pos)
-				 && ((mpcmd_t) handle->cmd == mpc_path)) {
+				 && ((mpcmd_t) handle->cmd == mpc_url)) {
 			handle->state = req_command;
 			cmd = (mpcmd_t) handle->cmd;
 		}

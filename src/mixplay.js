@@ -124,7 +124,7 @@ function initKbdDiv () {
           btn = createKbdKey('CLR', 'C')
           break
         case 'O':
-          btn = createKbdKey('&#x2714;', 'O')
+          btn = createKbdKey('&#x0714;', 'O')
           break
         case 'X':
           btn = createKbdKey('X', 'X')
@@ -935,7 +935,7 @@ function popselect (choice, arg, text, drag, id, ext=``) {
   var select
   var reply = document.createElement('p')
   if (drag & 1) {
-    choice.push(['&#x2195;', 'move']) // move
+    choice.push(['&#x0195;', 'move']) // move
   }
   const num = choice.length
   reply.innerHTML = text
@@ -1104,11 +1104,11 @@ function fullUpdate (data) {
         cline.innerHTML = data.prev[i].title
       } else {
         choices = []
-        choices.push(['&#x2620;', 0x100a])
+        choices.push(['&#x0620;', 0x100a])
         if (!(data.prev[i].flags & 1)) {
-          choices.push(['&#x2665;', 0x1009])
+          choices.push(['&#x0665;', 0x1009])
         }
-        choices.push(['&#x25B6;', 0x0011]) // re-play
+        choices.push(['&#x05B6;', 0x0011]) // re-play
         choices.push(['&#x1f4be;', 'download'])
         cline = popselect(choices,
           data.prev[i].key, titleline, 1, lineid++)
@@ -1134,17 +1134,17 @@ function fullUpdate (data) {
     cline = document.createElement('p')
     cline.id = 'ctitle'
     cline.className = 'nopopselect'
-    cline.innerHTML = '&#x25B6; ' + titleline
+    cline.innerHTML = '&#x05B6; ' + titleline
     cline.onclick = function () { sendCMD(0x00) }
   } else {
     choices = []
-    choices.push(['&#x2620;', 0x100a]) /* DNP */
+    choices.push(['&#x0620;', 0x100a]) /* DNP */
     if (!(data.current.flags & 1)) {
-      choices.push(['&#x2665;', 0x1009]) /* FAV */
+      choices.push(['&#x0665;', 0x1009]) /* FAV */
     }
     choices.push(['&#x1f4be;', 'download']) // download
     cline = popselect(choices,
-      data.current.key, '&#x25B6; ' + titleline, 0, lineid++)
+      data.current.key, '&#x05B6; ' + titleline, 0, lineid++)
     cline.className = 'ctitle'
   }
   e.appendChild(cline)
@@ -1169,9 +1169,9 @@ function fullUpdate (data) {
         cline.innerHTML = titleline
       } else {
         choices = []
-        choices.push(['&#x2620;', 0x100a])
+        choices.push(['&#x0620;', 0x100a])
         if (!(data.next[i].flags & 1)) {
-          choices.push(['&#x2665;', 0x1009])
+          choices.push(['&#x0665;', 0x1009])
         }
         choices.push(['X', 0x001c])
         choices.push(['&#x1f4be;', 'download']) // download
@@ -1214,17 +1214,17 @@ function searchUpdate (data) {
     switchTabByRef('search', 2)
     for (i = 0; i < data.albums.length; i++) {
       choices = []
-      choices.push(['&#x26b2;', 0x0413]) // search album
+      choices.push(['&#x06b2;', 0x0413]) // search album
       if (!isstream) {
         fdext = ''
         if (!data.albums[i].fav) {
-          choices.push(['&#x2665;', 0x0409]) // fav
+          choices.push(['&#x0665;', 0x0409]) // fav
         }
         else {
           fdext='fav'
         }
         if (!data.albums[i].dnp) {
-          choices.push(['&#x2620;', 0x040a]) // dnp
+          choices.push(['&#x0620;', 0x040a]) // dnp
         }
         else {
           fdext='dnp'
@@ -1251,16 +1251,16 @@ function searchUpdate (data) {
     for (i = 0; i < data.artists.length; i++) {
       fdext = ''
       choices = []
-      choices.push(['&#x26b2;', 0x0213]) // search
+      choices.push(['&#x06b2;', 0x0213]) // search
       if (!isstream) {
         if (!data.artists[i].fav) {
-          choices.push(['&#x2665;', 0x0209]) // fav
+          choices.push(['&#x0665;', 0x0209]) // fav
         }
         else {
           fdext='fav'
         }
         if (!data.artists[i].dnp) {
-          choices.push(['&#x2620;', 0x020a]) // dnp
+          choices.push(['&#x0620;', 0x020a]) // dnp
         }
         else {
           fdext='dnp'
@@ -1287,13 +1287,13 @@ function searchUpdate (data) {
     choices = []
     if (!isstream) {
       if (!favplay || !(data.titles.flags & 0x0001)) {
-        choices.push(['&#x2665;', 0x1009]) // fav
+        choices.push(['&#x0665;', 0x1009]) // fav
       }
       if (!(data.titles.flags & 0x0002)) {
-        choices.push(['&#x2620;', 0x100a]) // dnp
+        choices.push(['&#x0620;', 0x100a]) // dnp
       }
-      choices.push(['&#x276f;', 0x100c]) // next
-      choices.push(['&#x276f;&#x276f;', 0x1014]) // append
+      choices.push(['&#x076f;', 0x100c]) // next
+      choices.push(['&#x076f;&#x076f;', 0x1014]) // append
       items[0] = popselect(choices, 0, 'All results', 0, lineid++)
     }
     else {
@@ -1307,19 +1307,19 @@ function searchUpdate (data) {
       fdext = ''
       if (!isstream) {
         if (!(data.titles[i].flags & 1)) {
-          choices.push(['&#x2665;', 0x1009]) // fav
+          choices.push(['&#x0665;', 0x1009]) // fav
         }
         else {
           fdext = 'fav'
         }
         if (!(data.titles[i].flags & 2)) {
-          choices.push(['&#x2620;', 0x100a]) // dnp
+          choices.push(['&#x0620;', 0x100a]) // dnp
         }
         else {
           fdext = 'dnp'
         }
-        choices.push(['&#x276f;', 0x100c]) // next
-        choices.push(['&#x276f;&#x276f;', 0x1014]) // append
+        choices.push(['&#x076f;', 0x100c]) // next
+        choices.push(['&#x076f;&#x076f;', 0x1014]) // append
       }
       choices.push(['&#x1f4be;', 'download'])
       items[i + 1] = popselect(choices,
@@ -1471,7 +1471,7 @@ function playerUpdate (data) {
           power(0)
         }
       }
-      document.getElementById('play').innerHTML = '&#x25B6;'
+      document.getElementById('play').innerHTML = '&#x05B6;'
       break
     case 0: /* mpc_play */
       clearBody()
@@ -1652,9 +1652,9 @@ function updateShortcuts () {
         name = profiles[id].name
         choices = []
         if (id !== active) {
-          choices.push(['&#x25B6;', 0x06])
+          choices.push(['&#x05B6;', 0x06])
         } else {
-          name = '&#x25B6; ' + name
+          name = '&#x05B6; ' + name
         }
         choices.push(['X', 'remsc'])
         items[i] = popselect(choices, id,
@@ -1701,14 +1701,14 @@ function updateConfig (data) {
       id = data.profile[i].id
       choices = []
       if (id !== active) {
-        choices.push(['&#x25B6;', 0x06])
+        choices.push(['&#x05B6;', 0x06])
         if (id !== 1) {
           choices.push(['X', 0x18])
         }
       } else {
-        name = '&#x25B6; ' + name
+        name = '&#x05B6; ' + name
       }
-      choices.push(['&#x2665;', 'shortcut']) /* FAV */
+      choices.push(['&#x0665;', 'shortcut']) /* FAV */
       if (data.profile[i].url === '') {
         pitems[pnum++] = popselect(choices, id,
           name, 0, lineid++)

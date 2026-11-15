@@ -67,17 +67,17 @@ mptitle_t *getTitleForRange(const mpcmd_t range, const char *name) {
 		return NULL;
 	}
 
-	if (!MPC_EQALBUM(range) && !MPC_EQARTIST(range)) {
+	if (!MPC_ISALBUM(range) && !MPC_ISARTIST(range)) {
 		addMessage(0,
 				   "Can only search represantatives for Artists and Albums!");
 		return NULL;
 	}
 
 	do {
-		if (MPC_EQALBUM(range) && !strcasecmp(run->album, name)) {
+		if (MPC_ISALBUM(range) && !strcasecmp(run->album, name)) {
 			return run;
 		}
-		if (MPC_EQARTIST(range) && !strcasecmp(run->artist, name)) {
+		if (MPC_ISARTIST(range) && !strcasecmp(run->artist, name)) {
 			return run;
 		}
 		run = run->next;

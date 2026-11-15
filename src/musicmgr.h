@@ -98,7 +98,6 @@ int32_t writePlaylist(mpplaylist_t * pl, const char *name);
 
 mptitle_t *recurse(char *curdir, mptitle_t * files);
 mptitle_t *rewindTitles(mptitle_t * base);
-mptitle_t *loadPlaylist(const char *path);
 mptitle_t *insertTitle(mptitle_t * base, const char *path);
 int32_t search(const mpcmd_t range, const char *pat, int32_t cid);
 mptitle_t *addNewPath(const char *path);
@@ -108,7 +107,6 @@ void moveTitleByIndex(uint32_t from, uint32_t before);
 
 int32_t playCount(mptitle_t * title, int32_t skip);
 void applyLists(int32_t clean);
-int32_t searchPlay(const char *pat, uint32_t num, const int32_t global);
 int32_t handleRangeCmd(mpcmd_t cmd, mptitle_t * title);
 int32_t handleDBL(mptitle_t * title);
 int32_t applyDNPlist(marklist_t * list);

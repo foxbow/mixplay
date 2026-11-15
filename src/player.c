@@ -611,7 +611,14 @@ void *reader( __attribute__ ((unused))
 							 * some streams mix up title descriptions in weird ways, so we 
 							 * just check for similar enough to pass a fuzzy search */
 							if (!patMatch
-								(apos, control->current->title->display)) {
+								(apos, control->current->title->display) &&
+								/* if an ad runs and the next title has not been fully 
+								 * initialized by the stream, the title may be duplicated
+								 * so check that too if necessary */
+								((control->current->next == NULL) ||
+								 !patMatch(apos,
+										   control->current->next->title->
+										   display))) {
 
 								/* The album field contains the stream name. If it is not set
 								 * then this is the first title, and the current dummy will 
@@ -661,7 +668,7 @@ void *reader( __attribute__ ((unused))
 								strcpy(control->current->title->album,
 									   control->current->prev->title->title);
 
-								/* filter out 'things' */
+								/* mute out 'things' */
 								if (strcasecmp
 									(control->current->title->artist,
 									 control->current->title->album) == 0) {

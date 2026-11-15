@@ -5,6 +5,7 @@
 #include "utils.h"
 #include "player.h"
 #include "mpserver.h"
+#include "mphid.h"
 
 #ifndef VERSION
 #define VERSION "none"
@@ -14,7 +15,7 @@
  * print out the default CLI help text
  */
 static void printUsage(char *name) {
-	printf("USAGE: %s [args] [resource]\n", name);
+	printf("USAGE: %s [args]\n", name);
 	printf(" -V : print curent build ID\n");
 	printf(" -d : increase debug message level to display on console\n");
 	printf(" -f : single channel - disable fading\n");
@@ -24,39 +25,8 @@ static void printUsage(char *name) {
 	printf(" -m : force mix on playlist\n");
 	printf(" -W': write changed config (used with -r,-l,-h,-p)\n");
 	printf(" -s : stop on start, do not autoplay\n");
-	printf(" resource: resource to play\n");
-	printf("		   URL, directory, mp3 file, playlist\n");
-}
-
-/**
- * parse arguments given to the application
- */
-int32_t setArgument(const char *arg) {
-	char line[MAXPATHLEN + 1];
-	mpconfig_t *control = getConfig();
-
-	control->active = 0;
-	control->mpmode = PM_NONE;
-
-	if (isURL(arg)) {
-		activity(0, "Loading URL");
-		addMessage(1, "URL: %s", arg);
-		line[0] = 0;
-
-		if (strstr(arg, "https") == arg) {
-			addMessage(0, "No HTTPS support, trying plain HTTP.");
-			strtcat(line, "http", MAXPATHLEN);
-			strtcat(line, arg + 5, MAXPATHLEN);
-		}
-		else {
-			strtcpy(line, arg, MAXPATHLEN);
-		}
-		setStream(line, "<connecting>");
-		return 1;
-	}
-
-	addAlert(0, "Illegal argument<br>'%s'", arg);
-	return 0;
+	printf(" -I : force HID/flirc (re-)initialization\n");
+	printf(" -M <resource> : use <resource> as default musicdir\n");
 }
 
 /*
@@ -67,7 +37,7 @@ int32_t getArgs(int32_t argc, char **argv) {
 	int32_t c, changed = 0;
 
 	/* parse command line options */
-	while ((c = getopt(argc, argv, "VfdF:hp:Wms")) != -1) {
+	while ((c = getopt(argc, argv, "VfdF:hp:WmsIM:")) != -1) {
 		switch (c) {
 
 		case 'V':
@@ -102,8 +72,22 @@ int32_t getArgs(int32_t argc, char **argv) {
 		case 'W':
 			changed = 1;
 			break;
+
 		case 's':
 			config->stop = true;
+			break;
+
+		case 'I':
+			HIDinit();
+			break;
+
+		case 'M':
+			/* just a basic sanity check here */
+			if (!isDir(optarg)) {
+				fprintf(stderr, "%s is not a directory!", optarg);
+				exit(EXIT_FAILURE);
+			}
+			config->musicdir = strdup(optarg);
 			break;
 
 		case '?':
@@ -125,7 +109,12 @@ int32_t getArgs(int32_t argc, char **argv) {
 	}
 
 	if (optind < argc) {
-		return setArgument(argv[optind]);
+		fprintf(stderr, "Illegal argument: %s", argv[optind]);
+		for (++optind; optind < argc; optind++) {
+			fprintf(stderr, ", %s", argv[optind]);
+		}
+		fprintf(stderr, "\n");
+		exit(EXIT_FAILURE);
 	}
 
 	if (changed) {
