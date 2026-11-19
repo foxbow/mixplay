@@ -607,19 +607,23 @@ void *reader( __attribute__ ((unused))
 							}
 							*aend = 0;
 
+							/* if an ad runs and the next title has not been fully 
+							 * initialized by the stream, the title may be duplicated
+							 * so check that too if necessary */
+							if ((control->current->next != NULL)
+								&& patMatch(apos,
+											control->current->next->title->
+											display)) {
+								/* the current title is just a placeholder, 
+								 * remove it and get back to the original title */
+								control->current = remFromPL(control->current);
+							}
 							/* only do this if the title actually changed
 							 * some streams mix up title descriptions in weird ways, so we 
 							 * just check for similar enough to pass a fuzzy search */
-							if (!patMatch
-								(apos, control->current->title->display) &&
-								/* if an ad runs and the next title has not been fully 
-								 * initialized by the stream, the title may be duplicated
-								 * so check that too if necessary */
-								((control->current->next == NULL) ||
-								 !patMatch(apos,
-										   control->current->next->title->
-										   display))) {
-
+							else if (!patMatch
+									 (apos,
+									  control->current->title->display)) {
 								/* The album field contains the stream name. If it is not set
 								 * then this is the first title, and the current dummy will 
 								 * just be overwriten. If the current title is some channel 

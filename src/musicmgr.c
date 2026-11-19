@@ -180,7 +180,7 @@ static void clearTDARK(mptitle_t * root) {
 /*
  * removes a title from the current playlist chain and returns the next title
  */
-static mpplaylist_t *remFromPL(mpplaylist_t * pltitle) {
+mpplaylist_t *remFromPL(mpplaylist_t * pltitle) {
 	mpplaylist_t *ret = pltitle->next;
 
 	if (pltitle->prev != NULL) {
@@ -190,9 +190,17 @@ static mpplaylist_t *remFromPL(mpplaylist_t * pltitle) {
 		pltitle->next->prev = pltitle->prev;
 	}
 
-	/* title is no longer in the playlist */
-	clearTDARK(pltitle->title);
-	pltitle->title->flags &= ~MP_INPL;
+	if (pltitle->title) {
+		/* title has no path, so it's a stream or dummy: discard */
+		if (pltitle->title->path[0] == '\0') {
+			free(pltitle->title);
+		}
+		else {
+			/* title is no longer in the playlist */
+			clearTDARK(pltitle->title);
+			pltitle->title->flags &= ~MP_INPL;
+		}
+	}
 
 	free(pltitle);
 	return ret;
@@ -276,18 +284,23 @@ int32_t playCount(mptitle_t * title, int32_t skip) {
  * removed
  */
 mpplaylist_t *remFromPLByKey(const uint32_t key) {
-	if (getCurrent() == NULL) {
+	mpplaylist_t *root = getCurrent();
+
+	if (root == NULL) {
 		addMessage(0, "Cannot remove titles from an empty playlist");
 		return NULL;
 	}
 
+	if (isStreamActive()) {
+		addAlert(0, "Trying to remove title by key in a stream!");
+		return root;
+	}
+
 	if (key == 0) {
-		return getCurrent();
+		return root;
 	}
 
 	lockPlaylist();
-
-	mpplaylist_t *root = getCurrent();
 	mpplaylist_t *pl = root;
 
 	/* got to the start of the playlist */
@@ -298,35 +311,14 @@ mpplaylist_t *remFromPLByKey(const uint32_t key) {
 	/* look for a matching titles */
 	while (pl != NULL) {
 		if (pl->title->key == key) {
-			mpplaylist_t *torem = pl;
-
-			pl = torem->next;
-
-			if (torem->prev != NULL) {
-				torem->prev->next = torem->next;
+			if (pl == root) {
+				root = pl->next;
 			}
+			pl = remFromPL(pl);
 
-			if (torem->next != NULL) {
-				torem->next->prev = torem->prev;
+			if (pl == NULL) {
+				addMessage(0, "No more playlist!");
 			}
-
-			if (torem == getCurrent()) {
-				if (torem->next == NULL) {
-					if (torem->prev == NULL) {
-						addMessage(0, "No more playlist!");
-						getConfig()->current = NULL;
-					}
-					else {
-						getConfig()->current = torem->prev;
-					}
-				}
-				else {
-					getConfig()->current = torem->next;
-				}
-				root = getCurrent();
-			}
-
-			free(torem);
 			continue;
 		}
 		pl = pl->next;
@@ -1854,13 +1846,8 @@ void plCheck(bool fill) {
 				cnt++;
 			}
 
-			buf = pl->next;
-			pl->next = NULL;
-			while (buf != NULL) {
-				pl = buf->next;
-				free(buf->title);
-				free(buf);
-				buf = pl;
+			while (pl != NULL) {
+				pl = remFromPL(pl);
 			}
 			notifyChange(MPCOMM_TITLES);
 			unlockPlaylist();
@@ -1926,6 +1913,7 @@ void plCheck(bool fill) {
 		/* clean up loose ends */
 		while (buf != NULL) {
 			pl = buf->prev;
+			// remFromPL returns next, so take care of this.
 			remFromPL(buf);
 			buf = pl;
 		}

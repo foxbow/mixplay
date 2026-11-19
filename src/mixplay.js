@@ -1108,7 +1108,7 @@ function fullUpdate (data) {
         if (!(data.prev[i].flags & 1)) {
           choices.push(['&#x0665;', 0x1009])
         }
-        choices.push(['&#x05B6;', 0x0011]) // re-play
+        choices.push(['&#x25B6;', 0x0011]) // re-play
         choices.push(['&#x1f4be;', 'download'])
         cline = popselect(choices,
           data.prev[i].key, titleline, 1, lineid++)
