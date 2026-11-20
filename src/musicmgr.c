@@ -77,9 +77,6 @@ static int32_t addToList(const char *line, mpcmd_t cmd) {
  * if pl in NULL, a new playlist will be created, otherwise a
  * previous title will be added and returned, so the original
  * entry will be next.
- * 
- * this should not be used on playlists as the dummy title will
- * not be cleaned up on wipe!
  */
 mpplaylist_t *addPLDummy(mpplaylist_t * pl, const char *name) {
 	mpplaylist_t *buf;
@@ -1841,7 +1838,7 @@ void plCheck(bool fill) {
 	if (pl != NULL) {
 		/* It's a stream, so truncate stream title history to 20 titles */
 		if (getConfig()->mpmode & PM_STREAM) {
-			while ((pl->next != NULL) && (cnt < 20)) {
+			while ((pl != NULL) && (cnt <= 20)) {
 				pl = pl->next;
 				cnt++;
 			}
@@ -1849,6 +1846,7 @@ void plCheck(bool fill) {
 			while (pl != NULL) {
 				pl = remFromPL(pl);
 			}
+
 			notifyChange(MPCOMM_TITLES);
 			unlockPlaylist();
 			return;
