@@ -95,6 +95,7 @@ mpplaylist_t *remFromPLByKey(const uint32_t key);
 mpplaylist_t *addPLDummy(mpplaylist_t * pl, const char *name);
 void plCheck(bool del);
 int32_t writePlaylist(mpplaylist_t * pl, const char *name);
+mpplaylist_t *remFromPL(mpplaylist_t * pltitle);
 
 mptitle_t *recurse(char *curdir, mptitle_t * files);
 mptitle_t *rewindTitles(mptitle_t * base);
