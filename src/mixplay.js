@@ -5,7 +5,7 @@
    MPCOMM_CONFIG == 8 - configuration
    MPCOMM_ABORT == 16 - abort upload
    -1 - stopped */
-var doUpdate = 13f
+var doUpdate = 13
 var isstream = 0
 var msglines = []
 var msgpos = 0
