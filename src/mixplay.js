@@ -5,7 +5,7 @@
    MPCOMM_CONFIG == 8 - configuration
    MPCOMM_ABORT == 16 - abort upload
    -1 - stopped */
-var doUpdate = 13
+var doUpdate = 13f
 var isstream = 0
 var msglines = []
 var msgpos = 0
@@ -1108,7 +1108,7 @@ function fullUpdate (data) {
         if (!(data.prev[i].flags & 1)) {
           choices.push(['&#x2665;', 0x1009])
         }
-        choices.push(['&#x11;', 0x0011]) // re-play
+        choices.push(['&#x25B6;', 0x0011]) // re-play
         choices.push(['&#x1f4be;', 'download'])
         cline = popselect(choices,
           data.prev[i].key, titleline, 1, lineid++)
@@ -1134,7 +1134,7 @@ function fullUpdate (data) {
     cline = document.createElement('p')
     cline.id = 'ctitle'
     cline.className = 'nopopselect'
-    cline.innerHTML = '&#x11; ' + titleline
+    cline.innerHTML = '&#x25B6; ' + titleline
     cline.onclick = function () { sendCMD(0x00) }
   } else {
     choices = []
@@ -1144,7 +1144,7 @@ function fullUpdate (data) {
     }
     choices.push(['&#x1f4be;', 'download']) // download
     cline = popselect(choices,
-      data.current.key, '&#x11; ' + titleline, 0, lineid++)
+      data.current.key, '&#x25B6; ' + titleline, 0, lineid++)
     cline.className = 'ctitle'
   }
   e.appendChild(cline)
@@ -1471,7 +1471,7 @@ function playerUpdate (data) {
           power(0)
         }
       }
-      document.getElementById('play').innerHTML = '&#x11;'
+      document.getElementById('play').innerHTML = '&#x25B6;'
       break
     case 0: /* mpc_play */
       clearBody()
@@ -1652,9 +1652,9 @@ function updateShortcuts () {
         name = profiles[id].name
         choices = []
         if (id !== active) {
-          choices.push(['&#x11;', 0x06])
+          choices.push(['&#x25B6;', 0x06])
         } else {
-          name = '&#x11; ' + name
+          name = '&#x25B6; ' + name
         }
         choices.push(['X', 'remsc'])
         items[i] = popselect(choices, id,
@@ -1701,12 +1701,12 @@ function updateConfig (data) {
       id = data.profile[i].id
       choices = []
       if (id !== active) {
-        choices.push(['&#x11;', 0x06])
+        choices.push(['&#x25B6;', 0x06])
         if (id !== 1) {
           choices.push(['X', 0x18])
         }
       } else {
-        name = '&#x11; ' + name
+        name = '&#x25B6; ' + name
       }
       choices.push(['&#x2665;', 'shortcut']) /* FAV */
       if (data.profile[i].url === '') {
